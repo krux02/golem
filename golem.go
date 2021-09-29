@@ -106,10 +106,10 @@ func (this *TokenizeContext) pushBracketStack(arg string) {
 }
 
 
-func readToken(context *TokenizeContext, code string) Token {
-  if (len(code) == 0){
-		fmt.Println("Cannot read token in empty string");
-    os.Exit(1)
+func readToken(context *TokenizeContext, code string) (result Token, offset int) {
+	// fmt.Printf("read token in:%s...\n", code[:20]);
+  if (len(code) == 0) {
+		panic("Cannot read token in empty string");
   }
 
   {
@@ -118,6 +118,7 @@ func readToken(context *TokenizeContext, code string) Token {
     var gotNewLine = false;
 
 		rune, length := utf8.DecodeRuneInString(code)
+
     for u.IsSpace(rune) {
       if (rune == '\n') {
         gotNewLine = true;
@@ -131,18 +132,20 @@ func readToken(context *TokenizeContext, code string) Token {
         // do not infer semicolon when within braces
         (len(context.bracketStack) == 0 || context.bracketStack[len(context.bracketStack)-1] != "(") {
         // TODOdo not infer semicolon after comments
-      return Token{ kind : TkSemicolon, value : code[:idx] };
+			result.kind = TkSemicolon
+			result.value = code[:idx]
+      return
     }
 
     code = code[idx:];
+		offset = idx
   }
 
-  var result = Token{kind : TkInvalid, value : code[:1]};
+  result = Token{kind : TkInvalid, value : code[:1]};
 
   c, cLen := utf8.DecodeRuneInString(code)
   if (c >= 128) {
-    fmt.Println("currently only 7 bit ascii is supported!!!")
-		os.Exit(1)
+    panic("currently only 7 bit ascii is supported!!!")
   }
 
   switch {
@@ -150,20 +153,26 @@ func readToken(context *TokenizeContext, code string) Token {
     result.kind = TkIdent
 		result.value = code
 		for pos, rune := range code {
-			if !u.IsDigit(rune) || !u.IsLetter(rune) {
+			//fmt.Printf("rune: %c pos: %d\n",
+			//	rune, pos)
+
+			if !u.IsDigit(rune) && !u.IsLetter(rune) {
 				result.value = code[:pos]
+				break
 			}
 	  }
-		return result
+
+		return
   case c == '#':
     result.kind = TkLineComment;
 		result.value = code
 		for pos, rune := range code {
 			if rune == '\n' {
 				result.value = code[:pos]
+				break
 			}
 	  }
-		return result
+		return
   case u.IsDigit(c):
     result.kind = TkIntLit;
     // read number literal
@@ -197,12 +206,10 @@ func readToken(context *TokenizeContext, code string) Token {
 
 		rune, _ := utf8.DecodeRuneInString(code[it:])
     if u.IsLetter(rune) {
-      fmt.Println("invalid alpha character after literal");
-			os.Exit(1)
+      panic("invalid alpha character after literal");
     }
 
     result.value = code[:it]
-    return result;
   case c == '"':
     result.kind = TkStringLit;
 		var lastRune = '"'
@@ -218,60 +225,67 @@ func readToken(context *TokenizeContext, code string) Token {
 				switch rune {
 				case 'a', 'b', 'f', 'n', 'r', 't', 'v', '\\', '\'', '"':
 				default:
-          fmt.Println("illegal escale sequence");
-					os.Exit(1)
+          panic("illegal escale sequence");
 				}
 			} else if rune == '"' {
         scanningDone = true
 		  }
 	  }
 		result.value = code[:idx2]
+		return
   case c == '(':
     context.pushBracketStack(code[:cLen]);
-    return Token{TkOpenBrace, code[:cLen]};
+    result = Token{TkOpenBrace, code[:cLen]};
+		return
   case c == ')':
     if context.checkLastBracket("(") {
 			context.popBracketStack()
-      return Token{TkCloseBrace, code[:cLen]};
+			result = Token{TkCloseBrace, code[:cLen]};
     }
-    return result;
+    return
   case c == '[':
     context.pushBracketStack(code[:cLen]);
-    return Token{TkOpenBrace, code[:cLen]};
+    result = Token{TkOpenBrace, code[:cLen]};
+		return
   case c == ']':
     if context.checkLastBracket("[") {
 			context.popBracketStack()
-      return Token{TkCloseBrace, code[:cLen]};
+      result = Token{TkCloseBrace, code[:cLen]};
     }
-    return result;
+    return;
   case c == '{':
     context.pushBracketStack(code[:cLen]);
-    return Token{TkOpenBrace, code[:cLen]};
+		result = Token{TkOpenBrace, code[:cLen]};
+    return
   case c == '}':
     if context.checkLastBracket("{") {
 			context.popBracketStack()
-      return Token{TkCloseBrace, code[:cLen]};
+			result = Token{TkCloseBrace, code[:cLen]};
     }
-    return result;
+    return
   case c == '(':
     context.pushBracketStack(code[:cLen]);
-    return Token{TkOpenBrace, code[:cLen]};
+		result = Token{TkOpenBrace, code[:cLen]};
+    return
   case c == ')':
     if context.checkLastBracket("(") {
 			context.popBracketStack()
-      return Token{TkCloseBrace, code[:cLen]};
+      result = Token{TkCloseBrace, code[:cLen]};
     }
-    return result;
-
-  case c == ',': return Token{TkComma, code[:cLen]};
-  case c == ';': return Token{TkSemicolon, code[:cLen]};
+    return
+  case c == ',':
+		result = Token{TkComma, code[:cLen]};
+		return
+  case c == ';':
+		result = Token{TkSemicolon, code[:cLen]};
+		return
 
   default:
-    if u.IsPunct(c) {
+    if u.IsSymbol(c) || u.IsPunct(c) {
 
       var idx2 = len(code);
 			for pos, rune := range code[cLen:] {
-				if !u.IsPunct(rune) || strings.ContainsRune("{}[](),;", rune) {
+				if !u.IsPunct(rune) && !u.IsSymbol(rune) || strings.ContainsRune("{}[](),;", rune) {
 					idx2 = cLen + pos
 					break
 			  }
@@ -279,24 +293,27 @@ func readToken(context *TokenizeContext, code string) Token {
 
       result.kind = TkOperator;
       result.value = code[:idx2];
-      return result;
+      return
     }
+		fmt.Printf("ispunct %v\n", u.IsSymbol(c) )
 		panic(fmt.Sprintf("unexpected input: %c\n", c))
   };
 
+	fmt.Printf("ispunct %v\n", u.IsPunct(c) )
 	panic(fmt.Sprintf("unexpected input: %c\n", c))
 }
 
 func tokenize(code string) {
   for len(code) > 0 {
 		var context = &TokenizeContext{}
-    var token = readToken(context, code);
+    var token, offset = readToken(context, code);
     if token.kind == TkSemicolon {
       fmt.Println("Semicolon(;)");
     } else {
       fmt.Println(token);
     }
-		code = code[len(token.value):]
+
+		code = code[offset+len(token.value):]
   }
 }
 
@@ -305,19 +322,21 @@ func main() {
     fmt.Printf("%d: %s\n", i, arg);
   }
 
-  if (len(os.Args) < 2) {
-    panic("no input file specified");
-  }
-
+  // if (len(os.Args) < 2) {
+  //   panic("no input file specified");
+  // }
   // var file = fileFileToString(os.Args[1]);
 
-	bytes, err := ioutil.ReadFile("/home/arne/proj/golem-language/prototype1/demo.golem")
+	filepath := "/home/arne/proj/golem-language/prototype1/demo.golem"
+
+	bytes, err := ioutil.ReadFile(filepath)
 	if err != nil { panic(err) }
 	file := string(bytes)
 
 
   fmt.Println("all file:")
 	fmt.Println(file)
+	fmt.Println("------------------------------------------------------------------------------");
 
   tokenize(file);
 }
