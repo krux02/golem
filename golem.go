@@ -78,17 +78,27 @@ type Token struct {
   value string;
 };
 
+func (this Token) String() string {
+	return fmt.Sprintf("<%s %q>", TokenKindNames[this.kind], this.value)
+}
 
 //func print(Token token) -> void {
 //  printf("%s(%.*s)", TokenKindNames[size_t(token.kind)], (int)len(token.value), token.value.data );
 //}
 
-type TokenizeContext struct {
+type Tokenizer struct {
+	code string
+	offset int
   bracketStack []string
   lastToken Token
 };
 
-func (this *TokenizeContext) checkLastBracket(arg string) bool {
+func NewTokenizer(code string) *Tokenizer {
+	return &Tokenizer{code:code}
+}
+
+
+func (this *Tokenizer) checkLastBracket(arg string) bool {
 	len := len(this.bracketStack)
 	if len > 0 && this.bracketStack[len-1] == arg {
 		return true
@@ -96,17 +106,17 @@ func (this *TokenizeContext) checkLastBracket(arg string) bool {
 	return false
 }
 
-func (this *TokenizeContext) popBracketStack() {
+func (this *Tokenizer) popBracketStack() {
 	len := len(this.bracketStack)
 	this.bracketStack = this.bracketStack[:len-1]
 }
 
-func (this *TokenizeContext) pushBracketStack(arg string) {
+func (this *Tokenizer) pushBracketStack(arg string) {
 	this.bracketStack = append(this.bracketStack, arg)
 }
 
 
-func readToken(context *TokenizeContext, code string) (result Token, offset int) {
+func readToken(context *Tokenizer, code string) (result Token, offset int) {
 	// fmt.Printf("read token in:%s...\n", code[:20]);
   if (len(code) == 0) {
 		panic("Cannot read token in empty string");
@@ -303,18 +313,22 @@ func readToken(context *TokenizeContext, code string) (result Token, offset int)
 	panic(fmt.Sprintf("unexpected input: %c\n", c))
 }
 
-func tokenize(code string) {
-  for len(code) > 0 {
-		var context = &TokenizeContext{}
-    var token, offset = readToken(context, code);
-    if token.kind == TkSemicolon {
-      fmt.Println("Semicolon(;)");
-    } else {
-      fmt.Println(token);
-    }
+func (this *Tokenizer) Next() Token {
+	var token, offset = readToken(this, this.code[this.offset:])
+	this.offset += offset + len(token.value)
+	return token
+}
 
-		code = code[offset+len(token.value):]
-  }
+func (this *Tokenizer) AtEnd() bool {
+	return this.offset == len(this.code)
+}
+
+func tokenize(code string) {
+	var tokenizer = NewTokenizer(code)
+  for !tokenizer.AtEnd() {
+		token := tokenizer.Next()
+		fmt.Println(token)
+	}
 }
 
 func main() {
