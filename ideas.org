@@ -1,0 +1,737 @@
+This is simply a concept for a new programming language at this point
+in time. This Document should serve as guideline and collection of
+ideas worth following. It is work in progress.
+
+* The scientific approach to language design
+
+Making a new programming language that just works how I want it. Just
+adds another entry to the pile of existing programming languages. But
+it doesn't solve the underlying problem.
+
+But what is the underlying problem in programming language design?
+In my opinion the problem is that a dogmatic approach
+
+** Problem in Traditional compiler development
+
+ 0. Only compiler developers can implement features.
+ 1. The language/compiler developers implement a feature because it is
+    requested or they think it is useful.
+ 2. Testing phase begins. Everything seems to work fine.
+ 3. The real testing of course begins after the feature has been
+    released. Nobody wants to rely on experimental features in their
+    project.
+ 4. The feature turns out to attract a lot of users but in the long
+    run it causes more problems than anything else.
+ 5. The feature is now everywhere, The language is stuck with it and
+    can't fix it.
+ 6. Start with a new language, but this time only add features without
+    downsides (Go).
+
+Many problems are here:
+
+ * Languages are stuck with bad decision decisions because there
+   exists no rollback mechanism.
+ * New languages rollback on everything,
+ * The new language also has no rollback mechanism and therefore gets
+   stuck somewhere else.
+
+** Proposed Alternative
+
+Core language only contains well established features and concepts.
+
+Even the Core language should provide fine grained control over
+several aspects of the language, for example scoping rules, pass
+behavior in functions. Garbage collection.
+
+Advanced features are implemented as macros. Well established macros
+will be lifted to be part of the compiler (for performance reason).
+
+Getting rid of a specific macro in a ~codebase~ can automatically be
+done.
+
+More features for more people can be developed in parallel.
+
+A gremium can now decide after a feature has become popular and well
+tested, if it should become part of the standard distribution.
+
+Features need to have justifications in the design guideline of the
+language. Features that don't serve a higher goal in the design
+concept of the language can therefore be detected and removed.
+
+Be open about the limitations of the language. Only when limitations
+are tracked down, they can be addressed with solutions.
+
+* Why Yet another programming language
+
+Programming languages are made for several reasons. Many of them are
+good, many of them are bad. Some languages were born out of necessity,
+some are made out of joy in creating programming languages, and some
+are mode to serve a hidden business purpose. This language is born out
+of frustration with existing languages.
+
+Q: Why not fix an existing programming language and embrace its
+development.?
+
+A: I tried many times. Did not work out as many times.
+
+Q: What is the itching that you are trying to Fix with this Language.
+
+A: I try to provide a language, where people can fix their itches
+themself without the need to agree with the need to convince me about
+it.
+
+Q: What is the scope of the language?
+
+This language should serve as the preferred medium how humans can
+interact with their computer. This goes from high level interactive
+shell scripting where system processes can get started easily, to low
+level programming with structs and pointers, and even more more
+specialized gpu programming.
+
+* A language to Fight Chaos
+
+Everything is messy, especially when dealing with the internet (or
+human diversity). Nothing is ever consistent. Even within a single
+programming language things are often inconsistent. But software
+around the world is written in a bunch of different programming
+languages.
+
+* The User is the Authority
+
+Treat the user with respect. Don't patronize the user. If the user
+wants something, the user should be able to get it somehow. If the
+user wants to disable something there should be a way to disable it
+(optional language features).
+
+Incomplete list of examples where users are often patronized:
+
+ * garbage collection
+ * no garbage collection
+ * calling semantics
+ * language syntax
+ * Memory Layout
+
+Patronizing the user can be a good thing, but it isn't the job of a
+general purpose programming language to do this. It is the job of team
+leaders or project owners. This programming language doesn't claim
+responsibility for this.
+
+* No Cursed Weapons
+
+In Dungeons and Dragons and many inspired games, there is the concept
+of a cursed weapon, that when equipped, the hero can't take off
+anymore. A cursed weapon can in fact be a good weapon, but not being
+able to remove it anymore is just not good. The metaphor of a cursed
+weapon applies to many patterns in programming as well. Garbage
+collection is usually implemented as such a cursed weapon. If a
+language provides garbage collection, it is everywhere and the developer
+can't decide not to use it.
+
+Rust provides borrow checking to solve the memory safety problem
+without the need of a garbage collector. But this is just yet another
+cursed weapon the programmer cannot really opt out of. Solutions like
+this often come with a hidden cost that might become obvious very late
+into a project. But then the only way to take off the cursed weapon is
+port the project over to an entirely new programming language. And
+this is not just very expensive, it also has so many unknown and hidden costs
+attached to it is almost always impractical to do so.
+
+** Know Nothing by Design
+
+As a language designer I don't know if garbage collection or borrow
+checking or maybe something else is the best solution to get the
+developer's software done. The only person who is able to answer this
+question is the developer. Therefore as a language designer I must
+provide a solution that lets the developer pick from garbage
+collection, borrow checking, etc. Also there must be a solution to
+restrict garbage collection to a small part of the software.
+
+* Avoid the Walled Garden
+
+Many programming languages are like a walled garden, they can only
+access variables and functions from within the same language. This
+language should be different. Golem should act as a glue language that
+can stick together many different programming languages, wrapper free.
+
+The way this should work is with embedded DSLs for every language
+golem can call into. An example of how this might look can be seen in
+Go. In go there are magic comments that allow to write C code within
+a Go file. This allows to access both the C world and the Go world
+from within the same file.
+
+The difference here is, the embedded DSLs should be user defined, and
+it should be possible to design many different embedded DSLs for many
+different programming languages. One for C and C++, One for Java, One
+for JavaScript etc.
+
+* Focus on Metaprogramming and Tools
+
+One of the most important aspects of efficient and precise work of a
+programmer are good tools. Therefore it is essential that the
+programming language has special integration to build good
+tools. Tools shouldn't be build from scratch, they should be build
+around the compiler, within the language, easy to integrate. Examples:
+
+ * Custom error messages and warnings
+ * Programmable Completion
+ * project wide refactorings (like ~sed~ but more precise)
+ * Spell and Grammar checker for doc strings.
+ * model checking
+ * effect system
+
+After all, code is hypertext and without the help of a compiler, it is
+just text.
+
+* Performance Matters
+
+Performance matters, and experience shows only languages that provide
+building blocks for precise memory layout (like C) are fast in all
+domains of computing.
+
+* It is a Human Language after all
+
+Often enough we forget that programming languages are hybrid languages
+that needs to be both, natural for a human to read and write, and
+unambiguous for a machine to process. Tradeoffs need to be made
+here. There are generally four use cases for a programming language:
+
+ 1. Human to Computer communication
+
+    This is the most common usage of a programming language and and
+    arguably the most important form. It simply means a Humans tells a
+    computer, with the help of a programming language, what to
+    do. This is usually just called programming.
+
+ 2. Human to Human communication
+
+    Programming languages are often used in education to
+    explain algorithms.
+
+ 3. Computer to Computer communication
+
+    Genereally speaking, whenever code is generated and then further
+    processed by a compiler, we speak from computer to computer
+    communication. Intermediate representations in a compiler are
+    examples of languages optimized for this use case. And C is often
+    used to generate code for, even thoguh it is not designed for this
+    use case
+
+ 4. Computer to Human communication
+
+    It is debatable if error messages that a compiler throws are part
+    of a programming language definitien. For me they certainly are
+    part of the language and they tell the user what the computer did
+    not understand properly. And therefore it is clear computer to
+    human communication.
+
+Focusing on just humans or just computers completely ignoring the
+other, improves some use cases but makes the language worse for other
+use cases. A programming language is worse in a human to human
+communication, when it only has a written form, but no spoken
+form. Pointer arithmetic in C is such an example where a written form
+exists, but no official pronunciation of such pointer expressions
+exists. ~p*~ is refered to as "p star" "p pointer" or even "pointer
+p". The solution here would be to either use explicit words over
+symbols, or to declare an offical pronounciation for each symbol that
+is used. Focussing too much on humans might harm compilation
+time.
+
+Things to avoid in a human friendly language:
+
+  * underscores and the start or end of symbol
+  * symbols sprinkled around the sourcecode, that are not part of the
+    problem domain (* ^ & for pointer and borrow checker)
+
+* Create your own language toolbox
+
+There are opinionated people out there who disregard a programming
+language simply because it doesn't have feature X and therefore it
+can't be good. Completely ignoring the fact that there might be a
+better solution in the language to solve their problem. Our goal here
+is not to educate those people before trying out this language, we
+want to be able to simply tell them, feature X can be emulated. Either
+through a macro that already exists, or by letting them implement
+it on their own.
+
+* Avoid pushing users to make uneducated decisions
+
+This is a problem that I personally experienced in several Linux
+related projects. During the installation you get asked: "do you want
+Gnome or KDE?" No information is provided in what the developer thinks
+is better, or how the user make an informed decision here on its
+own. This problem continues to exist in Arch Linux as well, with its
+installation wiki. It always pushes the user to make a decision. It
+explains very well what the options are and how to pick the options,
+But it is very sparse on the information on what option is best or
+ever which option is just the more common option. Also the sheer
+amount of decisions that need to be made early on with no feedback at
+all lead to poor decision making. Decisions that are often hard to
+revert later.
+
+The solution here is simple. The language should have a clear opinion
+on what solution is best and flatten the path to get to this
+solution. But the language should never make it impossible or even
+hard for people who disagree on these decisions.
+
+* Performance Matters
+
+Any language design that would prevent a theoretical speed limit that
+is worse than C is rejected because of it.
+
+* Visuals matter
+
+There must me more to visualize the source code beyond just a big wall
+of hypertext.
+
+Visualizations should focus on different attributes of source
+code. The visualizations should aid to answer one or many important
+Questions about source code.
+
+ * Which code is edited most frequently?
+ * Which code is edited most frequently because of reported bugs?
+ * Where does the compiler spend all its time?
+ * Who fucked up the build time?
+ * Where does the program spend all its time?
+ * Predict costs before running them (cost transparency)
+
+(Alan Perlis famously quipped “Lisp programmers
+   know the value of everything and the cost of nothing.”)
+
+* debugging
+
+Being able to debug a program is one of the most important features of
+a programming language. While GDB is widely available and powerful,
+its usability is not intuitive at all. Common uses of debuggers:
+
+ * visualize execution of unfamiliar code
+ * visualize execution of problematic code
+ * display values as they are changed
+
+A common problem with existing debuggers is, they struggle to display
+complex data types. While GDB allows custom visualizations of custom
+data structures. These visualizations are limited to text
+representation only. There are so many data objects where a simple
+text representation is not much help, examples are images, 3D polygon
+data, voxel data. Even numbers can be visualized better other than
+just printing the value.
+
+users want to be able to
+visualize variables in source.
+
+* Language Atoms
+
+With language atoms I refer to the smallest building blocks of a
+programming language. The most low level a programmer can go. Examples
+here data types such as ``int`` and ``float``, but also operations on
+them, such as multiplication and addition. These are different from
+user defined or standard library types and operations.
+
+If language atoms are close to the target architecture, the languge
+can technically do high performance computing, when the atoms are much
+more abstract and high level high performance might become a hard
+optimization problem.
+
+* Do not Rely on Optimizations to be Fast
+
+Optimizations are an arbitrary complex topic in computer science. Some
+optimizations are worth it, others are not worth it, many are
+questionable. For many optimizations the question if it is worth it to
+scan for them in your project is never answered. In some languages,
+optimizations are essential to not crash the program (tail
+recursion for infinite loops in functional language).
+
+The problem here is, optimizations have to be done by the compiler
+again and again, for every project build. This can waste a lot of time
+on the developer side.
+
+Encouraging programming patterns that require complex optimizations
+has multiple downsides. First of all, the developer gets used to this
+pattern and therefore uses it more often. The pattern needs to be
+detected by the compiler more often and therefore slower
+compilation. Slower compilation frustrates the developer.
+
+The alternative is to suggest alternative patterns that that either
+don't need optimizations, or can be optimized trivially by the
+compiler.
+
+** TODO needs examples (c++ constructor)
+
+* Aim for programmer happiness
+
+Programming is fun. But many aspects of programming are not fun. Often
+this has to do with dealing with humans at some point in time, but
+often it just dealing with some ugly warts of the programming
+language.
+
+* Bindings to as many other programming languages as possible.
+
+Programming languages are often these perfect isolated worlds, where
+everything nice as long as you do everything in that
+language. You can call into other languages, most of the time it is
+just C, but then you have to write this wrapper code. And there are
+many other languages out there with huge amount of libraries. They
+should be usable as well. This is one aspect of programming that is
+extremely dirty in almost every programming language, this language
+aim to make it as seamless as possible for as many popular languages
+as possible. Even being extensible by the user, to integrate more
+languages for (manually written) wrapper free interaction.
+
+An idea how wrapper free language interaction might work is elaborated
+on in  the chapter about Embedded Domain Specific Languages.
+
+* Embedded Domain Specific Languages
+
+A Domain Specific Lanuage (DSL) is a Language designed for a narrow use
+case, but optimized to express solutions in this use case very
+effectively. A problem that Domain spefic languages do have however,
+they need to interact with other more general programming languages,
+and the interface between the domain language and the general language
+is almost never seamless.
+
+The solution here are Embedded DSLs (EDLS), These are still domain
+languages, but build to be part of a host language. These embedded
+languages full DSLs, but also have access to symbols of the host
+language. The embedded language is then either compiled in place into
+the host language and therefore doesn't cause interfacing problems, or
+the compiler can infer the necessary interface and genererate it fully
+automatic.
+
+** Passing symbols
+
+If an EDSL needs to access a symbol from the host language, for
+example a configuration variable, or block of data, there are
+three syntax options to pick from.
+
+ 1. Explicitly list all important symbols before the DSL
+ 2. Escape or tag the symbol usage in the DSL (e.g. $myvar instead of
+    myvar)
+ 3. Automatic capturing of variables.
+
+Explicit listing might cause unused data to be passed to the
+DSL. Escaping tags variales as alien, prohibits the usage of that
+tagging symbol to be used in the domain language. And last but not
+least, automatic capturing might hide the complexity of the interface,
+but even worse, depending of the scoping and symbol resolution rules
+of the embedded language, it might even be impossible to implement,
+and therefore not an option at all.
+
+** How to define an EDSL:
+
+An edsl should have a start tag and an end tag. The End tag is both
+for the compiler the developer and the EDITOR to know exactly where
+the edsl ends, even when within the DSL there are unmatched braces or
+a lot of syntax that the developr doesn't understand yet.
+
+The edsl should specify a grammar for its syntax. Not every syntax is
+allowed, after all it should be parsable by the golem parser, but the
+syntax definiton language should make it easy to reuse golem language
+patterns, such as identifier, literals, or full expressions
+(optionally with expected type).
+
+Then a macro in the compiler has to process the parsed syntax tree.
+
+* pass arguments by constant reference improved
+
+C++ has shown it, passing arguments as ~const&~ is generally a good
+idea, small types are better when passed as a copy. Let the compiler
+figure this out. So by default function arguments should be passed as
+reference. The compiler is then allowed to optimize the call into a
+pass by copy under the hood. This is nothing new and works exactly
+like this already in /Nim/ and afaik /Jai/.
+
+With these tools, passing structs and members of a struct without a
+deep copy works fine. But it is not yet solved to pass slices of a
+sequence/array like type.
+
+In C there are multiple ways to pass an array or sequence to a
+function. A common pattern is to pass a pointer to the first element
+and an integer containing the array length. For the reader this
+pointer integer pair instantly reads as an array argument. But it is
+more than just a reference to an array, it can seamlessly be used to
+reference a subarray without the introduction of a new type. Nim, Rust
+and C++ all have a specific type introduced, just to parss subarrays
+to functions.
+
+These new types are technically a good solution, but they bring in a
+human problem. All procedures that take a ~string~ as argument have to
+be rewritten to take a ~stringview~ instead. This is a burden on every
+programmer.
+
+The solution that I provide here is exploits the circumstance that the
+string type in the argument list is already semantically an immutable
+reference to a string. There is semantically no difference between an
+immutable reference to a string, and an immutable string slice, so the
+compiler can do the substitution for me. This way the language might
+be able to avoid the slice type in general.
+
+mutable references to strings and sequences are yet to be figured
+out. But at the current time strings and sequences aren't even figured
+out yet.
+
+null terminating strings might be incompatible with this concept.
+
+* dynamical scoping with compile time check.
+
+This idea came from working on opengl sandbox, but it is also
+inspiried from dynamically scoped variables in emacs lisp.
+
+Dynamic scoping by default like in emacs lisp is bad for two
+reasons. Risk of accidental hiding of variables and performance. But
+dynamic scoping has its use cases and abandoning it all together just
+because it has problems is no good solution either.
+
+In opengl sandbox, binding a framebuffer puts the current framebuffer
+on the dynamic stack. Entering the shadingDsl from here on makes the
+compiler look up the type of the current framebuffer. In OpenGL
+Sandbox that doesn't work down through function calls, but it would be
+technically possible to implement it.
+
+* Orthogonal and Interleaved Documentation and tests.
+
+Good documentation is important, the language (and tools) can help to
+write the best documentation possible.
+
+There are two ways to write documentation, orthogonal and interleaved
+(I just made that term up, don't google it). Interleaved documentation
+is just classical doc comments. They are interleaved, because there is
+source code, then there is documentation (comment), and then source
+code again. Orthogonal documentation is documentation out of
+source. It is orthogonal, because it doesn't touch the source code.
+
+Interleaved documentation is best when there isn't a lot of
+documentation to begin with. It is just simpler to start this
+way. When the documentation becomes more complex and detailed, it can
+happen that the documentation completely overshadows the
+implementation in visual document size. Then it might be a good idea
+then to migrate the documentation to a separate file. The compiler
+must be able to automate this migration in both directions.
+
+The exact same wording can be applied for testing as well.
+
+* Documentation is important.
+
+Always know where symbols come from, how much dependency they have
+
+* Object Oriented programming as library
+
+The usefulness of object oriented programming is debated. Some people
+go all in on OO, while other people try to avoid OO as much as
+possible. Golem wants to welcome both types of people. People who
+think OO should be able to express themself with OO, and those people
+who want to keep their project free from any OO pattern can simply opt
+out of the classes feature.
+
+This works when the concept of classes and inheritance is implemented
+as a macro. Examples of classes implemented via macro systems can be
+found it various lisp dialects such as elisp.
+
+Classes as library feature is important here, because it allows that
+the language feature can be improved upon by language users who care
+about OO. As said earlier, they don't need to convince me the language
+designer to introduce new concepts here.
+
+* Entity Component Systems
+
+Especially entity component systems are very important. For some
+reasons they don't yet have built in language support and they are
+just a programming pattern. This language doesn't try to implement
+entity component systems as a language feature either, but as a
+standard library macro. Similar to OO programming
+
+* Compiler internal data structure for the Syntax Tree.
+
+For a syntax tree it is important to process with recursive
+algorithms (iterate members), but it is also important to provide
+names for the children (field names). Therefore neither a class
+structure (no recursion over children), nor a tagged list of children
+(no names, position is name), are suitable. Also it would be best, if
+syntax tree structures would have a flat representation.
+
+
+#+begin_src C++
+
+#include <cstdint>
+#include <vector>
+#include <map>
+
+
+enum class SyntaxKind {
+  Identifier,
+  Symbol,
+  StringLiteral,
+  IntLiteral,
+  FloatLiteral,
+  Length,
+};
+
+struct Identifier {
+  int32_t id;
+};
+
+class IdentifierList {
+  std::unordered_map<std::string, Identifier>
+public:
+
+  newIdentifier(const char* name) {
+
+  }
+};
+
+identifierlist
+
+
+
+struct SyntaxNode {
+  SyntaxNode* children[];
+};
+
+int main() {
+}
+#+end_src
+
+#+RESULTS:
+
+* dumping ground of ideas
+
+ * easy jump to example/documentation while typing code. (like M-h in fish)
+an by displaying
+text. Displaying text is good to show individual parts of a program,
+but not good to get a general idea of
+ * The user is constantly fighting Chaos, don't curse the weapons.
+ * Infer UI from API should be possible
+ * a window-manager in golem for people who want to go all in (port
+   DWM)
+
+** backwards compatibility
+
+There are several approaches towards backwards compatibility in a
+language. One is to support multiple versions of a compiler,
+backporting bugfixes to old version branches of a compiler.
+
+When language features are provided as modules with module versions,
+people can stick to old versions of a feature. New versions of that feature
+won't break existing code.
+
+** Pattern Matching like in Scala
+
+Pattern Matching in Scala just works and is even extendable to custom
+matchers. There is no reason not to steal this feature and adapt it
+to the current language constraints.
+
+** Comments
+
+Line comments should be declared with ~#~ to be compatible with ~#!~
+executible files in POSIX systems.
+
+Multiline comments, not decided yet
+
+** Non keyword based language
+
+Many programming languages are based around keywords. Nim however
+shows, that even core language types, such as `int` and `float` may as
+well be defined locally in the system library, but with a ~buildin~
+implementation.
+
+Other language features such as for-loops might be implemented as
+system library macro symbols with ~buildin~ implementation.
+
+The purpose here should be to simplify the multi-backend compiler
+infrastructure.
+
+** Don't unifiy :: and .
+
+It is very valuable to see context free when a symbol lookup is from a
+local context (object) or a globally existent namespace.
+
+Jump to definition on ``foo::bar`` can capture the entire expression,
+while in ``foo.bar`` it is unknown to the editor if foo is a
+namespace/package or not.
+
+** Enums and Constant Groups
+
+Go does not have enums just constant groups that can be assigned with
+iota to mimic enums. Language knowledge about enums allows to have
+arrays that map directly from an enum type to the value. A distinction
+between enums and constant groups helps to keep out "enums with holes"
+from parts of the language where they don't belong.
+
+both enum and the const group should have their own scope, but context
+matters.
+
+#+begin_src
+
+type MyEnum = enum {
+  A,B,C,D
+}
+
+type MyConstantGroup = constgroup {
+  A = 100
+  B = 200
+  C = 1337
+  D = 4711
+}
+
+var myArray : array[MyEnum, string] # ok
+var myArray : array[MyConstGroup]   # not ok
+
+
+proc foo[T : constgroup](arg: T): string = ...
+
+foo(MyEnum:A)       # OK
+foo(MyConstGroup:B) # OK
+
+println(A)
+
+#+end_src
+
+** language support for arrays at end of object
+
+#+begin_src nim
+
+type MyNode = object
+  kind: NodeKind
+  flags : set[NodeFlag]
+  numChildren : uint16 {. length .} # this tells the compiler everything to have have language support
+  children : UncheckedArray[ptr MyNode]
+
+# auto generated constructor
+let foobar = createMyNode(numChildren = 13)
+
+# auto generated length
+echo "num children: ", len(foobar)
+staticAssert len(foobar) is int
+
+# auto generated iterator
+for child in foobar:
+  echo "child kind: ", child.kind
+
+#+end_src
+
+* A defensive justification for macros
+
+ * The Lisp Dialect Fragmentation Problem.
+
+Lisp as a programming language is known to have many dialects of
+itself. Not just several implementations, but also competing macros
+that do essentially implement the same language feature effectively
+making it a harder to read language. While I do agree that this is a
+problem that should be addressed I don't accept this as a reason to
+not have powerful macros altogether in this language.
+
+My claim here is simply that dialects emerge for more complicated
+reasons other than the opportunity to create them. And simply taking
+the possibility away to diverge the language won't magically make the
+urge to diverge the laguage away.
+
+On the other hand, if for example there are no macros in a language,
+it doesn't mean that there won't be language fragmentation. Just as an
+example take the language C++, it doesn't have macros[fn:1] but it
+does have language fragmentation. Many language features are
+redundant, like ~printf~ and ~cout~ which inevitably results in
+different user groups that prefer certain styles and subsets over
+others.
+
+[fn:1] C style macros are referred to as a "substitution
+preprocessor".
+
+** TODO no Solution yet
