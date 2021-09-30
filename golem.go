@@ -5,21 +5,7 @@ import "os"
 import "unicode/utf8"
 import "strings"
 import "io/ioutil"
-// import "regexp"
 import u "unicode"
-
-
-// (project-try-vc default-directory)
-// (vc-responsible-backend default-directory)
-// (project-current t)
-// (project-compile)
-// (project-find-file)
-// (project-compile)
-// (project-root (project-current t))
-//  default-directory
-// (toggle-debug-on-error t)
-// MatchString
-// https://0x0.st/-Y01.el
 
 type TokenKind int16
 
@@ -78,8 +64,8 @@ type Token struct {
   value string;
 };
 
-func (this Token) String() string {
-	return fmt.Sprintf("<%s %q>", TokenKindNames[this.kind], this.value)
+func (this TokenKind) String() string {
+	return TokenKindNames[this]
 }
 
 //func print(Token token) -> void {
@@ -116,7 +102,8 @@ func (this *Tokenizer) pushBracketStack(arg string) {
 }
 
 
-func readToken(context *Tokenizer, code string) (result Token, offset int) {
+func (this *Tokenizer) Next() (result Token) {
+	code := this.code[this.offset:]
 	// fmt.Printf("read token in:%s...\n", code[:20]);
   if (len(code) == 0) {
 		panic("Cannot read token in empty string");
@@ -138,9 +125,11 @@ func readToken(context *Tokenizer, code string) (result Token, offset int) {
 			rune, length = utf8.DecodeRuneInString(code[idx:])
     }
 
+		this.offset += idx
+
     if gotNewLine &&
         // do not infer semicolon when within braces
-        (len(context.bracketStack) == 0 || context.bracketStack[len(context.bracketStack)-1] != "(") {
+        (len(this.bracketStack) == 0 || this.bracketStack[len(this.bracketStack)-1] != "(") {
         // TODOdo not infer semicolon after comments
 			result.kind = TkSemicolon
 			result.value = code[:idx]
@@ -148,7 +137,6 @@ func readToken(context *Tokenizer, code string) (result Token, offset int) {
     }
 
     code = code[idx:];
-		offset = idx
   }
 
   result = Token{kind : TkInvalid, value : code[:1]};
@@ -171,8 +159,6 @@ func readToken(context *Tokenizer, code string) (result Token, offset int) {
 				break
 			}
 	  }
-
-		return
   case c == '#':
     result.kind = TkLineComment;
 		result.value = code
@@ -182,7 +168,6 @@ func readToken(context *Tokenizer, code string) (result Token, offset int) {
 				break
 			}
 	  }
-		return
   case u.IsDigit(c):
     result.kind = TkIntLit;
     // read number literal
@@ -242,81 +227,60 @@ func readToken(context *Tokenizer, code string) (result Token, offset int) {
 		  }
 	  }
 		result.value = code[:idx2]
-		return
   case c == '(':
-    context.pushBracketStack(code[:cLen]);
+    this.pushBracketStack(code[:cLen]);
     result = Token{TkOpenBrace, code[:cLen]};
-		return
   case c == ')':
-    if context.checkLastBracket("(") {
-			context.popBracketStack()
+    if this.checkLastBracket("(") {
+			this.popBracketStack()
 			result = Token{TkCloseBrace, code[:cLen]};
     }
-    return
   case c == '[':
-    context.pushBracketStack(code[:cLen]);
+    this.pushBracketStack(code[:cLen]);
     result = Token{TkOpenBrace, code[:cLen]};
-		return
   case c == ']':
-    if context.checkLastBracket("[") {
-			context.popBracketStack()
+    if this.checkLastBracket("[") {
+			this.popBracketStack()
       result = Token{TkCloseBrace, code[:cLen]};
     }
-    return;
   case c == '{':
-    context.pushBracketStack(code[:cLen]);
+    this.pushBracketStack(code[:cLen]);
 		result = Token{TkOpenBrace, code[:cLen]};
-    return
   case c == '}':
-    if context.checkLastBracket("{") {
-			context.popBracketStack()
+    if this.checkLastBracket("{") {
+			this.popBracketStack()
 			result = Token{TkCloseBrace, code[:cLen]};
     }
-    return
   case c == '(':
-    context.pushBracketStack(code[:cLen]);
+    this.pushBracketStack(code[:cLen]);
 		result = Token{TkOpenBrace, code[:cLen]};
-    return
   case c == ')':
-    if context.checkLastBracket("(") {
-			context.popBracketStack()
+    if this.checkLastBracket("(") {
+			this.popBracketStack()
       result = Token{TkCloseBrace, code[:cLen]};
     }
-    return
   case c == ',':
 		result = Token{TkComma, code[:cLen]};
-		return
   case c == ';':
 		result = Token{TkSemicolon, code[:cLen]};
-		return
-
-  default:
-    if u.IsSymbol(c) || u.IsPunct(c) {
-
-      var idx2 = len(code);
-			for pos, rune := range code[cLen:] {
-				if !u.IsPunct(rune) && !u.IsSymbol(rune) || strings.ContainsRune("{}[](),;", rune) {
-					idx2 = cLen + pos
-					break
-			  }
+	case u.IsSymbol(c) || u.IsPunct(c):
+		var idx2 = len(code);
+		for pos, rune := range code[cLen:] {
+			if !u.IsPunct(rune) && !u.IsSymbol(rune) || strings.ContainsRune("{}[](),;", rune) {
+				idx2 = cLen + pos
+				break
 			}
+		}
 
-      result.kind = TkOperator;
-      result.value = code[:idx2];
-      return
-    }
+		result.kind = TkOperator;
+		result.value = code[:idx2];
+  default:
 		fmt.Printf("ispunct %v\n", u.IsSymbol(c) )
 		panic(fmt.Sprintf("unexpected input: %c\n", c))
   };
 
-	fmt.Printf("ispunct %v\n", u.IsPunct(c) )
-	panic(fmt.Sprintf("unexpected input: %c\n", c))
-}
-
-func (this *Tokenizer) Next() Token {
-	var token, offset = readToken(this, this.code[this.offset:])
-	this.offset += offset + len(token.value)
-	return token
+	this.offset += len(result.value)
+	return
 }
 
 func (this *Tokenizer) AtEnd() bool {
@@ -331,30 +295,100 @@ func tokenize(code string) {
 	}
 }
 
+type TypeDef struct {
+	name string
+}
+
+type ProcDef struct {
+	name string
+}
+
+type PackageDef struct {
+	name string
+	typeDefs []TypeDef
+	procDefs []ProcDef
+}
+
+func (token Token) expectKind(kind TokenKind) {
+	if token.kind != kind {
+		panic(fmt.Sprintf("expected %v got %v", kind, token.kind))
+	}
+}
+
+func (token Token) expectIdent(arg string) {
+	token.expectKind(TkIdent)
+	if token.value != arg {
+		panic(fmt.Sprintf("expected %v got %v", arg, token.value))
+	}
+}
+
+func (token Token) expectOperator(arg string) {
+	token.expectKind(TkOperator)
+	if token.value != arg {
+		panic(fmt.Sprintf("expected %v got %v", arg, token.value))
+	}
+}
+
+
+func parseTypeDef(tokenizer *Tokenizer) (result TypeDef) {
+	var token Token
+	token = tokenizer.Next()
+	token.expectKind(TkIdent)
+	result.name = token.value
+	token = tokenizer.Next()
+	token.expectOperator("=")
+	token = tokenizer.Next()
+	fmt.Printf("pt: %v\n", token)
+  return
+}
+
+func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
+	return
+}
+
+func parsePackage(code, packageName string) (result PackageDef) {
+	result.name = packageName
+	var tokenizer = NewTokenizer(code)
+  for !tokenizer.AtEnd() {
+		token := tokenizer.Next()
+		switch token.kind {
+		case TkLineComment:
+			continue
+		case TkSemicolon:
+			continue
+		case TkIdent:
+			switch token.value {
+			case "type":
+				result.typeDefs = append(result.typeDefs, parseTypeDef(tokenizer))
+				continue
+			case "proc":
+				result.procDefs = append(result.procDefs, parseProcDef(tokenizer))
+				continue
+			}
+		}
+		panic(fmt.Sprintf("Unexpected Token: %v\n", token))
+	}
+	return
+}
+
 func main() {
 	for i, arg := range os.Args {
     fmt.Printf("%d: %s\n", i, arg);
   }
 
-  // if (len(os.Args) < 2) {
-  //   panic("no input file specified");
-  // }
-  // var file = fileFileToString(os.Args[1]);
-
-	filepath := "/home/arne/proj/golem-language/prototype1/demo.golem"
+	var filepath string
+  if len(os.Args) == 2 {
+		filepath = os.Args[1]
+	} else {
+    panic("program needs one argument only, the input file");
+  }
 
 	bytes, err := ioutil.ReadFile(filepath)
 	if err != nil { panic(err) }
-	file := string(bytes)
-
-
-  fmt.Println("all file:")
-	fmt.Println(file)
-	fmt.Println("------------------------------------------------------------------------------");
-
-  tokenize(file);
+  // tokenize(string(bytes));
+	parsePackage(string(bytes), "demo")
 }
 
 // Local Variables:
-// compile-command: "go build && ./golem"
+// compile-command: "go build && ./golem demo.golem"
 // End:
