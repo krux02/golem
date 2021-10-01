@@ -1,0 +1,11 @@
+
+
+* IDEA explicit tagging for return based, assignment based, or expression based function body ahead of time
+
+  #+begin_src golem
+
+  proc foo(a,b): int = a + b # expression based
+  proc foo(a,b): int { return a + b } # return based, no = op
+  proc foo(a,b): (result: int) {result = a + b}
+
+  #+end_src

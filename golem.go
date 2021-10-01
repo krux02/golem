@@ -68,6 +68,10 @@ func (this TokenKind) String() string {
 	return TokenKindNames[this]
 }
 
+func (this Token) String() string {
+	return fmt.Sprintf("(%s %q)", this.kind, this.value)
+}
+
 //func print(Token token) -> void {
 //  printf("%s(%.*s)", TokenKindNames[size_t(token.kind)], (int)len(token.value), token.value.data );
 //}
@@ -237,27 +241,19 @@ func (this *Tokenizer) Next() (result Token) {
     }
   case c == '[':
     this.pushBracketStack(code[:cLen]);
-    result = Token{TkOpenBrace, code[:cLen]};
+    result = Token{TkOpenBracket, code[:cLen]};
   case c == ']':
     if this.checkLastBracket("[") {
 			this.popBracketStack()
-      result = Token{TkCloseBrace, code[:cLen]};
+      result = Token{TkCloseBracket, code[:cLen]};
     }
   case c == '{':
     this.pushBracketStack(code[:cLen]);
-		result = Token{TkOpenBrace, code[:cLen]};
+		result = Token{TkOpenCurly, code[:cLen]};
   case c == '}':
     if this.checkLastBracket("{") {
 			this.popBracketStack()
-			result = Token{TkCloseBrace, code[:cLen]};
-    }
-  case c == '(':
-    this.pushBracketStack(code[:cLen]);
-		result = Token{TkOpenBrace, code[:cLen]};
-  case c == ')':
-    if this.checkLastBracket("(") {
-			this.popBracketStack()
-      result = Token{TkCloseBrace, code[:cLen]};
+			result = Token{TkCloseCurly, code[:cLen]};
     }
   case c == ',':
 		result = Token{TkComma, code[:cLen]};
@@ -287,38 +283,53 @@ func (this *Tokenizer) AtEnd() bool {
 	return this.offset == len(this.code)
 }
 
-func tokenize(code string) {
-	var tokenizer = NewTokenizer(code)
-  for !tokenizer.AtEnd() {
-		token := tokenizer.Next()
-		fmt.Println(token)
-	}
+type TypeExpr struct {
+	Ident string
 }
 
-type TypeDef struct {
-	name string
+type StructField struct {
+	Name string
+	Type TypeExpr
+}
+
+type StructDef struct {
+	Name string
+	Fields []StructField
+}
+
+type ProcArgument struct {
+	Name string
+	Type TypeExpr
+}
+
+type Expr struct {
+	Value string
 }
 
 type ProcDef struct {
-	name string
+	Name string
+	Arguments []ProcArgument
+	ResultType TypeExpr
+	Body Expr
 }
 
+
 type PackageDef struct {
-	name string
-	typeDefs []TypeDef
-	procDefs []ProcDef
+	Name string
+	TypeDefs []StructDef
+	ProcDefs []ProcDef
 }
 
 func (token Token) expectKind(kind TokenKind) {
 	if token.kind != kind {
-		panic(fmt.Sprintf("expected %v got %v", kind, token.kind))
+		panic(fmt.Sprintf("expected %v got %v", kind, token))
 	}
 }
 
 func (token Token) expectIdent(arg string) {
 	token.expectKind(TkIdent)
 	if token.value != arg {
-		panic(fmt.Sprintf("expected %v got %v", arg, token.value))
+		panic(fmt.Sprintf("expected ident %v got %v", arg, token.value))
 	}
 }
 
@@ -329,25 +340,127 @@ func (token Token) expectOperator(arg string) {
 	}
 }
 
+func (tokenizer *Tokenizer) parseTypeExpr() (result TypeExpr) {
+	token := tokenizer.Next()
+	token.expectKind(TkIdent)
+	result.Ident = token.value
+	return
+}
 
-func parseTypeDef(tokenizer *Tokenizer) (result TypeDef) {
+func (tokenizer *Tokenizer) parseExpr() (result Expr) {
+
+	startOffset := tokenizer.offset
+	token := tokenizer.Next()
+
+	if token.kind == TkIdent {
+		result.Value = token.value
+		return
+	}
+
+	token.expectKind(TkOpenCurly)
+	curlyDepth := 1
+
+	for curlyDepth > 0 {
+		token = tokenizer.Next()
+
+		if token.kind == TkOpenCurly {
+			curlyDepth++
+		}
+		if token.kind == TkCloseCurly {
+			curlyDepth--
+	  }
+	}
+
+	endOffset := tokenizer.offset
+	result.Value = tokenizer.code[startOffset:endOffset]
+
+	return
+}
+
+func parseTypeDef(tokenizer *Tokenizer) (result StructDef) {
 	var token Token
 	token = tokenizer.Next()
 	token.expectKind(TkIdent)
-	result.name = token.value
+	result.Name = token.value
 	token = tokenizer.Next()
 	token.expectOperator("=")
 	token = tokenizer.Next()
-	fmt.Printf("pt: %v\n", token)
+	token.expectIdent("struct")
+
+	openBrace := tokenizer.Next()
+	openBrace.expectKind(TkOpenCurly)
+
+	token = tokenizer.Next()
+
+	for token.kind == TkSemicolon {
+		token = tokenizer.Next()
+	}
+
+  for token.kind == TkIdent {
+		var structField StructField
+		name := token
+		name.expectKind(TkIdent)
+		structField.Name = name.value
+		colon := tokenizer.Next()
+		colon.expectOperator(":")
+		structField.Type = tokenizer.parseTypeExpr()
+		token = tokenizer.Next()
+		token.expectKind(TkSemicolon)
+		for token.kind == TkSemicolon {
+			token = tokenizer.Next()
+		}
+		result.Fields = append(result.Fields, structField)
+	}
+
+	token.expectKind(TkCloseCurly)
+
+
   return
 }
 
 func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
+	token := tokenizer.Next()
+	token.expectKind(TkIdent)
+	result.Name = token.value
+	token = tokenizer.Next()
+	token.expectKind(TkOpenBrace)
+	token = tokenizer.Next()
+
+	for token.kind == TkIdent {
+		startIndex := len(result.Arguments)
+
+		result.Arguments = append(result.Arguments, ProcArgument{Name: token.value})
+		token = tokenizer.Next()
+		for token.kind == TkComma {
+			token = tokenizer.Next()
+			token.expectKind(TkIdent)
+			result.Arguments = append(result.Arguments, ProcArgument{Name: token.value})
+			token = tokenizer.Next()
+		}
+
+		token.expectOperator(":")
+  	typ := tokenizer.parseTypeExpr()
+		for i := startIndex; i < len(result.Arguments); i++ {
+			result.Arguments[i].Type = typ
+		}
+		token = tokenizer.Next()
+	}
+	token.expectKind(TkCloseBrace)
+
+	token = tokenizer.Next()
+	token.expectOperator(":")
+	result.ResultType = tokenizer.parseTypeExpr()
+	token = tokenizer.Next()
+	token.expectOperator("=")
+
+	result.Body = tokenizer.parseExpr()
+
+	fmt.Printf("Body:\n%s\n", result.Body.Value)
 	return
 }
 
 func parsePackage(code, packageName string) (result PackageDef) {
-	result.name = packageName
+	result.Name = packageName
 	var tokenizer = NewTokenizer(code)
   for !tokenizer.AtEnd() {
 		token := tokenizer.Next()
@@ -359,13 +472,17 @@ func parsePackage(code, packageName string) (result PackageDef) {
 		case TkIdent:
 			switch token.value {
 			case "type":
-				result.typeDefs = append(result.typeDefs, parseTypeDef(tokenizer))
+				result.TypeDefs = append(result.TypeDefs, parseTypeDef(tokenizer))
 				continue
 			case "proc":
-				result.procDefs = append(result.procDefs, parseProcDef(tokenizer))
+				result.ProcDefs = append(result.ProcDefs, parseProcDef(tokenizer))
 				continue
 			}
 		}
+
+		fmt.Println("Cant Process")
+		fmt.Println(tokenizer.code[tokenizer.offset:])
+
 		panic(fmt.Sprintf("Unexpected Token: %v\n", token))
 	}
 	return
