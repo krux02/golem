@@ -6,6 +6,7 @@ import "unicode/utf8"
 import "strings"
 import "io/ioutil"
 import u "unicode"
+import "path/filepath"
 
 type TokenKind int16
 
@@ -83,10 +84,38 @@ type Tokenizer struct {
   lastToken Token
 };
 
+
 func NewTokenizer(code string) *Tokenizer {
 	return &Tokenizer{code:code}
 }
 
+func (this *Tokenizer) LineColumn(offset int) (line,column int) {
+	line = 1
+	lineStart := 0
+	for pos, rune := range this.code {
+		if offset <= pos {
+			column = pos-lineStart
+			return
+		}
+
+		if rune == '\n' {
+			line++
+			lineStart = pos
+		}
+	}
+	return -1, -1
+}
+
+func (this *Tokenizer) LineColumnCurrent() (line,column int) {
+	return this.LineColumn(this.offset)
+}
+
+func (this *Tokenizer) LineColumnLastToken() (line,columnStart, columnEnd int) {
+	fmt.Println(this.lastToken)
+	line, columnStart = this.LineColumn(this.offset - len(this.lastToken.value))
+	line, columnEnd = this.LineColumn(this.offset)
+	return
+}
 
 func (this *Tokenizer) checkLastBracket(arg string) bool {
 	len := len(this.bracketStack)
@@ -137,6 +166,7 @@ func (this *Tokenizer) Next() (result Token) {
         // TODOdo not infer semicolon after comments
 			result.kind = TkSemicolon
 			result.value = code[:idx]
+			this.lastToken = result
       return
     }
 
@@ -276,6 +306,7 @@ func (this *Tokenizer) Next() (result Token) {
   };
 
 	this.offset += len(result.value)
+	this.lastToken = result
 	return
 }
 
@@ -348,9 +379,9 @@ func (tokenizer *Tokenizer) parseTypeExpr() (result TypeExpr) {
 }
 
 func (tokenizer *Tokenizer) parseExpr() (result Expr) {
-
-	startOffset := tokenizer.offset
+	// eat whitespace before setting startOffest
 	token := tokenizer.Next()
+	startOffset := tokenizer.offset - len(token.value)
 
 	if token.kind == TkIdent {
 		result.Value = token.value
@@ -480,10 +511,13 @@ func parsePackage(code, packageName string) (result PackageDef) {
 			}
 		}
 
+		// utrineiaurtne
 		fmt.Println("Cant Process")
 		fmt.Println(tokenizer.code[tokenizer.offset:])
-
-		panic(fmt.Sprintf("Unexpected Token: %v\n", token))
+		line, columnStart, columnEnd := tokenizer.LineColumnLastToken()
+		msg := fmt.Sprintf("%s(%d, %d-%d) Error: unexpected Token: %v",
+			packageName, line, columnStart, columnEnd, token)
+		panic(msg)
 	}
 	return
 }
@@ -493,17 +527,21 @@ func main() {
     fmt.Printf("%d: %s\n", i, arg);
   }
 
-	var filepath string
+	var filename string
   if len(os.Args) == 2 {
-		filepath = os.Args[1]
+		filename = os.Args[1]
 	} else {
     panic("program needs one argument only, the input file");
   }
 
-	bytes, err := ioutil.ReadFile(filepath)
+	filename, err := filepath.Abs(filename)
+	if err != nil { panic(err) }
+
+	// base := filepath.Base(filename)
+	bytes, err := ioutil.ReadFile(filename)
 	if err != nil { panic(err) }
   // tokenize(string(bytes));
-	parsePackage(string(bytes), "demo")
+	parsePackage(string(bytes), filename)
 }
 
 // Local Variables:
