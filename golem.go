@@ -30,6 +30,13 @@ const (
 	TkCount
 );
 
+func init() {
+	if TkOpenBrace & TkCloseBrace == 1 {panic("()")}
+	if TkOpenBracket & TkCloseBracket == 1 {panic("[]")}
+	if TkOpenCurly & TkCloseCurly == 1 {panic("{}")}
+	fmt.Println("checks complete")
+}
+
 var TokenKindNames = [TkCount]string{
   "Invalid",
   "Ident",
@@ -73,20 +80,16 @@ func (this Token) String() string {
 	return fmt.Sprintf("(%s %q)", this.kind, this.value)
 }
 
-//func print(Token token) -> void {
-//  printf("%s(%.*s)", TokenKindNames[size_t(token.kind)], (int)len(token.value), token.value.data );
-//}
-
 type Tokenizer struct {
 	code string
+	filename string
 	offset int
-  bracketStack []string
+  bracketStack []Token
   lastToken Token
 };
 
-
-func NewTokenizer(code string) *Tokenizer {
-	return &Tokenizer{code:code}
+func NewTokenizer(code string, filename string) *Tokenizer {
+	return &Tokenizer{code:code, filename:filename}
 }
 
 func (this *Tokenizer) LineColumn(offset int) (line,column int) {
@@ -106,6 +109,10 @@ func (this *Tokenizer) LineColumn(offset int) (line,column int) {
 	return -1, -1
 }
 
+func (this *Tokenizer) LineColumn(token Token) (line,column int) {
+
+}
+
 func (this *Tokenizer) LineColumnCurrent() (line,column int) {
 	return this.LineColumn(this.offset)
 }
@@ -117,9 +124,9 @@ func (this *Tokenizer) LineColumnLastToken() (line,columnStart, columnEnd int) {
 	return
 }
 
-func (this *Tokenizer) checkLastBracket(arg string) bool {
+func (this *Tokenizer) checkMatchingBracket(kind TokenKind) bool {
 	len := len(this.bracketStack)
-	if len > 0 && this.bracketStack[len-1] == arg {
+	if len > 0 && this.bracketStack[len-1].kind == kind ^ 1 {
 		return true
   }
 	return false
@@ -130,13 +137,30 @@ func (this *Tokenizer) popBracketStack() {
 	this.bracketStack = this.bracketStack[:len-1]
 }
 
-func (this *Tokenizer) pushBracketStack(arg string) {
+func (this *Tokenizer) pushBracketStack(arg Token) {
 	this.bracketStack = append(this.bracketStack, arg)
 }
 
-
 func (this *Tokenizer) Next() (result Token) {
+	result, this.offset = this.LookAhead()
+	switch result.kind {
+	case TkOpenBrace, TkOpenBracket, TkOpenCurly:
+		this.pushBracketStack(result)
+	case TkCloseBrace, TkCloseBracket, TkCloseCurly:
+		// either match bracket or invalidat it
+		if this.checkMatchingBracket(result.kind) {
+			this.popBracketStack()
+		} else {
+			result.kind = TkInvalid
+		}
+	}
+	return
+}
+
+// LookAhead does the same as Next, but does not modify offset
+func (this *Tokenizer) LookAhead() (result Token, newOffset int) {
 	code := this.code[this.offset:]
+	newOffset = this.offset
 	// fmt.Printf("read token in:%s...\n", code[:20]);
   if (len(code) == 0) {
 		panic("Cannot read token in empty string");
@@ -153,16 +177,15 @@ func (this *Tokenizer) Next() (result Token) {
       if (rune == '\n') {
         gotNewLine = true;
       }
-
 			idx += length;
 			rune, length = utf8.DecodeRuneInString(code[idx:])
     }
 
-		this.offset += idx
+		newOffset += idx
 
     if gotNewLine &&
         // do not infer semicolon when within braces
-        (len(this.bracketStack) == 0 || this.bracketStack[len(this.bracketStack)-1] != "(") {
+        (len(this.bracketStack) == 0 || this.bracketStack[len(this.bracketStack)-1].kind != TkOpenBrace) {
         // TODOdo not infer semicolon after comments
 			result.kind = TkSemicolon
 			result.value = code[:idx]
@@ -262,29 +285,17 @@ func (this *Tokenizer) Next() (result Token) {
 	  }
 		result.value = code[:idx2]
   case c == '(':
-    this.pushBracketStack(code[:cLen]);
     result = Token{TkOpenBrace, code[:cLen]};
   case c == ')':
-    if this.checkLastBracket("(") {
-			this.popBracketStack()
-			result = Token{TkCloseBrace, code[:cLen]};
-    }
+		result = Token{TkCloseBrace, code[:cLen]};
   case c == '[':
-    this.pushBracketStack(code[:cLen]);
     result = Token{TkOpenBracket, code[:cLen]};
   case c == ']':
-    if this.checkLastBracket("[") {
-			this.popBracketStack()
-      result = Token{TkCloseBracket, code[:cLen]};
-    }
+		result = Token{TkCloseBracket, code[:cLen]};
   case c == '{':
-    this.pushBracketStack(code[:cLen]);
 		result = Token{TkOpenCurly, code[:cLen]};
   case c == '}':
-    if this.checkLastBracket("{") {
-			this.popBracketStack()
-			result = Token{TkCloseCurly, code[:cLen]};
-    }
+		result = Token{TkCloseCurly, code[:cLen]};
   case c == ',':
 		result = Token{TkComma, code[:cLen]};
   case c == ';':
@@ -305,7 +316,7 @@ func (this *Tokenizer) Next() (result Token) {
 		panic(fmt.Sprintf("unexpected input: %c\n", c))
   };
 
-	this.offset += len(result.value)
+	newOffset += len(result.value)
 	this.lastToken = result
 	return
 }
@@ -351,9 +362,10 @@ type PackageDef struct {
 	ProcDefs []ProcDef
 }
 
-func (token Token) expectKind(kind TokenKind) {
+func (tokenizer *Tokenizer) expectKind(token Token, kind TokenKind) {
 	if token.kind != kind {
-		panic(fmt.Sprintf("expected %v got %v", kind, token))
+		panic(fmt.Sprintf("%s(%d, %d-%d) Error: unexpected Token: %v",
+			tokenizer.filename, line, columnStart, columnEnd, token))
 	}
 }
 
@@ -445,7 +457,6 @@ func parseTypeDef(tokenizer *Tokenizer) (result StructDef) {
 
 	token.expectKind(TkCloseCurly)
 
-
   return
 }
 
@@ -493,6 +504,7 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 func parsePackage(code, packageName string) (result PackageDef) {
 	result.Name = packageName
 	var tokenizer = NewTokenizer(code)
+
   for !tokenizer.AtEnd() {
 		token := tokenizer.Next()
 		switch token.kind {
