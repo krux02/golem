@@ -1,103 +1,116 @@
 package main
 
-import "fmt"
+import . "fmt"
 import "os"
 import "unicode/utf8"
 import "strings"
 import "io/ioutil"
 import u "unicode"
 import "path/filepath"
+import "unsafe"
+import "reflect"
+
+// (add-hook 'before-save-hook 'gofmt-before-save)
 
 type TokenKind int16
 
 const (
-  TkInvalid TokenKind = iota
-  TkIdent
-  TkSemicolon
-  TkComma
-  TkOperator
-  TkStringLit
-  TkIntLit
-  TkFloatLit
-  TkLineComment
+	TkInvalid TokenKind = iota
+	TkIdent
+	TkSemicolon
+	TkComma
+	TkOperator
+	TkStringLit
+	TkIntLit
+	TkFloatLit
+	TkLineComment
 
-  TkOpenBrace
-  TkCloseBrace
-  TkOpenBracket
-  TkCloseBracket
-  TkOpenCurly
-  TkCloseCurly
-	TkCount
-);
+	TkOpenBrace    TokenKind = 100
+	TkCloseBrace   TokenKind = 101
+	TkOpenBracket  TokenKind = 102
+	TkCloseBracket TokenKind = 103
+	TkOpenCurly    TokenKind = 104
+	TkCloseCurly   TokenKind = 105
+	TkCount        TokenKind = 106
+)
 
 func init() {
-	if TkOpenBrace & TkCloseBrace == 1 {panic("()")}
-	if TkOpenBracket & TkCloseBracket == 1 {panic("[]")}
-	if TkOpenCurly & TkCloseCurly == 1 {panic("{}")}
-	fmt.Println("checks complete")
+
+	if TkOpenBrace^TkCloseBrace != 1 {
+		panic("()")
+	}
+	if TkOpenBracket^TkCloseBracket != 1 {
+		panic("[]")
+	}
+	if TkOpenCurly^TkCloseCurly != 1 {
+		panic("{}")
+	}
+
+	Println((int)(TkOpenCurly), (int)(TkCloseCurly), (int)(TkOpenCurly)&(int)(TkCloseCurly))
+	Println("checks complete")
 }
 
 var TokenKindNames = [TkCount]string{
-  "Invalid",
-  "Ident",
-  "Semicolon",
-  "Comma",
-  "Operator",
-  "StringLit",
-  "IntLit",
-  "FloatLit",
-  "LineComment",
-  "OpenBrace",
-  "CloseBrace",
-  "OpenBracket",
-  "CloseBracket",
-  "OpenCurly",
-  "CloseCurly",
-};
+	TkInvalid:      "Invalid",
+	TkIdent:        "Ident",
+	TkSemicolon:    "Semicolon",
+	TkComma:        "Comma",
+	TkOperator:     "Operator",
+	TkStringLit:    "StringLit",
+	TkIntLit:       "IntLit",
+	TkFloatLit:     "FloatLit",
+	TkLineComment:  "LineComment",
+	TkOpenBrace:    "OpenBrace",
+	TkCloseBrace:   "CloseBrace",
+	TkOpenBracket:  "OpenBracket",
+	TkCloseBracket: "CloseBracket",
+	TkOpenCurly:    "OpenCurly",
+	TkCloseCurly:   "CloseCurly",
+}
 
 type Type struct {
-  name string
-};
+	name string
+}
 
 var types []Type = []Type{
-  {"int"},
+	{"int"},
 	{"float"},
 	{"string"},
-};
+}
 
-type TypeHandle int;
+type TypeHandle int
 
 type Token struct {
-  kind TokenKind;
-  value string;
-};
+	kind  TokenKind
+	value string
+}
 
 func (this TokenKind) String() string {
 	return TokenKindNames[this]
 }
 
 func (this Token) String() string {
-	return fmt.Sprintf("(%s %q)", this.kind, this.value)
+	return Sprintf("(%s %q)", this.kind, this.value)
 }
 
 type Tokenizer struct {
-	code string
-	filename string
-	offset int
-  bracketStack []Token
-  lastToken Token
-};
-
-func NewTokenizer(code string, filename string) *Tokenizer {
-	return &Tokenizer{code:code, filename:filename}
+	code         string
+	filename     string
+	offset       int
+	bracketStack []Token
+	lastToken    Token
 }
 
-func (this *Tokenizer) LineColumn(offset int) (line,column int) {
+func NewTokenizer(code string, filename string) *Tokenizer {
+	return &Tokenizer{code: code, filename: filename}
+}
+
+func (this *Tokenizer) LineColumn(offset int) (line, column int) {
 	line = 1
 	lineStart := 0
 	for pos, rune := range this.code {
 		if offset <= pos {
-			column = pos-lineStart
+			column = pos - lineStart
 			return
 		}
 
@@ -109,26 +122,33 @@ func (this *Tokenizer) LineColumn(offset int) (line,column int) {
 	return -1, -1
 }
 
-func (this *Tokenizer) LineColumn(token Token) (line,column int) {
-
+func (this *Tokenizer) LineColumnToken(token Token) (line, columnStart, columnEnd int) {
+	header1 := (*reflect.StringHeader)(unsafe.Pointer(&this.code))
+	header2 := (*reflect.StringHeader)(unsafe.Pointer(&token.value))
+	offset := int(header2.Data - header1.Data)
+	line, columnStart = this.LineColumn(offset)
+	columnEnd = columnStart + header2.Len
+	return
 }
 
-func (this *Tokenizer) LineColumnCurrent() (line,column int) {
+func (this *Tokenizer) LineColumnCurrent() (line, column int) {
 	return this.LineColumn(this.offset)
 }
 
-func (this *Tokenizer) LineColumnLastToken() (line,columnStart, columnEnd int) {
-	fmt.Println(this.lastToken)
+func (this *Tokenizer) LineColumnLastToken() (line, columnStart, columnEnd int) {
+	Println(this.lastToken)
 	line, columnStart = this.LineColumn(this.offset - len(this.lastToken.value))
 	line, columnEnd = this.LineColumn(this.offset)
 	return
 }
 
 func (this *Tokenizer) checkMatchingBracket(kind TokenKind) bool {
+	Println(this.bracketStack)
+	Println(kind ^ 1)
 	len := len(this.bracketStack)
-	if len > 0 && this.bracketStack[len-1].kind == kind ^ 1 {
+	if len > 0 && this.bracketStack[len-1].kind == kind^1 {
 		return true
-  }
+	}
 	return false
 }
 
@@ -151,6 +171,7 @@ func (this *Tokenizer) Next() (result Token) {
 		if this.checkMatchingBracket(result.kind) {
 			this.popBracketStack()
 		} else {
+			Println(this.bracketStack, result)
 			result.kind = TkInvalid
 		}
 	}
@@ -161,147 +182,147 @@ func (this *Tokenizer) Next() (result Token) {
 func (this *Tokenizer) LookAhead() (result Token, newOffset int) {
 	code := this.code[this.offset:]
 	newOffset = this.offset
-	// fmt.Printf("read token in:%s...\n", code[:20]);
-  if (len(code) == 0) {
-		panic("Cannot read token in empty string");
-  }
+	// Printf("read token in:%s...\n", code[:20]);
+	if len(code) == 0 {
+		panic("Cannot read token in empty string")
+	}
 
-  {
-    // eat whitespace, maybe emit EndLine token
-    var idx = 0;
-    var gotNewLine = false;
+	{
+		// eat whitespace, maybe emit EndLine token
+		var idx = 0
+		var gotNewLine = false
 
 		rune, length := utf8.DecodeRuneInString(code)
 
-    for u.IsSpace(rune) {
-      if (rune == '\n') {
-        gotNewLine = true;
-      }
-			idx += length;
+		for u.IsSpace(rune) {
+			if rune == '\n' {
+				gotNewLine = true
+			}
+			idx += length
 			rune, length = utf8.DecodeRuneInString(code[idx:])
-    }
+		}
 
 		newOffset += idx
 
-    if gotNewLine &&
-        // do not infer semicolon when within braces
-        (len(this.bracketStack) == 0 || this.bracketStack[len(this.bracketStack)-1].kind != TkOpenBrace) {
-        // TODOdo not infer semicolon after comments
+		if gotNewLine &&
+			// do not infer semicolon when within braces
+			(len(this.bracketStack) == 0 || this.bracketStack[len(this.bracketStack)-1].kind != TkOpenBrace) {
+			// TODOdo not infer semicolon after comments
 			result.kind = TkSemicolon
 			result.value = code[:idx]
 			this.lastToken = result
-      return
-    }
+			return
+		}
 
-    code = code[idx:];
-  }
+		code = code[idx:]
+	}
 
-  result = Token{kind : TkInvalid, value : code[:1]};
+	result = Token{kind: TkInvalid, value: code[:1]}
 
-  c, cLen := utf8.DecodeRuneInString(code)
-  if (c >= 128) {
-    panic("currently only 7 bit ascii is supported!!!")
-  }
+	c, cLen := utf8.DecodeRuneInString(code)
+	if c >= 128 {
+		panic("currently only 7 bit ascii is supported!!!")
+	}
 
-  switch {
-  case u.IsLetter(c):
-    result.kind = TkIdent
+	switch {
+	case u.IsLetter(c):
+		result.kind = TkIdent
 		result.value = code
 		for pos, rune := range code {
-			//fmt.Printf("rune: %c pos: %d\n",
+			//Printf("rune: %c pos: %d\n",
 			//	rune, pos)
 
 			if !u.IsDigit(rune) && !u.IsLetter(rune) {
 				result.value = code[:pos]
 				break
 			}
-	  }
-  case c == '#':
-    result.kind = TkLineComment;
+		}
+	case c == '#':
+		result.kind = TkLineComment
 		result.value = code
 		for pos, rune := range code {
 			if rune == '\n' {
 				result.value = code[:pos]
 				break
 			}
-	  }
-  case u.IsDigit(c):
-    result.kind = TkIntLit;
-    // read number literal
-    it := len(code);
+		}
+	case u.IsDigit(c):
+		result.kind = TkIntLit
+		// read number literal
+		it := len(code)
 		for pos, rune := range code {
 			if !u.IsDigit(rune) {
 				it = pos
 				break
-		  }
+			}
 		}
 
-    if rune, runeLen := utf8.DecodeRuneInString(code[it:]); rune == '.' {
-      result.kind = TkFloatLit;
-		  it += runeLen
+		if rune, runeLen := utf8.DecodeRuneInString(code[it:]); rune == '.' {
+			result.kind = TkFloatLit
+			it += runeLen
 
 			rune, _ := utf8.DecodeRuneInString(code[it:])
 
-      if !u.IsDigit(rune) {
-        panic("incomplete floating point literal")
-      }
+			if !u.IsDigit(rune) {
+				panic("incomplete floating point literal")
+			}
 
 			var idx2 = len(code)
-      for pos, rune := range code[it:] {
+			for pos, rune := range code[it:] {
 				if !u.IsDigit(rune) {
 					idx2 = it + pos
 					break
 				}
-      }
+			}
 			it = idx2
-    }
+		}
 
 		rune, _ := utf8.DecodeRuneInString(code[it:])
-    if u.IsLetter(rune) {
-      panic("invalid alpha character after literal");
-    }
+		if u.IsLetter(rune) {
+			panic("invalid alpha character after literal")
+		}
 
-    result.value = code[:it]
-  case c == '"':
-    result.kind = TkStringLit;
+		result.value = code[:it]
+	case c == '"':
+		result.kind = TkStringLit
 		var lastRune = '"'
 		var scanningDone = false
 		var idx2 = len(code)
 		for pos, rune := range code[cLen:] {
 			if scanningDone {
-				idx2 = cLen + pos;
+				idx2 = cLen + pos
 				break
-		  }
+			}
 
 			if lastRune == '\\' {
 				switch rune {
 				case 'a', 'b', 'f', 'n', 'r', 't', 'v', '\\', '\'', '"':
 				default:
-          panic("illegal escale sequence");
+					panic("illegal escale sequence")
 				}
 			} else if rune == '"' {
-        scanningDone = true
-		  }
-	  }
+				scanningDone = true
+			}
+		}
 		result.value = code[:idx2]
-  case c == '(':
-    result = Token{TkOpenBrace, code[:cLen]};
-  case c == ')':
-		result = Token{TkCloseBrace, code[:cLen]};
-  case c == '[':
-    result = Token{TkOpenBracket, code[:cLen]};
-  case c == ']':
-		result = Token{TkCloseBracket, code[:cLen]};
-  case c == '{':
-		result = Token{TkOpenCurly, code[:cLen]};
-  case c == '}':
-		result = Token{TkCloseCurly, code[:cLen]};
-  case c == ',':
-		result = Token{TkComma, code[:cLen]};
-  case c == ';':
-		result = Token{TkSemicolon, code[:cLen]};
+	case c == '(':
+		result = Token{TkOpenBrace, code[:cLen]}
+	case c == ')':
+		result = Token{TkCloseBrace, code[:cLen]}
+	case c == '[':
+		result = Token{TkOpenBracket, code[:cLen]}
+	case c == ']':
+		result = Token{TkCloseBracket, code[:cLen]}
+	case c == '{':
+		result = Token{TkOpenCurly, code[:cLen]}
+	case c == '}':
+		result = Token{TkCloseCurly, code[:cLen]}
+	case c == ',':
+		result = Token{TkComma, code[:cLen]}
+	case c == ';':
+		result = Token{TkSemicolon, code[:cLen]}
 	case u.IsSymbol(c) || u.IsPunct(c):
-		var idx2 = len(code);
+		var idx2 = len(code)
 		for pos, rune := range code[cLen:] {
 			if !u.IsPunct(rune) && !u.IsSymbol(rune) || strings.ContainsRune("{}[](),;", rune) {
 				idx2 = cLen + pos
@@ -309,12 +330,12 @@ func (this *Tokenizer) LookAhead() (result Token, newOffset int) {
 			}
 		}
 
-		result.kind = TkOperator;
-		result.value = code[:idx2];
-  default:
-		fmt.Printf("ispunct %v\n", u.IsSymbol(c) )
-		panic(fmt.Sprintf("unexpected input: %c\n", c))
-  };
+		result.kind = TkOperator
+		result.value = code[:idx2]
+	default:
+		Printf("ispunct %v\n", u.IsSymbol(c))
+		panic(Sprintf("unexpected input: %c\n", c))
+	}
 
 	newOffset += len(result.value)
 	this.lastToken = result
@@ -335,7 +356,7 @@ type StructField struct {
 }
 
 type StructDef struct {
-	Name string
+	Name   string
 	Fields []StructField
 }
 
@@ -344,48 +365,108 @@ type ProcArgument struct {
 	Type TypeExpr
 }
 
-type Expr struct {
+type BlockExpr struct {
 	Value string
 }
 
-type ProcDef struct {
-	Name string
-	Arguments []ProcArgument
-	ResultType TypeExpr
-	Body Expr
+func (blockExpr BlockExpr) String() string {
+	return blockExpr.Value
 }
 
+// Expr := Symbol | Call
+type Expr interface {
+	String() string
+}
+
+type Symbol struct {
+	Value              string
+	OperatorPrecedence int
+}
+
+func (sym Symbol) String() string {
+	return sym.Value
+}
+
+var FunctionSymbolTable = []Symbol{
+	{Value: "*", OperatorPrecedence: 6},
+	{Value: "/", OperatorPrecedence: 6},
+	{Value: "+", OperatorPrecedence: 5},
+	{Value: "-", OperatorPrecedence: 5},
+}
+
+func LookupFunctionSymbol(value string) Symbol {
+	// TODO, this is horrible lookup
+	for _, sym := range FunctionSymbolTable {
+		if sym.Value == value {
+			return sym
+		}
+	}
+	panic(Sprintf("Undefined Function `%s`", value))
+}
+
+type Call struct {
+	Sym  Symbol
+	Args []Expr
+	// other properties
+	Braced bool // true for (a+b) +(a,b), false for a+b
+}
+
+func (call Call) String() string {
+	var builder strings.Builder
+	builder.WriteString(call.Sym.Value)
+	builder.WriteString("(")
+	for i, arg := range call.Args {
+		if i != 0 {
+			builder.WriteString(", ")
+		}
+		builder.WriteString(arg.String())
+	}
+	builder.WriteString(")")
+	return builder.String()
+}
+
+type ProcDef struct {
+	Name       string
+	Args       []ProcArgument
+	ResultType TypeExpr
+	Body       Expr
+}
 
 type PackageDef struct {
-	Name string
+	Name     string
 	TypeDefs []StructDef
 	ProcDefs []ProcDef
 }
 
+func (tokenizer *Tokenizer) wrongKind(token Token) {
+	line, columnStart, columnEnd := tokenizer.LineColumnToken(token)
+	panic(Sprintf("%s(%d, %d-%d) Error: unexpected Token: %v",
+		tokenizer.filename, line, columnStart, columnEnd, token))
+}
+
 func (tokenizer *Tokenizer) expectKind(token Token, kind TokenKind) {
 	if token.kind != kind {
-		panic(fmt.Sprintf("%s(%d, %d-%d) Error: unexpected Token: %v",
-			tokenizer.filename, line, columnStart, columnEnd, token))
+		tokenizer.wrongKind(token)
 	}
 }
 
-func (token Token) expectIdent(arg string) {
-	token.expectKind(TkIdent)
+func (tokenizer *Tokenizer) expectIdent(token Token, arg string) {
+	tokenizer.expectKind(token, TkIdent)
 	if token.value != arg {
-		panic(fmt.Sprintf("expected ident %v got %v", arg, token.value))
+		panic(Sprintf("expected ident %v got %v", arg, token.value))
 	}
 }
 
-func (token Token) expectOperator(arg string) {
-	token.expectKind(TkOperator)
+func (tokenizer *Tokenizer) expectOperator(token Token, arg string) {
+	tokenizer.expectKind(token, TkOperator)
 	if token.value != arg {
-		panic(fmt.Sprintf("expected %v got %v", arg, token.value))
+		panic(Sprintf("expected %v got %v", arg, token.value))
 	}
 }
 
 func (tokenizer *Tokenizer) parseTypeExpr() (result TypeExpr) {
 	token := tokenizer.Next()
-	token.expectKind(TkIdent)
+	tokenizer.expectKind(token, TkIdent)
 	result.Ident = token.value
 	return
 }
@@ -396,11 +477,36 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 	startOffset := tokenizer.offset - len(token.value)
 
 	if token.kind == TkIdent {
-		result.Value = token.value
-		return
+		sym := Symbol{Value: token.value}
+
+		lookAhead, _ := tokenizer.LookAhead()
+
+		switch lookAhead.kind {
+		case TkSemicolon:
+			return (Expr)(sym)
+		case TkOperator:
+			token = tokenizer.Next()
+			operator := LookupFunctionSymbol(token.value)
+			rhs := tokenizer.parseExpr()
+			call := Call{Sym: operator, Args: []Expr{sym, rhs}}
+
+			if rhsCall, ok := rhs.(Call); ok && !rhsCall.Braced {
+				rhsOperator := rhsCall.Sym
+				if operator.OperatorPrecedence > rhsOperator.OperatorPrecedence {
+					// operator precedence
+					call.Args[1] = rhsCall.Args[0]
+					rhsCall.Args[0] = call
+					return (Expr)(rhsCall)
+				}
+			}
+			return (Expr)(call)
+		}
+
+		tokenizer.wrongKind(lookAhead)
+
 	}
 
-	token.expectKind(TkOpenCurly)
+	tokenizer.expectKind(token, TkOpenCurly)
 	curlyDepth := 1
 
 	for curlyDepth > 0 {
@@ -411,27 +517,26 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 		}
 		if token.kind == TkCloseCurly {
 			curlyDepth--
-	  }
+		}
 	}
 
 	endOffset := tokenizer.offset
-	result.Value = tokenizer.code[startOffset:endOffset]
-
+	result = BlockExpr{Value: tokenizer.code[startOffset:endOffset]}
 	return
 }
 
 func parseTypeDef(tokenizer *Tokenizer) (result StructDef) {
 	var token Token
 	token = tokenizer.Next()
-	token.expectKind(TkIdent)
+	tokenizer.expectKind(token, TkIdent)
 	result.Name = token.value
 	token = tokenizer.Next()
-	token.expectOperator("=")
+	tokenizer.expectOperator(token, "=")
 	token = tokenizer.Next()
-	token.expectIdent("struct")
+	tokenizer.expectIdent(token, "struct")
 
 	openBrace := tokenizer.Next()
-	openBrace.expectKind(TkOpenCurly)
+	tokenizer.expectKind(openBrace, TkOpenCurly)
 
 	token = tokenizer.Next()
 
@@ -439,73 +544,73 @@ func parseTypeDef(tokenizer *Tokenizer) (result StructDef) {
 		token = tokenizer.Next()
 	}
 
-  for token.kind == TkIdent {
+	for token.kind == TkIdent {
 		var structField StructField
 		name := token
-		name.expectKind(TkIdent)
+		tokenizer.expectKind(name, TkIdent)
 		structField.Name = name.value
 		colon := tokenizer.Next()
-		colon.expectOperator(":")
+		tokenizer.expectOperator(colon, ":")
 		structField.Type = tokenizer.parseTypeExpr()
 		token = tokenizer.Next()
-		token.expectKind(TkSemicolon)
+		tokenizer.expectKind(token, TkSemicolon)
 		for token.kind == TkSemicolon {
 			token = tokenizer.Next()
 		}
 		result.Fields = append(result.Fields, structField)
 	}
 
-	token.expectKind(TkCloseCurly)
+	tokenizer.expectKind(token, TkCloseCurly)
 
-  return
+	return
 }
 
 func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 	token := tokenizer.Next()
-	token.expectKind(TkIdent)
+	tokenizer.expectKind(token, TkIdent)
 	result.Name = token.value
 	token = tokenizer.Next()
-	token.expectKind(TkOpenBrace)
+	tokenizer.expectKind(token, TkOpenBrace)
 	token = tokenizer.Next()
 
 	for token.kind == TkIdent {
-		startIndex := len(result.Arguments)
+		startIndex := len(result.Args)
 
-		result.Arguments = append(result.Arguments, ProcArgument{Name: token.value})
+		result.Args = append(result.Args, ProcArgument{Name: token.value})
 		token = tokenizer.Next()
 		for token.kind == TkComma {
 			token = tokenizer.Next()
-			token.expectKind(TkIdent)
-			result.Arguments = append(result.Arguments, ProcArgument{Name: token.value})
+			tokenizer.expectKind(token, TkIdent)
+			result.Args = append(result.Args, ProcArgument{Name: token.value})
 			token = tokenizer.Next()
 		}
 
-		token.expectOperator(":")
-  	typ := tokenizer.parseTypeExpr()
-		for i := startIndex; i < len(result.Arguments); i++ {
-			result.Arguments[i].Type = typ
+		tokenizer.expectOperator(token, ":")
+		typ := tokenizer.parseTypeExpr()
+		for i := startIndex; i < len(result.Args); i++ {
+			result.Args[i].Type = typ
 		}
 		token = tokenizer.Next()
 	}
-	token.expectKind(TkCloseBrace)
+	tokenizer.expectKind(token, TkCloseBrace)
 
 	token = tokenizer.Next()
-	token.expectOperator(":")
+	tokenizer.expectOperator(token, ":")
 	result.ResultType = tokenizer.parseTypeExpr()
 	token = tokenizer.Next()
-	token.expectOperator("=")
+	tokenizer.expectOperator(token, "=")
 
 	result.Body = tokenizer.parseExpr()
 
-	fmt.Printf("Body:\n%s\n", result.Body.Value)
+	Println("Body:", result.Body)
 	return
 }
 
 func parsePackage(code, packageName string) (result PackageDef) {
 	result.Name = packageName
-	var tokenizer = NewTokenizer(code)
+	var tokenizer = NewTokenizer(code, packageName)
 
-  for !tokenizer.AtEnd() {
+	for !tokenizer.AtEnd() {
 		token := tokenizer.Next()
 		switch token.kind {
 		case TkLineComment:
@@ -524,10 +629,10 @@ func parsePackage(code, packageName string) (result PackageDef) {
 		}
 
 		// utrineiaurtne
-		fmt.Println("Cant Process")
-		fmt.Println(tokenizer.code[tokenizer.offset:])
+		Println("Cant Process")
+		Println(tokenizer.code[tokenizer.offset:])
 		line, columnStart, columnEnd := tokenizer.LineColumnLastToken()
-		msg := fmt.Sprintf("%s(%d, %d-%d) Error: unexpected Token: %v",
+		msg := Sprintf("%s(%d, %d-%d) Error: unexpected Token: %v",
 			packageName, line, columnStart, columnEnd, token)
 		panic(msg)
 	}
@@ -536,23 +641,27 @@ func parsePackage(code, packageName string) (result PackageDef) {
 
 func main() {
 	for i, arg := range os.Args {
-    fmt.Printf("%d: %s\n", i, arg);
-  }
+		Printf("%d: %s\n", i, arg)
+	}
 
 	var filename string
-  if len(os.Args) == 2 {
+	if len(os.Args) == 2 {
 		filename = os.Args[1]
 	} else {
-    panic("program needs one argument only, the input file");
-  }
+		panic("program needs one argument only, the input file")
+	}
 
 	filename, err := filepath.Abs(filename)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 
 	// base := filepath.Base(filename)
 	bytes, err := ioutil.ReadFile(filename)
-	if err != nil { panic(err) }
-  // tokenize(string(bytes));
+	if err != nil {
+		panic(err)
+	}
+	// tokenize(string(bytes));
 	parsePackage(string(bytes), filename)
 }
 
