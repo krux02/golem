@@ -9,6 +9,7 @@ import u "unicode"
 import "path/filepath"
 import "unsafe"
 import "reflect"
+import "path"
 
 // (add-hook 'before-save-hook 'gofmt-before-save)
 
@@ -45,9 +46,6 @@ func init() {
 	if TkOpenCurly^TkCloseCurly != 1 {
 		panic("{}")
 	}
-
-	Println((int)(TkOpenCurly), (int)(TkCloseCurly), (int)(TkOpenCurly)&(int)(TkCloseCurly))
-	Println("checks complete")
 }
 
 var TokenKindNames = [TkCount]string{
@@ -143,8 +141,6 @@ func (this *Tokenizer) LineColumnLastToken() (line, columnStart, columnEnd int) 
 }
 
 func (this *Tokenizer) checkMatchingBracket(kind TokenKind) bool {
-	Println(this.bracketStack)
-	Println(kind ^ 1)
 	len := len(this.bracketStack)
 	if len > 0 && this.bracketStack[len-1].kind == kind^1 {
 		return true
@@ -392,6 +388,7 @@ var FunctionSymbolTable = []Symbol{
 	{Value: "/", OperatorPrecedence: 6},
 	{Value: "+", OperatorPrecedence: 5},
 	{Value: "-", OperatorPrecedence: 5},
+	{Value: "println"},
 }
 
 func LookupFunctionSymbol(value string) Symbol {
@@ -606,9 +603,9 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 	return
 }
 
-func parsePackage(code, packageName string) (result PackageDef) {
-	result.Name = packageName
-	var tokenizer = NewTokenizer(code, packageName)
+func parsePackage(code, filename string) (result PackageDef) {
+	result.Name = path.Base(filename)
+	var tokenizer = NewTokenizer(code, filename)
 
 	for !tokenizer.AtEnd() {
 		token := tokenizer.Next()
@@ -633,17 +630,13 @@ func parsePackage(code, packageName string) (result PackageDef) {
 		Println(tokenizer.code[tokenizer.offset:])
 		line, columnStart, columnEnd := tokenizer.LineColumnLastToken()
 		msg := Sprintf("%s(%d, %d-%d) Error: unexpected Token: %v",
-			packageName, line, columnStart, columnEnd, token)
+			filename, line, columnStart, columnEnd, token)
 		panic(msg)
 	}
 	return
 }
 
 func main() {
-	for i, arg := range os.Args {
-		Printf("%d: %s\n", i, arg)
-	}
-
 	var filename string
 	if len(os.Args) == 2 {
 		filename = os.Args[1]
