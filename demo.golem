@@ -6,7 +6,7 @@ type MyStruct = struct {
 }
 
 proc myfun1(a, b, c: int): int = {
-  return a + b * c
+  return(a + b * c)
 }
 
 proc myfun2(a, b, c: int) : int = a * b + a * c

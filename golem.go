@@ -83,14 +83,6 @@ type Token struct {
 	value string
 }
 
-func (this TokenKind) String() string {
-	return TokenKindNames[this]
-}
-
-func (this Token) String() string {
-	return Sprintf("(%s %q)", this.kind, this.value)
-}
-
 type Tokenizer struct {
 	code         string
 	filename     string
@@ -361,27 +353,41 @@ type ProcArgument struct {
 	Type TypeExpr
 }
 
-type BlockExpr struct {
-	Value string
+type CodeBlock struct {
+	Items []Expr
 }
 
-func (blockExpr BlockExpr) String() string {
-	return blockExpr.Value
-}
+func (block CodeBlock) expression() {}
+func (block CodeBlock) statement()  {}
 
-// Expr := Symbol | Call
 type Expr interface {
-	String() string
+	prettyPrint(*strings.Builder)
+	expression()
 }
+
+type Stmt interface {
+	prettyPrint(*strings.Builder)
+	statement()
+}
+
+type ReturnStmt struct {
+	Expr Expr
+}
+
+func (stmt ReturnStmt) statement() {}
 
 type Symbol struct {
 	Value              string
 	OperatorPrecedence int
 }
 
-func (sym Symbol) String() string {
-	return sym.Value
+func (sym Symbol) expression() {}
+
+type StringLit struct {
+	Val string
 }
+
+func (lit StringLit) expression() {}
 
 var FunctionSymbolTable = []Symbol{
 	{Value: "*", OperatorPrecedence: 6},
@@ -408,19 +414,7 @@ type Call struct {
 	Braced bool // true for (a+b) +(a,b), false for a+b
 }
 
-func (call Call) String() string {
-	var builder strings.Builder
-	builder.WriteString(call.Sym.Value)
-	builder.WriteString("(")
-	for i, arg := range call.Args {
-		if i != 0 {
-			builder.WriteString(", ")
-		}
-		builder.WriteString(arg.String())
-	}
-	builder.WriteString(")")
-	return builder.String()
-}
+func (call Call) expression() {}
 
 type ProcDef struct {
 	Name       string
@@ -471,16 +465,19 @@ func (tokenizer *Tokenizer) parseTypeExpr() (result TypeExpr) {
 func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 	// eat whitespace before setting startOffest
 	token := tokenizer.Next()
-	startOffset := tokenizer.offset - len(token.value)
 
-	if token.kind == TkIdent {
+	Println("parse expr: ", token)
+
+	switch token.kind {
+	case TkIdent:
 		sym := Symbol{Value: token.value}
 
 		lookAhead, _ := tokenizer.LookAhead()
 
 		switch lookAhead.kind {
-		case TkSemicolon:
+		case TkSemicolon, TkCloseBrace, TkCloseCurly:
 			return (Expr)(sym)
+
 		case TkOperator:
 			token = tokenizer.Next()
 			operator := LookupFunctionSymbol(token.value)
@@ -497,29 +494,72 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 				}
 			}
 			return (Expr)(call)
+		case TkOpenBrace:
+			// parse call expr
+			var args []Expr
+			token = tokenizer.Next()
+			for true {
+				lookAhead, _ = tokenizer.LookAhead()
+				Println(token, lookAhead)
+				switch lookAhead.kind {
+				case TkIdent, TkStringLit:
+					args = append(args, tokenizer.parseExpr())
+					continue
+				case TkCloseBrace:
+					token = tokenizer.Next()
+					call := Call{Sym: sym, Args: args}
+					Println("parsed call: ", call)
+					return (Expr)(call)
+				}
+				tokenizer.wrongKind(lookAhead)
+			}
 		}
 
 		tokenizer.wrongKind(lookAhead)
+	case TkOpenCurly:
+		Println("pares block")
+		// parse block
+		var block CodeBlock
 
+		lookAhead, _ := tokenizer.LookAhead()
+		for lookAhead.kind == TkSemicolon {
+			tokenizer.Next()
+			lookAhead, _ = tokenizer.LookAhead()
+		}
+
+		for lookAhead.kind != TkCloseCurly {
+			item := tokenizer.parseExpr()
+			Println("Item: ", item)
+			block.Items = append(block.Items, item)
+
+			next := tokenizer.Next()
+			tokenizer.expectKind(next, TkSemicolon)
+			lookAhead, _ = tokenizer.LookAhead()
+		}
+
+		endToken := tokenizer.Next()
+
+		tokenizer.expectKind(endToken, TkCloseCurly)
+		// tokenizer.expectKind(endtoken, TkCloseCurly)
+		Println("parsed block: ", block)
+		return (Expr)(block)
+	case TkStringLit:
+		var b strings.Builder
+		b.Grow(len(token.value)-2)
+		for i, rune := range token.value {
+			if rune == '\\' {
+				panic("escape sequences not implemented")
+      } else if i != 0 && i != len(token.value)-1 {
+				b.WriteRune(rune)
+			}
+		}
+
+		lit := StringLit{Val: b.String()}
+		return (Expr)(lit)
 	}
 
-	tokenizer.expectKind(token, TkOpenCurly)
-	curlyDepth := 1
-
-	for curlyDepth > 0 {
-		token = tokenizer.Next()
-
-		if token.kind == TkOpenCurly {
-			curlyDepth++
-		}
-		if token.kind == TkCloseCurly {
-			curlyDepth--
-		}
-	}
-
-	endOffset := tokenizer.offset
-	result = BlockExpr{Value: tokenizer.code[startOffset:endOffset]}
-	return
+	tokenizer.wrongKind(token)
+	panic("unreachable")
 }
 
 func parseTypeDef(tokenizer *Tokenizer) (result StructDef) {
@@ -657,7 +697,3 @@ func main() {
 	// tokenize(string(bytes));
 	parsePackage(string(bytes), filename)
 }
-
-// Local Variables:
-// compile-command: "go build && ./golem demo.golem"
-// End:
