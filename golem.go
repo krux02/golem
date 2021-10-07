@@ -126,7 +126,6 @@ func (this *Tokenizer) LineColumnCurrent() (line, column int) {
 }
 
 func (this *Tokenizer) LineColumnLastToken() (line, columnStart, columnEnd int) {
-	Println(this.lastToken)
 	line, columnStart = this.LineColumn(this.offset - len(this.lastToken.value))
 	line, columnEnd = this.LineColumn(this.offset)
 	return
@@ -466,8 +465,6 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 	// eat whitespace before setting startOffest
 	token := tokenizer.Next()
 
-	Println("parse expr: ", token)
-
 	switch token.kind {
 	case TkIdent:
 		sym := Symbol{Value: token.value}
@@ -500,7 +497,6 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 			token = tokenizer.Next()
 			for true {
 				lookAhead, _ = tokenizer.LookAhead()
-				Println(token, lookAhead)
 				switch lookAhead.kind {
 				case TkIdent, TkStringLit:
 					args = append(args, tokenizer.parseExpr())
@@ -508,7 +504,6 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 				case TkCloseBrace:
 					token = tokenizer.Next()
 					call := Call{Sym: sym, Args: args}
-					Println("parsed call: ", call)
 					return (Expr)(call)
 				}
 				tokenizer.wrongKind(lookAhead)
@@ -517,7 +512,6 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 
 		tokenizer.wrongKind(lookAhead)
 	case TkOpenCurly:
-		Println("pares block")
 		// parse block
 		var block CodeBlock
 
@@ -529,7 +523,6 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 
 		for lookAhead.kind != TkCloseCurly {
 			item := tokenizer.parseExpr()
-			Println("Item: ", item)
 			block.Items = append(block.Items, item)
 
 			next := tokenizer.Next()
@@ -541,15 +534,14 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 
 		tokenizer.expectKind(endToken, TkCloseCurly)
 		// tokenizer.expectKind(endtoken, TkCloseCurly)
-		Println("parsed block: ", block)
 		return (Expr)(block)
 	case TkStringLit:
 		var b strings.Builder
-		b.Grow(len(token.value)-2)
+		b.Grow(len(token.value) - 2)
 		for i, rune := range token.value {
 			if rune == '\\' {
 				panic("escape sequences not implemented")
-      } else if i != 0 && i != len(token.value)-1 {
+			} else if i != 0 && i != len(token.value)-1 {
 				b.WriteRune(rune)
 			}
 		}
@@ -639,7 +631,6 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 
 	result.Body = tokenizer.parseExpr()
 
-	Println("Body:", result.Body)
 	return
 }
 
@@ -666,8 +657,6 @@ func parsePackage(code, filename string) (result PackageDef) {
 		}
 
 		// utrineiaurtne
-		Println("Cant Process")
-		Println(tokenizer.code[tokenizer.offset:])
 		line, columnStart, columnEnd := tokenizer.LineColumnLastToken()
 		msg := Sprintf("%s(%d, %d-%d) Error: unexpected Token: %v",
 			filename, line, columnStart, columnEnd, token)

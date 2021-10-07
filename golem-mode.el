@@ -27,6 +27,13 @@
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.golem\\'" . golem-mode))
 
+;; Create the syntax table for this mode.
+(defvar golem-mode-syntax-table (make-syntax-table prog-mode-syntax-table) "Syntax table used while in `golem-mode'.")
+
+(progn
+  (modify-syntax-entry ?\# "<" golem-mode-syntax-table)
+  (modify-syntax-entry ?\n ">#" golem-mode-syntax-table))
+
 (defconst golem-highlights
   (rx-let ((ident (seq alpha (* (any alnum "_")))))
     (list
@@ -40,9 +47,13 @@
 ;;;###autoload
 (define-derived-mode golem-mode prog-mode "golem"
   "major mode for editing golem language code"
-  (set (make-local-variable 'font-lock-defaults) '(golem-highlights))
-  (set (make-local-variable 'compile-command)
-       (concat "golem " (file-relative-name buffer-file-name))))
+  :group 'golem
+
+  (setq-local comment-start "#")
+  (setq-local comment-start-skip "#+ *")
+  (setq-local font-lock-defaults '(golem-highlights))
+  (setq-local compile-command
+              (concat "golem " (file-relative-name buffer-file-name))))
 
 (provide 'golem-mode)
 ;;; golem-mode.el ends here
