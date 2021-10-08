@@ -91,7 +91,6 @@ type Tokenizer struct {
 	filename                string
 	token, lookAheadToken   Token
 	offset, lookAheadOffset int
-	bracketStack            []Token
 }
 
 func NewTokenizer(code string, filename string) (result *Tokenizer) {
@@ -130,23 +129,6 @@ func (this *Tokenizer) LineColumnCurrent() (line, column int) {
 	return this.LineColumnOffset(this.offset)
 }
 
-func (this *Tokenizer) checkMatchingBracket(kind TokenKind) bool {
-	len := len(this.bracketStack)
-	if len > 0 && this.bracketStack[len-1].kind == kind^1 {
-		return true
-	}
-	return false
-}
-
-func (this *Tokenizer) popBracketStack() {
-	len := len(this.bracketStack)
-	this.bracketStack = this.bracketStack[:len-1]
-}
-
-func (this *Tokenizer) pushBracketStack(arg Token) {
-	this.bracketStack = append(this.bracketStack, arg)
-}
-
 func (this *Tokenizer) Next() Token {
 	this.token, this.offset = this.lookAheadToken, this.lookAheadOffset
 	this.lookAheadToken, this.lookAheadOffset = this.ScanTokenAt(this.lookAheadOffset)
@@ -165,31 +147,50 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 
 	{
 		// eat whitespace, maybe emit EndLine token
-		var idx = 0
+		var idx int
 		var gotNewLine = false
 
-		rune, length := utf8.DecodeRuneInString(code)
-
-		for u.IsSpace(rune) {
-			if rune == '\n' {
-				gotNewLine = true
-			}
+	eatWhiteSpace:
+		rune, length := utf8.DecodeRuneInString(code[idx:])
+		switch rune {
+		case ' ':
 			idx += length
-			rune, length = utf8.DecodeRuneInString(code[idx:])
+			goto eatWhiteSpace
+		case '\n':
+			idx += length
+			gotNewLine = true
+			goto eatWhiteSpace
+		case '\\':
+			idx += length
+		newlineEscape:
+			rune, length := utf8.DecodeRuneInString(code[idx:])
+
+			switch rune {
+			case ' ', '\r':
+				idx += length
+				goto newlineEscape
+			case '\n':
+				idx += length
+				goto eatWhiteSpace
+			default:
+				idx += length
+				newOffset += idx
+				result.kind = TkInvalid
+				result.value = code[:idx]
+				return
+			}
+		default:
 		}
 
-		newOffset += idx
-
-		if gotNewLine &&
-			// do not infer semicolon when within braces
-			(len(this.bracketStack) == 0 || this.bracketStack[len(this.bracketStack)-1].kind != TkOpenBrace) {
-			// TODOdo not infer semicolon after comments
+		if gotNewLine {
+			newOffset += idx
 			result.kind = TkSemicolon
 			result.value = code[:idx]
 			return
 		}
 
 		code = code[idx:]
+		newOffset += idx
 	}
 
 	result = Token{kind: TkInvalid, value: code[:1]}
@@ -309,7 +310,7 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 		result.value = code[:idx2]
 	default:
 		Printf("ispunct %v\n", u.IsSymbol(c))
-		panic(Sprintf("unexpected input: %c\n", c))
+		panic(Sprintf("unexpected input: %c %d\n", c, c))
 	}
 
 	newOffset += len(result.value)
