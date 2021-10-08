@@ -69,9 +69,35 @@ func (stmt ReturnStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(";\n")
 }
 
-func (lit StringLit) prettyPrint(builder *AstPrettyPrinter) {
+func (lit StrLit) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteRune('"')
-	builder.WriteString(lit.Val)
+	for _, rune := range lit.Val {
+		switch rune {
+		case '\a':
+			builder.WriteString("\\a")
+		case '\b':
+			builder.WriteString("\\b")
+		case '\f':
+			builder.WriteString("\\f")
+		case '\n':
+			builder.WriteString("\\n")
+		case '\r':
+			builder.WriteString("\\r")
+		case '\t':
+			builder.WriteString("\\t")
+		case '\v':
+			builder.WriteString("\\v")
+		case '\\':
+			builder.WriteString("\\\\")
+		case '\'':
+			builder.WriteString("\\'")
+		case '"':
+			builder.WriteString("\\\"")
+		default:
+			builder.WriteRune(rune)
+		}
+	}
+	//builder.WriteString(lit.Val)
 	builder.WriteRune('"')
 }
 
@@ -156,7 +182,7 @@ func (stmt ReturnStmt) String() string {
 	return builder.String()
 }
 
-func (lit StringLit) String() string {
+func (lit StrLit) String() string {
 	builder := &AstPrettyPrinter{}
 	lit.prettyPrint(builder)
 	return builder.String()

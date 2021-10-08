@@ -15,5 +15,5 @@ proc myfun2(a,b,c: int) : int = a * b + a * c
 
 ## this is a comment
 proc main(): int32 = {
-  println("Hallo Welt!")
+  printf("Hallo Welt!\n")
 }

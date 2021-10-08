@@ -21,7 +21,7 @@ const (
 	TkSemicolon
 	TkComma
 	TkOperator
-	TkStringLit
+	TkStrLit
 	TkIntLit
 	TkFloatLit
 	TkLineComment
@@ -38,7 +38,6 @@ const (
 )
 
 func init() {
-
 	if TkOpenBrace^TkCloseBrace != 1 {
 		panic("()")
 	}
@@ -56,7 +55,7 @@ var TokenKindNames = [TkCount]string{
 	TkSemicolon:    "Semicolon",
 	TkComma:        "Comma",
 	TkOperator:     "Operator",
-	TkStringLit:    "StringLit",
+	TkStrLit:       "StrLit",
 	TkIntLit:       "IntLit",
 	TkFloatLit:     "FloatLit",
 	TkLineComment:  "LineComment",
@@ -260,7 +259,7 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 
 		result.value = code[:it]
 	case c == '"':
-		result.kind = TkStringLit
+		result.kind = TkStrLit
 		var lastRune = '"'
 		var scanningDone = false
 		var idx2 = len(code)
@@ -372,11 +371,11 @@ type Symbol struct {
 
 func (sym Symbol) expression() {}
 
-type StringLit struct {
+type StrLit struct {
 	Val string
 }
 
-func (lit StringLit) expression() {}
+func (lit StrLit) expression() {}
 
 var FunctionSymbolTable = []Symbol{
 	{Value: "*", OperatorPrecedence: 6},
@@ -418,15 +417,15 @@ type PackageDef struct {
 	ProcDefs []ProcDef
 }
 
-func (tokenizer *Tokenizer) wrongKind(token Token) {
+func (tokenizer *Tokenizer) wrongKind(token Token) string {
 	line, columnStart, columnEnd := tokenizer.LineColumnToken(token)
-	panic(Sprintf("%s(%d, %d-%d) Error: unexpected Token: %v",
-		tokenizer.filename, line, columnStart, columnEnd, token))
+	return Sprintf("%s(%d, %d-%d) Error: unexpected Token: %v",
+		tokenizer.filename, line, columnStart, columnEnd, token)
 }
 
 func (tokenizer *Tokenizer) expectKind(token Token, kind TokenKind) {
 	if token.kind != kind {
-		tokenizer.wrongKind(token)
+		panic(tokenizer.wrongKind(token))
 	}
 }
 
@@ -488,7 +487,7 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 			for true {
 				lookAhead = tokenizer.lookAheadToken
 				switch lookAhead.kind {
-				case TkIdent, TkStringLit:
+				case TkIdent, TkStrLit:
 					args = append(args, tokenizer.parseExpr())
 					continue
 				case TkCloseBrace:
@@ -496,11 +495,11 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 					call := Call{Sym: sym, Args: args}
 					return (Expr)(call)
 				}
-				tokenizer.wrongKind(lookAhead)
+				panic(tokenizer.wrongKind(lookAhead))
 			}
 		}
 
-		tokenizer.wrongKind(lookAhead)
+		panic(tokenizer.wrongKind(lookAhead))
 	case TkOpenCurly:
 		// parse block
 		var block CodeBlock
@@ -522,23 +521,53 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 		tokenizer.expectKind(endToken, TkCloseCurly)
 		// tokenizer.expectKind(endtoken, TkCloseCurly)
 		return (Expr)(block)
-	case TkStringLit:
+	case TkStrLit:
 		var b strings.Builder
 		b.Grow(len(token.value) - 2)
+		var processEscape bool
 		for i, rune := range token.value {
+			if processEscape {
+				switch rune {
+				case 'a':
+					b.WriteRune('\a')
+				case 'b':
+					b.WriteRune('\b')
+				case 'f':
+					b.WriteRune('\f')
+				case 'n':
+					b.WriteRune('\n')
+				case 'r':
+					b.WriteRune('\r')
+				case 't':
+					b.WriteRune('\t')
+				case 'v':
+					b.WriteRune('\v')
+				case '\\':
+					b.WriteRune('\\')
+				case '\'':
+					b.WriteRune('\'')
+				case '"':
+					b.WriteRune('"')
+				default:
+					panic("illegal escale sequence")
+				}
+				processEscape = false
+				continue
+			}
+
 			if rune == '\\' {
-				panic("escape sequences not implemented")
+				processEscape = true
+				continue
 			} else if i != 0 && i != len(token.value)-1 {
 				b.WriteRune(rune)
 			}
 		}
 
-		lit := StringLit{Val: b.String()}
+		lit := StrLit{Val: b.String()}
 		return (Expr)(lit)
 	}
 
-	tokenizer.wrongKind(token)
-	panic("unreachable")
+	panic(tokenizer.wrongKind(token))
 }
 
 func parseTypeDef(tokenizer *Tokenizer) (result StructDef) {
@@ -577,7 +606,6 @@ func parseTypeDef(tokenizer *Tokenizer) (result StructDef) {
 	}
 
 	tokenizer.expectKind(token, TkCloseCurly)
-
 	return
 }
 
@@ -646,9 +674,7 @@ func parsePackage(code, filename string) (result PackageDef) {
 				continue
 			}
 		}
-
-		tokenizer.wrongKind(tokenizer.token)
-		panic("unreachable")
+		panic(tokenizer.wrongKind(tokenizer.token))
 	}
 	panic("unreachable")
 }
