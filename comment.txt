@@ -1,0 +1,105 @@
+I've read through your language design document, and before I go into smaller details, I want to point out that it is *very* similar to the parts of nim that I happened to like. There are some minor disagreements, probably (because there always are), but overall I think the ideas expression there are pretty on-point. It is similar to what I wrote about a year ago here https://forum.nim-lang.org/t/6753#41973 (the comment is a response on this https://vladfaust.com/posts/2020-08-16-system-programming-in-2k20/ article. It itself is not specifically noteworthy if I remember correctly, mostly about everything being bad, nim lacking OOP/using indentation etc). Now to specifics
+
+----------------------------------------------
+
+**krux**:
+> Spell and Grammar checker for doc strings.
+
+This can be extended to "spell, grammar ... semantics, missing documented entries, automatically generated documentation for common defensive patterns in imperative code etc.". I don't think it is especially complex to detect `if condition(arg): raise` pattern, and I **know** that it is easy to implement annotations like "function directly raises undocumented exception" (https://github.com/haxscramper/haxdoc/commit/9e09f7a2dc2c56fdce66102a172f1d9104270145)
+
+This was discussed literally couple hours before you joined IIRC, https://matrix.to/#/!HhesJmZLBWquxVVdnD:matrix.org/$1B2srvZsXIyL2SvYarmK0EYIly4OeGFJiz5Q9Mc-Vks?via=libera.chat&via=matrix.org&via=envs.net I'm going to just quote myself directly here
+
+**haxscramper**:
+> Docgen in general is in stone age IMO
+> nim doc is exceptionally stupid
+> but overall tooling is also not really all that great
+> there are projects like sourcetrail, sourcegraph, github semantic, wooboq and others that allow some code indexing, but they don't understand documentation
+> On the other hand documentation generators are unable to understand real code, and in general only scrap formatted comments (and maybe files) and convet these things to `.html`
+> So I'm sayin that this https://clang.llvm.org/doxygen/group__CINDEX.html should be interlinked with this https://code.woboq.org/llvm/clang/include/clang-c/Index.h.html
+
+**haxscramper**:
+> And in general, nim is a language that arguably requires an order of magnitude more complex documentation generator. I mean, what do we have here?
+> - Implicitly injected variables
+> - Embedded DSL with semantics that can be completely overturned
+> - Exceptions, optional arguments, callbacks, exceptions again, effects, defects
+
+There is also a need to use something like org-mode for writing documentation instead of this underdeveloped RST parser, with partial crooked markdown support. Most of the documentation generator tools don't really make things better, they either roll completely random-ass markup format based on insanely limited commonmark, or roll their own markup format. Either way, there is more things that have to be added then if they just started with org-mode. And I'm not even bringing up features like literate programming etc.
+
+Related https://gradha.github.io/articles/2015/08/sad-ways-documentation-generation-tools-suck.html - I've read this article seveal times at this point, and each time I find nim part of it to be more and more true. It mostly talks about how bad nim doc is, but still think it is worth linking.
+
+**krux**:
+> It is debatable if error messages that a compiler throws are part of a programming language definitien. For me they certainly are part of the language and they tell the user what the computer did not understand properly. And therefore it is clear computer to human communication.
+
+Totally agree on this one. I think good error messages allow for more complex language, or at least extend boundaries of what is considered "too complicated", because if compiler can correct user when it is needed, they can still use the feature, but if they are just left with "you have error" message, or the one that is too difficult to read (aka type mismatch 'errors')
+
+----------------------------------------------
+
+**krux**:
+> visualize execution of unfamiliar code
+
+Execution traces, tools to overlay them into documentation and source code. Again
+
+**haxscramper**:
+> What I'm really interested in is a code coverage and **especially!** execution traces, as they, in my opinion, provide the ability to get insights into code execution in a way that no other tool could. Debugging, behavior detection (user can detect changes in control flow (if there is any) by simply running the program under two library (dependency) versions) and just general understanding of the code (for example, I could run `nim c test.nim`, look at the execution trace of the compiler and get a clear picture of how things work with each other. What part of code gets executed in which order, and so on). It is possible to get a lot of static data from the nim code (as my tests with haxdoc and different ways of code analysis has shown), but runtime data is also extremely valuable.
+
+----------------------------------------------
+
+**krux**:
+> Do not Rely on Optimizations to be Fast
+
+This was also discussed recently, if you interested https://matrix.to/#/!HhesJmZLBWquxVVdnD:matrix.org/$sc5jw5sAuIx1wuo3SbitH4iaCpr442GCUqPTofdnTnA?via=libera.chat&via=matrix.org&via=envs.net
+
+I mostly ... don't really care, since I don't tend to write code that requires specific hyperoptimizsations, but @saem views this [use of templates/inline iterators] as an antipattern that should be phased out.
+
+**saem**:
+> What I'm saying is that first class iterators are the only thing a user should have to care about. Then with symbolic evaluation it optimizes away the cost, that's much better than the current second class iterator template approach.
+> It also composes well and creates fewer optimization fences.
+> Using templates as inline functions is also a case where optimization should make it go away.
+
+----------------------------------------------
+
+**krux**:
+> Bindings to as many other programming languages as possible.
+
+Right now I don't think there is any alternative that was as good as making it (1) easy to interop with C and (2) allowing user to create syntactic sugar to account for ineviable ugliness of some of the interop approaches. I think nim does pretty good here, with things like nimpy, https://github.com/treeform/genny etc.
+
+----------------------------------------------
+
+**krux**:
+> Orthogonal and Interleaved Documentation and tests.
+> The compiler must be able to automate this migration in both directions.
+
+I don't think compiler should really be concerned with documentation migration, because it is a **documentation generator** issue, and in my opininon documentation generator should be a separate tool. If you are talking about `M-x org-refile-doc-comment-at-point`, then it makes sense (as in "it would be convenient to have a shortcut to move documentation").
+
+**krux**:
+> There are two ways to write documentation, orthogonal and interleaved.
+
+Technically true (because documentation comment can be either internal or external to the source code being documented), but this distinction is not really importan in my opinon, since it should be possible for tooling to make this completely transparent. I should be able to write documentation for certain entries in source code, certain ones in external documents, and this all should be completely interchangeably linked into final product when I compile documentation.
+
+```org
+* Documentation entry types
+  :properties:
+  :haxdoc:link-head: file!docentry_types
+  :end:
+
+** [[code:enum!DocEntryKind]]
+
+Different types of documentable entries processed by haxdoc
+
+- [[code:dekFunc]] :: Procedure declaration
+  - Nested documentation item
+  - It is not mandatory to write ~[[code:enumField!~ each time, documentation generator should be able to
+    resolve current context and error out if it is ambiguous
+
+** [[code:DocEntry]]
+
+Documentable entry processed by haxdoc
+
+#+caption: Documentable entry construction example
+#+begin_src nim
+    result = db.newDocEntry(dekPackage, lib.name)
+    result.visibility = dvkPublic
+#+end_src
+```
+
+Some random code inserted in the `#+begin_src` example, it will be ran as regular literate programming style code block, and **in addition** to that, I can even run it through the same source code annotation engine, and all examples would have an interlinked entries (like `newDocEntry`, or `dvkPublic`). This can be done even with current compiler, but petter tracking between pnode and original source code would be really advantageous.
