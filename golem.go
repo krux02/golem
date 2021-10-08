@@ -26,6 +26,8 @@ const (
 	TkFloatLit
 	TkLineComment
 
+	TkEof // end of file
+
 	TkOpenBrace    TokenKind = 100
 	TkCloseBrace   TokenKind = 101
 	TkOpenBracket  TokenKind = 102
@@ -58,6 +60,7 @@ var TokenKindNames = [TkCount]string{
 	TkIntLit:       "IntLit",
 	TkFloatLit:     "FloatLit",
 	TkLineComment:  "LineComment",
+	TkEof:          "<EOF>",
 	TkOpenBrace:    "OpenBrace",
 	TkCloseBrace:   "CloseBrace",
 	TkOpenBracket:  "OpenBracket",
@@ -84,15 +87,17 @@ type Token struct {
 }
 
 type Tokenizer struct {
-	code         string
-	filename     string
-	offset       int
-	lastToken    Token
-	bracketStack []Token
+	code                    string
+	filename                string
+	token, lookAheadToken   Token
+	offset, lookAheadOffset int
+	bracketStack            []Token
 }
 
-func NewTokenizer(code string, filename string) *Tokenizer {
-	return &Tokenizer{code: code, filename: filename}
+func NewTokenizer(code string, filename string) (result *Tokenizer) {
+	result = &Tokenizer{code: code, filename: filename}
+	result.lookAheadToken, result.lookAheadOffset = result.ScanTokenAt(0)
+	return
 }
 
 func (this *Tokenizer) LineColumnOffset(offset int) (line, column int) {
@@ -143,23 +148,19 @@ func (this *Tokenizer) pushBracketStack(arg Token) {
 }
 
 func (this *Tokenizer) Next() Token {
-	this.lastToken, this.offset = this.ScatTokenAt(this.offset)
-	return this.lastToken
+	this.token, this.offset = this.lookAheadToken, this.lookAheadOffset
+	this.lookAheadToken, this.lookAheadOffset = this.ScanTokenAt(this.lookAheadOffset)
+	return this.token
 }
 
-func (this *Tokenizer) LookAhead() Token {
-	result, _ := this.ScatTokenAt(this.offset)
-	return result
-}
-
-// LookAhead does the same as Next, but does not modify offset
-func (this *Tokenizer) ScatTokenAt(offset int) (result Token, newOffset int) {
+func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 	code := this.code[offset:]
 	newOffset = offset
 
 	// Printf("read token in:%s...\n", code[:20]);
 	if len(code) == 0 {
-		panic("Cannot read token in empty string")
+		result.kind = TkEof
+		return
 	}
 
 	{
@@ -312,7 +313,6 @@ func (this *Tokenizer) ScatTokenAt(offset int) (result Token, newOffset int) {
 	}
 
 	newOffset += len(result.value)
-	this.lastToken = result
 	return
 }
 
@@ -458,7 +458,7 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 	case TkIdent:
 		sym := Symbol{Value: token.value}
 
-		lookAhead := tokenizer.LookAhead()
+		lookAhead := tokenizer.lookAheadToken
 
 		switch lookAhead.kind {
 		case TkSemicolon, TkCloseBrace, TkCloseCurly:
@@ -485,7 +485,7 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 			var args []Expr
 			token = tokenizer.Next()
 			for true {
-				lookAhead = tokenizer.LookAhead()
+				lookAhead = tokenizer.lookAheadToken
 				switch lookAhead.kind {
 				case TkIdent, TkStringLit:
 					args = append(args, tokenizer.parseExpr())
@@ -504,19 +504,16 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 		// parse block
 		var block CodeBlock
 
-		lookAhead := tokenizer.LookAhead()
-		for lookAhead.kind == TkSemicolon {
+		for tokenizer.lookAheadToken.kind == TkSemicolon {
 			tokenizer.Next()
-			lookAhead = tokenizer.LookAhead()
 		}
 
-		for lookAhead.kind != TkCloseCurly {
+		for tokenizer.lookAheadToken.kind != TkCloseCurly {
 			item := tokenizer.parseExpr()
 			block.Items = append(block.Items, item)
 
 			next := tokenizer.Next()
 			tokenizer.expectKind(next, TkSemicolon)
-			lookAhead = tokenizer.LookAhead()
 		}
 
 		endToken := tokenizer.Next()
@@ -629,13 +626,15 @@ func parsePackage(code, filename string) (result PackageDef) {
 	result.Name = path.Base(filename)
 	var tokenizer = NewTokenizer(code, filename)
 
-	for !tokenizer.AtEnd() {
+	for true {
 		token := tokenizer.Next()
 		switch token.kind {
 		case TkLineComment:
 			continue
 		case TkSemicolon:
 			continue
+		case TkEof:
+			return
 		case TkIdent:
 			switch token.value {
 			case "type":
@@ -647,10 +646,10 @@ func parsePackage(code, filename string) (result PackageDef) {
 			}
 		}
 
-		tokenizer.wrongKind(tokenizer.lastToken)
+		tokenizer.wrongKind(tokenizer.token)
 		panic("unreachable")
 	}
-	return
+	panic("unreachable")
 }
 
 func main() {
