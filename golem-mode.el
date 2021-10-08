@@ -34,6 +34,19 @@
   (modify-syntax-entry ?\# "<" golem-mode-syntax-table)
   (modify-syntax-entry ?\n ">#" golem-mode-syntax-table))
 
+(defun golem-string-escape-matcher (&optional limit)
+  "Highlight matcher escape sequence in string within LIMIT."
+  (let ((string-escape-regexp
+         (rx (or (and "\\" (any "abfnrtv\\'\""))
+                 (and "%" (any "%dfs")))))
+        res)
+    (while
+        (and
+         (setq res (re-search-forward
+                    string-escape-regexp limit t))
+         (not (nth 3 (syntax-ppss)))))
+    res))
+
 (defconst golem-highlights
   (rx-let ((ident (seq alpha (* (any alnum "_")))))
     (list
@@ -42,6 +55,7 @@
      (list (rx (group ident) "(") 1 font-lock-function-name-face)
      (list (rx ":" (* " ") (group ident)) 1 font-lock-type-face)
      (list (rx (group-n 1 "struct") (* " ") "{") 1 font-lock-keyword-face)
+     (list 'golem-string-escape-matcher 0 font-lock-preprocessor-face 'prepend)
      )))
 
 ;;;###autoload

@@ -11,7 +11,7 @@ import "unsafe"
 import "reflect"
 import "path"
 
-// (add-hook 'before-save-hook 'gofmt-before-save)
+// (add-hook 'go-mode-hook (lambda () (add-hook 'before-save-hook 'gofmt-before-save)))
 
 type TokenKind int16
 
@@ -707,4 +707,6 @@ func main() {
 	for _, proc := range pak.ProcDefs {
 		Println(proc.String())
 	}
+
+	Println(compilePackageToC(pak))
 }
