@@ -87,15 +87,15 @@ type Tokenizer struct {
 	code         string
 	filename     string
 	offset       int
-	bracketStack []Token
 	lastToken    Token
+	bracketStack []Token
 }
 
 func NewTokenizer(code string, filename string) *Tokenizer {
 	return &Tokenizer{code: code, filename: filename}
 }
 
-func (this *Tokenizer) LineColumn(offset int) (line, column int) {
+func (this *Tokenizer) LineColumnOffset(offset int) (line, column int) {
 	line = 1
 	lineStart := 0
 	for pos, rune := range this.code {
@@ -116,19 +116,13 @@ func (this *Tokenizer) LineColumnToken(token Token) (line, columnStart, columnEn
 	header1 := (*reflect.StringHeader)(unsafe.Pointer(&this.code))
 	header2 := (*reflect.StringHeader)(unsafe.Pointer(&token.value))
 	offset := int(header2.Data - header1.Data)
-	line, columnStart = this.LineColumn(offset)
+	line, columnStart = this.LineColumnOffset(offset)
 	columnEnd = columnStart + header2.Len
 	return
 }
 
 func (this *Tokenizer) LineColumnCurrent() (line, column int) {
-	return this.LineColumn(this.offset)
-}
-
-func (this *Tokenizer) LineColumnLastToken() (line, columnStart, columnEnd int) {
-	line, columnStart = this.LineColumn(this.offset - len(this.lastToken.value))
-	line, columnEnd = this.LineColumn(this.offset)
-	return
+	return this.LineColumnOffset(this.offset)
 }
 
 func (this *Tokenizer) checkMatchingBracket(kind TokenKind) bool {
@@ -148,27 +142,21 @@ func (this *Tokenizer) pushBracketStack(arg Token) {
 	this.bracketStack = append(this.bracketStack, arg)
 }
 
-func (this *Tokenizer) Next() (result Token) {
-	result, this.offset = this.LookAhead()
-	switch result.kind {
-	case TkOpenBrace, TkOpenBracket, TkOpenCurly:
-		this.pushBracketStack(result)
-	case TkCloseBrace, TkCloseBracket, TkCloseCurly:
-		// either match bracket or invalidat it
-		if this.checkMatchingBracket(result.kind) {
-			this.popBracketStack()
-		} else {
-			Println(this.bracketStack, result)
-			result.kind = TkInvalid
-		}
-	}
-	return
+func (this *Tokenizer) Next() Token {
+	this.lastToken, this.offset = this.ScatTokenAt(this.offset)
+	return this.lastToken
+}
+
+func (this *Tokenizer) LookAhead() Token {
+	result, _ := this.ScatTokenAt(this.offset)
+	return result
 }
 
 // LookAhead does the same as Next, but does not modify offset
-func (this *Tokenizer) LookAhead() (result Token, newOffset int) {
-	code := this.code[this.offset:]
-	newOffset = this.offset
+func (this *Tokenizer) ScatTokenAt(offset int) (result Token, newOffset int) {
+	code := this.code[offset:]
+	newOffset = offset
+
 	// Printf("read token in:%s...\n", code[:20]);
 	if len(code) == 0 {
 		panic("Cannot read token in empty string")
@@ -197,7 +185,6 @@ func (this *Tokenizer) LookAhead() (result Token, newOffset int) {
 			// TODOdo not infer semicolon after comments
 			result.kind = TkSemicolon
 			result.value = code[:idx]
-			this.lastToken = result
 			return
 		}
 
@@ -360,12 +347,14 @@ func (block CodeBlock) expression() {}
 func (block CodeBlock) statement()  {}
 
 type Expr interface {
-	prettyPrint(*strings.Builder)
+	String() string
+	prettyPrint(*AstPrettyPrinter)
 	expression()
 }
 
 type Stmt interface {
-	prettyPrint(*strings.Builder)
+	String() string
+	prettyPrint(*AstPrettyPrinter)
 	statement()
 }
 
@@ -469,7 +458,7 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 	case TkIdent:
 		sym := Symbol{Value: token.value}
 
-		lookAhead, _ := tokenizer.LookAhead()
+		lookAhead := tokenizer.LookAhead()
 
 		switch lookAhead.kind {
 		case TkSemicolon, TkCloseBrace, TkCloseCurly:
@@ -496,7 +485,7 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 			var args []Expr
 			token = tokenizer.Next()
 			for true {
-				lookAhead, _ = tokenizer.LookAhead()
+				lookAhead = tokenizer.LookAhead()
 				switch lookAhead.kind {
 				case TkIdent, TkStringLit:
 					args = append(args, tokenizer.parseExpr())
@@ -515,10 +504,10 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 		// parse block
 		var block CodeBlock
 
-		lookAhead, _ := tokenizer.LookAhead()
+		lookAhead := tokenizer.LookAhead()
 		for lookAhead.kind == TkSemicolon {
 			tokenizer.Next()
-			lookAhead, _ = tokenizer.LookAhead()
+			lookAhead = tokenizer.LookAhead()
 		}
 
 		for lookAhead.kind != TkCloseCurly {
@@ -527,7 +516,7 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 
 			next := tokenizer.Next()
 			tokenizer.expectKind(next, TkSemicolon)
-			lookAhead, _ = tokenizer.LookAhead()
+			lookAhead = tokenizer.LookAhead()
 		}
 
 		endToken := tokenizer.Next()
@@ -615,7 +604,9 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 		}
 
 		tokenizer.expectOperator(token, ":")
+
 		typ := tokenizer.parseTypeExpr()
+
 		for i := startIndex; i < len(result.Args); i++ {
 			result.Args[i].Type = typ
 		}
@@ -656,11 +647,8 @@ func parsePackage(code, filename string) (result PackageDef) {
 			}
 		}
 
-		// utrineiaurtne
-		line, columnStart, columnEnd := tokenizer.LineColumnLastToken()
-		msg := Sprintf("%s(%d, %d-%d) Error: unexpected Token: %v",
-			filename, line, columnStart, columnEnd, token)
-		panic(msg)
+		tokenizer.wrongKind(tokenizer.lastToken)
+		panic("unreachable")
 	}
 	return
 }
@@ -684,5 +672,13 @@ func main() {
 		panic(err)
 	}
 	// tokenize(string(bytes));
-	parsePackage(string(bytes), filename)
+	pak := parsePackage(string(bytes), filename)
+
+	Println(pak.Name)
+	for _, typ := range pak.TypeDefs {
+		Println(typ.String())
+	}
+	for _, proc := range pak.ProcDefs {
+		Println(proc.String())
+	}
 }
