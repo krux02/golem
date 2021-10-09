@@ -1,8 +1,8 @@
 package main
 
 import (
-	"strings"
 	"fmt"
+	"strings"
 )
 
 type CCodeGeneratorContext struct {
@@ -35,7 +35,7 @@ func (context *CCodeGeneratorContext) compileCall(call Call) {
 			context.compileExpr(it)
 		}
 		context.WriteString(")")
-  default:
+	default:
 		context.WriteString(call.Sym.Value)
 		context.WriteString("(")
 		for i, it := range call.Args {
@@ -80,6 +80,10 @@ func (context *CCodeGeneratorContext) compileStrLit(lit StrLit) {
 	context.WriteRune('"')
 }
 
+func (context *CCodeGeneratorContext) compileSymbol(sym Symbol) {
+	context.WriteString(sym.Value)
+}
+
 func (context *CCodeGeneratorContext) compileExpr(expr Expr) {
 	switch ex := expr.(type) {
 	case CodeBlock:
@@ -88,6 +92,8 @@ func (context *CCodeGeneratorContext) compileExpr(expr Expr) {
 		context.compileCall(ex)
 	case StrLit:
 		context.compileStrLit(ex)
+	case Symbol:
+		context.compileSymbol(ex)
 	default:
 		panic(fmt.Sprintf("Not implemented %T", expr))
 	}
@@ -135,12 +141,9 @@ func (context *CCodeGeneratorContext) compileProcDef(procDef ProcDef) {
 }
 
 func compilePackageToC(pak PackageDef) string {
+	builder := &CCodeGeneratorContext{pak: pak}
 	for _, proc := range pak.ProcDefs {
-		if proc.Name == "main" {
-			builder := &CCodeGeneratorContext{pak: pak}
-			builder.compileProcDef(proc)
-			return builder.String()
-		}
+		builder.compileProcDef(proc)
 	}
-	panic("no main entry point found")
+	return builder.String()
 }

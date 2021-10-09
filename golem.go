@@ -707,6 +707,6 @@ func main() {
 	for _, proc := range pak.ProcDefs {
 		Println(proc.String())
 	}
-
+	Println("------------------------------------------------------------\n")
 	Println(compilePackageToC(pak))
 }

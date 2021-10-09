@@ -49,16 +49,13 @@ func (call Call) prettyPrint(builder *AstPrettyPrinter) {
 func (codeBlock CodeBlock) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("{")
 	builder.Indentation++
-	builder.NewlineAndIndent()
-	iLast := len(codeBlock.Items) - 1
-	for i, item := range codeBlock.Items {
+	for _, item := range codeBlock.Items {
+		builder.NewlineAndIndent()
 		item.prettyPrint(builder)
 		builder.WriteString(";")
-		if i == iLast {
-			builder.Indentation--
-		}
-		builder.NewlineAndIndent()
 	}
+	builder.Indentation--
+	builder.NewlineAndIndent()
 	builder.WriteString("}")
 	builder.NewlineAndIndent()
 }
