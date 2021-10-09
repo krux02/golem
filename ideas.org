@@ -643,9 +643,9 @@ infrastructure.
 It is very valuable to see context free when a symbol lookup is from a
 local context (object) or a globally existent namespace.
 
-Jump to definition on ``foo::bar`` can capture the entire expression,
-while in ``foo.bar`` it is unknown to the editor if foo is a
-namespace/package or not.
+Jump to definition on ~foo::bar~ can capture the entire expression,
+while in ~foo.bar~ it is unknown to the editor if foo is a
+namespace or package or not.
 
 ** Enums and Constant Groups
 
@@ -706,6 +706,21 @@ for child in foobar:
   echo "child kind: ", child.kind
 
 #+end_src
+
+** semantic whitespace/indentation vs braces
+
+Both approaches have their advantages. Semantic whitespace has the
+advantage that there are no unmatched braces. On the fly syntax
+checking doesn't convert the source code intro a Christmas tree
+instantly.
+
+With explicit blocks, it is much easier to declare things inline
+
+An idea here would be to combine both worlds here. Use Curly braces
+for code blocks, but make the whitespace for indentation
+mandatory. Mandatory indentation tells the parser exactly where a
+closing curly brace is missing. Easy error correction, good hint from
+the compiler, and no Christmas tree lights in the program.
 
 * A defensive justification for macros
 
