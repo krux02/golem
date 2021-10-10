@@ -60,12 +60,6 @@ func (codeBlock CodeBlock) prettyPrint(builder *AstPrettyPrinter) {
 	builder.NewlineAndIndent()
 }
 
-func (stmt ReturnStmt) prettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("return ")
-	stmt.Expr.prettyPrint(builder)
-	builder.WriteString(";\n")
-}
-
 func (lit StrLit) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteRune('"')
 	for _, rune := range lit.Val {
@@ -170,12 +164,6 @@ func (codeBlock CodeBlock) String() string {
 func (call Call) String() string {
 	builder := &AstPrettyPrinter{}
 	call.prettyPrint(builder)
-	return builder.String()
-}
-
-func (stmt ReturnStmt) String() string {
-	builder := &AstPrettyPrinter{}
-	stmt.prettyPrint(builder)
 	return builder.String()
 }
 

@@ -320,63 +320,6 @@ func (this *Tokenizer) AtEnd() bool {
 	return this.offset == len(this.code)
 }
 
-type TypeExpr struct {
-	Ident string
-}
-
-type StructField struct {
-	Name string
-	Type TypeExpr
-}
-
-type StructDef struct {
-	Name   string
-	Fields []StructField
-}
-
-type ProcArgument struct {
-	Name string
-	Type TypeExpr
-}
-
-type CodeBlock struct {
-	Items []Expr
-}
-
-func (block CodeBlock) expression() {}
-func (block CodeBlock) statement()  {}
-
-type Expr interface {
-	String() string
-	prettyPrint(*AstPrettyPrinter)
-	expression()
-}
-
-type Stmt interface {
-	String() string
-	prettyPrint(*AstPrettyPrinter)
-	statement()
-}
-
-type ReturnStmt struct {
-	Expr Expr
-}
-
-func (stmt ReturnStmt) statement() {}
-
-type Symbol struct {
-	Value              string
-	OperatorPrecedence int
-}
-
-func (sym Symbol) expression() {}
-
-type StrLit struct {
-	Val string
-}
-
-func (lit StrLit) expression() {}
-
 var FunctionSymbolTable = []Symbol{
 	{Value: "*", OperatorPrecedence: 6},
 	{Value: "/", OperatorPrecedence: 6},
@@ -393,28 +336,6 @@ func LookupFunctionSymbol(value string) Symbol {
 		}
 	}
 	panic(Sprintf("Undefined Function `%s`", value))
-}
-
-type Call struct {
-	Sym  Symbol
-	Args []Expr
-	// other properties
-	Braced bool // true for (a+b) +(a,b), false for a+b
-}
-
-func (call Call) expression() {}
-
-type ProcDef struct {
-	Name       string
-	Args       []ProcArgument
-	ResultType TypeExpr
-	Body       Expr
-}
-
-type PackageDef struct {
-	Name     string
-	TypeDefs []StructDef
-	ProcDefs []ProcDef
 }
 
 func (tokenizer *Tokenizer) wrongKind(token Token) string {
