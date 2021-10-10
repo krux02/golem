@@ -13,6 +13,11 @@ type TcStructField struct {
 	Type TypeHandle
 }
 
+type TcVariableSym struct {
+	Name string
+	Type TypeHandle
+}
+
 type TcStructDef struct {
 	Name   string
 	Fields []TcStructField

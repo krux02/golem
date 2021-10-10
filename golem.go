@@ -69,20 +69,6 @@ var TokenKindNames = [...]string{
 	TkEof:          "<EOF>",
 }
 
-type Type struct {
-	Name string
-}
-
-// supposed to be constant
-var builtinTypes []Type = []Type{
-	{"int"},
-	{"float"},
-	{"string"},
-}
-
-// index to refere to a (currently only builtin) type
-type TypeHandle int
-
 type Token struct {
 	kind  TokenKind
 	value string
