@@ -26,7 +26,6 @@ const (
 	TkFloatLit
 	TkLineComment
 
-	TkEof // end of file
 
 	TkOpenBrace    TokenKind = 100
 	TkCloseBrace   TokenKind = 101
@@ -34,7 +33,9 @@ const (
 	TkCloseBracket TokenKind = 103
 	TkOpenCurly    TokenKind = 104
 	TkCloseCurly   TokenKind = 105
-	TkCount        TokenKind = 106
+
+	TkEof TokenKind = iota // end of file
+	TkCount
 )
 
 func init() {
@@ -49,7 +50,7 @@ func init() {
 	}
 }
 
-var TokenKindNames = [TkCount]string{
+var TokenKindNames = [...]string{
 	TkInvalid:      "Invalid",
 	TkIdent:        "Ident",
 	TkSemicolon:    "Semicolon",
@@ -59,25 +60,27 @@ var TokenKindNames = [TkCount]string{
 	TkIntLit:       "IntLit",
 	TkFloatLit:     "FloatLit",
 	TkLineComment:  "LineComment",
-	TkEof:          "<EOF>",
 	TkOpenBrace:    "OpenBrace",
 	TkCloseBrace:   "CloseBrace",
 	TkOpenBracket:  "OpenBracket",
 	TkCloseBracket: "CloseBracket",
 	TkOpenCurly:    "OpenCurly",
 	TkCloseCurly:   "CloseCurly",
+	TkEof:          "<EOF>",
 }
 
 type Type struct {
-	name string
+	Name string
 }
 
-var types []Type = []Type{
+// supposed to be constant
+var builtinTypes []Type = []Type{
 	{"int"},
 	{"float"},
 	{"string"},
 }
 
+// index to refere to a (currently only builtin) type
 type TypeHandle int
 
 type Token struct {
