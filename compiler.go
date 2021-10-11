@@ -7,13 +7,13 @@ import (
 
 type CCodeGeneratorContext struct {
 	strings.Builder
-	indentation int
-	pak         TcPackageDef
+	Indentation int
+	Pak         TcPackageDef
 }
 
 func (context *CCodeGeneratorContext) newlineAndIndent() {
 	context.WriteString("\n")
-	for i := 0; i < context.indentation; i++ {
+	for i := 0; i < context.Indentation; i++ {
 		context.WriteString("  ")
 	}
 }
@@ -103,21 +103,21 @@ func (context *CCodeGeneratorContext) compileExpr(expr TcExpr) {
 
 func (context *CCodeGeneratorContext) compileCodeBlock(block TcCodeBlock) {
 	context.WriteString("{")
-	context.indentation += 1
+	context.Indentation += 1
 
 	for _, expr := range block.Items {
 		context.newlineAndIndent()
 		context.compileExpr(expr)
+		context.WriteRune(';')
 	}
 
-	context.indentation -= 1
+	context.Indentation -= 1
 	context.newlineAndIndent()
 	context.WriteString("}")
-	context.newlineAndIndent()
-
 }
 
 func (context *CCodeGeneratorContext) compileProcDef(procDef TcProcDef) {
+	context.newlineAndIndent()
 	context.compileTypeExpr(procDef.ResultType)
 	// context.compileTypeExpr(procDef.ResultType)
 	context.WriteString(" ")
@@ -139,11 +139,33 @@ func (context *CCodeGeneratorContext) compileProcDef(procDef TcProcDef) {
 		body.Items = []TcExpr{procDef.Body}
 	}
 	context.compileCodeBlock(body)
+}
 
+func (context *CCodeGeneratorContext) compileStructDef(structDef TcStructDef) {
+	context.newlineAndIndent()
+	context.WriteString("typedef struct ")
+	context.WriteString(structDef.Name)
+	context.WriteString(" {")
+	context.Indentation += 1
+	for _, field := range structDef.Fields {
+		context.newlineAndIndent()
+		context.compileTypeExpr(field.Type)
+		context.WriteString(" ")
+		context.WriteString(field.Name)
+		context.WriteString(";")
+	}
+	context.Indentation -= 1
+	context.newlineAndIndent()
+	context.WriteString("} ")
+	context.WriteString(structDef.Name)
+	context.WriteString(";")
 }
 
 func compilePackageToC(pak TcPackageDef) string {
-	builder := &CCodeGeneratorContext{pak: pak}
+	builder := &CCodeGeneratorContext{Pak: pak}
+	for _, typ := range pak.TypeDefs {
+		builder.compileStructDef(typ)
+	}
 	for _, proc := range pak.ProcDefs {
 		builder.compileProcDef(proc)
 	}

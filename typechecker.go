@@ -62,13 +62,14 @@ func (scope Scope) LookUpProc(sym Symbol) TcProcSymbol {
 	var result TcProcSymbol
 	result.Name = sym.Name
 	result.Impl = scope.Procedures[sym.Name]
+	fmt.Println("Impl: ", result.Name)
+	fmt.Println(result.Impl)
 	return result
 }
 
 func (scope Scope) LookUpSym(sym Symbol) TcSymbol {
 	var result TcSymbol
 	result.Name = sym.Name
-
 	result.typ = scope.Types[sym.Name]
 	return result
 }
@@ -80,6 +81,7 @@ func TypeCheckStructDef(scope Scope, def StructDef) TcStructDef {
 		var tcField TcStructField
 		tcField.Name = field.Name
 		tcField.Type = scope.LookUpType(field.Type)
+		result.Fields = append(result.Fields, tcField)
 	}
 	return result
 }
