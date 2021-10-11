@@ -86,6 +86,7 @@ func TypeCheckStructDef(scope Scope, def StructDef) TcStructDef {
 
 func TypeCheckProcDef(scope Scope, def ProcDef) TcProcDef {
 	var result TcProcDef
+	result.Name = def.Name
 	result.ResultType = scope.LookUpType(def.ResultType)
 
 	for _, arg := range def.Args {
@@ -94,8 +95,8 @@ func TypeCheckProcDef(scope Scope, def ProcDef) TcProcDef {
 		tcArg.Type = scope.LookUpType(arg.Type)
 		result.Args = append(result.Args, tcArg)
 	}
+
 	result.Body = TypeCheckExpr(scope, def.Body)
-	// result.Body = TypeCheckExpr(scope, def.Body)
 	return result
 }
 

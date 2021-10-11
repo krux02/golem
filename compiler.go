@@ -22,7 +22,7 @@ func (context *CCodeGeneratorContext) compileTypeExpr(typ TypeHandle) {
 	context.WriteString(typ.Name())
 }
 
-func (context *CCodeGeneratorContext) compileCall(call Call) {
+func (context *CCodeGeneratorContext) compileCall(call TcCall) {
 	switch call.Sym.Name {
 	case "+", "-", "*", "/":
 		context.WriteString("(")
@@ -80,19 +80,19 @@ func (context *CCodeGeneratorContext) compileStrLit(lit StrLit) {
 	context.WriteRune('"')
 }
 
-func (context *CCodeGeneratorContext) compileSymbol(sym Symbol) {
+func (context *CCodeGeneratorContext) compileSymbol(sym TcSymbol) {
 	context.WriteString(sym.Name)
 }
 
-func (context *CCodeGeneratorContext) compileExpr(expr Expr) {
+func (context *CCodeGeneratorContext) compileExpr(expr TcExpr) {
 	switch ex := expr.(type) {
-	case CodeBlock:
+	case TcCodeBlock:
 		context.compileCodeBlock(ex)
-	case Call:
+	case TcCall:
 		context.compileCall(ex)
 	case StrLit:
 		context.compileStrLit(ex)
-	case Symbol:
+	case TcSymbol:
 		context.compileSymbol(ex)
 	case nil:
 		panic(fmt.Sprintf("invalid Ast, expression is nil %T", expr))
@@ -101,7 +101,7 @@ func (context *CCodeGeneratorContext) compileExpr(expr Expr) {
 	}
 }
 
-func (context *CCodeGeneratorContext) compileCodeBlock(block CodeBlock) {
+func (context *CCodeGeneratorContext) compileCodeBlock(block TcCodeBlock) {
 	context.WriteString("{")
 	context.indentation += 1
 
@@ -133,10 +133,10 @@ func (context *CCodeGeneratorContext) compileProcDef(procDef TcProcDef) {
 	}
 	context.WriteString(")")
 
-	body, ok := procDef.Body.(CodeBlock)
+	body, ok := procDef.Body.(TcCodeBlock)
 	// ensure code block for code generation
 	if !ok {
-		body.Items = []Expr{procDef.Body}
+		body.Items = []TcExpr{procDef.Body}
 	}
 	context.compileCodeBlock(body)
 

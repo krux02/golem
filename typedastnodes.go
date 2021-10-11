@@ -58,7 +58,7 @@ type TcProcDef struct {
 	Name       string
 	Args       []TcProcArgument
 	ResultType TypeHandle
-	Body       Expr
+	Body       TcExpr
 }
 
 type TcPackageDef struct {
