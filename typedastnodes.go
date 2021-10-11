@@ -33,17 +33,23 @@ type TcCodeBlock struct {
 }
 
 type TcSymbol struct {
-	Value              string
-	OperatorPrecedence int
+	Name              string
+	typ TypeHandle
 }
 
-type TcStrLit struct {
-	Val string
+func (sym TcSymbol) Type() TypeHandle {
+	return sym.typ
 }
+
+type TcProcSymbol struct {
+	Name string
+	Impl *TcProcDef
+}
+
 
 type TcCall struct {
-	Sym  Symbol
-	Args []Expr
+	Sym  TcProcSymbol
+	Args []TcExpr
 	// other properties
 	Braced bool // true for (a+b) +(a,b), false for a+b
 }
@@ -63,5 +69,5 @@ type TcPackageDef struct {
 
 func (sym TcSymbol) expression() {}
 func (block TcCodeBlock) expression() {}
-func (lit TcStrLit) expression() {}
+//func (lit TcStrLit) expression() {}
 func (call TcCall) expression() {}

@@ -1,5 +1,9 @@
 package main
 
+import (
+	"fmt"
+)
+
 
 type Type interface {
 	Name() string
@@ -13,40 +17,63 @@ func (typ *BuiltinType) Name() string {
 	return typ.name
 }
 
-var builtinScope = &Scope{
+var TypeInt = &BuiltinType{"int"}
+var TypeFloat = &BuiltinType{"float"}
+var TypeString = &BuiltinType{"string"}
+var TypeVoid = &BuiltinType{"void"}
+
+var builtinScope Scope = &ScopeImpl{
 	Parent: nil,
 	Types: map[string]Type{
-    "int": &BuiltinType{"int"},
-	  "float": &BuiltinType{"float"},
-	  "string": &BuiltinType{"string"},
+    "int": TypeInt,
+	  "float": TypeFloat,
+	  "string": TypeString,
+		"void": TypeVoid,
 	},
 }
 
 // index to refere to a (currently only builtin) type
 type TypeHandle Type
 
-type Scope struct {
-	Parent *Scope
-	Variables map[string]Symbol
-	Procedures map[string]ProcDef
+type ScopeImpl struct {
+	Parent Scope
+	Variables map[string]TcSymbol
+	Procedures map[string]*TcProcDef
 	Types map[string]Type
 }
 
-func (scope *Scope) LookUpType(expr TypeExpr) TypeHandle {
+type Scope = *ScopeImpl
+
+func (scope Scope) LookUpType(expr TypeExpr) TypeHandle {
 	// TODO really slow lookup, should really be faster
 	name := expr.Ident
-
-
 	for key, value := range scope.Types {
 		if key == name {
 			return TypeHandle(value)
 		}
 	}
-
-	panic("Type not found")
+	if scope.Parent != nil {
+		return scope.Parent.LookUpType(expr)
+	}
+	panic(fmt.Sprintf("Type not found: %s", name))
 }
 
-func TypeCheckStructDef(scope *Scope, def StructDef) TcStructDef {
+func (scope Scope) LookUpProc(sym Symbol) TcProcSymbol {
+	var result TcProcSymbol
+	result.Name = sym.Name
+	result.Impl = scope.Procedures[sym.Name]
+	return result
+}
+
+func (scope Scope) LookUpSym(sym Symbol) TcSymbol {
+	var result TcSymbol
+	result.Name = sym.Name
+
+	result.typ = scope.Types[sym.Name]
+	return result
+}
+
+func TypeCheckStructDef(scope Scope, def StructDef) TcStructDef {
 	var result TcStructDef
 	result.Name = def.Name
 	for _, field := range def.Fields {
@@ -57,7 +84,7 @@ func TypeCheckStructDef(scope *Scope, def StructDef) TcStructDef {
 	return result
 }
 
-func TypeCheckProcDef(scope *Scope, def ProcDef) TcProcDef {
+func TypeCheckProcDef(scope Scope, def ProcDef) TcProcDef {
 	var result TcProcDef
 	result.ResultType = scope.LookUpType(def.ResultType)
 
@@ -67,19 +94,70 @@ func TypeCheckProcDef(scope *Scope, def ProcDef) TcProcDef {
 		tcArg.Type = scope.LookUpType(arg.Type)
 		result.Args = append(result.Args, tcArg)
 	}
-	result.Body = TypeCheckExpr(def.Body)
+	result.Body = TypeCheckExpr(scope, def.Body)
+	// result.Body = TypeCheckExpr(scope, def.Body)
 	return result
 }
 
-func TypeCheckExpr(arg Expr) TcExpr {
+func TypeCheckCall(scope Scope, call Call) TcCall {
+	var result TcCall
+	result.Sym = scope.LookUpProc(call.Sym)
+	result.Args = make([]TcExpr, 0, len(call.Args))
+	for _, arg := range call.Args {
+		tcArg := TypeCheckExpr(scope, arg)
+		result.Args = append(result.Args, tcArg)
+	}
+	return result
+}
+
+func TypeCheckCodeBlock(scope Scope, arg CodeBlock) TcCodeBlock {
+	var result TcCodeBlock
+	result.Items = make([]TcExpr, 0, len(arg.Items))
+	for _, item := range arg.Items {
+		result.Items = append(result.Items, TypeCheckExpr(scope, item))
+	}
+	return result
+}
+
+func (block TcCodeBlock) Type() TypeHandle {
+	if len(block.Items) == 0 {
+		return TypeVoid
+	}
+	return block.Items[len(block.Items)-1].Type()
+}
+
+func (call TcCall) Type() TypeHandle {
+	return call.Sym.Impl.ResultType
+}
+
+func (strLit StrLit) Type() TypeHandle {
+	return TypeString
+}
+
+
+func TypeCheckExpr(scope Scope, arg Expr) TcExpr {
 	var result TcExpr
+	switch arg := arg.(type) {
+	case Call:
+		return (TcExpr)(TypeCheckCall(scope, arg))
+	case CodeBlock:
+		return (TcExpr)(TypeCheckCodeBlock(scope, arg))
+	case Symbol:
+		return (TcExpr)(scope.LookUpSym(arg))
+	case StrLit:
+		return (TcExpr)(arg)
+	default:
+
+		panic(fmt.Sprintf("not implemented %T", arg))
+	}
+
 	// TODO not implemented
 	return result
 }
 
 func TypeCheckPackage(arg PackageDef) TcPackageDef {
 	var result TcPackageDef
-	scope := &Scope{Parent: builtinScope}
+	scope := &ScopeImpl{Parent: builtinScope}
 	result.Name = arg.Name
 	for _, typeDef := range arg.TypeDefs {
 		result.TypeDefs = append(result.TypeDefs, TypeCheckStructDef(scope, typeDef))

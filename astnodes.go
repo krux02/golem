@@ -32,7 +32,7 @@ type CodeBlock struct {
 }
 
 type Symbol struct {
-	Value              string
+	Name              string
 	OperatorPrecedence int
 }
 

@@ -31,11 +31,11 @@ func (this Token) String() string {
 /// AST NODES
 
 func (sym Symbol) prettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString(sym.Value)
+	builder.WriteString(sym.Name)
 }
 
 func (call Call) prettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString(call.Sym.Value)
+	builder.WriteString(call.Sym.Name)
 	builder.WriteString("(")
 	for i, arg := range call.Args {
 		if i != 0 {
@@ -151,7 +151,7 @@ func (procDef ProcDef) prettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (sym Symbol) String() string {
-	return sym.Value
+	return sym.Name
 }
 
 func (codeBlock CodeBlock) String() string {
@@ -166,6 +166,31 @@ func (call Call) String() string {
 	call.prettyPrint(builder)
 	return builder.String()
 }
+
+func (call TcCall) String() string {
+	panic("not implemented")
+}
+
+func (call TcCall) prettyPrint(*AstPrettyPrinter) {
+	panic("not implemented")
+}
+
+func (call TcCodeBlock) String() string {
+	panic("not implemented")
+}
+
+func (call TcCodeBlock) prettyPrint(*AstPrettyPrinter) {
+	panic("not implemented")
+}
+
+func (call TcSymbol) String() string {
+	panic("not implemented")
+}
+
+func (call TcSymbol) prettyPrint(*AstPrettyPrinter) {
+	panic("not implemented")
+}
+
 
 func (lit StrLit) String() string {
 	builder := &AstPrettyPrinter{}

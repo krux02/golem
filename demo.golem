@@ -14,6 +14,6 @@ proc myfun1(a, b, c: int): int = {
 proc myfun2(a,b,c: int) : int = a * b + a * c
 
 ## this is a comment
-proc main(): int32 = {
+proc main(): int = {
   printf("Hallo Welt!\n")
 }

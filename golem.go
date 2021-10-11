@@ -309,22 +309,24 @@ func (this *Tokenizer) AtEnd() bool {
 	return this.offset == len(this.code)
 }
 
+
+// TODO this is not a function sybol table, it is just an Operator Precedence table
 var FunctionSymbolTable = []Symbol{
-	{Value: "*", OperatorPrecedence: 6},
-	{Value: "/", OperatorPrecedence: 6},
-	{Value: "+", OperatorPrecedence: 5},
-	{Value: "-", OperatorPrecedence: 5},
-	{Value: "println"},
+	{Name: "*", OperatorPrecedence: 6},
+	{Name: "/", OperatorPrecedence: 6},
+	{Name: "+", OperatorPrecedence: 5},
+	{Name: "-", OperatorPrecedence: 5},
+	{Name: "println"},
 }
 
-func LookupFunctionSymbol(value string) Symbol {
+func LookupFunctionSymbol(name string) Symbol {
 	// TODO, this is horrible lookup
 	for _, sym := range FunctionSymbolTable {
-		if sym.Value == value {
+		if sym.Name == name {
 			return sym
 		}
 	}
-	panic(Sprintf("Undefined Function `%s`", value))
+	panic(Sprintf("Undefined Function `%s`", name))
 }
 
 func (tokenizer *Tokenizer) wrongKind(token Token) string {
@@ -366,7 +368,7 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 
 	switch token.kind {
 	case TkIdent:
-		sym := Symbol{Value: token.value}
+		sym := Symbol{Name: token.value}
 
 		lookAhead := tokenizer.lookAheadToken
 
@@ -617,6 +619,10 @@ func main() {
 	for _, proc := range pak.ProcDefs {
 		Println(proc.String())
 	}
+
+	checkpackage := TypeCheckPackage(pak)
+
+
 	Println("------------------------------------------------------------\n")
-	Println(compilePackageToC(pak))
+	Println(compilePackageToC(checkpackage))
 }

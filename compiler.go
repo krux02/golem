@@ -8,7 +8,7 @@ import (
 type CCodeGeneratorContext struct {
 	strings.Builder
 	indentation int
-	pak         PackageDef
+	pak         TcPackageDef
 }
 
 func (context *CCodeGeneratorContext) newlineAndIndent() {
@@ -18,25 +18,25 @@ func (context *CCodeGeneratorContext) newlineAndIndent() {
 	}
 }
 
-func (context *CCodeGeneratorContext) compileTypeExpr(typ TypeExpr) {
-	context.WriteString(typ.Ident)
+func (context *CCodeGeneratorContext) compileTypeExpr(typ TypeHandle) {
+	context.WriteString(typ.Name())
 }
 
 func (context *CCodeGeneratorContext) compileCall(call Call) {
-	switch call.Sym.Value {
+	switch call.Sym.Name {
 	case "+", "-", "*", "/":
 		context.WriteString("(")
 		for i, it := range call.Args {
 			if i != 0 {
 				context.WriteString(" ")
-				context.WriteString(call.Sym.Value)
+				context.WriteString(call.Sym.Name)
 				context.WriteString(" ")
 			}
 			context.compileExpr(it)
 		}
 		context.WriteString(")")
 	default:
-		context.WriteString(call.Sym.Value)
+		context.WriteString(call.Sym.Name)
 		context.WriteString("(")
 		for i, it := range call.Args {
 			if i != 0 {
@@ -81,7 +81,7 @@ func (context *CCodeGeneratorContext) compileStrLit(lit StrLit) {
 }
 
 func (context *CCodeGeneratorContext) compileSymbol(sym Symbol) {
-	context.WriteString(sym.Value)
+	context.WriteString(sym.Name)
 }
 
 func (context *CCodeGeneratorContext) compileExpr(expr Expr) {
@@ -94,6 +94,8 @@ func (context *CCodeGeneratorContext) compileExpr(expr Expr) {
 		context.compileStrLit(ex)
 	case Symbol:
 		context.compileSymbol(ex)
+	case nil:
+		panic(fmt.Sprintf("invalid Ast, expression is nil %T", expr))
 	default:
 		panic(fmt.Sprintf("Not implemented %T", expr))
 	}
@@ -115,7 +117,7 @@ func (context *CCodeGeneratorContext) compileCodeBlock(block CodeBlock) {
 
 }
 
-func (context *CCodeGeneratorContext) compileProcDef(procDef ProcDef) {
+func (context *CCodeGeneratorContext) compileProcDef(procDef TcProcDef) {
 	context.compileTypeExpr(procDef.ResultType)
 	// context.compileTypeExpr(procDef.ResultType)
 	context.WriteString(" ")
@@ -140,7 +142,7 @@ func (context *CCodeGeneratorContext) compileProcDef(procDef ProcDef) {
 
 }
 
-func compilePackageToC(pak PackageDef) string {
+func compilePackageToC(pak TcPackageDef) string {
 	builder := &CCodeGeneratorContext{pak: pak}
 	for _, proc := range pak.ProcDefs {
 		builder.compileProcDef(proc)
