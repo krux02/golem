@@ -4,7 +4,6 @@ import (
 	"fmt"
 )
 
-
 type Type interface {
 	Name() string
 }
@@ -21,14 +20,25 @@ var TypeInt = &BuiltinType{"int"}
 var TypeFloat = &BuiltinType{"float"}
 var TypeString = &BuiltinType{"string"}
 var TypeVoid = &BuiltinType{"void"}
+var TypeNoReturn = &BuiltinType{"noreturn"}
 
 var builtinScope Scope = &ScopeImpl{
 	Parent: nil,
 	Types: map[string]Type{
-    "int": TypeInt,
-	  "float": TypeFloat,
-	  "string": TypeString,
-		"void": TypeVoid,
+		"int":      TypeInt,
+		"float":    TypeFloat,
+		"string":   TypeString,
+		"void":     TypeVoid,
+		"noreturn": TypeNoReturn,
+	},
+	// these are builtin procedures, therefore their Impl is nil
+	Procedures: map[string]*TcProcDef{
+		"+":      nil,
+		"-":      nil,
+		"*":      nil,
+		"/":      nil,
+		"return": nil,
+		"printf": nil,
 	},
 }
 
@@ -36,10 +46,10 @@ var builtinScope Scope = &ScopeImpl{
 type TypeHandle Type
 
 type ScopeImpl struct {
-	Parent Scope
-	Variables map[string]TcSymbol
+	Parent     Scope
+	Variables  map[string]TcSymbol
 	Procedures map[string]*TcProcDef
-	Types map[string]Type
+	Types      map[string]Type
 }
 
 type Scope = *ScopeImpl
@@ -59,12 +69,14 @@ func (scope Scope) LookUpType(expr TypeExpr) TypeHandle {
 }
 
 func (scope Scope) LookUpProc(sym Symbol) TcProcSymbol {
-	var result TcProcSymbol
-	result.Name = sym.Name
-	result.Impl = scope.Procedures[sym.Name]
-	fmt.Println("Impl: ", result.Name)
-	fmt.Println(result.Impl)
-	return result
+	if scope == nil {
+		panic(fmt.Sprintf("Proc not found: %s", sym.Name))
+	}
+
+	if impl, ok := scope.Procedures[sym.Name]; ok {
+		return TcProcSymbol{Name: sym.Name, Impl: impl}
+	}
+	return scope.Parent.LookUpProc(sym)
 }
 
 func (scope Scope) LookUpSym(sym Symbol) TcSymbol {
@@ -137,7 +149,6 @@ func (strLit StrLit) Type() TypeHandle {
 	return TypeString
 }
 
-
 func TypeCheckExpr(scope Scope, arg Expr) TcExpr {
 	var result TcExpr
 	switch arg := arg.(type) {
@@ -168,5 +179,5 @@ func TypeCheckPackage(arg PackageDef) TcPackageDef {
 	for _, procDef := range arg.ProcDefs {
 		result.ProcDefs = append(result.ProcDefs, TypeCheckProcDef(scope, procDef))
 	}
-  return result
+	return result
 }
