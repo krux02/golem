@@ -32,8 +32,7 @@ type CodeBlock struct {
 }
 
 type Symbol struct {
-	Name              string
-	OperatorPrecedence int
+	Name string
 }
 
 type StrLit struct {
@@ -60,7 +59,7 @@ type PackageDef struct {
 	ProcDefs []ProcDef
 }
 
-func (sym Symbol) expression() {}
+func (sym Symbol) expression()      {}
 func (block CodeBlock) expression() {}
-func (lit StrLit) expression() {}
-func (call Call) expression() {}
+func (lit StrLit) expression()      {}
+func (call Call) expression()       {}

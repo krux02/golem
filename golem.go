@@ -11,8 +11,6 @@ import "unsafe"
 import "reflect"
 import "path"
 
-// (add-hook 'go-mode-hook (lambda () (add-hook 'before-save-hook 'gofmt-before-save)))
-
 type TokenKind int16
 
 const (
@@ -25,7 +23,6 @@ const (
 	TkIntLit
 	TkFloatLit
 	TkLineComment
-
 
 	TkOpenBrace    TokenKind = 100
 	TkCloseBrace   TokenKind = 101
@@ -309,24 +306,12 @@ func (this *Tokenizer) AtEnd() bool {
 	return this.offset == len(this.code)
 }
 
-
 // TODO this is not a function sybol table, it is just an Operator Precedence table
-var FunctionSymbolTable = []Symbol{
-	{Name: "*", OperatorPrecedence: 6},
-	{Name: "/", OperatorPrecedence: 6},
-	{Name: "+", OperatorPrecedence: 5},
-	{Name: "-", OperatorPrecedence: 5},
-	{Name: "println"},
-}
-
-func LookupFunctionSymbol(name string) Symbol {
-	// TODO, this is horrible lookup
-	for _, sym := range FunctionSymbolTable {
-		if sym.Name == name {
-			return sym
-		}
-	}
-	panic(Sprintf("Undefined Function `%s`", name))
+var OperatorPrecedence map[string]int = map[string]int{
+	"*": 6,
+	"/": 6,
+	"+": 5,
+	"-": 5,
 }
 
 func (tokenizer *Tokenizer) wrongKind(token Token) string {
@@ -378,13 +363,13 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 
 		case TkOperator:
 			token = tokenizer.Next()
-			operator := LookupFunctionSymbol(token.value)
+			operator := Symbol{Name: token.value}
 			rhs := tokenizer.parseExpr()
 			call := Call{Sym: operator, Args: []Expr{sym, rhs}}
 
 			if rhsCall, ok := rhs.(Call); ok && !rhsCall.Braced {
 				rhsOperator := rhsCall.Sym
-				if operator.OperatorPrecedence > rhsOperator.OperatorPrecedence {
+				if OperatorPrecedence[operator.Name] > OperatorPrecedence[rhsOperator.Name] {
 					// operator precedence
 					call.Args[1] = rhsCall.Args[0]
 					rhsCall.Args[0] = call
@@ -621,7 +606,6 @@ func main() {
 	}
 
 	checkpackage := TypeCheckPackage(pak)
-
 
 	Println("------------------------------------------------------------\n")
 	Println(compilePackageToC(checkpackage))
