@@ -89,16 +89,26 @@ func (context *CCodeGeneratorContext) compileSymbol(sym TcSymbol) {
 }
 
 func (context *CCodeGeneratorContext) compileExpr(expr TcExpr) {
+	context.compileExprWithPrefix(expr, "")
+}
+
+// lastStmtPrefix is used to inject a return statement at each control
+// flow end in procedures
+func (context *CCodeGeneratorContext) compileExprWithPrefix(expr TcExpr, lastStmtPrefix string) {
 	switch ex := expr.(type) {
 	case TcCodeBlock:
-		context.compileCodeBlock(ex)
+		context.compileCodeBlockWithPrefix(ex, lastStmtPrefix)
 	case TcCall:
+		context.WriteString(lastStmtPrefix)
 		context.compileCall(ex)
 	case StrLit:
+		context.WriteString(lastStmtPrefix)
 		context.compileStrLit(ex)
 	case IntLit:
+		context.WriteString(lastStmtPrefix)
 		context.compileIntLit(ex)
 	case TcSymbol:
+		context.WriteString(lastStmtPrefix)
 		context.compileSymbol(ex)
 	case nil:
 		panic(fmt.Sprintf("invalid Ast, expression is nil %T", expr))
@@ -108,11 +118,19 @@ func (context *CCodeGeneratorContext) compileExpr(expr TcExpr) {
 }
 
 func (context *CCodeGeneratorContext) compileCodeBlock(block TcCodeBlock) {
+	context.compileCodeBlockWithPrefix(block, "")
+}
+
+func (context *CCodeGeneratorContext) compileCodeBlockWithPrefix(block TcCodeBlock, lastStmtPrefix string) {
 	context.WriteString("{")
 	context.Indentation += 1
 
-	for _, expr := range block.Items {
+	N := len(block.Items)
+	for i, expr := range block.Items {
 		context.newlineAndIndent()
+		if i == N-1 {
+			context.WriteString(lastStmtPrefix)
+		}
 		context.compileExpr(expr)
 		context.WriteRune(';')
 	}
@@ -144,7 +162,7 @@ func (context *CCodeGeneratorContext) compileProcDef(procDef TcProcDef) {
 	if !ok {
 		body.Items = []TcExpr{procDef.Body}
 	}
-	context.compileCodeBlock(body)
+	context.compileCodeBlockWithPrefix(body, "return ")
 }
 
 func (context *CCodeGeneratorContext) compileStructDef(structDef TcStructDef) {

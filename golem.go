@@ -12,6 +12,8 @@ import "reflect"
 import "path"
 import "log"
 import "strconv"
+import "os/exec"
+import "syscall"
 
 type TokenKind int16
 
@@ -628,9 +630,13 @@ func main() {
 
 	Println(sourceCodeC)
 	tempDir := path.Join(os.TempDir(), "golem")
-	fileName := Sprintf("%s.c", filepath.Base(filename))
+	base := filepath.Base(filename)
+	if base[len(base)-6:] != ".golem" {
+		panic("Input file must end on .golem")
+	}
+	base = base[:len(base)-6]
+	fileName := Sprintf("%s.c", base)
 	absFilename := path.Join(tempDir, fileName)
-	Println(absFilename)
 
 	err = os.MkdirAll(tempDir, os.ModePerm)
 	if err != nil {
@@ -641,4 +647,14 @@ func main() {
 		log.Fatal(err)
 	}
 
+	binaryAbsFilename := path.Join(tempDir, base)
+	cmd := exec.Command("gcc", absFilename, "-o", binaryAbsFilename)
+	err = cmd.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = syscall.Exec(binaryAbsFilename, nil, nil)
+	// exec should not return
+	log.Fatal(err)
 }
