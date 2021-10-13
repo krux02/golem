@@ -722,6 +722,79 @@ mandatory. Mandatory indentation tells the parser exactly where a
 closing curly brace is missing. Easy error correction, good hint from
 the compiler, and no Christmas tree lights in the program.
 
+** explicit tagging for return based, assignment based, or expression based function body ahead of time
+
+#+begin_src golem
+proc foo(a,b): int = a + b # expression based
+proc foo(a,b): int { return a + b } # return based, no = op
+proc foo(a,b): (result: int) {result = a + b}
+#+end_src
+
+** type expectation EXPR : TYPE
+
+allow arbitrary expressions to have a type signature
+
+examples:
+
+ * ~let x:i64 = a + b~ equivalent to ~let x = (a + b):i64~
+ * ~let y = 123456789:i64~
+ * ~let z = 123.456:f32~
+ * ~let f = foo:proc(f32,f32):f32
+
+This is not a type cast, it is just an annotation for the type checker
+to declare the expected type.
+
+Currently every usage of a colon is used to signal an expected type
+for a symbol. The idea is to extend this syntax and allow it to be
+used for arbitrary expressions. It could be made a universal truth in
+golem that ~:~ is always followed by a /TYPEEXPR/
+
+** dynconst
+
+Name is not final.
+
+Problem:
+
+#+begin_src golem
+# with code duplication
+proc getItem(a: var Foo, idx: int): var Bar = {...}
+proc getItem(a: const Foo, idx: int): const Bar {...}
+# without code duplication
+proc getItem(a: dynconst Foo, idx: int): dynconstof(a) Bar = {...}
+#+end_src
+
+one implementation when /constness/ just needs to be propagated. The
+implementation has the restriction to worth with both const and
+mutable, arguments.
+
+** enforce divMod on integer division
+
+Enforce usage of ~divMod~ on integer division instead of distinct
+operators for ~div~ and ~mod~. The idea here is that the machine
+operation for integer division always computes the residuum as well, it
+is just discarded when not used. In my experience residuum is used
+most of the time in conjunction with the integer division. Integer
+division is one of the most expensive CPU instructions, even topping
+floating point division in costs. Not combining ~divMod~ contains the
+risk the the optimizer can't unify the two calls into one and the
+expensive operation has to be done multiple times.
+
+Not using a ~/~ operator, signaling a normal division like in math,
+should not be used for integer division. It actually is a different
+kind of operation with a very different purpose than floating point
+division. Visual distinction for these two operators would be
+beneficial.
+
+** macro ide interactions
+
+Custom error messages for macros are one thing, programmable
+completion another, The highest level of ide interaction would be to
+provide ide callbacks to get some support to fix certain problems.
+
+Examples: implement functions for interface type.
+
+Other programmable ide interactions still need to be specified.
+
 * A defensive justification for macros
 
  * The Lisp Dialect Fragmentation Problem.

@@ -10,6 +10,8 @@ import "path/filepath"
 import "unsafe"
 import "reflect"
 import "path"
+import "log"
+import "strconv"
 
 type TokenKind int16
 
@@ -352,6 +354,12 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 	token := tokenizer.Next()
 
 	switch token.kind {
+	case TkLineComment:
+		// eat automatically generated TkSemicolon at end of each line
+		// (the semicolon should probably not be generated here?)
+		next := tokenizer.Next()
+		tokenizer.expectKind(next, TkSemicolon)
+		return tokenizer.parseExpr()
 	case TkIdent:
 		sym := Symbol{Name: token.value}
 
@@ -460,7 +468,14 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 			}
 		}
 
-		lit := StrLit{Val: b.String()}
+		lit := StrLit{Value: b.String()}
+		return (Expr)(lit)
+	case TkIntLit:
+		intValue, err := strconv.Atoi(token.value)
+		if err != nil {
+			panic("internal error invalid int token")
+		}
+		lit := IntLit{Value: intValue}
 		return (Expr)(lit)
 	}
 
@@ -550,6 +565,7 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 
 func parsePackage(code, filename string) (result PackageDef) {
 	result.Name = path.Base(filename)
+	Println("processing package: ", result.Name)
 	var tokenizer = NewTokenizer(code, filename)
 
 	for true {
@@ -589,7 +605,6 @@ func main() {
 		panic(err)
 	}
 
-	// base := filepath.Base(filename)
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
 		panic(err)
@@ -608,5 +623,22 @@ func main() {
 	checkpackage := TypeCheckPackage(pak)
 
 	Println("------------------------------------------------------------\n")
-	Println(compilePackageToC(checkpackage))
+
+	sourceCodeC := compilePackageToC(checkpackage)
+
+	Println(sourceCodeC)
+	tempDir := path.Join(os.TempDir(), "golem")
+	fileName := Sprintf("%s.c", filepath.Base(filename))
+	absFilename := path.Join(tempDir, fileName)
+	Println(absFilename)
+
+	err = os.MkdirAll(tempDir, os.ModePerm)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = os.WriteFile(absFilename, []byte(sourceCodeC), 0666)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 }

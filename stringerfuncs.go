@@ -62,7 +62,7 @@ func (codeBlock CodeBlock) prettyPrint(builder *AstPrettyPrinter) {
 
 func (lit StrLit) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteRune('"')
-	for _, rune := range lit.Val {
+	for _, rune := range lit.Value {
 		switch rune {
 		case '\a':
 			builder.WriteString("\\a")
@@ -90,6 +90,31 @@ func (lit StrLit) prettyPrint(builder *AstPrettyPrinter) {
 	}
 	//builder.WriteString(lit.Val)
 	builder.WriteRune('"')
+}
+
+func WriteIntLit(builder *strings.Builder, value int) {
+	if value == 0 {
+		builder.WriteByte('0')
+		return
+	}
+	if value < 0 {
+		builder.WriteRune('-')
+		value = -value
+	}
+	const N = 32
+	var buffer [N]byte
+	i := 0
+	for ; value > 0; i++ {
+		buffer[i] = "0123456789"[value%10]
+		value = value / 10
+	}
+	for ; i > 0; i-- {
+		builder.WriteByte(buffer[i-1])
+	}
+}
+
+func (lit IntLit) prettyPrint(builder *AstPrettyPrinter) {
+	WriteIntLit(&builder.Builder, lit.Value)
 }
 
 func (typeExpr TypeExpr) prettyPrint(builder *AstPrettyPrinter) {
@@ -191,8 +216,13 @@ func (call TcSymbol) prettyPrint(*AstPrettyPrinter) {
 	panic("not implemented")
 }
 
-
 func (lit StrLit) String() string {
+	builder := &AstPrettyPrinter{}
+	lit.prettyPrint(builder)
+	return builder.String()
+}
+
+func (lit IntLit) String() string {
 	builder := &AstPrettyPrinter{}
 	lit.prettyPrint(builder)
 	return builder.String()

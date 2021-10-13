@@ -36,7 +36,15 @@ type Symbol struct {
 }
 
 type StrLit struct {
-	Val string
+	Value string
+}
+
+type IntLit struct {
+	Value int
+}
+
+type FloatLit struct {
+	Value float64
 }
 
 type Call struct {
@@ -62,4 +70,6 @@ type PackageDef struct {
 func (sym Symbol) expression()      {}
 func (block CodeBlock) expression() {}
 func (lit StrLit) expression()      {}
+func (lit IntLit) expression()      {}
+func (lit FloatLit) expression()    {}
 func (call Call) expression()       {}

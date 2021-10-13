@@ -3,19 +3,23 @@ package main
 // The ast after beeing processed by the typechecker. Tc prefix is for
 // type checked.
 
+type Type interface {
+	Name() string
+}
+
 type TcExpr interface {
 	Expr
-	Type() TypeHandle
+	Type() Type
 }
 
 type TcStructField struct {
 	Name string
-	Type TypeHandle
+	Type Type
 }
 
 type TcVariableSym struct {
 	Name string
-	Type TypeHandle
+	Type Type
 }
 
 type TcStructDef struct {
@@ -25,7 +29,7 @@ type TcStructDef struct {
 
 type TcProcArgument struct {
 	Name string
-	Type TypeHandle
+	Type Type
 }
 
 type TcCodeBlock struct {
@@ -33,11 +37,11 @@ type TcCodeBlock struct {
 }
 
 type TcSymbol struct {
-	Name              string
-	typ TypeHandle
+	Name string
+	typ  Type
 }
 
-func (sym TcSymbol) Type() TypeHandle {
+func (sym TcSymbol) Type() Type {
 	return sym.typ
 }
 
@@ -45,7 +49,6 @@ type TcProcSymbol struct {
 	Name string
 	Impl *TcProcDef
 }
-
 
 type TcCall struct {
 	Sym  TcProcSymbol
@@ -57,7 +60,7 @@ type TcCall struct {
 type TcProcDef struct {
 	Name       string
 	Args       []TcProcArgument
-	ResultType TypeHandle
+	ResultType Type
 	Body       TcExpr
 }
 
@@ -67,7 +70,8 @@ type TcPackageDef struct {
 	ProcDefs []TcProcDef
 }
 
-func (sym TcSymbol) expression() {}
+func (sym TcSymbol) expression()      {}
 func (block TcCodeBlock) expression() {}
+
 //func (lit TcStrLit) expression() {}
 func (call TcCall) expression() {}

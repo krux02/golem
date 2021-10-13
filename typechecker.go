@@ -4,10 +4,6 @@ import (
 	"fmt"
 )
 
-type Type interface {
-	Name() string
-}
-
 type BuiltinType struct {
 	name string
 }
@@ -16,11 +12,69 @@ func (typ *BuiltinType) Name() string {
 	return typ.name
 }
 
+// **** Constants ****
+
 var TypeInt = &BuiltinType{"int"}
 var TypeFloat = &BuiltinType{"float"}
 var TypeString = &BuiltinType{"string"}
 var TypeVoid = &BuiltinType{"void"}
+
+// This type is used to tag that a function never returns.
 var TypeNoReturn = &BuiltinType{"noreturn"}
+
+// this type is the internal representation when no type has been
+// specified. It is not a type by its own.
+var TypeUnspecified = &BuiltinType{"<unspecified>"}
+
+var BuiltinPlus *TcProcDef = &TcProcDef{
+	Name: "+",
+	Args: []TcProcArgument{
+		TcProcArgument{Type: TypeInt},
+		TcProcArgument{Type: TypeInt},
+	},
+	ResultType: TypeInt,
+}
+
+var BuiltinMinus *TcProcDef = &TcProcDef{
+	Name: "-",
+	Args: []TcProcArgument{
+		TcProcArgument{Type: TypeInt},
+		TcProcArgument{Type: TypeInt},
+	},
+	ResultType: TypeInt,
+}
+
+var BuiltinMult *TcProcDef = &TcProcDef{
+	Name: "*",
+	Args: []TcProcArgument{
+		TcProcArgument{Type: TypeInt},
+		TcProcArgument{Type: TypeInt},
+	},
+	ResultType: TypeInt,
+}
+
+var BuiltinDivide *TcProcDef = &TcProcDef{
+	Name: "/",
+	Args: []TcProcArgument{
+		TcProcArgument{Type: TypeFloat},
+		TcProcArgument{Type: TypeFloat},
+	},
+	ResultType: TypeFloat,
+}
+
+var BuiltinReturn *TcProcDef = &TcProcDef{
+	Name:       "return",
+	ResultType: TypeNoReturn,
+}
+
+var BuiltinPrintf *TcProcDef = &TcProcDef{
+	Name: "printf",
+	Args: []TcProcArgument{
+		TcProcArgument{Name: "format", Type: TypeString},
+		// TODO support argument list
+	},
+	ResultType: TypeVoid,
+}
 
 var builtinScope Scope = &ScopeImpl{
 	Parent: nil,
@@ -33,17 +87,18 @@ var builtinScope Scope = &ScopeImpl{
 	},
 	// these are builtin procedures, therefore their Impl is nil
 	Procedures: map[string]*TcProcDef{
-		"+":      nil,
-		"-":      nil,
-		"*":      nil,
-		"/":      nil,
-		"return": nil,
-		"printf": nil,
+		"+":      BuiltinPlus,
+		"-":      BuiltinMinus,
+		"*":      BuiltinMult,
+		"/":      BuiltinDivide,
+		"return": BuiltinReturn,
+		"printf": BuiltinPrintf,
 	},
 }
 
+// ****
+
 // index to refere to a (currently only builtin) type
-type TypeHandle Type
 
 type ScopeImpl struct {
 	Parent     Scope
@@ -54,12 +109,12 @@ type ScopeImpl struct {
 
 type Scope = *ScopeImpl
 
-func (scope Scope) LookUpType(expr TypeExpr) TypeHandle {
+func (scope Scope) LookUpType(expr TypeExpr) Type {
 	// TODO really slow lookup, should really be faster
 	name := expr.Ident
 	for key, value := range scope.Types {
 		if key == name {
-			return TypeHandle(value)
+			return value
 		}
 	}
 	if scope.Parent != nil {
@@ -101,67 +156,109 @@ func TypeCheckStructDef(scope Scope, def StructDef) TcStructDef {
 func TypeCheckProcDef(scope Scope, def ProcDef) TcProcDef {
 	var result TcProcDef
 	result.Name = def.Name
-	result.ResultType = scope.LookUpType(def.ResultType)
-
 	for _, arg := range def.Args {
 		var tcArg TcProcArgument
 		tcArg.Name = arg.Name
 		tcArg.Type = scope.LookUpType(arg.Type)
 		result.Args = append(result.Args, tcArg)
 	}
+	resultType := scope.LookUpType(def.ResultType)
+	result.ResultType = resultType
 
-	result.Body = TypeCheckExpr(scope, def.Body)
+	result.Body = TypeCheckExpr(scope, def.Body, resultType)
+
 	return result
 }
 
-func TypeCheckCall(scope Scope, call Call) TcCall {
+func ExpectType(gotten, expected Type) {
+	if expected != gotten {
+		// TODO print proper line information here
+		panic(fmt.Sprintf("Expected type '%s' but got type '%s'", expected.Name(), gotten.Name()))
+	}
+}
+
+func ExpectArgsLen(gotten, expected int) {
+	if expected != gotten {
+		panic(fmt.Sprintf("Expected %d arguments, but got %d.",
+			expected, gotten))
+	}
+}
+
+func TypeCheckCall(scope Scope, call Call, expected Type) TcCall {
 	var result TcCall
-	result.Sym = scope.LookUpProc(call.Sym)
+	procSym := scope.LookUpProc(call.Sym)
+	ExpectType(procSym.Impl.ResultType, expected)
+	result.Sym = procSym
 	result.Args = make([]TcExpr, 0, len(call.Args))
-	for _, arg := range call.Args {
-		tcArg := TypeCheckExpr(scope, arg)
+	expectedArgs := procSym.Impl.Args
+	ExpectArgsLen(len(call.Args), len(expectedArgs))
+	if len(expectedArgs) != len(call.Args) {
+		// TODO print proper line information here
+
+	}
+	for i, arg := range call.Args {
+		expectedType := expectedArgs[i].Type
+		tcArg := TypeCheckExpr(scope, arg, expectedType)
 		result.Args = append(result.Args, tcArg)
 	}
+
 	return result
 }
 
-func TypeCheckCodeBlock(scope Scope, arg CodeBlock) TcCodeBlock {
+func TypeCheckCodeBlock(scope Scope, arg CodeBlock, expected Type) TcCodeBlock {
 	var result TcCodeBlock
-	result.Items = make([]TcExpr, 0, len(arg.Items))
-	for _, item := range arg.Items {
-		result.Items = append(result.Items, TypeCheckExpr(scope, item))
+	N := len(arg.Items)
+	if N > 0 {
+		result.Items = make([]TcExpr, N)
+		for i, item := range arg.Items {
+			if i == N-1 {
+				result.Items[i] = TypeCheckExpr(scope, item, expected)
+			} else {
+				result.Items[i] = TypeCheckExpr(scope, item, TypeVoid)
+			}
+		}
+	} else {
+		// empty block is type void
+		if expected != TypeVoid {
+
+		}
 	}
 	return result
 }
 
-func (block TcCodeBlock) Type() TypeHandle {
+func (block TcCodeBlock) Type() Type {
 	if len(block.Items) == 0 {
 		return TypeVoid
 	}
 	return block.Items[len(block.Items)-1].Type()
 }
 
-func (call TcCall) Type() TypeHandle {
+func (call TcCall) Type() Type {
 	return call.Sym.Impl.ResultType
 }
 
-func (strLit StrLit) Type() TypeHandle {
+func (lit StrLit) Type() Type {
 	return TypeString
 }
 
-func TypeCheckExpr(scope Scope, arg Expr) TcExpr {
+func (lit IntLit) Type() Type {
+	return TypeInt
+}
+
+func TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExpr {
 	var result TcExpr
 	switch arg := arg.(type) {
 	case Call:
-		return (TcExpr)(TypeCheckCall(scope, arg))
+		return (TcExpr)(TypeCheckCall(scope, arg, expected))
 	case CodeBlock:
-		return (TcExpr)(TypeCheckCodeBlock(scope, arg))
+		return (TcExpr)(TypeCheckCodeBlock(scope, arg, expected))
 	case Symbol:
 		return (TcExpr)(scope.LookUpSym(arg))
 	case StrLit:
 		return (TcExpr)(arg)
+	case IntLit:
+		return (TcExpr)(arg)
 	default:
-
 		panic(fmt.Sprintf("not implemented %T", arg))
 	}
 

@@ -18,7 +18,7 @@ func (context *CCodeGeneratorContext) newlineAndIndent() {
 	}
 }
 
-func (context *CCodeGeneratorContext) compileTypeExpr(typ TypeHandle) {
+func (context *CCodeGeneratorContext) compileTypeExpr(typ Type) {
 	context.WriteString(typ.Name())
 }
 
@@ -50,7 +50,7 @@ func (context *CCodeGeneratorContext) compileCall(call TcCall) {
 
 func (context *CCodeGeneratorContext) compileStrLit(lit StrLit) {
 	context.WriteRune('"')
-	for _, rune := range lit.Val {
+	for _, rune := range lit.Value {
 		switch rune {
 		case '\a':
 			context.WriteString("\\a")
@@ -80,6 +80,10 @@ func (context *CCodeGeneratorContext) compileStrLit(lit StrLit) {
 	context.WriteRune('"')
 }
 
+func (context *CCodeGeneratorContext) compileIntLit(lit IntLit) {
+	WriteIntLit(&context.Builder, lit.Value)
+}
+
 func (context *CCodeGeneratorContext) compileSymbol(sym TcSymbol) {
 	context.WriteString(sym.Name)
 }
@@ -92,6 +96,8 @@ func (context *CCodeGeneratorContext) compileExpr(expr TcExpr) {
 		context.compileCall(ex)
 	case StrLit:
 		context.compileStrLit(ex)
+	case IntLit:
+		context.compileIntLit(ex)
 	case TcSymbol:
 		context.compileSymbol(ex)
 	case nil:
@@ -163,6 +169,11 @@ func (context *CCodeGeneratorContext) compileStructDef(structDef TcStructDef) {
 
 func compilePackageToC(pak TcPackageDef) string {
 	builder := &CCodeGeneratorContext{Pak: pak}
+	// TODO this sholud depend on the usage of `printf`
+	builder.WriteString("\n#include <stdio.h>")
+	// TODO this sholud depend on the usage of `string` as a type
+	builder.newlineAndIndent()
+	builder.WriteString("typedef char* string;")
 	for _, typ := range pak.TypeDefs {
 		builder.compileStructDef(typ)
 	}
