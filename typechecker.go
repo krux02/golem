@@ -238,9 +238,7 @@ func TypeCheckCodeBlock(scope Scope, arg CodeBlock, expected Type) TcCodeBlock {
 		}
 	} else {
 		// empty block is type void
-		if expected != TypeVoid {
-
-		}
+		ExpectType(TypeVoid, expected)
 	}
 	return result
 }
@@ -259,6 +257,10 @@ func TypeCheckLetStmt(scope Scope, arg LetStmt) TcLetStmt {
 	result.Value = TypeCheckExpr(scope, arg.Value, expected)
 	result.Sym = scope.NewLetSym(arg.Name, result.Value.Type())
 	return result
+}
+
+func TypeCheckReturnStmt(scope Scope, arg ReturnStmt) TcReturnStmt {
+	return TcReturnStmt{TypeCheckExpr(scope, arg.Value, TypeUnspecified)}
 }
 
 func (block TcCodeBlock) Type() Type {
@@ -288,7 +290,7 @@ func (sym TcLetStmt) Type() Type {
 	return TypeVoid
 }
 
-func (returnStmt ReturnStmt) Type() Type {
+func (returnStmt TcReturnStmt) Type() Type {
 	return TypeNoReturn
 }
 
@@ -300,13 +302,19 @@ func TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExpr {
 	case CodeBlock:
 		return (TcExpr)(TypeCheckCodeBlock(scope, arg, expected))
 	case Symbol:
-		return (TcExpr)(scope.LookUpLetSym(arg))
+		sym := scope.LookUpLetSym(arg)
+		ExpectType(sym.Typ, expected)
+		return (TcExpr)(sym)
 	case StrLit:
+		ExpectType(TypeString, expected)
 		return (TcExpr)(arg)
 	case IntLit:
+		ExpectType(TypeInt, expected)
 		return (TcExpr)(arg)
 	case ReturnStmt:
-		return (TcExpr)(arg)
+		// ignoring expected type here, because the return expression
+		// never evaluates to anything.
+		return (TcExpr)(TypeCheckReturnStmt(scope, arg))
 	case LetStmt:
 		ExpectType(TypeVoid, expected)
 		return (TcExpr)(TypeCheckLetStmt(scope, arg))

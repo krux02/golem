@@ -50,6 +50,10 @@ type TcLetStmt struct {
 	Value TcExpr
 }
 
+type TcReturnStmt struct {
+	Value TcExpr
+}
+
 type TcProcDef struct {
 	Name       string
 	Args       []TcLetSymbol
@@ -65,5 +69,6 @@ type TcPackageDef struct {
 
 func (sym TcLetSymbol) expression()   {}
 func (stmt TcLetStmt) expression()    {}
+func (stmt TcReturnStmt) expression() {}
 func (block TcCodeBlock) expression() {}
 func (call TcCall) expression()       {}

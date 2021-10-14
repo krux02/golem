@@ -231,6 +231,12 @@ func (letStmt TcLetStmt) prettyPrint(builder *AstPrettyPrinter) {
 	letStmt.Value.prettyPrint(builder)
 }
 
+func (returnStmt TcReturnStmt) prettyPrint(builder *AstPrettyPrinter) {
+	builder.NewlineAndIndent()
+	builder.WriteString("return ")
+	returnStmt.Value.prettyPrint(builder)
+}
+
 func (sym TcLetSymbol) String() string {
 	builder := &AstPrettyPrinter{}
 	sym.prettyPrint(builder)
@@ -286,6 +292,12 @@ func (letStmt TcLetStmt) String() string {
 }
 
 func (returnStmt ReturnStmt) String() string {
+	builder := &AstPrettyPrinter{}
+	returnStmt.prettyPrint(builder)
+	return builder.String()
+}
+
+func (returnStmt TcReturnStmt) String() string {
 	builder := &AstPrettyPrinter{}
 	returnStmt.prettyPrint(builder)
 	return builder.String()

@@ -1,2 +1,3 @@
 * TODO rename Symbol to Ident
 * TODO introduce colon Token
+* TODO implement type checking on 'return'

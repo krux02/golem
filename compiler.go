@@ -92,8 +92,17 @@ func (context *CCodeGeneratorContext) compileExpr(expr TcExpr) {
 	context.compileExprWithPrefix(expr, "")
 }
 
+func (context *CCodeGeneratorContext) compileLetStmt(stmt TcLetStmt) {
+	context.compileTypeExpr(stmt.Sym.Typ)
+	context.WriteByte(' ')
+	context.compileSymbol(stmt.Sym)
+	context.WriteString(" = ")
+	context.compileExpr(stmt.Value)
+}
+
 // lastStmtPrefix is used to inject a return statement at each control
 // flow end in procedures
+// TODO rename lastStmtPrefix -> lastExprPrefix
 func (context *CCodeGeneratorContext) compileExprWithPrefix(expr TcExpr, lastStmtPrefix string) {
 	switch ex := expr.(type) {
 	case TcCodeBlock:
@@ -110,6 +119,18 @@ func (context *CCodeGeneratorContext) compileExprWithPrefix(expr TcExpr, lastStm
 	case TcLetSymbol:
 		context.WriteString(lastStmtPrefix)
 		context.compileSymbol(ex)
+	case TcLetStmt:
+		if lastStmtPrefix != "" {
+			panic(fmt.Sprintf("internal error, lastStmtPrefix not supported here", lastStmtPrefix))
+		}
+		context.compileLetStmt(ex)
+	case TcReturnStmt:
+		if lastStmtPrefix == "" || lastStmtPrefix == "return " {
+			context.WriteString("return ")
+			context.compileExpr(ex.Value)
+			return
+		}
+		panic(fmt.Sprintf("internal error, cannot inject '%s' in return statement", lastStmtPrefix))
 	case nil:
 		panic(fmt.Sprintf("invalid Ast, expression is nil %T", expr))
 	default:
@@ -129,9 +150,10 @@ func (context *CCodeGeneratorContext) compileCodeBlockWithPrefix(block TcCodeBlo
 	for i, expr := range block.Items {
 		context.newlineAndIndent()
 		if i == N-1 {
-			context.WriteString(lastStmtPrefix)
+			context.compileExprWithPrefix(expr, lastStmtPrefix)
+		} else {
+			context.compileExpr(expr)
 		}
-		context.compileExpr(expr)
 		context.WriteRune(';')
 	}
 
