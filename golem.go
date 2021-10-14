@@ -351,6 +351,32 @@ func (tokenizer *Tokenizer) parseTypeExpr() (result TypeExpr) {
 	return
 }
 
+func (tokenizer *Tokenizer) parseStmtOrExpr() (result Expr) {
+	lookAhead := tokenizer.lookAheadToken
+	if lookAhead.kind == TkIdent {
+		if lookAhead.value == "let" {
+			// parse let Stmt
+			var letStmt LetStmt
+			next := tokenizer.Next()
+			next = tokenizer.Next()
+			tokenizer.expectKind(next, TkIdent)
+			letStmt.Name = next.value
+			next = tokenizer.Next()
+			Println(next)
+			if next.kind == TkOperator && next.value == ":" {
+				letStmt.Type = tokenizer.parseTypeExpr()
+				next = tokenizer.Next()
+			}
+
+			tokenizer.expectKind(next, TkOperator)
+			letStmt.Value = tokenizer.parseExpr()
+			// letStmt
+			return (Expr)(letStmt)
+		}
+	}
+	return tokenizer.parseExpr()
+}
+
 func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 	// eat whitespace before setting startOffest
 	token := tokenizer.Next()
@@ -394,9 +420,19 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 			for true {
 				lookAhead = tokenizer.lookAheadToken
 				switch lookAhead.kind {
-				case TkIdent, TkStrLit:
+				case TkIdent, TkStrLit, TkIntLit:
 					args = append(args, tokenizer.parseExpr())
-					continue
+					switch tokenizer.lookAheadToken.kind {
+					case TkComma:
+						tokenizer.Next()
+						continue
+					case TkCloseBrace:
+						// TkCloseBrace is already handled in the outer switch
+						// this is really ugly, why? I must be doing something wrong
+						continue
+					default:
+					}
+					panic(tokenizer.wrongKind(tokenizer.lookAheadToken))
 				case TkCloseBrace:
 					token = tokenizer.Next()
 					call := Call{Sym: sym, Args: args}
@@ -416,7 +452,8 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 		}
 
 		for tokenizer.lookAheadToken.kind != TkCloseCurly {
-			item := tokenizer.parseExpr()
+
+			item := tokenizer.parseStmtOrExpr()
 			block.Items = append(block.Items, item)
 
 			next := tokenizer.Next()

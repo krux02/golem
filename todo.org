@@ -1,1 +1,2 @@
 * TODO rename Symbol to Ident
+* TODO introduce colon Token

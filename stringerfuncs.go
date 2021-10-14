@@ -175,6 +175,18 @@ func (procDef ProcDef) prettyPrint(builder *AstPrettyPrinter) {
 	procDef.Body.prettyPrint(builder)
 }
 
+func (letStmt LetStmt) prettyPrint(builder *AstPrettyPrinter) {
+	builder.NewlineAndIndent()
+	builder.WriteString("let ")
+	builder.WriteString(letStmt.Name)
+	if letStmt.Type.Ident != "" {
+		builder.WriteString(":")
+		letStmt.Type.prettyPrint(builder)
+	}
+	builder.WriteString(" = ")
+	letStmt.Value.prettyPrint(builder)
+}
+
 func (sym Symbol) String() string {
 	return sym.Name
 }
@@ -237,5 +249,11 @@ func (structDef StructDef) String() string {
 func (procDef ProcDef) String() string {
 	builder := &AstPrettyPrinter{}
 	procDef.prettyPrint(builder)
+	return builder.String()
+}
+
+func (letStmt LetStmt) String() string {
+	builder := &AstPrettyPrinter{}
+	letStmt.prettyPrint(builder)
 	return builder.String()
 }

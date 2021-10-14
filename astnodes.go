@@ -17,6 +17,13 @@ type StructField struct {
 	Type TypeExpr
 }
 
+// every stmt is also an expression
+type LetStmt struct {
+	Name  string
+	Type  TypeExpr
+	Value Expr
+}
+
 type StructDef struct {
 	Name   string
 	Fields []StructField
@@ -73,3 +80,4 @@ func (lit StrLit) expression()      {}
 func (lit IntLit) expression()      {}
 func (lit FloatLit) expression()    {}
 func (call Call) expression()       {}
+func (letstmt LetStmt) expression() {}
