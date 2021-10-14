@@ -13,14 +13,18 @@ type TypeExpr struct {
 }
 
 type StructField struct {
-	Name string
-	Type TypeExpr
+	Name     string
+	TypeExpr TypeExpr
 }
 
 // every stmt is also an expression
 type LetStmt struct {
-	Name  string
-	Type  TypeExpr
+	Name     string
+	TypeExpr TypeExpr
+	Value    Expr
+}
+
+type ReturnStmt struct {
 	Value Expr
 }
 
@@ -74,10 +78,11 @@ type PackageDef struct {
 	ProcDefs []ProcDef
 }
 
-func (sym Symbol) expression()      {}
-func (block CodeBlock) expression() {}
-func (lit StrLit) expression()      {}
-func (lit IntLit) expression()      {}
-func (lit FloatLit) expression()    {}
-func (call Call) expression()       {}
-func (letstmt LetStmt) expression() {}
+func (sym Symbol) expression()            {}
+func (block CodeBlock) expression()       {}
+func (lit StrLit) expression()            {}
+func (lit IntLit) expression()            {}
+func (lit FloatLit) expression()          {}
+func (call Call) expression()             {}
+func (letstmt LetStmt) expression()       {}
+func (returnstmt ReturnStmt) expression() {}

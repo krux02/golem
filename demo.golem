@@ -6,15 +6,15 @@ type MyStruct = struct {
 }
 
 proc myfun1(a, b, c: int): int = {
-  # return(a + b * c)
-  a + b * c
+  return a + b * c
+  # a + b * c
 }
 
 # proc myfun2(a,b:int; c: int) : int = a * b + a * c
 
 proc myfun2(a,b,c: int) : int = a * b + a * c
 
-## this is a comment
+## this is a doc comment
 proc main():int = {
   let x:int = myfun1(12, 13, 14)
   let y = myfun2(15, 16, 17)

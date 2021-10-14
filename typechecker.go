@@ -28,36 +28,36 @@ var TypeUnspecified = &BuiltinType{"<unspecified>"}
 
 var BuiltinPlus *TcProcDef = &TcProcDef{
 	Name: "+",
-	Args: []TcProcArgument{
-		TcProcArgument{Type: TypeInt},
-		TcProcArgument{Type: TypeInt},
+	Args: []TcLetSymbol{
+		TcLetSymbol{Typ: TypeInt},
+		TcLetSymbol{Typ: TypeInt},
 	},
 	ResultType: TypeInt,
 }
 
 var BuiltinMinus *TcProcDef = &TcProcDef{
 	Name: "-",
-	Args: []TcProcArgument{
-		TcProcArgument{Type: TypeInt},
-		TcProcArgument{Type: TypeInt},
+	Args: []TcLetSymbol{
+		TcLetSymbol{Typ: TypeInt},
+		TcLetSymbol{Typ: TypeInt},
 	},
 	ResultType: TypeInt,
 }
 
 var BuiltinMult *TcProcDef = &TcProcDef{
 	Name: "*",
-	Args: []TcProcArgument{
-		TcProcArgument{Type: TypeInt},
-		TcProcArgument{Type: TypeInt},
+	Args: []TcLetSymbol{
+		TcLetSymbol{Typ: TypeInt},
+		TcLetSymbol{Typ: TypeInt},
 	},
 	ResultType: TypeInt,
 }
 
 var BuiltinDivide *TcProcDef = &TcProcDef{
 	Name: "/",
-	Args: []TcProcArgument{
-		TcProcArgument{Type: TypeFloat},
-		TcProcArgument{Type: TypeFloat},
+	Args: []TcLetSymbol{
+		TcLetSymbol{Typ: TypeFloat},
+		TcLetSymbol{Typ: TypeFloat},
 	},
 	ResultType: TypeFloat,
 }
@@ -69,8 +69,8 @@ var BuiltinReturn *TcProcDef = &TcProcDef{
 
 var BuiltinPrintf *TcProcDef = &TcProcDef{
 	Name: "printf",
-	Args: []TcProcArgument{
-		TcProcArgument{Name: "format", Type: TypeString},
+	Args: []TcLetSymbol{
+		TcLetSymbol{Name: "format", Typ: TypeString},
 		// TODO support argument list
 	},
 	ResultType: TypeVoid,
@@ -99,15 +99,30 @@ var builtinScope Scope = &ScopeImpl{
 // ****
 
 // index to refere to a (currently only builtin) type
-
+// somehow unify this mess
 type ScopeImpl struct {
 	Parent     Scope
-	Variables  map[string]TcSymbol
+	Variables  map[string]TcLetSymbol
 	Procedures map[string]*TcProcDef
 	Types      map[string]Type
 }
 
 type Scope = *ScopeImpl
+
+func (scope Scope) NewSubScope() Scope {
+	return &ScopeImpl{
+		Parent:     scope,
+		Variables:  make(map[string]TcLetSymbol),
+		Procedures: make(map[string]*TcProcDef),
+		Types:      make(map[string]Type),
+	}
+}
+
+func (scope Scope) NewLetSym(name string, typ Type) TcLetSymbol {
+	result := TcLetSymbol{Name: name, Typ: typ}
+	scope.Variables[name] = result
+	return result
+}
 
 func (scope Scope) LookUpType(expr TypeExpr) Type {
 	// TODO really slow lookup, should really be faster
@@ -134,11 +149,15 @@ func (scope Scope) LookUpProc(sym Symbol) TcProcSymbol {
 	return scope.Parent.LookUpProc(sym)
 }
 
-func (scope Scope) LookUpSym(sym Symbol) TcSymbol {
-	var result TcSymbol
-	result.Name = sym.Name
-	result.typ = scope.Types[sym.Name]
-	return result
+func (scope Scope) LookUpLetSym(sym Symbol) TcLetSymbol {
+	if scope == nil {
+		panic(fmt.Sprintf("let sym not found: %s", sym.Name))
+	}
+
+	if sym, ok := scope.Variables[sym.Name]; ok {
+		return sym
+	}
+	return scope.Parent.LookUpLetSym(sym)
 }
 
 func TypeCheckStructDef(scope Scope, def StructDef) TcStructDef {
@@ -147,31 +166,31 @@ func TypeCheckStructDef(scope Scope, def StructDef) TcStructDef {
 	for _, field := range def.Fields {
 		var tcField TcStructField
 		tcField.Name = field.Name
-		tcField.Type = scope.LookUpType(field.Type)
+		tcField.Type = scope.LookUpType(field.TypeExpr)
 		result.Fields = append(result.Fields, tcField)
 	}
 	return result
 }
 
-func TypeCheckProcDef(scope Scope, def ProcDef) TcProcDef {
+func TypeCheckProcDef(parentScope Scope, def ProcDef) TcProcDef {
+	scope := parentScope.NewSubScope()
 	var result TcProcDef
 	result.Name = def.Name
 	for _, arg := range def.Args {
-		var tcArg TcProcArgument
-		tcArg.Name = arg.Name
-		tcArg.Type = scope.LookUpType(arg.Type)
+		tcArg := scope.NewLetSym(arg.Name, scope.LookUpType(arg.Type))
 		result.Args = append(result.Args, tcArg)
 	}
 	resultType := scope.LookUpType(def.ResultType)
 	result.ResultType = resultType
-
 	result.Body = TypeCheckExpr(scope, def.Body, resultType)
 
+	// TODO this is very ugly, store a pointer to a local, return a copy
+	parentScope.Procedures[result.Name] = &result
 	return result
 }
 
 func ExpectType(gotten, expected Type) {
-	if expected != gotten {
+	if expected != TypeUnspecified && expected != gotten {
 		// TODO print proper line information here
 		panic(fmt.Sprintf("Expected type '%s' but got type '%s'", expected.Name(), gotten.Name()))
 	}
@@ -197,7 +216,7 @@ func TypeCheckCall(scope Scope, call Call, expected Type) TcCall {
 
 	}
 	for i, arg := range call.Args {
-		expectedType := expectedArgs[i].Type
+		expectedType := expectedArgs[i].Typ
 		tcArg := TypeCheckExpr(scope, arg, expectedType)
 		result.Args = append(result.Args, tcArg)
 	}
@@ -226,6 +245,22 @@ func TypeCheckCodeBlock(scope Scope, arg CodeBlock, expected Type) TcCodeBlock {
 	return result
 }
 
+func (expr TypeExpr) IsSet() bool {
+	return expr.Ident != ""
+}
+
+func TypeCheckLetStmt(scope Scope, arg LetStmt) TcLetStmt {
+	var expected Type = TypeUnspecified
+	if arg.TypeExpr.IsSet() {
+		expected = scope.LookUpType(arg.TypeExpr)
+	}
+
+	var result TcLetStmt
+	result.Value = TypeCheckExpr(scope, arg.Value, expected)
+	result.Sym = scope.NewLetSym(arg.Name, result.Value.Type())
+	return result
+}
+
 func (block TcCodeBlock) Type() Type {
 	if len(block.Items) == 0 {
 		return TypeVoid
@@ -245,6 +280,18 @@ func (lit IntLit) Type() Type {
 	return TypeInt
 }
 
+func (sym TcLetSymbol) Type() Type {
+	return sym.Typ
+}
+
+func (sym TcLetStmt) Type() Type {
+	return TypeVoid
+}
+
+func (returnStmt ReturnStmt) Type() Type {
+	return TypeNoReturn
+}
+
 func TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExpr {
 	var result TcExpr
 	switch arg := arg.(type) {
@@ -253,11 +300,16 @@ func TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExpr {
 	case CodeBlock:
 		return (TcExpr)(TypeCheckCodeBlock(scope, arg, expected))
 	case Symbol:
-		return (TcExpr)(scope.LookUpSym(arg))
+		return (TcExpr)(scope.LookUpLetSym(arg))
 	case StrLit:
 		return (TcExpr)(arg)
 	case IntLit:
 		return (TcExpr)(arg)
+	case ReturnStmt:
+		return (TcExpr)(arg)
+	case LetStmt:
+		ExpectType(TypeVoid, expected)
+		return (TcExpr)(TypeCheckLetStmt(scope, arg))
 	default:
 		panic(fmt.Sprintf("not implemented %T", arg))
 	}
@@ -268,7 +320,7 @@ func TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExpr {
 
 func TypeCheckPackage(arg PackageDef) TcPackageDef {
 	var result TcPackageDef
-	scope := &ScopeImpl{Parent: builtinScope}
+	scope := builtinScope.NewSubScope()
 	result.Name = arg.Name
 	for _, typeDef := range arg.TypeDefs {
 		result.TypeDefs = append(result.TypeDefs, TypeCheckStructDef(scope, typeDef))

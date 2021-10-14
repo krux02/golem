@@ -17,37 +17,25 @@ type TcStructField struct {
 	Type Type
 }
 
-type TcVariableSym struct {
-	Name string
-	Type Type
-}
-
 type TcStructDef struct {
 	Name   string
 	Fields []TcStructField
-}
-
-type TcProcArgument struct {
-	Name string
-	Type Type
 }
 
 type TcCodeBlock struct {
 	Items []TcExpr
 }
 
-type TcSymbol struct {
-	Name string
-	typ  Type
-}
-
-func (sym TcSymbol) Type() Type {
-	return sym.typ
-}
+// TODO rename to TcProcSym and TcLetSym
 
 type TcProcSymbol struct {
 	Name string
 	Impl *TcProcDef
+}
+
+type TcLetSymbol struct {
+	Name string
+	Typ  Type
 }
 
 type TcCall struct {
@@ -57,9 +45,14 @@ type TcCall struct {
 	Braced bool // true for (a+b) +(a,b), false for a+b
 }
 
+type TcLetStmt struct {
+	Sym   TcLetSymbol
+	Value TcExpr
+}
+
 type TcProcDef struct {
 	Name       string
-	Args       []TcProcArgument
+	Args       []TcLetSymbol
 	ResultType Type
 	Body       TcExpr
 }
@@ -70,8 +63,7 @@ type TcPackageDef struct {
 	ProcDefs []TcProcDef
 }
 
-func (sym TcSymbol) expression()      {}
+func (sym TcLetSymbol) expression()   {}
+func (stmt TcLetStmt) expression()    {}
 func (block TcCodeBlock) expression() {}
-
-//func (lit TcStrLit) expression() {}
-func (call TcCall) expression() {}
+func (call TcCall) expression()       {}

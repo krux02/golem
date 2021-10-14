@@ -131,7 +131,7 @@ func (structDef StructDef) prettyPrint(builder *AstPrettyPrinter) {
 	for i, field := range structDef.Fields {
 		builder.WriteString(field.Name)
 		builder.WriteString(" : ")
-		field.Type.prettyPrint(builder)
+		field.TypeExpr.prettyPrint(builder)
 		if i == iLast {
 			builder.Indentation--
 		}
@@ -175,13 +175,18 @@ func (procDef ProcDef) prettyPrint(builder *AstPrettyPrinter) {
 	procDef.Body.prettyPrint(builder)
 }
 
+func (returnStmt ReturnStmt) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("return ")
+	returnStmt.Value.prettyPrint(builder)
+}
+
 func (letStmt LetStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.NewlineAndIndent()
 	builder.WriteString("let ")
 	builder.WriteString(letStmt.Name)
-	if letStmt.Type.Ident != "" {
+	if letStmt.TypeExpr.IsSet() {
 		builder.WriteString(":")
-		letStmt.Type.prettyPrint(builder)
+		letStmt.TypeExpr.prettyPrint(builder)
 	}
 	builder.WriteString(" = ")
 	letStmt.Value.prettyPrint(builder)
@@ -204,15 +209,7 @@ func (call Call) String() string {
 	return builder.String()
 }
 
-func (call TcCall) String() string {
-	panic("not implemented")
-}
-
 func (call TcCall) prettyPrint(*AstPrettyPrinter) {
-	panic("not implemented")
-}
-
-func (call TcCodeBlock) String() string {
 	panic("not implemented")
 }
 
@@ -220,12 +217,36 @@ func (call TcCodeBlock) prettyPrint(*AstPrettyPrinter) {
 	panic("not implemented")
 }
 
-func (call TcSymbol) String() string {
-	panic("not implemented")
+func (sym TcLetSymbol) prettyPrint(printer *AstPrettyPrinter) {
+	printer.WriteString(sym.Name)
 }
 
-func (call TcSymbol) prettyPrint(*AstPrettyPrinter) {
-	panic("not implemented")
+func (letStmt TcLetStmt) prettyPrint(builder *AstPrettyPrinter) {
+	builder.NewlineAndIndent()
+	builder.WriteString("let ")
+	letStmt.Sym.prettyPrint(builder)
+	builder.WriteString(":")
+	builder.WriteString(letStmt.Sym.Typ.Name())
+	builder.WriteString(" = ")
+	letStmt.Value.prettyPrint(builder)
+}
+
+func (sym TcLetSymbol) String() string {
+	builder := &AstPrettyPrinter{}
+	sym.prettyPrint(builder)
+	return builder.String()
+}
+
+func (codeBlock TcCodeBlock) String() string {
+	builder := &AstPrettyPrinter{}
+	codeBlock.prettyPrint(builder)
+	return builder.String()
+}
+
+func (call TcCall) String() string {
+	builder := &AstPrettyPrinter{}
+	call.prettyPrint(builder)
+	return builder.String()
 }
 
 func (lit StrLit) String() string {
@@ -255,5 +276,17 @@ func (procDef ProcDef) String() string {
 func (letStmt LetStmt) String() string {
 	builder := &AstPrettyPrinter{}
 	letStmt.prettyPrint(builder)
+	return builder.String()
+}
+
+func (letStmt TcLetStmt) String() string {
+	builder := &AstPrettyPrinter{}
+	letStmt.prettyPrint(builder)
+	return builder.String()
+}
+
+func (returnStmt ReturnStmt) String() string {
+	builder := &AstPrettyPrinter{}
+	returnStmt.prettyPrint(builder)
 	return builder.String()
 }

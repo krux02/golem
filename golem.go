@@ -26,7 +26,7 @@ const (
 	TkStrLit
 	TkIntLit
 	TkFloatLit
-	TkLineComment
+	TkDocComment
 
 	TkOpenBrace    TokenKind = 100
 	TkCloseBrace   TokenKind = 101
@@ -60,7 +60,7 @@ var TokenKindNames = [...]string{
 	TkStrLit:       "StrLit",
 	TkIntLit:       "IntLit",
 	TkFloatLit:     "FloatLit",
-	TkLineComment:  "LineComment",
+	TkDocComment:   "DocComment",
 	TkOpenBrace:    "OpenBrace",
 	TkCloseBrace:   "CloseBrace",
 	TkOpenBracket:  "OpenBracket",
@@ -149,6 +149,16 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			idx += length
 			gotNewLine = true
 			goto eatWhiteSpace
+		case '#': // eat comment as part of whitespace
+			//idx += length
+			gotNewLine = true
+			offset := strings.IndexByte(code[idx:], '\n')
+			if offset != -1 {
+				idx = idx + offset + 1
+			} else {
+				idx = len(code)
+			}
+			goto eatWhiteSpace
 		case '\\':
 			idx += length
 		newlineEscape:
@@ -202,15 +212,16 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 				break
 			}
 		}
-	case c == '#':
-		result.kind = TkLineComment
-		result.value = code
-		for pos, rune := range code {
-			if rune == '\n' {
-				result.value = code[:pos]
-				break
-			}
-		}
+	// currently disabled branch
+	// case c == '#':
+	// 	result.kind = TkLineComment
+	// 	result.value = code
+	// 	for pos, rune := range code {
+	// 		if rune == '\n' {
+	// 			result.value = code[:pos]
+	// 			break
+	// 		}
+	// 	}
 	case u.IsDigit(c):
 		result.kind = TkIntLit
 		// read number literal
@@ -354,7 +365,7 @@ func (tokenizer *Tokenizer) parseTypeExpr() (result TypeExpr) {
 func (tokenizer *Tokenizer) parseStmtOrExpr() (result Expr) {
 	lookAhead := tokenizer.lookAheadToken
 	if lookAhead.kind == TkIdent {
-		if lookAhead.value == "let" {
+		if lookAhead.value == "let" || lookAhead.value == "var" {
 			// parse let Stmt
 			var letStmt LetStmt
 			next := tokenizer.Next()
@@ -362,9 +373,8 @@ func (tokenizer *Tokenizer) parseStmtOrExpr() (result Expr) {
 			tokenizer.expectKind(next, TkIdent)
 			letStmt.Name = next.value
 			next = tokenizer.Next()
-			Println(next)
 			if next.kind == TkOperator && next.value == ":" {
-				letStmt.Type = tokenizer.parseTypeExpr()
+				letStmt.TypeExpr = tokenizer.parseTypeExpr()
 				next = tokenizer.Next()
 			}
 
@@ -372,6 +382,12 @@ func (tokenizer *Tokenizer) parseStmtOrExpr() (result Expr) {
 			letStmt.Value = tokenizer.parseExpr()
 			// letStmt
 			return (Expr)(letStmt)
+		}
+		if lookAhead.value == "return" {
+			var returnStmt ReturnStmt
+			tokenizer.Next()
+			returnStmt.Value = tokenizer.parseExpr()
+			return (Expr)(returnStmt)
 		}
 	}
 	return tokenizer.parseExpr()
@@ -382,12 +398,13 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 	token := tokenizer.Next()
 
 	switch token.kind {
-	case TkLineComment:
-		// eat automatically generated TkSemicolon at end of each line
-		// (the semicolon should probably not be generated here?)
-		next := tokenizer.Next()
-		tokenizer.expectKind(next, TkSemicolon)
-		return tokenizer.parseExpr()
+	// currently disabled
+	// case TkLineComment:
+	// 	// eat automatically generated TkSemicolon at end of each line
+	// 	// (the semicolon should probably not be generated here?)
+	// 	next := tokenizer.Next()
+	// 	tokenizer.expectKind(next, TkSemicolon)
+	// 	return tokenizer.parseExpr()
 	case TkIdent:
 		sym := Symbol{Name: token.value}
 
@@ -547,7 +564,7 @@ func parseTypeDef(tokenizer *Tokenizer) (result StructDef) {
 		structField.Name = name.value
 		colon := tokenizer.Next()
 		tokenizer.expectOperator(colon, ":")
-		structField.Type = tokenizer.parseTypeExpr()
+		structField.TypeExpr = tokenizer.parseTypeExpr()
 		token = tokenizer.Next()
 		tokenizer.expectKind(token, TkSemicolon)
 		for token.kind == TkSemicolon {
@@ -610,8 +627,8 @@ func parsePackage(code, filename string) (result PackageDef) {
 	for true {
 		token := tokenizer.Next()
 		switch token.kind {
-		case TkLineComment:
-			continue
+		//case TkLineComment:
+		//	continue
 		case TkSemicolon:
 			continue
 		case TkEof:

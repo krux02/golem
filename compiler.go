@@ -84,7 +84,7 @@ func (context *CCodeGeneratorContext) compileIntLit(lit IntLit) {
 	WriteIntLit(&context.Builder, lit.Value)
 }
 
-func (context *CCodeGeneratorContext) compileSymbol(sym TcSymbol) {
+func (context *CCodeGeneratorContext) compileSymbol(sym TcLetSymbol) {
 	context.WriteString(sym.Name)
 }
 
@@ -107,7 +107,7 @@ func (context *CCodeGeneratorContext) compileExprWithPrefix(expr TcExpr, lastStm
 	case IntLit:
 		context.WriteString(lastStmtPrefix)
 		context.compileIntLit(ex)
-	case TcSymbol:
+	case TcLetSymbol:
 		context.WriteString(lastStmtPrefix)
 		context.compileSymbol(ex)
 	case nil:
@@ -151,7 +151,7 @@ func (context *CCodeGeneratorContext) compileProcDef(procDef TcProcDef) {
 		if i != 0 {
 			context.WriteString(", ")
 		}
-		context.compileTypeExpr(arg.Type)
+		context.compileTypeExpr(arg.Typ)
 		context.WriteString(" ")
 		context.WriteString(arg.Name)
 	}
