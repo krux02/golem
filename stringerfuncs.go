@@ -30,8 +30,8 @@ func (this Token) String() string {
 
 /// AST NODES
 
-func (sym Symbol) prettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString(sym.Name)
+func (ident Ident) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString(ident.Name)
 }
 
 func (call Call) prettyPrint(builder *AstPrettyPrinter) {
@@ -192,8 +192,8 @@ func (letStmt LetStmt) prettyPrint(builder *AstPrettyPrinter) {
 	letStmt.Value.prettyPrint(builder)
 }
 
-func (sym Symbol) String() string {
-	return sym.Name
+func (ident Ident) String() string {
+	return ident.Name
 }
 
 func (codeBlock CodeBlock) String() string {

@@ -42,7 +42,7 @@ type CodeBlock struct {
 	Items []Expr
 }
 
-type Symbol struct {
+type Ident struct {
 	Name string
 }
 
@@ -59,7 +59,7 @@ type FloatLit struct {
 }
 
 type Call struct {
-	Sym  Symbol
+	Sym  Ident
 	Args []Expr
 	// other properties
 	Braced bool // true for (a+b) +(a,b), false for a+b
@@ -78,7 +78,7 @@ type PackageDef struct {
 	ProcDefs []ProcDef
 }
 
-func (sym Symbol) expression()            {}
+func (ident Ident) expression()           {}
 func (block CodeBlock) expression()       {}
 func (lit StrLit) expression()            {}
 func (lit IntLit) expression()            {}

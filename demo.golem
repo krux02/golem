@@ -19,5 +19,6 @@ proc main():int = {
   let x:int = myfun1(12, 13, 14)
   let y = myfun2(15, 16, 17)
   printf("Hallo Welt!\n")
+  # printf("x: %d y: %d\n", x, y)
   0
 }

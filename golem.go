@@ -393,24 +393,96 @@ func (tokenizer *Tokenizer) parseStmtOrExpr() (result Expr) {
 	return tokenizer.parseExpr()
 }
 
-func (tokenizer *Tokenizer) parseExpr() (result Expr) {
-	token := tokenizer.Next()
+func (tokenizer *Tokenizer) parseCodeBlock() CodeBlock {
+	_ = tokenizer.Next()
+	// parse block
+	var block CodeBlock
+	for tokenizer.lookAheadToken.kind == TkSemicolon {
+		tokenizer.Next()
+	}
+	for tokenizer.lookAheadToken.kind != TkCloseCurly {
+		item := tokenizer.parseStmtOrExpr()
+		block.Items = append(block.Items, item)
+		next := tokenizer.Next()
+		tokenizer.expectKind(next, TkSemicolon)
+	}
+	endToken := tokenizer.Next()
+	tokenizer.expectKind(endToken, TkCloseCurly)
+	return block
+}
 
-	switch token.kind {
+func (tokenizer *Tokenizer) parseStrLit() StrLit {
+	token := tokenizer.Next()
+	var b strings.Builder
+	b.Grow(len(token.value) - 2)
+	var processEscape bool
+	for i, rune := range token.value {
+		if processEscape {
+			switch rune {
+			case 'a':
+				b.WriteRune('\a')
+			case 'b':
+				b.WriteRune('\b')
+			case 'f':
+				b.WriteRune('\f')
+			case 'n':
+				b.WriteRune('\n')
+			case 'r':
+				b.WriteRune('\r')
+			case 't':
+				b.WriteRune('\t')
+			case 'v':
+				b.WriteRune('\v')
+			case '\\':
+				b.WriteRune('\\')
+			case '\'':
+				b.WriteRune('\'')
+			case '"':
+				b.WriteRune('"')
+			default:
+				panic("illegal escale sequence")
+			}
+			processEscape = false
+			continue
+		}
+
+		if rune == '\\' {
+			processEscape = true
+			continue
+		} else if i != 0 && i != len(token.value)-1 {
+			b.WriteRune(rune)
+		}
+	}
+
+	return StrLit{Value: b.String()}
+}
+
+func (tokenizer *Tokenizer) parseIntLit() IntLit {
+	token := tokenizer.Next()
+	intValue, err := strconv.Atoi(token.value)
+	if err != nil {
+		panic("internal error invalid int token")
+	}
+	return IntLit{Value: intValue}
+}
+
+func (tokenizer *Tokenizer) parseExpr() (result Expr) {
+	switch tokenizer.lookAheadToken.kind {
 	case TkIdent:
-		sym := Symbol{Name: token.value}
+		token := tokenizer.Next()
+		ident := Ident{Name: token.value}
 
 		lookAhead := tokenizer.lookAheadToken
 
 		switch lookAhead.kind {
 		case TkSemicolon, TkCloseBrace, TkCloseCurly:
-			return (Expr)(sym)
+			return (Expr)(ident)
 
 		case TkOperator:
 			token = tokenizer.Next()
-			operator := Symbol{Name: token.value}
+			operator := Ident{Name: token.value}
 			rhs := tokenizer.parseExpr()
-			call := Call{Sym: operator, Args: []Expr{sym, rhs}}
+			call := Call{Sym: operator, Args: []Expr{ident, rhs}}
 
 			if rhsCall, ok := rhs.(Call); ok && !rhsCall.Braced {
 				rhsOperator := rhsCall.Sym
@@ -444,7 +516,7 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 					panic(tokenizer.wrongKind(tokenizer.lookAheadToken))
 				case TkCloseBrace:
 					token = tokenizer.Next()
-					call := Call{Sym: sym, Args: args}
+					call := Call{Sym: ident, Args: args}
 					return (Expr)(call)
 				}
 				panic(tokenizer.wrongKind(lookAhead))
@@ -453,81 +525,14 @@ func (tokenizer *Tokenizer) parseExpr() (result Expr) {
 
 		panic(tokenizer.wrongKind(lookAhead))
 	case TkOpenCurly:
-		// parse block
-		var block CodeBlock
-
-		for tokenizer.lookAheadToken.kind == TkSemicolon {
-			tokenizer.Next()
-		}
-
-		for tokenizer.lookAheadToken.kind != TkCloseCurly {
-
-			item := tokenizer.parseStmtOrExpr()
-			block.Items = append(block.Items, item)
-
-			next := tokenizer.Next()
-			tokenizer.expectKind(next, TkSemicolon)
-		}
-
-		endToken := tokenizer.Next()
-
-		tokenizer.expectKind(endToken, TkCloseCurly)
-		// tokenizer.expectKind(endtoken, TkCloseCurly)
-		return (Expr)(block)
+		return (Expr)(tokenizer.parseCodeBlock())
 	case TkStrLit:
-		var b strings.Builder
-		b.Grow(len(token.value) - 2)
-		var processEscape bool
-		for i, rune := range token.value {
-			if processEscape {
-				switch rune {
-				case 'a':
-					b.WriteRune('\a')
-				case 'b':
-					b.WriteRune('\b')
-				case 'f':
-					b.WriteRune('\f')
-				case 'n':
-					b.WriteRune('\n')
-				case 'r':
-					b.WriteRune('\r')
-				case 't':
-					b.WriteRune('\t')
-				case 'v':
-					b.WriteRune('\v')
-				case '\\':
-					b.WriteRune('\\')
-				case '\'':
-					b.WriteRune('\'')
-				case '"':
-					b.WriteRune('"')
-				default:
-					panic("illegal escale sequence")
-				}
-				processEscape = false
-				continue
-			}
-
-			if rune == '\\' {
-				processEscape = true
-				continue
-			} else if i != 0 && i != len(token.value)-1 {
-				b.WriteRune(rune)
-			}
-		}
-
-		lit := StrLit{Value: b.String()}
-		return (Expr)(lit)
+		return (Expr)(tokenizer.parseStrLit())
 	case TkIntLit:
-		intValue, err := strconv.Atoi(token.value)
-		if err != nil {
-			panic("internal error invalid int token")
-		}
-		lit := IntLit{Value: intValue}
-		return (Expr)(lit)
+		return (Expr)(tokenizer.parseIntLit())
 	}
 
-	panic(tokenizer.wrongKind(token))
+	panic(tokenizer.wrongKind(tokenizer.lookAheadToken))
 }
 
 func parseTypeDef(tokenizer *Tokenizer) (result StructDef) {

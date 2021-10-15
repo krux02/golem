@@ -138,26 +138,26 @@ func (scope Scope) LookUpType(expr TypeExpr) Type {
 	panic(fmt.Sprintf("Type not found: %s", name))
 }
 
-func (scope Scope) LookUpProc(sym Symbol) TcProcSymbol {
+func (scope Scope) LookUpProc(ident Ident) TcProcSymbol {
 	if scope == nil {
-		panic(fmt.Sprintf("Proc not found: %s", sym.Name))
+		panic(fmt.Sprintf("Proc not found: %s", ident.Name))
 	}
 
-	if impl, ok := scope.Procedures[sym.Name]; ok {
-		return TcProcSymbol{Name: sym.Name, Impl: impl}
+	if impl, ok := scope.Procedures[ident.Name]; ok {
+		return TcProcSymbol{Name: ident.Name, Impl: impl}
 	}
-	return scope.Parent.LookUpProc(sym)
+	return scope.Parent.LookUpProc(ident)
 }
 
-func (scope Scope) LookUpLetSym(sym Symbol) TcLetSymbol {
+func (scope Scope) LookUpLetSym(ident Ident) TcLetSymbol {
 	if scope == nil {
-		panic(fmt.Sprintf("let sym not found: %s", sym.Name))
+		panic(fmt.Sprintf("let sym not found: %s", ident.Name))
 	}
 
-	if sym, ok := scope.Variables[sym.Name]; ok {
+	if sym, ok := scope.Variables[ident.Name]; ok {
 		return sym
 	}
-	return scope.Parent.LookUpLetSym(sym)
+	return scope.Parent.LookUpLetSym(ident)
 }
 
 func TypeCheckStructDef(scope Scope, def StructDef) TcStructDef {
@@ -301,7 +301,7 @@ func TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExpr {
 		return (TcExpr)(TypeCheckCall(scope, arg, expected))
 	case CodeBlock:
 		return (TcExpr)(TypeCheckCodeBlock(scope, arg, expected))
-	case Symbol:
+	case Ident:
 		sym := scope.LookUpLetSym(arg)
 		ExpectType(sym.Typ, expected)
 		return (TcExpr)(sym)
