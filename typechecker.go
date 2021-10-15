@@ -101,10 +101,14 @@ var builtinScope Scope = &ScopeImpl{
 // index to refere to a (currently only builtin) type
 // somehow unify this mess
 type ScopeImpl struct {
-	Parent     Scope
-	Variables  map[string]TcLetSymbol
-	Procedures map[string]*TcProcDef
-	Types      map[string]Type
+	Parent Scope
+	// A return stmt needs to know which procedure it belongs to. This
+	// pointer points to the corresponding procedure. This should
+	// probably be redued to be just the proc signature.
+	CurrentProc *TcProcDef
+	Variables   map[string]TcLetSymbol
+	Procedures  map[string]*TcProcDef
+	Types       map[string]Type
 }
 
 type Scope = *ScopeImpl
@@ -172,9 +176,9 @@ func TypeCheckStructDef(scope Scope, def StructDef) TcStructDef {
 	return result
 }
 
-func TypeCheckProcDef(parentScope Scope, def ProcDef) TcProcDef {
+func TypeCheckProcDef(parentScope Scope, def ProcDef) (result TcProcDef) {
 	scope := parentScope.NewSubScope()
-	var result TcProcDef
+	scope.CurrentProc = &result
 	result.Name = def.Name
 	for _, arg := range def.Args {
 		tcArg := scope.NewLetSym(arg.Name, scope.LookUpType(arg.Type))
@@ -186,7 +190,7 @@ func TypeCheckProcDef(parentScope Scope, def ProcDef) TcProcDef {
 
 	// TODO this is very ugly, store a pointer to a local, return a copy
 	parentScope.Procedures[result.Name] = &result
-	return result
+	return
 }
 
 func ExpectType(gotten, expected Type) {
@@ -260,7 +264,7 @@ func TypeCheckLetStmt(scope Scope, arg LetStmt) TcLetStmt {
 }
 
 func TypeCheckReturnStmt(scope Scope, arg ReturnStmt) TcReturnStmt {
-	return TcReturnStmt{TypeCheckExpr(scope, arg.Value, TypeUnspecified)}
+	return TcReturnStmt{TypeCheckExpr(scope, arg.Value, scope.CurrentProc.ResultType)}
 }
 
 func (block TcCodeBlock) Type() Type {
@@ -312,7 +316,7 @@ func TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExpr {
 		ExpectType(TypeInt, expected)
 		return (TcExpr)(arg)
 	case ReturnStmt:
-		// ignoring expected type here, because the return expression
+		// ignoring expected type here, because the return as expression
 		// never evaluates to anything.
 		return (TcExpr)(TypeCheckReturnStmt(scope, arg))
 	case LetStmt:
