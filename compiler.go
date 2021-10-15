@@ -100,37 +100,36 @@ func (context *CCodeGeneratorContext) compileLetStmt(stmt TcLetStmt) {
 	context.compileExpr(stmt.Value)
 }
 
-// lastStmtPrefix is used to inject a return statement at each control
-// flow end in procedures
-// TODO rename lastStmtPrefix -> lastExprPrefix
-func (context *CCodeGeneratorContext) compileExprWithPrefix(expr TcExpr, lastStmtPrefix string) {
+// lastExprPrefix is used to inject a return statement at each control
+// flow end in procedures, as in C code
+func (context *CCodeGeneratorContext) compileExprWithPrefix(expr TcExpr, lastExprPrefix string) {
 	switch ex := expr.(type) {
 	case TcCodeBlock:
-		context.compileCodeBlockWithPrefix(ex, lastStmtPrefix)
+		context.compileCodeBlockWithPrefix(ex, lastExprPrefix)
 	case TcCall:
-		context.WriteString(lastStmtPrefix)
+		context.WriteString(lastExprPrefix)
 		context.compileCall(ex)
 	case StrLit:
-		context.WriteString(lastStmtPrefix)
+		context.WriteString(lastExprPrefix)
 		context.compileStrLit(ex)
 	case IntLit:
-		context.WriteString(lastStmtPrefix)
+		context.WriteString(lastExprPrefix)
 		context.compileIntLit(ex)
 	case TcLetSymbol:
-		context.WriteString(lastStmtPrefix)
+		context.WriteString(lastExprPrefix)
 		context.compileSymbol(ex)
 	case TcLetStmt:
-		if lastStmtPrefix != "" {
-			panic(fmt.Sprintf("internal error, lastStmtPrefix not supported here", lastStmtPrefix))
+		if lastExprPrefix != "" {
+			panic(fmt.Sprintf("internal error, lastExprPrefix not supported here", lastExprPrefix))
 		}
 		context.compileLetStmt(ex)
 	case TcReturnStmt:
-		if lastStmtPrefix == "" || lastStmtPrefix == "return " {
+		if lastExprPrefix == "" || lastExprPrefix == "return " {
 			context.WriteString("return ")
 			context.compileExpr(ex.Value)
 			return
 		}
-		panic(fmt.Sprintf("internal error, cannot inject '%s' in return statement", lastStmtPrefix))
+		panic(fmt.Sprintf("internal error, cannot inject '%s' in return statement", lastExprPrefix))
 	case nil:
 		panic(fmt.Sprintf("invalid Ast, expression is nil %T", expr))
 	default:
@@ -142,7 +141,7 @@ func (context *CCodeGeneratorContext) compileCodeBlock(block TcCodeBlock) {
 	context.compileCodeBlockWithPrefix(block, "")
 }
 
-func (context *CCodeGeneratorContext) compileCodeBlockWithPrefix(block TcCodeBlock, lastStmtPrefix string) {
+func (context *CCodeGeneratorContext) compileCodeBlockWithPrefix(block TcCodeBlock, lastExprPrefix string) {
 	context.WriteString("{")
 	context.Indentation += 1
 
@@ -150,7 +149,7 @@ func (context *CCodeGeneratorContext) compileCodeBlockWithPrefix(block TcCodeBlo
 	for i, expr := range block.Items {
 		context.newlineAndIndent()
 		if i == N-1 {
-			context.compileExprWithPrefix(expr, lastStmtPrefix)
+			context.compileExprWithPrefix(expr, lastExprPrefix)
 		} else {
 			context.compileExpr(expr)
 		}

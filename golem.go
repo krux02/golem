@@ -394,17 +394,9 @@ func (tokenizer *Tokenizer) parseStmtOrExpr() (result Expr) {
 }
 
 func (tokenizer *Tokenizer) parseExpr() (result Expr) {
-	// eat whitespace before setting startOffest
 	token := tokenizer.Next()
 
 	switch token.kind {
-	// currently disabled
-	// case TkLineComment:
-	// 	// eat automatically generated TkSemicolon at end of each line
-	// 	// (the semicolon should probably not be generated here?)
-	// 	next := tokenizer.Next()
-	// 	tokenizer.expectKind(next, TkSemicolon)
-	// 	return tokenizer.parseExpr()
 	case TkIdent:
 		sym := Symbol{Name: token.value}
 
