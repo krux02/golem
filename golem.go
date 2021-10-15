@@ -466,73 +466,85 @@ func (tokenizer *Tokenizer) parseIntLit() IntLit {
 	return IntLit{Value: intValue}
 }
 
-func (tokenizer *Tokenizer) parseExpr() (result Expr) {
+func (tokenizer *Tokenizer) parseIdent() Ident {
+	// this func implementation is a joke, but it should be consistent with the other parse thingies
+	token := tokenizer.Next()
+	return Ident{Name: token.value}
+}
+
+func (tokenizer *Tokenizer) parseInfixCall(lhs Expr) Call {
+	token := tokenizer.Next()
+	operator := Ident{Name: token.value}
+	rhs := tokenizer.parseExpr()
+	call := Call{Sym: operator, Args: []Expr{lhs, rhs}}
+
+	if rhsCall, ok := rhs.(Call); ok && !rhsCall.Braced {
+		rhsOperator := rhsCall.Sym
+		if OperatorPrecedence[operator.Name] > OperatorPrecedence[rhsOperator.Name] {
+			// operator precedence
+			call.Args[1] = rhsCall.Args[0]
+			rhsCall.Args[0] = call
+			return rhsCall
+		}
+	}
+	return call
+}
+
+func (tokenizer *Tokenizer) parseCall(callee Expr) Call {
+	// parse call expr
+	var args []Expr
+	tokenizer.Next()
+	for true {
+		switch tokenizer.lookAheadToken.kind {
+		case TkIdent, TkStrLit, TkIntLit:
+			args = append(args, tokenizer.parseExpr())
+			switch tokenizer.lookAheadToken.kind {
+			case TkComma:
+				tokenizer.Next()
+				continue
+			case TkCloseBrace:
+				// TkCloseBrace is already handled in the outer switch
+				// this is really ugly, why? I must be doing something wrong
+				continue
+			default:
+			}
+			panic(tokenizer.wrongKind(tokenizer.lookAheadToken))
+		case TkCloseBrace:
+			tokenizer.Next()
+			return Call{Sym: callee.(Ident), Args: args}
+		}
+		panic(tokenizer.wrongKind(tokenizer.lookAheadToken))
+	}
+	panic("unreachable")
+}
+
+func (tokenizer *Tokenizer) parseExpr() Expr {
+	var expr Expr
 	switch tokenizer.lookAheadToken.kind {
 	case TkIdent:
-		token := tokenizer.Next()
-		ident := Ident{Name: token.value}
-
-		lookAhead := tokenizer.lookAheadToken
-
-		switch lookAhead.kind {
-		case TkSemicolon, TkCloseBrace, TkCloseCurly:
-			return (Expr)(ident)
-
-		case TkOperator:
-			token = tokenizer.Next()
-			operator := Ident{Name: token.value}
-			rhs := tokenizer.parseExpr()
-			call := Call{Sym: operator, Args: []Expr{ident, rhs}}
-
-			if rhsCall, ok := rhs.(Call); ok && !rhsCall.Braced {
-				rhsOperator := rhsCall.Sym
-				if OperatorPrecedence[operator.Name] > OperatorPrecedence[rhsOperator.Name] {
-					// operator precedence
-					call.Args[1] = rhsCall.Args[0]
-					rhsCall.Args[0] = call
-					return (Expr)(rhsCall)
-				}
-			}
-			return (Expr)(call)
-		case TkOpenBrace:
-			// parse call expr
-			var args []Expr
-			token = tokenizer.Next()
-			for true {
-				lookAhead = tokenizer.lookAheadToken
-				switch lookAhead.kind {
-				case TkIdent, TkStrLit, TkIntLit:
-					args = append(args, tokenizer.parseExpr())
-					switch tokenizer.lookAheadToken.kind {
-					case TkComma:
-						tokenizer.Next()
-						continue
-					case TkCloseBrace:
-						// TkCloseBrace is already handled in the outer switch
-						// this is really ugly, why? I must be doing something wrong
-						continue
-					default:
-					}
-					panic(tokenizer.wrongKind(tokenizer.lookAheadToken))
-				case TkCloseBrace:
-					token = tokenizer.Next()
-					call := Call{Sym: ident, Args: args}
-					return (Expr)(call)
-				}
-				panic(tokenizer.wrongKind(lookAhead))
-			}
-		}
-
-		panic(tokenizer.wrongKind(lookAhead))
+		expr = (Expr)(tokenizer.parseIdent())
 	case TkOpenCurly:
-		return (Expr)(tokenizer.parseCodeBlock())
+		expr = (Expr)(tokenizer.parseCodeBlock())
 	case TkStrLit:
-		return (Expr)(tokenizer.parseStrLit())
+		expr = (Expr)(tokenizer.parseStrLit())
 	case TkIntLit:
-		return (Expr)(tokenizer.parseIntLit())
+		expr = (Expr)(tokenizer.parseIntLit())
+	default:
+		tokenizer.wrongKind(tokenizer.lookAheadToken)
 	}
 
-	panic(tokenizer.wrongKind(tokenizer.lookAheadToken))
+	// any expression could be the start of a longer expression, this is
+	// explorerd here
+
+	lookAhead := tokenizer.lookAheadToken
+	switch lookAhead.kind {
+	case TkOperator:
+		expr = (Expr)(tokenizer.parseInfixCall(expr))
+	case TkOpenBrace:
+		expr = (Expr)(tokenizer.parseCall(expr))
+	}
+
+	return expr
 }
 
 func parseTypeDef(tokenizer *Tokenizer) (result StructDef) {
