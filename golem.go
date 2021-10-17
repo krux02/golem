@@ -75,6 +75,8 @@ type Token struct {
 	value string
 }
 
+// this is by now far from just a tokenizer, has evolved to become the
+// full parser of the language.
 type Tokenizer struct {
 	code                    string
 	filename                string
@@ -204,24 +206,11 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 		result.kind = TkIdent
 		result.value = code
 		for pos, rune := range code {
-			//Printf("rune: %c pos: %d\n",
-			//	rune, pos)
-
 			if !u.IsDigit(rune) && !u.IsLetter(rune) {
 				result.value = code[:pos]
 				break
 			}
 		}
-	// currently disabled branch
-	// case c == '#':
-	// 	result.kind = TkLineComment
-	// 	result.value = code
-	// 	for pos, rune := range code {
-	// 		if rune == '\n' {
-	// 			result.value = code[:pos]
-	// 			break
-	// 		}
-	// 	}
 	case u.IsDigit(c):
 		result.kind = TkIntLit
 		// read number literal

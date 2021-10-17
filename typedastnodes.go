@@ -59,6 +59,15 @@ type TcProcDef struct {
 	Args       []TcLetSymbol
 	ResultType Type
 	Body       TcExpr
+
+	// This code here is supposed to be temporary code. TcProcDef should
+	// be a tidy clean minimal definition. This code must be optimized
+	// for reading. Do NOT bloat it with shit for lots of of exceptions
+	// in the language.
+
+	// Exception for printf. It has varargs that are at this point in
+	// time no language feature yet.
+	printfargs bool
 }
 
 type TcPackageDef struct {

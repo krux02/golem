@@ -67,12 +67,14 @@ var BuiltinReturn *TcProcDef = &TcProcDef{
 	ResultType: TypeNoReturn,
 }
 
+// Printf is literally the only use case for real varargs that I
+// know. Therefore the implementation for varargs will be strictly
+// tied to printf for now. A general concept for varargs will be
+// specified out as soon as it becomes necessary.
 var BuiltinPrintf *TcProcDef = &TcProcDef{
 	Name: "printf",
-	Args: []TcLetSymbol{
-		TcLetSymbol{Name: "format", Typ: TypeString},
-		// TODO support argument list
-	},
+	// TODO support argument list
+	printfargs: true,
 	ResultType: TypeVoid,
 }
 
@@ -207,24 +209,82 @@ func ExpectArgsLen(gotten, expected int) {
 	}
 }
 
-func TypeCheckCall(scope Scope, call Call, expected Type) TcCall {
+func ExpectMinArgsLen(gotten, expected int) {
+	if gotten < expected {
+		panic(fmt.Sprintf("Expected at least %d arguments, but got %d.",
+			expected, gotten))
+	}
+}
+
+func TypeCheckCallPrintf(scope Scope, printfSym TcProcSymbol, args []Expr) TcCall {
 	var result TcCall
+	result.Sym = printfSym
+	result.Args = make([]TcExpr, 0, len(args))
+
+	prefixArgs := printfSym.Impl.Args
+	ExpectMinArgsLen(len(args), len(prefixArgs))
+
+	for i := 0; i < len(prefixArgs); i++ {
+		expectedType := prefixArgs[i].Typ
+		tcArg := TypeCheckExpr(scope, args[i], expectedType)
+		result.Args = append(result.Args, tcArg)
+	}
+
+	formatExpr := TypeCheckExpr(scope, args[len(prefixArgs)], TypeString)
+	result.Args = append(result.Args, formatExpr)
+	i := len(prefixArgs) + 1
+	// format string must me a string literal
+	formatStr := formatExpr.(StrLit).Value
+	for j := 0; j < len(formatStr); j++ {
+		c1 := formatStr[j]
+		if c1 != '%' {
+			continue
+		}
+		j++
+		if j == len(formatStr) {
+			panic(fmt.Sprintf("incomplete format expr at end of format string", formatStr))
+		}
+		c2 := formatStr[j]
+		var argType Type
+		switch c2 {
+		case '%':
+			continue
+		case 's':
+			argType = TypeString
+		case 'd':
+			argType = TypeInt
+		case 'f':
+			argType = TypeFloat
+		default:
+			panic(fmt.Sprintf("invalid format expr %%%c in %s", c2, formatExpr.String()))
+		}
+		if i == len(args) {
+			panic(fmt.Sprintf("not enough arguments for %s", formatExpr.String()))
+		}
+		tcArg := TypeCheckExpr(scope, args[i], argType)
+		result.Args = append(result.Args, tcArg)
+		i++
+	}
+
+	return result
+}
+
+func TypeCheckCall(scope Scope, call Call, expected Type) TcCall {
 	procSym := scope.LookUpProc(call.Sym)
 	ExpectType(procSym.Impl.ResultType, expected)
+	if procSym.Impl.printfargs {
+		return TypeCheckCallPrintf(scope, procSym, call.Args)
+	}
+	var result TcCall
 	result.Sym = procSym
 	result.Args = make([]TcExpr, 0, len(call.Args))
 	expectedArgs := procSym.Impl.Args
 	ExpectArgsLen(len(call.Args), len(expectedArgs))
-	if len(expectedArgs) != len(call.Args) {
-		// TODO print proper line information here
-
-	}
 	for i, arg := range call.Args {
 		expectedType := expectedArgs[i].Typ
 		tcArg := TypeCheckExpr(scope, arg, expectedType)
 		result.Args = append(result.Args, tcArg)
 	}
-
 	return result
 }
 
