@@ -69,7 +69,6 @@ func (codeBlock CodeBlock) prettyPrint(builder *AstPrettyPrinter) {
 		builder.NewlineAndIndent()
 	}
 	builder.WriteString("}")
-	builder.NewlineAndIndent()
 }
 
 func (lit StrLit) prettyPrint(builder *AstPrettyPrinter) {

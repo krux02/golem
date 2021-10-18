@@ -656,32 +656,23 @@ func main() {
 	} else {
 		panic("program needs one argument only, the input file")
 	}
-
 	filename, err := filepath.Abs(filename)
 	if err != nil {
 		panic(err)
 	}
-
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
 		panic(err)
 	}
 	// tokenize(string(bytes));
 	pak := parsePackage(string(bytes), filename)
-
-	Println(AstFormat(pak))
-
-	Println("------------------------------------------------------------\n")
-
+	Print(AstFormat(pak))
+	Print("\n------------------------------------------------------------")
 	typedPak := TypeCheckPackage(pak)
-
-	Println(AstFormat(typedPak))
-
-	Println("------------------------------------------------------------\n")
-
+	Print(AstFormat(typedPak))
+	Print("\n------------------------------------------------------------")
 	sourceCodeC := compilePackageToC(typedPak)
-
-	Println(sourceCodeC)
+	Print("\n", sourceCodeC, "\n")
 	tempDir := path.Join(os.TempDir(), "golem")
 	base := filepath.Base(filename)
 	if base[len(base)-6:] != ".golem" {
@@ -690,7 +681,6 @@ func main() {
 	base = base[:len(base)-6]
 	fileName := Sprintf("%s.c", base)
 	absFilename := path.Join(tempDir, fileName)
-
 	err = os.MkdirAll(tempDir, os.ModePerm)
 	if err != nil {
 		log.Fatal(err)
@@ -699,15 +689,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	binaryAbsFilename := path.Join(tempDir, base)
 	cmd := exec.Command("gcc", absFilename, "-o", binaryAbsFilename)
 	err = cmd.Run()
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	err = syscall.Exec(binaryAbsFilename, nil, nil)
 	// exec should not return
-	log.Fatal(err)
+	log.Fatal(syscall.Exec(binaryAbsFilename, nil, nil))
 }

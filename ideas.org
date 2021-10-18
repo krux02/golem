@@ -635,6 +635,15 @@ implementation.
 Other language features such as for-loops might be implemented as
 system library macro symbols with ~buildin~ implementation.
 
+keywords are only in certain contexts expected (or parsed as a
+keywords). Keywords such as ~break/continue~ are only parsed as their
+corresponding statement, when the words is the first word of a
+statement (expression in a code block). Outside of that context break
+and continue are just normal identifiers. Variables, constants and
+functions can be named as such. Therefore ~{break}~ is always the
+break statement, where ~(break)~ is always the identifier break, since
+it is not directly embedded in ~{}~.
+
 The purpose here should be to simplify the multi-backend compiler
 infrastructure.
 
