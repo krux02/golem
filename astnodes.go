@@ -4,6 +4,7 @@ package main
 
 type AstNode interface {
 	prettyPrint(*AstPrettyPrinter)
+	// TODO add something here to access original source string.
 }
 
 type Expr interface {
@@ -21,11 +22,18 @@ type StructField struct {
 	TypeExpr TypeExpr
 }
 
-// every stmt is also an expression
 type LetStmt struct {
 	Name     string
 	TypeExpr TypeExpr
 	Value    Expr
+}
+
+type BreakStmt struct {
+	Source string
+}
+
+type ContinueStmt struct {
+	Source string
 }
 
 type ReturnStmt struct {
@@ -62,6 +70,10 @@ type FloatLit struct {
 	Value float64
 }
 
+type ArrayLit struct {
+	Items []Expr
+}
+
 type Call struct {
 	Sym  Ident
 	Args []Expr
@@ -78,15 +90,19 @@ type ProcDef struct {
 
 type PackageDef struct {
 	Name     string
+	Globals  []LetStmt
 	TypeDefs []StructDef
 	ProcDefs []ProcDef
 }
 
-func (ident Ident) expression()           {}
-func (block CodeBlock) expression()       {}
-func (lit StrLit) expression()            {}
-func (lit IntLit) expression()            {}
-func (lit FloatLit) expression()          {}
-func (call Call) expression()             {}
-func (letstmt LetStmt) expression()       {}
-func (returnstmt ReturnStmt) expression() {}
+func (ident Ident) expression()               {}
+func (block CodeBlock) expression()           {}
+func (lit StrLit) expression()                {}
+func (lit IntLit) expression()                {}
+func (lit FloatLit) expression()              {}
+func (lit ArrayLit) expression()              {}
+func (call Call) expression()                 {}
+func (letstmt LetStmt) expression()           {}
+func (returnstmt ReturnStmt) expression()     {}
+func (breakstmt BreakStmt) expression()       {}
+func (continuestmt ContinueStmt) expression() {}

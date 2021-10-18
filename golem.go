@@ -323,6 +323,12 @@ func (tokenizer *Tokenizer) wrongKind(token Token) string {
 		tokenizer.filename, line, columnStart, columnEnd, token)
 }
 
+func (tokenizer *Tokenizer) wrongIdent(token Token) string {
+	line, columnStart, columnEnd := tokenizer.LineColumnToken(token)
+	return Sprintf("%s(%d, %d-%d) Error: unexpected identifier: %s",
+		tokenizer.filename, line, columnStart, columnEnd, token.value)
+}
+
 func (tokenizer *Tokenizer) expectKind(token Token, kind TokenKind) {
 	if token.kind != kind {
 		panic(tokenizer.wrongKind(token))
@@ -350,32 +356,60 @@ func (tokenizer *Tokenizer) parseTypeExpr() (result TypeExpr) {
 	return
 }
 
+func (tokenizer *Tokenizer) parseReturnStmt() (result ReturnStmt) {
+	token := tokenizer.Next()
+	tokenizer.expectIdent(token, "return")
+	result.Value = tokenizer.parseExpr()
+	return
+}
+
+func (tokenizer *Tokenizer) parseLetStmt() (result LetStmt) {
+	// parse let Stmt
+	next := tokenizer.Next()
+	tokenizer.expectIdent(next, "let")
+	next = tokenizer.Next()
+	tokenizer.expectKind(next, TkIdent)
+	result.Name = next.value
+	next = tokenizer.Next()
+	if next.kind == TkOperator && next.value == ":" {
+		result.TypeExpr = tokenizer.parseTypeExpr()
+		next = tokenizer.Next()
+	}
+	tokenizer.expectKind(next, TkOperator)
+	result.Value = tokenizer.parseExpr()
+	return
+}
+
+func (tokenizer *Tokenizer) parseBreakStmt() (result BreakStmt) {
+	token := tokenizer.Next()
+	tokenizer.expectIdent(token, "break")
+	result.Source = token.value
+	return
+}
+
+func (tokenizer *Tokenizer) parseContinueStmt() (result ContinueStmt) {
+	token := tokenizer.Next()
+	tokenizer.expectIdent(token, "continue")
+	result.Source = token.value
+	return
+}
+
 func (tokenizer *Tokenizer) parseStmtOrExpr() (result Expr) {
 	lookAhead := tokenizer.lookAheadToken
 	if lookAhead.kind == TkIdent {
-		if lookAhead.value == "let" || lookAhead.value == "var" {
-			// parse let Stmt
-			var letStmt LetStmt
-			next := tokenizer.Next()
-			next = tokenizer.Next()
-			tokenizer.expectKind(next, TkIdent)
-			letStmt.Name = next.value
-			next = tokenizer.Next()
-			if next.kind == TkOperator && next.value == ":" {
-				letStmt.TypeExpr = tokenizer.parseTypeExpr()
-				next = tokenizer.Next()
-			}
-
-			tokenizer.expectKind(next, TkOperator)
-			letStmt.Value = tokenizer.parseExpr()
-			// letStmt
-			return (Expr)(letStmt)
-		}
-		if lookAhead.value == "return" {
-			var returnStmt ReturnStmt
-			tokenizer.Next()
-			returnStmt.Value = tokenizer.parseExpr()
-			return (Expr)(returnStmt)
+		switch lookAhead.value {
+		case "let":
+			return (Expr)(tokenizer.parseLetStmt())
+		case "var":
+			panic("not implemented")
+		case "const":
+			panic("not implemented")
+		case "return":
+			return (Expr)(tokenizer.parseReturnStmt())
+		case "break":
+			return (Expr)(tokenizer.parseBreakStmt())
+		case "continue":
+			return (Expr)(tokenizer.parseBreakStmt())
 		}
 	}
 	return tokenizer.parseExpr()
@@ -506,6 +540,25 @@ func (tokenizer *Tokenizer) parseCall(callee Expr) Call {
 	panic("unreachable")
 }
 
+func (tokenizer *Tokenizer) parseArrayLit() (result ArrayLit) {
+	next := tokenizer.Next()
+	tokenizer.expectKind(next, TkOpenBracket)
+
+	if tokenizer.lookAheadToken.kind == TkCloseBracket {
+		return
+	}
+	result.Items = append(result.Items, tokenizer.parseExpr())
+
+	for tokenizer.lookAheadToken.kind == TkComma {
+		tokenizer.Next()
+		result.Items = append(result.Items, tokenizer.parseExpr())
+	}
+
+	next = tokenizer.Next()
+	tokenizer.expectKind(next, TkCloseBracket)
+	return
+}
+
 func (tokenizer *Tokenizer) parseExpr() Expr {
 	var expr Expr
 	switch tokenizer.lookAheadToken.kind {
@@ -517,6 +570,8 @@ func (tokenizer *Tokenizer) parseExpr() Expr {
 		expr = (Expr)(tokenizer.parseStrLit())
 	case TkIntLit:
 		expr = (Expr)(tokenizer.parseIntLit())
+	case TkOpenBracket:
+		expr = (Expr)(tokenizer.parseArrayLit())
 	default:
 		tokenizer.wrongKind(tokenizer.lookAheadToken)
 	}
@@ -537,6 +592,8 @@ func (tokenizer *Tokenizer) parseExpr() Expr {
 
 func parseTypeDef(tokenizer *Tokenizer) (result StructDef) {
 	var token Token
+	token = tokenizer.Next()
+	tokenizer.expectIdent(token, "type")
 	token = tokenizer.Next()
 	tokenizer.expectKind(token, TkIdent)
 	result.Name = token.value
@@ -576,6 +633,8 @@ func parseTypeDef(tokenizer *Tokenizer) (result StructDef) {
 
 func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 	token := tokenizer.Next()
+	tokenizer.expectIdent(token, "proc")
+	token = tokenizer.Next()
 	tokenizer.expectKind(token, TkIdent)
 	result.Name = token.value
 	token = tokenizer.Next()
@@ -623,27 +682,37 @@ func parsePackage(code, filename string) (result PackageDef) {
 	result.Name = path.Base(filename)
 	Println("processing package: ", result.Name)
 	var tokenizer = NewTokenizer(code, filename)
-
 	for true {
-		token := tokenizer.Next()
-		switch token.kind {
+		switch tokenizer.lookAheadToken.kind {
 		//case TkLineComment:
 		//	continue
 		case TkSemicolon:
+			tokenizer.Next()
 			continue
 		case TkEof:
 			return
 		case TkIdent:
-			switch token.value {
+			switch tokenizer.lookAheadToken.value {
 			case "type":
 				result.TypeDefs = append(result.TypeDefs, parseTypeDef(tokenizer))
 				continue
 			case "proc":
 				result.ProcDefs = append(result.ProcDefs, parseProcDef(tokenizer))
 				continue
+			case "let":
+				result.Globals = append(result.Globals, tokenizer.parseLetStmt())
+				continue
+			case "var":
+				panic("not implemented")
+				continue
+			case "const":
+				panic("not implemented")
+				continue
+			default:
 			}
+			panic(tokenizer.wrongIdent(tokenizer.lookAheadToken))
 		}
-		panic(tokenizer.wrongKind(tokenizer.token))
+		panic(tokenizer.wrongKind(tokenizer.lookAheadToken))
 	}
 	panic("unreachable")
 }
@@ -663,12 +732,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	Println("----------------------- parsed  code -----------------------")
 	pak := parsePackage(string(bytes), filename)
 	Println(AstFormat(pak))
-	Println("------------------------------------------------------------")
+	Println("--------------------- typechecked code ---------------------")
 	typedPak := TypeCheckPackage(pak)
 	Println(AstFormat(typedPak))
-	Println("------------------------------------------------------------")
+	Println("-------------------------- C code --------------------------")
 	sourceCodeC := compilePackageToC(typedPak)
 	Println(sourceCodeC)
 	tempDir := path.Join(os.TempDir(), "golem")

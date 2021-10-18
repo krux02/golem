@@ -103,6 +103,17 @@ func (lit StrLit) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteRune('"')
 }
 
+func (lit ArrayLit) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteRune('[')
+	for i, expr := range lit.Items {
+		if i != 0 {
+			builder.WriteString(", ")
+		}
+		builder.WriteAstNode(expr)
+	}
+	builder.WriteRune(']')
+}
+
 func WriteIntLit(builder *strings.Builder, value int) {
 	if value == 0 {
 		builder.WriteByte('0')
@@ -196,15 +207,27 @@ func (letStmt LetStmt) prettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (pak PackageDef) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("# file: ")
 	builder.WriteString(pak.Name)
 	for _, typ := range pak.TypeDefs {
 		builder.NewlineAndIndent()
 		builder.WriteAstNode(typ)
 	}
+	for _, value := range pak.Globals {
+		builder.NewlineAndIndent()
+		builder.WriteAstNode(value)
+	}
 	for _, proc := range pak.ProcDefs {
 		builder.NewlineAndIndent()
 		builder.WriteAstNode(proc)
 	}
+}
+
+func (breakstmt BreakStmt) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString(breakstmt.Source)
+}
+func (continuestmt ContinueStmt) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString(continuestmt.Source)
 }
 
 // format type checked ast nodes
@@ -263,7 +286,7 @@ func (sym TcLetSymbol) prettyPrint(printer *AstPrettyPrinter) {
 func (letStmt TcLetStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("let ")
 	builder.WriteAstNode(letStmt.Sym)
-	builder.WriteString(":")
+	builder.WriteString(": ")
 	builder.WriteString(letStmt.Sym.Typ.Name())
 	builder.WriteString(" = ")
 	builder.WriteAstNode(letStmt.Value)
@@ -309,6 +332,7 @@ func (procDef TcProcDef) prettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (pak TcPackageDef) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("# file: ")
 	builder.WriteString(pak.Name)
 	for _, typ := range pak.TypeDefs {
 		builder.NewlineAndIndent()

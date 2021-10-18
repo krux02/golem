@@ -1,4 +1,8 @@
 
+
+#  array[6,Int]
+let myArray = [123, 456, 789, 234, 567, 891]
+
 type MyStruct = struct {
   a: int
   b: float
