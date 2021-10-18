@@ -30,13 +30,13 @@ func (builder *AstPrettyPrinter) NewlineAndIndent() {
 	}
 }
 
-type AstNode interface {
-	prettyPrint(*AstPrettyPrinter)
+func (builder *AstPrettyPrinter) WriteAstNode(node AstNode) {
+	node.prettyPrint(builder)
 }
 
 func AstFormat(node AstNode) string {
 	builder := &AstPrettyPrinter{}
-	node.prettyPrint(builder)
+	builder.WriteAstNode(node)
 	return builder.String()
 }
 
@@ -51,7 +51,7 @@ func (call Call) prettyPrint(builder *AstPrettyPrinter) {
 		if i != 0 {
 			builder.WriteString(", ")
 		}
-		arg.prettyPrint(builder)
+		builder.WriteAstNode(arg)
 	}
 	builder.WriteString(")")
 }
@@ -61,11 +61,13 @@ func (codeBlock CodeBlock) prettyPrint(builder *AstPrettyPrinter) {
 	builder.Indentation++
 	for _, item := range codeBlock.Items {
 		builder.NewlineAndIndent()
-		item.prettyPrint(builder)
+		builder.WriteAstNode(item)
 		builder.WriteString(";")
 	}
 	builder.Indentation--
-	builder.NewlineAndIndent()
+	if len(codeBlock.Items) > 0 {
+		builder.NewlineAndIndent()
+	}
 	builder.WriteString("}")
 	builder.NewlineAndIndent()
 }
@@ -136,22 +138,144 @@ func (structDef StructDef) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(structDef.Name)
 	builder.WriteString(" = struct {")
 	builder.Indentation++
-	builder.NewlineAndIndent()
-	iLast := len(structDef.Fields) - 1
-	for i, field := range structDef.Fields {
-		builder.WriteString(field.Name)
-		builder.WriteString(" : ")
-		field.TypeExpr.prettyPrint(builder)
-		if i == iLast {
-			builder.Indentation--
-		}
+	for _, field := range structDef.Fields {
 		builder.NewlineAndIndent()
+		builder.WriteString(field.Name)
+		builder.WriteString(": ")
+		builder.WriteAstNode(field.TypeExpr)
 	}
-	builder.WriteString("}")
+	builder.Indentation--
 	builder.NewlineAndIndent()
+	builder.WriteString("}")
 }
 
 func (procDef ProcDef) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("proc ")
+	builder.WriteString(procDef.Name)
+	builder.WriteString("(")
+	if len(procDef.Args) > 3 {
+		builder.Indentation += 2
+		for _, arg := range procDef.Args {
+			builder.NewlineAndIndent()
+			builder.WriteString(arg.Name)
+			builder.WriteString(": ")
+			builder.WriteAstNode(arg.Type)
+		}
+		builder.Indentation -= 2
+		builder.NewlineAndIndent()
+
+	} else {
+		for i, arg := range procDef.Args {
+			if i != 0 {
+				builder.WriteString("; ")
+			}
+			builder.WriteString(arg.Name)
+			builder.WriteString(": ")
+			builder.WriteAstNode(arg.Type)
+		}
+	}
+	builder.WriteString("): ")
+	builder.WriteAstNode(procDef.ResultType)
+	builder.WriteString(" = ")
+	builder.WriteAstNode(procDef.Body)
+}
+
+func (returnStmt ReturnStmt) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("return ")
+	builder.WriteAstNode(returnStmt.Value)
+}
+
+func (letStmt LetStmt) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("let ")
+	builder.WriteString(letStmt.Name)
+	if letStmt.TypeExpr.IsSet() {
+		builder.WriteString(":")
+		builder.WriteAstNode(letStmt.TypeExpr)
+	}
+	builder.WriteString(" = ")
+	builder.WriteAstNode(letStmt.Value)
+}
+
+func (pak PackageDef) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString(pak.Name)
+	for _, typ := range pak.TypeDefs {
+		builder.NewlineAndIndent()
+		builder.WriteAstNode(typ)
+	}
+	for _, proc := range pak.ProcDefs {
+		builder.NewlineAndIndent()
+		builder.WriteAstNode(proc)
+	}
+}
+
+// format type checked ast nodes
+
+func (typ BuiltinType) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString(typ.name)
+}
+
+func (call TcCall) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString(call.Sym.Name)
+	builder.WriteString("(")
+	for i, arg := range call.Args {
+		if i != 0 {
+			builder.WriteString(", ")
+		}
+		builder.WriteAstNode(arg)
+	}
+	builder.WriteString(")")
+}
+
+func (structDef TcStructDef) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("type ")
+	builder.WriteString(structDef.Name)
+	builder.WriteString(" = struct {")
+	builder.Indentation++
+	for _, field := range structDef.Fields {
+		builder.NewlineAndIndent()
+		builder.WriteString(field.Name)
+		builder.WriteString(": ")
+		builder.WriteAstNode(field.Type)
+	}
+	builder.Indentation--
+	builder.NewlineAndIndent()
+	builder.WriteString("}")
+}
+
+func (codeBlock TcCodeBlock) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("{")
+	builder.Indentation++
+	for _, item := range codeBlock.Items {
+		builder.NewlineAndIndent()
+		builder.WriteAstNode(item)
+		builder.WriteString(";")
+	}
+	builder.Indentation--
+	if len(codeBlock.Items) > 0 {
+		builder.NewlineAndIndent()
+	}
+	builder.WriteString("}")
+}
+
+func (sym TcLetSymbol) prettyPrint(printer *AstPrettyPrinter) {
+	printer.WriteString(sym.Name)
+}
+
+func (letStmt TcLetStmt) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("let ")
+	builder.WriteAstNode(letStmt.Sym)
+	builder.WriteString(":")
+	builder.WriteString(letStmt.Sym.Typ.Name())
+	builder.WriteString(" = ")
+	builder.WriteAstNode(letStmt.Value)
+}
+
+func (returnStmt TcReturnStmt) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("return ")
+	builder.WriteAstNode(returnStmt.Value)
+}
+
+func (procDef TcProcDef) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("proc ")
 	builder.WriteString(procDef.Name)
 	builder.WriteString("(")
@@ -162,7 +286,7 @@ func (procDef ProcDef) prettyPrint(builder *AstPrettyPrinter) {
 		for i, arg := range procDef.Args {
 			builder.WriteString(arg.Name)
 			builder.WriteString(": ")
-			arg.Type.prettyPrint(builder)
+			builder.WriteAstNode(arg.Type())
 			if i == iLast {
 				builder.Indentation -= 2
 			}
@@ -176,56 +300,23 @@ func (procDef ProcDef) prettyPrint(builder *AstPrettyPrinter) {
 			}
 			builder.WriteString(arg.Name)
 			builder.WriteString(": ")
-			arg.Type.prettyPrint(builder)
+			builder.WriteAstNode(arg.Type())
 		}
 	}
 	builder.WriteString("): ")
-	procDef.ResultType.prettyPrint(builder)
+	builder.WriteAstNode(procDef.ResultType)
 	builder.WriteString(" = ")
-	procDef.Body.prettyPrint(builder)
+	builder.WriteAstNode(procDef.Body)
 }
 
-func (returnStmt ReturnStmt) prettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("return ")
-	returnStmt.Value.prettyPrint(builder)
-}
-
-func (letStmt LetStmt) prettyPrint(builder *AstPrettyPrinter) {
-	builder.NewlineAndIndent()
-	builder.WriteString("let ")
-	builder.WriteString(letStmt.Name)
-	if letStmt.TypeExpr.IsSet() {
-		builder.WriteString(":")
-		letStmt.TypeExpr.prettyPrint(builder)
+func (pak TcPackageDef) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString(pak.Name)
+	for _, typ := range pak.TypeDefs {
+		builder.NewlineAndIndent()
+		builder.WriteAstNode(typ)
 	}
-	builder.WriteString(" = ")
-	letStmt.Value.prettyPrint(builder)
-}
-
-func (call TcCall) prettyPrint(*AstPrettyPrinter) {
-	panic("not implemented")
-}
-
-func (call TcCodeBlock) prettyPrint(*AstPrettyPrinter) {
-	panic("not implemented")
-}
-
-func (sym TcLetSymbol) prettyPrint(printer *AstPrettyPrinter) {
-	printer.WriteString(sym.Name)
-}
-
-func (letStmt TcLetStmt) prettyPrint(builder *AstPrettyPrinter) {
-	builder.NewlineAndIndent()
-	builder.WriteString("let ")
-	letStmt.Sym.prettyPrint(builder)
-	builder.WriteString(":")
-	builder.WriteString(letStmt.Sym.Typ.Name())
-	builder.WriteString(" = ")
-	letStmt.Value.prettyPrint(builder)
-}
-
-func (returnStmt TcReturnStmt) prettyPrint(builder *AstPrettyPrinter) {
-	builder.NewlineAndIndent()
-	builder.WriteString("return ")
-	returnStmt.Value.prettyPrint(builder)
+	for _, proc := range pak.ProcDefs {
+		builder.NewlineAndIndent()
+		builder.WriteAstNode(proc)
+	}
 }

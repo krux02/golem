@@ -4,10 +4,12 @@ package main
 // type checked.
 
 type Type interface {
+	AstNode
 	Name() string
 }
 
 type TcExpr interface {
+	AstNode
 	Expr
 	Type() Type
 }

@@ -2,12 +2,17 @@ package main
 
 // an overview all all nods that are allowed in an untyped AST emitted directly from the parser
 
-type Expr interface {
+type AstNode interface {
 	prettyPrint(*AstPrettyPrinter)
+}
+
+type Expr interface {
+	AstNode
 	expression()
 }
 
 type TypeExpr struct {
+	// this type is a placeholder, it is supposed to become more complex
 	Ident string
 }
 

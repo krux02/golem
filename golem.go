@@ -603,6 +603,9 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 			result.Args[i].Type = typ
 		}
 		token = tokenizer.Next()
+		if token.kind == TkSemicolon {
+			token = tokenizer.Next()
+		}
 	}
 	tokenizer.expectKind(token, TkCloseBrace)
 
@@ -666,19 +669,17 @@ func main() {
 	// tokenize(string(bytes));
 	pak := parsePackage(string(bytes), filename)
 
-	Println(pak.Name)
-	for _, typ := range pak.TypeDefs {
-		Println(AstFormat(typ))
-	}
-	for _, proc := range pak.ProcDefs {
-		Println(AstFormat(proc))
-	}
-
-	checkpackage := TypeCheckPackage(pak)
+	Println(AstFormat(pak))
 
 	Println("------------------------------------------------------------\n")
 
-	sourceCodeC := compilePackageToC(checkpackage)
+	typedPak := TypeCheckPackage(pak)
+
+	Println(AstFormat(typedPak))
+
+	Println("------------------------------------------------------------\n")
+
+	sourceCodeC := compilePackageToC(typedPak)
 
 	Println(sourceCodeC)
 	tempDir := path.Join(os.TempDir(), "golem")
