@@ -804,6 +804,8 @@ Examples: implement functions for interface type.
 
 Other programmable ide interactions still need to be specified.
 
+** pattern matching in if stmt/expr
+
 * A defensive justification for macros
 
  * The Lisp Dialect Fragmentation Problem.

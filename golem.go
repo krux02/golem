@@ -98,7 +98,6 @@ func (this *Tokenizer) LineColumnOffset(offset int) (line, column int) {
 			column = pos - lineStart
 			return
 		}
-
 		if rune == '\n' {
 			line++
 			lineStart = pos
@@ -664,15 +663,14 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	// tokenize(string(bytes));
 	pak := parsePackage(string(bytes), filename)
-	Print(AstFormat(pak))
-	Print("\n------------------------------------------------------------")
+	Println(AstFormat(pak))
+	Println("------------------------------------------------------------")
 	typedPak := TypeCheckPackage(pak)
-	Print(AstFormat(typedPak))
-	Print("\n------------------------------------------------------------")
+	Println(AstFormat(typedPak))
+	Println("------------------------------------------------------------")
 	sourceCodeC := compilePackageToC(typedPak)
-	Print("\n", sourceCodeC, "\n")
+	Println(sourceCodeC)
 	tempDir := path.Join(os.TempDir(), "golem")
 	base := filepath.Base(filename)
 	if base[len(base)-6:] != ".golem" {
@@ -695,6 +693,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	Println("=========================== exec ===========================")
 	// exec should not return
 	log.Fatal(syscall.Exec(binaryAbsFilename, nil, nil))
 }

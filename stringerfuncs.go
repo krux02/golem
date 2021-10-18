@@ -188,7 +188,7 @@ func (letStmt LetStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("let ")
 	builder.WriteString(letStmt.Name)
 	if letStmt.TypeExpr.IsSet() {
-		builder.WriteString(":")
+		builder.WriteString(": ")
 		builder.WriteAstNode(letStmt.TypeExpr)
 	}
 	builder.WriteString(" = ")
