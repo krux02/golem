@@ -256,10 +256,10 @@ func TypeCheckCallPrintf(scope Scope, printfSym TcProcSymbol, args []Expr) TcCal
 		case 'f':
 			argType = TypeFloat
 		default:
-			panic(fmt.Sprintf("invalid format expr %%%c in %s", c2, formatExpr.String()))
+			panic(fmt.Sprintf("invalid format expr %%%c in %s", c2, AstFormat(formatExpr)))
 		}
 		if i == len(args) {
-			panic(fmt.Sprintf("not enough arguments for %s", formatExpr.String()))
+			panic(fmt.Sprintf("not enough arguments for %s", AstFormat(formatExpr)))
 		}
 		tcArg := TypeCheckExpr(scope, args[i], argType)
 		result.Args = append(result.Args, tcArg)

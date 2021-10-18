@@ -12,14 +12,6 @@ type AstPrettyPrinter struct {
 	Indentation int
 }
 
-func (builder *AstPrettyPrinter) NewlineAndIndent() {
-	builder.WriteRune('\n')
-	N := builder.Indentation
-	for i := 0; i < N; i++ {
-		builder.WriteString("  ")
-	}
-}
-
 func (this TokenKind) String() string {
 	return TokenKindNames[this]
 }
@@ -29,6 +21,24 @@ func (this Token) String() string {
 }
 
 /// AST NODES
+
+func (builder *AstPrettyPrinter) NewlineAndIndent() {
+	builder.WriteRune('\n')
+	N := builder.Indentation
+	for i := 0; i < N; i++ {
+		builder.WriteString("  ")
+	}
+}
+
+type AstNode interface {
+	prettyPrint(*AstPrettyPrinter)
+}
+
+func AstFormat(node AstNode) string {
+	builder := &AstPrettyPrinter{}
+	node.prettyPrint(builder)
+	return builder.String()
+}
 
 func (ident Ident) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(ident.Name)
@@ -192,23 +202,6 @@ func (letStmt LetStmt) prettyPrint(builder *AstPrettyPrinter) {
 	letStmt.Value.prettyPrint(builder)
 }
 
-func (ident Ident) String() string {
-	return ident.Name
-}
-
-func (codeBlock CodeBlock) String() string {
-	builder := &AstPrettyPrinter{}
-	codeBlock.prettyPrint(builder)
-	result := builder.String()
-	return result
-}
-
-func (call Call) String() string {
-	builder := &AstPrettyPrinter{}
-	call.prettyPrint(builder)
-	return builder.String()
-}
-
 func (call TcCall) prettyPrint(*AstPrettyPrinter) {
 	panic("not implemented")
 }
@@ -235,70 +228,4 @@ func (returnStmt TcReturnStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.NewlineAndIndent()
 	builder.WriteString("return ")
 	returnStmt.Value.prettyPrint(builder)
-}
-
-func (sym TcLetSymbol) String() string {
-	builder := &AstPrettyPrinter{}
-	sym.prettyPrint(builder)
-	return builder.String()
-}
-
-func (codeBlock TcCodeBlock) String() string {
-	builder := &AstPrettyPrinter{}
-	codeBlock.prettyPrint(builder)
-	return builder.String()
-}
-
-func (call TcCall) String() string {
-	builder := &AstPrettyPrinter{}
-	call.prettyPrint(builder)
-	return builder.String()
-}
-
-func (lit StrLit) String() string {
-	builder := &AstPrettyPrinter{}
-	lit.prettyPrint(builder)
-	return builder.String()
-}
-
-func (lit IntLit) String() string {
-	builder := &AstPrettyPrinter{}
-	lit.prettyPrint(builder)
-	return builder.String()
-}
-
-func (structDef StructDef) String() string {
-	builder := &AstPrettyPrinter{}
-	structDef.prettyPrint(builder)
-	return builder.String()
-}
-
-func (procDef ProcDef) String() string {
-	builder := &AstPrettyPrinter{}
-	procDef.prettyPrint(builder)
-	return builder.String()
-}
-
-func (letStmt LetStmt) String() string {
-	builder := &AstPrettyPrinter{}
-	letStmt.prettyPrint(builder)
-	return builder.String()
-}
-
-func (letStmt TcLetStmt) String() string {
-	builder := &AstPrettyPrinter{}
-	letStmt.prettyPrint(builder)
-	return builder.String()
-}
-
-func (returnStmt ReturnStmt) String() string {
-	builder := &AstPrettyPrinter{}
-	returnStmt.prettyPrint(builder)
-	return builder.String()
-}
-
-func (returnStmt TcReturnStmt) String() string {
-	builder := &AstPrettyPrinter{}
-	returnStmt.prettyPrint(builder)
-	return builder.String()
 }

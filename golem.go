@@ -668,10 +668,10 @@ func main() {
 
 	Println(pak.Name)
 	for _, typ := range pak.TypeDefs {
-		Println(typ.String())
+		Println(AstFormat(typ))
 	}
 	for _, proc := range pak.ProcDefs {
-		Println(proc.String())
+		Println(AstFormat(proc))
 	}
 
 	checkpackage := TypeCheckPackage(pak)
