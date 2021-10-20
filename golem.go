@@ -26,6 +26,7 @@ const (
 	TkStrLit
 	TkIntLit
 	TkFloatLit
+	TkCharLit
 	TkDocComment
 
 	TkOpenBrace    TokenKind = 100
@@ -60,6 +61,7 @@ var TokenKindNames = [...]string{
 	TkStrLit:       "StrLit",
 	TkIntLit:       "IntLit",
 	TkFloatLit:     "FloatLit",
+	TkCharLit:      "CharLit",
 	TkDocComment:   "DocComment",
 	TkOpenBrace:    "OpenBrace",
 	TkCloseBrace:   "CloseBrace",
@@ -262,13 +264,35 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 				switch rune {
 				case 'a', 'b', 'f', 'n', 'r', 't', 'v', '\\', '\'', '"':
 				default:
-					panic("illegal escale sequence")
+					panic("illegal escape sequence")
 				}
 			} else if rune == '"' {
 				scanningDone = true
 			}
 		}
 		result.value = code[:idx2]
+	case c == '\'':
+		result.kind = TkCharLit
+		rune1, rune1Len := utf8.DecodeRuneInString(code[cLen:])
+		if rune1 == '\\' {
+			rune2, rune2Len := utf8.DecodeRuneInString(code[cLen+rune1Len:])
+			switch rune2 {
+			case 'a', 'b', 'f', 'n', 'r', 't', 'v', '\\', '\'', '"':
+			default:
+				panic("illegal escape sequence")
+			}
+			rune3, rune3Len := utf8.DecodeRuneInString(code[cLen+rune1Len+rune2Len:])
+			if rune3 != '\'' {
+				panic("illegal escape sequence")
+			}
+			result.value = code[:cLen+rune1Len+rune2Len+rune3Len]
+		} else {
+			rune2, rune2Len := utf8.DecodeRuneInString(code[cLen+rune1Len:])
+			if rune2 != '\'' {
+				panic("illegal escape sequence")
+			}
+			result.value = code[:cLen+rune1Len+rune2Len]
+		}
 	case c == '(':
 		result = Token{TkOpenBrace, code[:cLen]}
 	case c == ')':
@@ -363,20 +387,41 @@ func parseReturnStmt(tokenizer *Tokenizer) (result ReturnStmt) {
 	return
 }
 
+func parseVarLetConstBody(tokenizer *Tokenizer) (name string, typ TypeExpr, expr Expr) {
+	next := tokenizer.Next()
+	tokenizer.expectKind(next, TkIdent)
+	name = next.value
+	next = tokenizer.Next()
+	if next.kind == TkOperator && next.value == ":" {
+		typ = parseTypeExpr(tokenizer)
+		next = tokenizer.Next()
+	}
+	tokenizer.expectKind(next, TkOperator)
+	expr = parseExpr(tokenizer)
+	return
+}
+
 func parseLetStmt(tokenizer *Tokenizer) (result LetStmt) {
 	// parse let Stmt
 	next := tokenizer.Next()
 	tokenizer.expectIdent(next, "let")
-	next = tokenizer.Next()
-	tokenizer.expectKind(next, TkIdent)
-	result.Name = next.value
-	next = tokenizer.Next()
-	if next.kind == TkOperator && next.value == ":" {
-		result.TypeExpr = parseTypeExpr(tokenizer)
-		next = tokenizer.Next()
-	}
-	tokenizer.expectKind(next, TkOperator)
-	result.Value = parseExpr(tokenizer)
+	result.Name, result.TypeExpr, result.Value = parseVarLetConstBody(tokenizer)
+	return
+}
+
+func parseVarStmt(tokenizer *Tokenizer) (result VarStmt) {
+	// parse let Stmt
+	next := tokenizer.Next()
+	tokenizer.expectIdent(next, "var")
+	result.Name, result.TypeExpr, result.Value = parseVarLetConstBody(tokenizer)
+	return
+}
+
+func parseConstStmt(tokenizer *Tokenizer) (result ConstStmt) {
+	// parse let Stmt
+	next := tokenizer.Next()
+	tokenizer.expectIdent(next, "const")
+	result.Name, result.TypeExpr, result.Value = parseVarLetConstBody(tokenizer)
 	return
 }
 
@@ -394,6 +439,29 @@ func parseContinueStmt(tokenizer *Tokenizer) (result ContinueStmt) {
 	return
 }
 
+func parseForLoop(tokenizer *Tokenizer) (result ForLoopStmt) {
+	token := tokenizer.Next()
+	tokenizer.expectIdent(token, "for")
+	result.LoopIdent = parseIdent(tokenizer)
+	token = tokenizer.Next()
+	tokenizer.expectIdent(token, "in")
+	result.Collection = parseExpr(tokenizer)
+
+	Println(AstFormat(result))
+	Println(tokenizer.token, tokenizer.lookAheadToken)
+
+	result.Body = parseCodeBlock(tokenizer)
+	return
+}
+
+func parseIfStmt(tokenizer *Tokenizer) (result IfStmt) {
+	token := tokenizer.Next()
+	tokenizer.expectIdent(token, "if")
+	result.Condition = parseExpr(tokenizer)
+	result.Body = parseCodeBlock(tokenizer)
+	return
+}
+
 func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
 	lookAhead := tokenizer.lookAheadToken
 	if lookAhead.kind == TkIdent {
@@ -401,22 +469,28 @@ func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
 		case "let":
 			return (Expr)(parseLetStmt(tokenizer))
 		case "var":
-			panic("not implemented")
+			return (Expr)(parseVarStmt(tokenizer))
 		case "const":
-			panic("not implemented")
+			return (Expr)(parseConstStmt(tokenizer))
 		case "return":
 			return (Expr)(parseReturnStmt(tokenizer))
+		case "for":
+			return (Expr)(parseForLoop(tokenizer))
 		case "break":
 			return (Expr)(parseBreakStmt(tokenizer))
 		case "continue":
 			return (Expr)(parseBreakStmt(tokenizer))
+		case "if":
+			return (Expr)(parseIfStmt(tokenizer))
 		}
 	}
 	return parseExpr(tokenizer)
 }
 
 func parseCodeBlock(tokenizer *Tokenizer) CodeBlock {
-	_ = tokenizer.Next()
+	token := tokenizer.Next()
+	tokenizer.expectKind(token, TkOpenCurly)
+
 	// parse block
 	var block CodeBlock
 	for tokenizer.lookAheadToken.kind == TkSemicolon {
@@ -433,8 +507,48 @@ func parseCodeBlock(tokenizer *Tokenizer) CodeBlock {
 	return block
 }
 
+func parseCharLit(tokenizer *Tokenizer) (result CharLit) {
+	token := tokenizer.Next()
+	tokenizer.expectKind(token, TkCharLit)
+
+	rune1, rune1Len := utf8.DecodeRuneInString(token.value[1:])
+	if rune1 == '\\' {
+		rune2, _ := utf8.DecodeRuneInString(token.value[1+rune1Len:])
+		switch rune2 {
+		case 'a':
+			result.Rune = '\a'
+		case 'b':
+			result.Rune = '\b'
+		case 'f':
+			result.Rune = '\f'
+		case 'n':
+			result.Rune = '\n'
+		case 'r':
+			result.Rune = '\r'
+		case 't':
+			result.Rune = '\t'
+		case 'v':
+			result.Rune = '\v'
+		case '\\':
+			result.Rune = '\\'
+		case '\'':
+			result.Rune = '\''
+		case '"':
+			result.Rune = '"'
+		default:
+			panic("illegal escale sequence")
+		}
+
+		//rune3, rune3Length = utf8.DecodeRuneInString(token.value[1+rune1Len+rune2Len:])
+		return
+	}
+
+	return CharLit{Rune: rune1}
+}
+
 func parseStrLit(tokenizer *Tokenizer) StrLit {
 	token := tokenizer.Next()
+	tokenizer.expectKind(token, TkStrLit)
 	var b strings.Builder
 	b.Grow(len(token.value) - 2)
 	var processEscape bool
@@ -566,6 +680,8 @@ func parseExpr(tokenizer *Tokenizer) Expr {
 		expr = (Expr)(parseIdent(tokenizer))
 	case TkOpenCurly:
 		expr = (Expr)(parseCodeBlock(tokenizer))
+	case TkCharLit:
+		expr = (Expr)(parseCharLit(tokenizer))
 	case TkStrLit:
 		expr = (Expr)(parseStrLit(tokenizer))
 	case TkIntLit:

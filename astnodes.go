@@ -28,6 +28,29 @@ type LetStmt struct {
 	Value    Expr
 }
 
+type VarStmt struct {
+	Name     string
+	TypeExpr TypeExpr
+	Value    Expr
+}
+
+type ConstStmt struct {
+	Name     string
+	TypeExpr TypeExpr
+	Value    Expr
+}
+
+type ForLoopStmt struct {
+	LoopIdent  Ident
+	Collection Expr
+	Body       CodeBlock
+}
+
+type IfStmt struct {
+	Condition Expr
+	Body      CodeBlock
+}
+
 type BreakStmt struct {
 	Source string
 }
@@ -60,6 +83,10 @@ type Ident struct {
 
 type StrLit struct {
 	Value string
+}
+
+type CharLit struct {
+	Rune rune
 }
 
 type IntLit struct {
@@ -95,14 +122,19 @@ type PackageDef struct {
 	ProcDefs []ProcDef
 }
 
-func (ident Ident) expression()               {}
-func (block CodeBlock) expression()           {}
-func (lit StrLit) expression()                {}
-func (lit IntLit) expression()                {}
-func (lit FloatLit) expression()              {}
-func (lit ArrayLit) expression()              {}
-func (call Call) expression()                 {}
-func (letstmt LetStmt) expression()           {}
-func (returnstmt ReturnStmt) expression()     {}
-func (breakstmt BreakStmt) expression()       {}
-func (continuestmt ContinueStmt) expression() {}
+func (ident Ident) expression()       {}
+func (block CodeBlock) expression()   {}
+func (lit StrLit) expression()        {}
+func (lit IntLit) expression()        {}
+func (lit FloatLit) expression()      {}
+func (lit ArrayLit) expression()      {}
+func (lit CharLit) expression()       {}
+func (call Call) expression()         {}
+func (stmt LetStmt) expression()      {}
+func (stmt VarStmt) expression()      {}
+func (stmt ConstStmt) expression()    {}
+func (stmt ForLoopStmt) expression()  {}
+func (stmt IfStmt) expression()       {}
+func (stmt ReturnStmt) expression()   {}
+func (stmt BreakStmt) expression()    {}
+func (stmt ContinueStmt) expression() {}

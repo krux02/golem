@@ -71,6 +71,37 @@ func (codeBlock CodeBlock) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("}")
 }
 
+func (lit CharLit) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteRune('\'')
+	switch lit.Rune {
+	case '\a':
+		builder.WriteString("\\a")
+	case '\b':
+		builder.WriteString("\\b")
+	case '\f':
+		builder.WriteString("\\f")
+	case '\n':
+		builder.WriteString("\\n")
+	case '\r':
+		builder.WriteString("\\r")
+	case '\t':
+		builder.WriteString("\\t")
+	case '\v':
+		builder.WriteString("\\v")
+	case '\\':
+		builder.WriteString("\\\\")
+	case '\'':
+		builder.WriteString("\\'")
+	case '"':
+		builder.WriteString("\\\"")
+	default:
+		builder.WriteRune(lit.Rune)
+	}
+
+	//builder.WriteString(lit.Val)
+	builder.WriteRune('\'')
+}
+
 func (lit StrLit) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteRune('"')
 	for _, rune := range lit.Value {
@@ -204,6 +235,44 @@ func (letStmt LetStmt) prettyPrint(builder *AstPrettyPrinter) {
 	}
 	builder.WriteString(" = ")
 	builder.WriteAstNode(letStmt.Value)
+}
+
+func (letStmt VarStmt) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("var ")
+	builder.WriteString(letStmt.Name)
+	if letStmt.TypeExpr.IsSet() {
+		builder.WriteString(": ")
+		builder.WriteAstNode(letStmt.TypeExpr)
+	}
+	builder.WriteString(" = ")
+	builder.WriteAstNode(letStmt.Value)
+}
+
+func (letStmt ConstStmt) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("const ")
+	builder.WriteString(letStmt.Name)
+	if letStmt.TypeExpr.IsSet() {
+		builder.WriteString(": ")
+		builder.WriteAstNode(letStmt.TypeExpr)
+	}
+	builder.WriteString(" = ")
+	builder.WriteAstNode(letStmt.Value)
+}
+
+func (loopStmt ForLoopStmt) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("for ")
+	builder.WriteString(loopStmt.LoopIdent.Name)
+	builder.WriteString(" in ")
+	builder.WriteAstNode(loopStmt.Collection)
+	builder.WriteString(" ")
+	builder.WriteAstNode(loopStmt.Body)
+}
+
+func (ifStmt IfStmt) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("if ")
+	builder.WriteAstNode(ifStmt.Condition)
+	builder.WriteString(" ")
+	builder.WriteAstNode(ifStmt.Body)
 }
 
 func (pak PackageDef) prettyPrint(builder *AstPrettyPrinter) {
