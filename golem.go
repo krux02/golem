@@ -349,21 +349,21 @@ func (tokenizer *Tokenizer) expectOperator(token Token, arg string) {
 	}
 }
 
-func (tokenizer *Tokenizer) parseTypeExpr() (result TypeExpr) {
+func parseTypeExpr(tokenizer *Tokenizer) (result TypeExpr) {
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkIdent)
 	result.Ident = token.value
 	return
 }
 
-func (tokenizer *Tokenizer) parseReturnStmt() (result ReturnStmt) {
+func parseReturnStmt(tokenizer *Tokenizer) (result ReturnStmt) {
 	token := tokenizer.Next()
 	tokenizer.expectIdent(token, "return")
-	result.Value = tokenizer.parseExpr()
+	result.Value = parseExpr(tokenizer)
 	return
 }
 
-func (tokenizer *Tokenizer) parseLetStmt() (result LetStmt) {
+func parseLetStmt(tokenizer *Tokenizer) (result LetStmt) {
 	// parse let Stmt
 	next := tokenizer.Next()
 	tokenizer.expectIdent(next, "let")
@@ -372,50 +372,50 @@ func (tokenizer *Tokenizer) parseLetStmt() (result LetStmt) {
 	result.Name = next.value
 	next = tokenizer.Next()
 	if next.kind == TkOperator && next.value == ":" {
-		result.TypeExpr = tokenizer.parseTypeExpr()
+		result.TypeExpr = parseTypeExpr(tokenizer)
 		next = tokenizer.Next()
 	}
 	tokenizer.expectKind(next, TkOperator)
-	result.Value = tokenizer.parseExpr()
+	result.Value = parseExpr(tokenizer)
 	return
 }
 
-func (tokenizer *Tokenizer) parseBreakStmt() (result BreakStmt) {
+func parseBreakStmt(tokenizer *Tokenizer) (result BreakStmt) {
 	token := tokenizer.Next()
 	tokenizer.expectIdent(token, "break")
 	result.Source = token.value
 	return
 }
 
-func (tokenizer *Tokenizer) parseContinueStmt() (result ContinueStmt) {
+func parseContinueStmt(tokenizer *Tokenizer) (result ContinueStmt) {
 	token := tokenizer.Next()
 	tokenizer.expectIdent(token, "continue")
 	result.Source = token.value
 	return
 }
 
-func (tokenizer *Tokenizer) parseStmtOrExpr() (result Expr) {
+func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
 	lookAhead := tokenizer.lookAheadToken
 	if lookAhead.kind == TkIdent {
 		switch lookAhead.value {
 		case "let":
-			return (Expr)(tokenizer.parseLetStmt())
+			return (Expr)(parseLetStmt(tokenizer))
 		case "var":
 			panic("not implemented")
 		case "const":
 			panic("not implemented")
 		case "return":
-			return (Expr)(tokenizer.parseReturnStmt())
+			return (Expr)(parseReturnStmt(tokenizer))
 		case "break":
-			return (Expr)(tokenizer.parseBreakStmt())
+			return (Expr)(parseBreakStmt(tokenizer))
 		case "continue":
-			return (Expr)(tokenizer.parseBreakStmt())
+			return (Expr)(parseBreakStmt(tokenizer))
 		}
 	}
-	return tokenizer.parseExpr()
+	return parseExpr(tokenizer)
 }
 
-func (tokenizer *Tokenizer) parseCodeBlock() CodeBlock {
+func parseCodeBlock(tokenizer *Tokenizer) CodeBlock {
 	_ = tokenizer.Next()
 	// parse block
 	var block CodeBlock
@@ -423,7 +423,7 @@ func (tokenizer *Tokenizer) parseCodeBlock() CodeBlock {
 		tokenizer.Next()
 	}
 	for tokenizer.lookAheadToken.kind != TkCloseCurly {
-		item := tokenizer.parseStmtOrExpr()
+		item := parseStmtOrExpr(tokenizer)
 		block.Items = append(block.Items, item)
 		next := tokenizer.Next()
 		tokenizer.expectKind(next, TkSemicolon)
@@ -433,7 +433,7 @@ func (tokenizer *Tokenizer) parseCodeBlock() CodeBlock {
 	return block
 }
 
-func (tokenizer *Tokenizer) parseStrLit() StrLit {
+func parseStrLit(tokenizer *Tokenizer) StrLit {
 	token := tokenizer.Next()
 	var b strings.Builder
 	b.Grow(len(token.value) - 2)
@@ -479,7 +479,7 @@ func (tokenizer *Tokenizer) parseStrLit() StrLit {
 	return StrLit{Value: b.String()}
 }
 
-func (tokenizer *Tokenizer) parseIntLit() IntLit {
+func parseIntLit(tokenizer *Tokenizer) IntLit {
 	token := tokenizer.Next()
 	intValue, err := strconv.Atoi(token.value)
 	if err != nil {
@@ -488,16 +488,16 @@ func (tokenizer *Tokenizer) parseIntLit() IntLit {
 	return IntLit{Value: intValue}
 }
 
-func (tokenizer *Tokenizer) parseIdent() Ident {
+func parseIdent(tokenizer *Tokenizer) Ident {
 	// this func implementation is a joke, but it should be consistent with the other parse thingies
 	token := tokenizer.Next()
 	return Ident{Name: token.value}
 }
 
-func (tokenizer *Tokenizer) parseInfixCall(lhs Expr) Call {
+func parseInfixCall(tokenizer *Tokenizer, lhs Expr) Call {
 	token := tokenizer.Next()
 	operator := Ident{Name: token.value}
-	rhs := tokenizer.parseExpr()
+	rhs := parseExpr(tokenizer)
 	call := Call{Sym: operator, Args: []Expr{lhs, rhs}}
 
 	if rhsCall, ok := rhs.(Call); ok && !rhsCall.Braced {
@@ -512,14 +512,14 @@ func (tokenizer *Tokenizer) parseInfixCall(lhs Expr) Call {
 	return call
 }
 
-func (tokenizer *Tokenizer) parseCall(callee Expr) Call {
+func parseCall(tokenizer *Tokenizer, callee Expr) Call {
 	// parse call expr
 	var args []Expr
 	tokenizer.Next()
 	for true {
 		switch tokenizer.lookAheadToken.kind {
 		case TkIdent, TkStrLit, TkIntLit:
-			args = append(args, tokenizer.parseExpr())
+			args = append(args, parseExpr(tokenizer))
 			switch tokenizer.lookAheadToken.kind {
 			case TkComma:
 				tokenizer.Next()
@@ -540,18 +540,18 @@ func (tokenizer *Tokenizer) parseCall(callee Expr) Call {
 	panic("unreachable")
 }
 
-func (tokenizer *Tokenizer) parseArrayLit() (result ArrayLit) {
+func parseArrayLit(tokenizer *Tokenizer) (result ArrayLit) {
 	next := tokenizer.Next()
 	tokenizer.expectKind(next, TkOpenBracket)
 
 	if tokenizer.lookAheadToken.kind == TkCloseBracket {
 		return
 	}
-	result.Items = append(result.Items, tokenizer.parseExpr())
+	result.Items = append(result.Items, parseExpr(tokenizer))
 
 	for tokenizer.lookAheadToken.kind == TkComma {
 		tokenizer.Next()
-		result.Items = append(result.Items, tokenizer.parseExpr())
+		result.Items = append(result.Items, parseExpr(tokenizer))
 	}
 
 	next = tokenizer.Next()
@@ -559,19 +559,19 @@ func (tokenizer *Tokenizer) parseArrayLit() (result ArrayLit) {
 	return
 }
 
-func (tokenizer *Tokenizer) parseExpr() Expr {
+func parseExpr(tokenizer *Tokenizer) Expr {
 	var expr Expr
 	switch tokenizer.lookAheadToken.kind {
 	case TkIdent:
-		expr = (Expr)(tokenizer.parseIdent())
+		expr = (Expr)(parseIdent(tokenizer))
 	case TkOpenCurly:
-		expr = (Expr)(tokenizer.parseCodeBlock())
+		expr = (Expr)(parseCodeBlock(tokenizer))
 	case TkStrLit:
-		expr = (Expr)(tokenizer.parseStrLit())
+		expr = (Expr)(parseStrLit(tokenizer))
 	case TkIntLit:
-		expr = (Expr)(tokenizer.parseIntLit())
+		expr = (Expr)(parseIntLit(tokenizer))
 	case TkOpenBracket:
-		expr = (Expr)(tokenizer.parseArrayLit())
+		expr = (Expr)(parseArrayLit(tokenizer))
 	default:
 		tokenizer.wrongKind(tokenizer.lookAheadToken)
 	}
@@ -582,9 +582,9 @@ func (tokenizer *Tokenizer) parseExpr() Expr {
 	lookAhead := tokenizer.lookAheadToken
 	switch lookAhead.kind {
 	case TkOperator:
-		expr = (Expr)(tokenizer.parseInfixCall(expr))
+		expr = (Expr)(parseInfixCall(tokenizer, expr))
 	case TkOpenBrace:
-		expr = (Expr)(tokenizer.parseCall(expr))
+		expr = (Expr)(parseCall(tokenizer, expr))
 	}
 
 	return expr
@@ -618,7 +618,7 @@ func parseTypeDef(tokenizer *Tokenizer) (result StructDef) {
 		structField.Name = name.value
 		colon := tokenizer.Next()
 		tokenizer.expectOperator(colon, ":")
-		structField.TypeExpr = tokenizer.parseTypeExpr()
+		structField.TypeExpr = parseTypeExpr(tokenizer)
 		token = tokenizer.Next()
 		tokenizer.expectKind(token, TkSemicolon)
 		for token.kind == TkSemicolon {
@@ -655,7 +655,7 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 
 		tokenizer.expectOperator(token, ":")
 
-		typ := tokenizer.parseTypeExpr()
+		typ := parseTypeExpr(tokenizer)
 
 		for i := startIndex; i < len(result.Args); i++ {
 			result.Args[i].Type = typ
@@ -669,11 +669,11 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 
 	token = tokenizer.Next()
 	tokenizer.expectOperator(token, ":")
-	result.ResultType = tokenizer.parseTypeExpr()
+	result.ResultType = parseTypeExpr(tokenizer)
 	token = tokenizer.Next()
 	tokenizer.expectOperator(token, "=")
 
-	result.Body = tokenizer.parseExpr()
+	result.Body = parseExpr(tokenizer)
 
 	return
 }
@@ -700,7 +700,7 @@ func parsePackage(code, filename string) (result PackageDef) {
 				result.ProcDefs = append(result.ProcDefs, parseProcDef(tokenizer))
 				continue
 			case "let":
-				result.Globals = append(result.Globals, tokenizer.parseLetStmt())
+				result.Globals = append(result.Globals, parseLetStmt(tokenizer))
 				continue
 			case "var":
 				panic("not implemented")

@@ -806,6 +806,23 @@ Other programmable ide interactions still need to be specified.
 
 ** pattern matching in if stmt/expr
 
+~if Some(a) = getMaybeSomething() { print(a) }~
+
+** working with multiple garbage collectors
+
+When interfacing with multiple languages, one already works with
+multiple garbage collectors. Therefore it makes sense to also support
+working with multiple garbage collectors from within the same
+language.
+
+Idea, have a different pointer type for each possible allocation
+heap. ~ref boehmref goref jsref javaref sbclref~ etc. This ensures it
+is always known at compile time from which heap an allocation comes
+from. Exchanging data from different heaps requires explicit
+conversions. Either to raw pointers (unmanaged and unchecked) or to
+other pointer/ref types with appropriate conversion operations.
+
+
 * A defensive justification for macros
 
  * The Lisp Dialect Fragmentation Problem.
