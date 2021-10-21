@@ -50,8 +50,9 @@
 (defconst golem-highlights
   (rx-let ((ident (seq alpha (* (any alnum "_")))))
     (list
-     (cons (rx line-start (* " ") (or "return" "var" "let" "proc" "type")) font-lock-keyword-face)
+     (cons (rx line-start (* " ") (or "return" "var" "let" "if" "proc" "type")) font-lock-keyword-face)
      (cons "\t+" font-lock-warning-face)
+     '("^ *\\<for\\>" (0 font-lock-keyword-face) ("\\<in\\>" nil nil (0 font-lock-keyword-face)))
      (list (rx (group ident) "(") 1 font-lock-function-name-face)
      (list (rx ":" (* " ") (group ident)) 1 font-lock-type-face)
      (list (rx (group-n 1 "struct") (* " ") "{") 1 font-lock-keyword-face)
