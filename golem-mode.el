@@ -4,8 +4,28 @@
 
 (require 'compile)
 
-(add-to-list 'compilation-error-regexp-alist 'golem)
+(defconst golem-highlights
+  (rx-let ((ident (seq alpha (* (any alnum "_"))))
+           ;; keywords in golem only have a meaning when placed at the
+           ;; beginning of a statement.
+           (stmt-context (seq (or line-start ";" "{") (* " "))))
+    (list
+     (cons (rx bow (1+ digit) (? "." (1+ digit)) eow) font-lock-constant-face)
+     (list (rx stmt-context (group (or "return" "var" "let" "if" "proc" "type")) eow) 1 font-lock-keyword-face)
+     ;; match else only when it follows a closing }
+     (list (rx "}" (* " ") (group "else") eow) 1 font-lock-keyword-face)
+     (cons "\t+" font-lock-warning-face)
+     ;; anchored pattern to match `in' keyword in a for loop
+     (list (rx stmt-context (group "for") eow) (list 1 font-lock-keyword-face)
+           (list (rx bow "in" eow) nil nil (list 0 font-lock-keyword-face)))
+           ;;'("^ *\\<for\\>"                      (0 font-lock-keyword-face) )
+     (list (rx (group ident) "(") 1 font-lock-function-name-face)
+     (list (rx ":" (* " ") (group ident)) 1 font-lock-type-face)
+     (list (rx (group-n 1 "struct") (* " ") "{") 1 font-lock-keyword-face)
+     (list 'golem-string-escape-matcher 0 font-lock-preprocessor-face 'prepend)
+     )))
 
+(add-to-list 'compilation-error-regexp-alist 'golem)
 (setf
  (alist-get 'golem compilation-error-regexp-alist-alist)
  `(,(rx
@@ -46,20 +66,6 @@
                     string-escape-regexp limit t))
          (not (nth 3 (syntax-ppss)))))
     res))
-
-(defconst golem-highlights
-  (rx-let ((ident (seq alpha (* (any alnum "_")))))
-    (list
-     (cons (rx bow (1+ digit) (? "." (1+ digit)) eow) font-lock-constant-face)
-     (cons (rx line-start (* " ") (or "return" "var" "let" "if" "proc" "type")) font-lock-keyword-face)
-     (cons "\t+" font-lock-warning-face)
-     ;; anchored pattern to match `in' keyword in a for loop
-     '("^ *\\<for\\>" (0 font-lock-keyword-face) ("\\<in\\>" nil nil (0 font-lock-keyword-face)))
-     (list (rx (group ident) "(") 1 font-lock-function-name-face)
-     (list (rx ":" (* " ") (group ident)) 1 font-lock-type-face)
-     (list (rx (group-n 1 "struct") (* " ") "{") 1 font-lock-keyword-face)
-     (list 'golem-string-escape-matcher 0 font-lock-preprocessor-face 'prepend)
-     )))
 
 ;;;###autoload
 (define-derived-mode golem-mode prog-mode "golem"

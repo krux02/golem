@@ -21,10 +21,7 @@ proc myfun2(a,b:int; c: int): int = a * b + a * c
 proc myfun3(a,b,c,d,e,f: string): void = {}
 
 proc max(a,b: int): int = {
-  if a > b {
-    return a
-  }
-  return b
+  if a > b {a} else {b}
 }
 
 proc maxParenDepth(expr: string): int = {

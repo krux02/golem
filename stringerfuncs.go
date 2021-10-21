@@ -269,6 +269,10 @@ func (ifStmt IfStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteAstNode(ifStmt.Condition)
 	builder.WriteString(" ")
 	builder.WriteAstNode(ifStmt.Body)
+	if len(ifStmt.Else.Items) > 0 {
+		builder.WriteString(" else ")
+		builder.WriteAstNode(ifStmt.Body)
+	}
 }
 
 func (ifStmt TcIfStmt) prettyPrint(builder *AstPrettyPrinter) {
@@ -276,6 +280,10 @@ func (ifStmt TcIfStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteAstNode(ifStmt.Condition)
 	builder.WriteString(" ")
 	builder.WriteAstNode(ifStmt.Body)
+	if len(ifStmt.Else.Items) > 0 {
+		builder.WriteString(" else ")
+		builder.WriteAstNode(ifStmt.Body)
+	}
 }
 
 func (pak PackageDef) prettyPrint(builder *AstPrettyPrinter) {

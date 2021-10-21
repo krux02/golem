@@ -1,4 +1,3 @@
-* TODO rename Symbol to Ident
-* TODO introduce colon Token
-* TODO implement type checking on 'return'
+* DONE implement type checking on 'return'
 * TODO implement 'context' type and parameter for TypeCheck functions
+* TODO introduce C code generation pre transformation that transforms all codeblock expressions into pure code blocks statements

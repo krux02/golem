@@ -20,6 +20,7 @@ type TokenKind int16
 const (
 	TkInvalid TokenKind = iota
 	TkIdent
+	TkColon
 	TkSemicolon
 	TkComma
 	TkOperator
@@ -55,6 +56,7 @@ func init() {
 var TokenKindNames = [...]string{
 	TkInvalid:      "Invalid",
 	TkIdent:        "Ident",
+	TkColon:        "Colon",
 	TkSemicolon:    "Semicolon",
 	TkComma:        "Comma",
 	TkOperator:     "Operator",
@@ -307,6 +309,8 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 		result = Token{TkCloseCurly, code[:cLen]}
 	case c == ',':
 		result = Token{TkComma, code[:cLen]}
+	case c == ':':
+		result = Token{TkColon, code[:cLen]}
 	case c == ';':
 		result = Token{TkSemicolon, code[:cLen]}
 	case u.IsSymbol(c) || u.IsPunct(c):
@@ -406,7 +410,7 @@ func parseVariableDefStmt(tokenizer *Tokenizer) (result VariableDefStmt) {
 	tokenizer.expectKind(next, TkIdent)
 	result.Name = next.value
 	next = tokenizer.Next()
-	if next.kind == TkOperator && next.value == ":" {
+	if next.kind == TkColon {
 		result.TypeExpr = parseTypeExpr(tokenizer)
 		next = tokenizer.Next()
 	}
@@ -445,6 +449,10 @@ func parseIfStmt(tokenizer *Tokenizer) (result IfStmt) {
 	tokenizer.expectIdent(token, "if")
 	result.Condition = parseExpr(tokenizer)
 	result.Body = parseCodeBlock(tokenizer)
+	if tokenizer.lookAheadToken.kind == TkIdent && tokenizer.lookAheadToken.value == "else" {
+		tokenizer.Next()
+		result.Else = parseCodeBlock(tokenizer)
+	}
 	return
 }
 
@@ -469,24 +477,24 @@ func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
 	return parseExpr(tokenizer)
 }
 
-func parseCodeBlock(tokenizer *Tokenizer) CodeBlock {
-	token := tokenizer.Next()
-	tokenizer.expectKind(token, TkOpenCurly)
-
-	// parse block
-	var block CodeBlock
+func (tokenizer *Tokenizer) eatSemicolon() {
 	for tokenizer.lookAheadToken.kind == TkSemicolon {
 		tokenizer.Next()
 	}
+}
+
+func parseCodeBlock(tokenizer *Tokenizer) (result CodeBlock) {
+	startToken := tokenizer.Next()
+	tokenizer.expectKind(startToken, TkOpenCurly)
+	tokenizer.eatSemicolon()
 	for tokenizer.lookAheadToken.kind != TkCloseCurly {
 		item := parseStmtOrExpr(tokenizer)
-		block.Items = append(block.Items, item)
-		next := tokenizer.Next()
-		tokenizer.expectKind(next, TkSemicolon)
+		result.Items = append(result.Items, item)
+		tokenizer.eatSemicolon()
 	}
 	endToken := tokenizer.Next()
 	tokenizer.expectKind(endToken, TkCloseCurly)
-	return block
+	return
 }
 
 func parseCharLit(tokenizer *Tokenizer) (result CharLit) {
@@ -639,17 +647,13 @@ func parseCall(tokenizer *Tokenizer, callee Expr) Call {
 func parseArrayLit(tokenizer *Tokenizer) (result ArrayLit) {
 	next := tokenizer.Next()
 	tokenizer.expectKind(next, TkOpenBracket)
-
-	if tokenizer.lookAheadToken.kind == TkCloseBracket {
-		return
-	}
-	result.Items = append(result.Items, parseExpr(tokenizer))
-
-	for tokenizer.lookAheadToken.kind == TkComma {
-		tokenizer.Next()
+	if tokenizer.lookAheadToken.kind != TkCloseBracket {
 		result.Items = append(result.Items, parseExpr(tokenizer))
+		for tokenizer.lookAheadToken.kind == TkComma {
+			tokenizer.Next()
+			result.Items = append(result.Items, parseExpr(tokenizer))
+		}
 	}
-
 	next = tokenizer.Next()
 	tokenizer.expectKind(next, TkCloseBracket)
 	return
@@ -715,7 +719,7 @@ func parseTypeDef(tokenizer *Tokenizer) (result StructDef) {
 		tokenizer.expectKind(name, TkIdent)
 		structField.Name = name.value
 		colon := tokenizer.Next()
-		tokenizer.expectOperator(colon, ":")
+		tokenizer.expectKind(colon, TkColon)
 		structField.TypeExpr = parseTypeExpr(tokenizer)
 		token = tokenizer.Next()
 		tokenizer.expectKind(token, TkSemicolon)
@@ -751,7 +755,7 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 			token = tokenizer.Next()
 		}
 
-		tokenizer.expectOperator(token, ":")
+		tokenizer.expectKind(token, TkColon)
 
 		typ := parseTypeExpr(tokenizer)
 
@@ -766,7 +770,7 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 	tokenizer.expectKind(token, TkCloseBrace)
 
 	token = tokenizer.Next()
-	tokenizer.expectOperator(token, ":")
+	tokenizer.expectKind(token, TkColon)
 	result.ResultType = parseTypeExpr(tokenizer)
 	token = tokenizer.Next()
 	tokenizer.expectOperator(token, "=")

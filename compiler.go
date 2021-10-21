@@ -134,11 +134,18 @@ func (context *CCodeGeneratorContext) compileVariableDefStmt(stmt TcVariableDefS
 	context.compileExpr(stmt.Value)
 }
 
-func (context *CCodeGeneratorContext) compileIfStmt(stmt TcIfStmt) {
+func (context *CCodeGeneratorContext) compileIfStmt(stmt TcIfStmt, lastExprPrefix string) {
+
 	context.WriteString("if (")
 	context.compileExpr(stmt.Condition)
 	context.WriteString(") ")
-	context.compileCodeBlock(stmt.Body)
+	context.compileCodeBlockWithPrefix(stmt.Body, lastExprPrefix)
+	if len(stmt.Else.Items) > 0 {
+		context.WriteString(" else ")
+		context.compileCodeBlockWithPrefix(stmt.Else, lastExprPrefix)
+	} else if lastExprPrefix != "" {
+		panic(fmt.Sprintf("internal error, cannot inject '%s' in return statement", lastExprPrefix))
+	}
 }
 
 func (context *CCodeGeneratorContext) compileForLoopStmt(stmt TcForLoopStmt) {
@@ -198,11 +205,8 @@ func (context *CCodeGeneratorContext) compileExprWithPrefix(expr TcExpr, lastExp
 		}
 		panic(fmt.Sprintf("internal error, cannot inject '%s' in return statement", lastExprPrefix))
 	case TcIfStmt:
-		if lastExprPrefix != "" {
-			panic(fmt.Sprintf("internal error, cannot inject '%s' in return statement", lastExprPrefix))
-		}
-		// TODO this should be forwarded
-		context.compileIfStmt(ex)
+
+		context.compileIfStmt(ex, lastExprPrefix)
 	case TcForLoopStmt:
 		if lastExprPrefix != "" {
 			panic(fmt.Sprintf("internal error, cannot inject '%s' in return statement", lastExprPrefix))

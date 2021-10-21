@@ -333,8 +333,7 @@ func TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExpr {
 		ExpectType(TypeVoid, expected)
 		return (TcExpr)(TypeCheckForLoopStmt(scope, arg))
 	case IfStmt:
-		ExpectType(TypeVoid, expected)
-		return (TcExpr)(TypeCheckIfStmt(scope, arg))
+		return (TcExpr)(TypeCheckIfStmt(scope, arg, expected))
 	default:
 		panic(fmt.Sprintf("not implemented %T", arg))
 	}
@@ -343,10 +342,17 @@ func TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExpr {
 	return result
 }
 
-func TypeCheckIfStmt(scope Scope, stmt IfStmt) (result TcIfStmt) {
+func TypeCheckIfStmt(scope Scope, stmt IfStmt, expected Type) (result TcIfStmt) {
 	// currently only iteration on strings in possible (of course that is not final)
 	result.Condition = TypeCheckExpr(scope, stmt.Condition, TypeBoolean)
-	result.Body = TypeCheckCodeBlock(scope, stmt.Body, TypeVoid)
+	if len(stmt.Else.Items) == 0 {
+		ExpectType(TypeVoid, expected)
+		result.Body = TypeCheckCodeBlock(scope, stmt.Body, TypeVoid)
+	} else {
+		result.Body = TypeCheckCodeBlock(scope, stmt.Body, expected)
+		result.Else = TypeCheckCodeBlock(scope, stmt.Else, expected)
+	}
+
 	return
 }
 

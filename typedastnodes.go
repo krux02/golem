@@ -60,6 +60,7 @@ type TcForLoopStmt struct {
 type TcIfStmt struct {
 	Condition TcExpr
 	Body      TcCodeBlock
+	Else      TcCodeBlock
 }
 
 type TcCall struct {
