@@ -294,8 +294,18 @@ func (stmt TcForLoopStmt) Type() Type {
 	return TypeVoid
 }
 
+func UnifyType(a, b Type) Type {
+	if a != b {
+		panic("type incompatible")
+	}
+	return a
+}
+
 func (stmt TcIfStmt) Type() Type {
-	return TypeVoid
+	if len(stmt.Else.Items) == 0 {
+		return TypeVoid
+	}
+	return UnifyType(stmt.Body.Type(), stmt.Else.Type())
 }
 
 func (returnStmt TcReturnStmt) Type() Type {
