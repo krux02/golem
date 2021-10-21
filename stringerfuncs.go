@@ -226,37 +226,24 @@ func (returnStmt ReturnStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteAstNode(returnStmt.Value)
 }
 
-func (letStmt LetStmt) prettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("let ")
-	builder.WriteString(letStmt.Name)
-	if letStmt.TypeExpr.IsSet() {
+func (stmt VariableDefStmt) prettyPrint(builder *AstPrettyPrinter) {
+	switch stmt.Kind {
+	case SkLet:
+		builder.WriteString("let ")
+	case SkVar:
+		builder.WriteString("var ")
+	case SkConst:
+		builder.WriteString("const ")
+	default:
+		panic("illegal or not implemented")
+	}
+	builder.WriteString(stmt.Name)
+	if stmt.TypeExpr.IsSet() {
 		builder.WriteString(": ")
-		builder.WriteAstNode(letStmt.TypeExpr)
+		builder.WriteAstNode(stmt.TypeExpr)
 	}
 	builder.WriteString(" = ")
-	builder.WriteAstNode(letStmt.Value)
-}
-
-func (letStmt VarStmt) prettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("var ")
-	builder.WriteString(letStmt.Name)
-	if letStmt.TypeExpr.IsSet() {
-		builder.WriteString(": ")
-		builder.WriteAstNode(letStmt.TypeExpr)
-	}
-	builder.WriteString(" = ")
-	builder.WriteAstNode(letStmt.Value)
-}
-
-func (letStmt ConstStmt) prettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("const ")
-	builder.WriteString(letStmt.Name)
-	if letStmt.TypeExpr.IsSet() {
-		builder.WriteString(": ")
-		builder.WriteAstNode(letStmt.TypeExpr)
-	}
-	builder.WriteString(" = ")
-	builder.WriteAstNode(letStmt.Value)
+	builder.WriteAstNode(stmt.Value)
 }
 
 func (loopStmt ForLoopStmt) prettyPrint(builder *AstPrettyPrinter) {
@@ -268,7 +255,23 @@ func (loopStmt ForLoopStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteAstNode(loopStmt.Body)
 }
 
+func (loopStmt TcForLoopStmt) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("for ")
+	builder.WriteString(loopStmt.LoopSym.Name)
+	builder.WriteString(" in ")
+	builder.WriteAstNode(loopStmt.Collection)
+	builder.WriteString(" ")
+	builder.WriteAstNode(loopStmt.Body)
+}
+
 func (ifStmt IfStmt) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("if ")
+	builder.WriteAstNode(ifStmt.Condition)
+	builder.WriteString(" ")
+	builder.WriteAstNode(ifStmt.Body)
+}
+
+func (ifStmt TcIfStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("if ")
 	builder.WriteAstNode(ifStmt.Condition)
 	builder.WriteString(" ")
@@ -348,17 +351,26 @@ func (codeBlock TcCodeBlock) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("}")
 }
 
-func (sym TcLetSymbol) prettyPrint(printer *AstPrettyPrinter) {
+func (sym TcSymbol) prettyPrint(printer *AstPrettyPrinter) {
 	printer.WriteString(sym.Name)
 }
 
-func (letStmt TcLetStmt) prettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("let ")
-	builder.WriteAstNode(letStmt.Sym)
+func (stmt TcVariableDefStmt) prettyPrint(builder *AstPrettyPrinter) {
+	switch stmt.Sym.Kind {
+	case SkLet:
+		builder.WriteString("let ")
+	case SkVar:
+		builder.WriteString("var ")
+	case SkConst:
+		builder.WriteString("const ")
+	default:
+		panic("internal errer")
+	}
+	builder.WriteAstNode(stmt.Sym)
 	builder.WriteString(": ")
-	builder.WriteString(letStmt.Sym.Typ.Name())
+	builder.WriteString(stmt.Sym.Typ.Name())
 	builder.WriteString(" = ")
-	builder.WriteAstNode(letStmt.Value)
+	builder.WriteAstNode(stmt.Value)
 }
 
 func (returnStmt TcReturnStmt) prettyPrint(builder *AstPrettyPrinter) {

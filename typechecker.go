@@ -14,9 +14,13 @@ func (typ *BuiltinType) Name() string {
 
 // **** Constants ****
 
+// These type names are by no means final, there are just to get
+// something working.
+var TypeBoolean = &BuiltinType{"bool"}
 var TypeInt = &BuiltinType{"int"}
 var TypeFloat = &BuiltinType{"float"}
 var TypeString = &BuiltinType{"string"}
+var TypeChar = &BuiltinType{"char"}
 var TypeVoid = &BuiltinType{"void"}
 
 // This type is used to tag that a function never returns.
@@ -25,78 +29,6 @@ var TypeNoReturn = &BuiltinType{"noreturn"}
 // this type is the internal representation when no type has been
 // specified. It is not a type by its own.
 var TypeUnspecified = &BuiltinType{"<unspecified>"}
-
-var BuiltinPlus *TcProcDef = &TcProcDef{
-	Name: "+",
-	Args: []TcLetSymbol{
-		TcLetSymbol{Typ: TypeInt},
-		TcLetSymbol{Typ: TypeInt},
-	},
-	ResultType: TypeInt,
-}
-
-var BuiltinMinus *TcProcDef = &TcProcDef{
-	Name: "-",
-	Args: []TcLetSymbol{
-		TcLetSymbol{Typ: TypeInt},
-		TcLetSymbol{Typ: TypeInt},
-	},
-	ResultType: TypeInt,
-}
-
-var BuiltinMult *TcProcDef = &TcProcDef{
-	Name: "*",
-	Args: []TcLetSymbol{
-		TcLetSymbol{Typ: TypeInt},
-		TcLetSymbol{Typ: TypeInt},
-	},
-	ResultType: TypeInt,
-}
-
-var BuiltinDivide *TcProcDef = &TcProcDef{
-	Name: "/",
-	Args: []TcLetSymbol{
-		TcLetSymbol{Typ: TypeFloat},
-		TcLetSymbol{Typ: TypeFloat},
-	},
-	ResultType: TypeFloat,
-}
-
-var BuiltinReturn *TcProcDef = &TcProcDef{
-	Name:       "return",
-	ResultType: TypeNoReturn,
-}
-
-// Printf is literally the only use case for real varargs that I
-// know. Therefore the implementation for varargs will be strictly
-// tied to printf for now. A general concept for varargs will be
-// specified out as soon as it becomes necessary.
-var BuiltinPrintf *TcProcDef = &TcProcDef{
-	Name: "printf",
-	// TODO support argument list
-	printfargs: true,
-	ResultType: TypeVoid,
-}
-
-var builtinScope Scope = &ScopeImpl{
-	Parent: nil,
-	Types: map[string]Type{
-		"int":      TypeInt,
-		"float":    TypeFloat,
-		"string":   TypeString,
-		"void":     TypeVoid,
-		"noreturn": TypeNoReturn,
-	},
-	// these are builtin procedures, therefore their Impl is nil
-	Procedures: map[string]*TcProcDef{
-		"+":      BuiltinPlus,
-		"-":      BuiltinMinus,
-		"*":      BuiltinMult,
-		"/":      BuiltinDivide,
-		"return": BuiltinReturn,
-		"printf": BuiltinPrintf,
-	},
-}
 
 // ****
 
@@ -108,7 +40,7 @@ type ScopeImpl struct {
 	// pointer points to the corresponding procedure. This should
 	// probably be redued to be just the proc signature.
 	CurrentProc *TcProcDef
-	Variables   map[string]TcLetSymbol
+	Variables   map[string]TcSymbol
 	Procedures  map[string]*TcProcDef
 	Types       map[string]Type
 }
@@ -118,14 +50,14 @@ type Scope = *ScopeImpl
 func (scope Scope) NewSubScope() Scope {
 	return &ScopeImpl{
 		Parent:     scope,
-		Variables:  make(map[string]TcLetSymbol),
+		Variables:  make(map[string]TcSymbol),
 		Procedures: make(map[string]*TcProcDef),
 		Types:      make(map[string]Type),
 	}
 }
 
-func (scope Scope) NewLetSym(name string, typ Type) TcLetSymbol {
-	result := TcLetSymbol{Name: name, Typ: typ}
+func (scope Scope) NewSymbol(name string, kind SymbolKind, typ Type) TcSymbol {
+	result := TcSymbol{Name: name, Kind: kind, Typ: typ}
 	scope.Variables[name] = result
 	return result
 }
@@ -155,7 +87,7 @@ func (scope Scope) LookUpProc(ident Ident) TcProcSymbol {
 	return scope.Parent.LookUpProc(ident)
 }
 
-func (scope Scope) LookUpLetSym(ident Ident) TcLetSymbol {
+func (scope Scope) LookUpLetSym(ident Ident) TcSymbol {
 	if scope == nil {
 		panic(fmt.Sprintf("let sym not found: %s", ident.Name))
 	}
@@ -183,7 +115,7 @@ func TypeCheckProcDef(parentScope Scope, def ProcDef) (result TcProcDef) {
 	scope.CurrentProc = &result
 	result.Name = def.Name
 	for _, arg := range def.Args {
-		tcArg := scope.NewLetSym(arg.Name, scope.LookUpType(arg.Type))
+		tcArg := scope.NewSymbol(arg.Name, SkProcArg, scope.LookUpType(arg.Type))
 		result.Args = append(result.Args, tcArg)
 	}
 	resultType := scope.LookUpType(def.ResultType)
@@ -311,15 +243,15 @@ func (expr TypeExpr) IsSet() bool {
 	return expr.Ident != ""
 }
 
-func TypeCheckLetStmt(scope Scope, arg LetStmt) TcLetStmt {
+func TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt) TcVariableDefStmt {
 	var expected Type = TypeUnspecified
 	if arg.TypeExpr.IsSet() {
 		expected = scope.LookUpType(arg.TypeExpr)
 	}
 
-	var result TcLetStmt
+	var result TcVariableDefStmt
 	result.Value = TypeCheckExpr(scope, arg.Value, expected)
-	result.Sym = scope.NewLetSym(arg.Name, result.Value.Type())
+	result.Sym = scope.NewSymbol(arg.Name, arg.Kind, result.Value.Type())
 	return result
 }
 
@@ -342,15 +274,27 @@ func (lit StrLit) Type() Type {
 	return TypeString
 }
 
+func (lit CharLit) Type() Type {
+	return TypeChar
+}
+
 func (lit IntLit) Type() Type {
 	return TypeInt
 }
 
-func (sym TcLetSymbol) Type() Type {
+func (sym TcSymbol) Type() Type {
 	return sym.Typ
 }
 
-func (sym TcLetStmt) Type() Type {
+func (stmt TcVariableDefStmt) Type() Type {
+	return TypeVoid
+}
+
+func (stmt TcForLoopStmt) Type() Type {
+	return TypeVoid
+}
+
+func (stmt TcIfStmt) Type() Type {
 	return TypeVoid
 }
 
@@ -372,16 +316,25 @@ func TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExpr {
 	case StrLit:
 		ExpectType(TypeString, expected)
 		return (TcExpr)(arg)
+	case CharLit:
+		ExpectType(TypeChar, expected)
+		return (TcExpr)(arg)
 	case IntLit:
 		ExpectType(TypeInt, expected)
 		return (TcExpr)(arg)
 	case ReturnStmt:
 		// ignoring expected type here, because the return as expression
-		// never evaluates to anything.
+		// never evaluates to anything
 		return (TcExpr)(TypeCheckReturnStmt(scope, arg))
-	case LetStmt:
+	case VariableDefStmt:
 		ExpectType(TypeVoid, expected)
-		return (TcExpr)(TypeCheckLetStmt(scope, arg))
+		return (TcExpr)(TypeCheckVariableDefStmt(scope, arg))
+	case ForLoopStmt:
+		ExpectType(TypeVoid, expected)
+		return (TcExpr)(TypeCheckForLoopStmt(scope, arg))
+	case IfStmt:
+		ExpectType(TypeVoid, expected)
+		return (TcExpr)(TypeCheckIfStmt(scope, arg))
 	default:
 		panic(fmt.Sprintf("not implemented %T", arg))
 	}
@@ -390,8 +343,23 @@ func TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExpr {
 	return result
 }
 
-func TypeCheckPackage(arg PackageDef) TcPackageDef {
-	var result TcPackageDef
+func TypeCheckIfStmt(scope Scope, stmt IfStmt) (result TcIfStmt) {
+	// currently only iteration on strings in possible (of course that is not final)
+	result.Condition = TypeCheckExpr(scope, stmt.Condition, TypeBoolean)
+	result.Body = TypeCheckCodeBlock(scope, stmt.Body, TypeVoid)
+	return
+}
+
+func TypeCheckForLoopStmt(scope Scope, loopArg ForLoopStmt) (result TcForLoopStmt) {
+	scope = scope.NewSubScope()
+	// currently only iteration on strings in possible (of course that is not final)
+	result.Collection = TypeCheckExpr(scope, loopArg.Collection, TypeString)
+	result.LoopSym = scope.NewSymbol(loopArg.LoopIdent.Name, SkLoopIterator, TypeChar)
+	result.Body = TypeCheckCodeBlock(scope, loopArg.Body, TypeVoid)
+	return
+}
+
+func TypeCheckPackage(arg PackageDef) (result TcPackageDef) {
 	scope := builtinScope.NewSubScope()
 	result.Name = arg.Name
 	for _, typeDef := range arg.TypeDefs {
@@ -400,5 +368,5 @@ func TypeCheckPackage(arg PackageDef) TcPackageDef {
 	for _, procDef := range arg.ProcDefs {
 		result.ProcDefs = append(result.ProcDefs, TypeCheckProcDef(scope, procDef))
 	}
-	return result
+	return
 }

@@ -28,16 +28,38 @@ type TcCodeBlock struct {
 	Items []TcExpr
 }
 
-// TODO rename to TcProcSym and TcLetSym
+// TODO unify TcProcSym with the othe symbol types
 
 type TcProcSymbol struct {
 	Name string
 	Impl *TcProcDef
 }
 
-type TcLetSymbol struct {
+type SymbolKind int
+
+const (
+	SkLet SymbolKind = iota
+	SkVar
+	SkConst
+	SkProcArg
+	SkLoopIterator
+)
+
+type TcSymbol struct {
 	Name string
+	Kind SymbolKind
 	Typ  Type
+}
+
+type TcForLoopStmt struct {
+	LoopSym    TcSymbol
+	Collection TcExpr
+	Body       TcCodeBlock
+}
+
+type TcIfStmt struct {
+	Condition TcExpr
+	Body      TcCodeBlock
 }
 
 type TcCall struct {
@@ -47,8 +69,8 @@ type TcCall struct {
 	Braced bool // true for (a+b) +(a,b), false for a+b
 }
 
-type TcLetStmt struct {
-	Sym   TcLetSymbol
+type TcVariableDefStmt struct {
+	Sym   TcSymbol
 	Value TcExpr
 }
 
@@ -58,7 +80,7 @@ type TcReturnStmt struct {
 
 type TcProcDef struct {
 	Name       string
-	Args       []TcLetSymbol
+	Args       []TcSymbol
 	ResultType Type
 	Body       TcExpr
 
@@ -78,8 +100,10 @@ type TcPackageDef struct {
 	ProcDefs []TcProcDef
 }
 
-func (sym TcLetSymbol) expression()   {}
-func (stmt TcLetStmt) expression()    {}
-func (stmt TcReturnStmt) expression() {}
-func (block TcCodeBlock) expression() {}
-func (call TcCall) expression()       {}
+func (sym TcSymbol) expression()           {}
+func (stmt TcVariableDefStmt) expression() {}
+func (stmt TcReturnStmt) expression()      {}
+func (stmt TcForLoopStmt) expression()     {}
+func (stmt TcIfStmt) expression()          {}
+func (block TcCodeBlock) expression()      {}
+func (call TcCall) expression()            {}

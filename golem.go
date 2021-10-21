@@ -387,41 +387,31 @@ func parseReturnStmt(tokenizer *Tokenizer) (result ReturnStmt) {
 	return
 }
 
-func parseVarLetConstBody(tokenizer *Tokenizer) (name string, typ TypeExpr, expr Expr) {
+/* (name string, typ TypeExpr, expr Expr) */
+
+func parseVariableDefStmt(tokenizer *Tokenizer) (result VariableDefStmt) {
 	next := tokenizer.Next()
+	switch next.value {
+	case "let":
+		result.Kind = SkLet
+	case "var":
+		result.Kind = SkVar
+	case "const":
+		result.Kind = SkConst
+	default:
+		tokenizer.wrongIdent(next)
+	}
+
+	next = tokenizer.Next()
 	tokenizer.expectKind(next, TkIdent)
-	name = next.value
+	result.Name = next.value
 	next = tokenizer.Next()
 	if next.kind == TkOperator && next.value == ":" {
-		typ = parseTypeExpr(tokenizer)
+		result.TypeExpr = parseTypeExpr(tokenizer)
 		next = tokenizer.Next()
 	}
 	tokenizer.expectKind(next, TkOperator)
-	expr = parseExpr(tokenizer)
-	return
-}
-
-func parseLetStmt(tokenizer *Tokenizer) (result LetStmt) {
-	// parse let Stmt
-	next := tokenizer.Next()
-	tokenizer.expectIdent(next, "let")
-	result.Name, result.TypeExpr, result.Value = parseVarLetConstBody(tokenizer)
-	return
-}
-
-func parseVarStmt(tokenizer *Tokenizer) (result VarStmt) {
-	// parse let Stmt
-	next := tokenizer.Next()
-	tokenizer.expectIdent(next, "var")
-	result.Name, result.TypeExpr, result.Value = parseVarLetConstBody(tokenizer)
-	return
-}
-
-func parseConstStmt(tokenizer *Tokenizer) (result ConstStmt) {
-	// parse let Stmt
-	next := tokenizer.Next()
-	tokenizer.expectIdent(next, "const")
-	result.Name, result.TypeExpr, result.Value = parseVarLetConstBody(tokenizer)
+	result.Value = parseExpr(tokenizer)
 	return
 }
 
@@ -446,10 +436,6 @@ func parseForLoop(tokenizer *Tokenizer) (result ForLoopStmt) {
 	token = tokenizer.Next()
 	tokenizer.expectIdent(token, "in")
 	result.Collection = parseExpr(tokenizer)
-
-	Println(AstFormat(result))
-	Println(tokenizer.token, tokenizer.lookAheadToken)
-
 	result.Body = parseCodeBlock(tokenizer)
 	return
 }
@@ -466,12 +452,8 @@ func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
 	lookAhead := tokenizer.lookAheadToken
 	if lookAhead.kind == TkIdent {
 		switch lookAhead.value {
-		case "let":
-			return (Expr)(parseLetStmt(tokenizer))
-		case "var":
-			return (Expr)(parseVarStmt(tokenizer))
-		case "const":
-			return (Expr)(parseConstStmt(tokenizer))
+		case "var", "let", "const":
+			return (Expr)(parseVariableDefStmt(tokenizer))
 		case "return":
 			return (Expr)(parseReturnStmt(tokenizer))
 		case "for":
@@ -815,14 +797,8 @@ func parsePackage(code, filename string) (result PackageDef) {
 			case "proc":
 				result.ProcDefs = append(result.ProcDefs, parseProcDef(tokenizer))
 				continue
-			case "let":
-				result.Globals = append(result.Globals, parseLetStmt(tokenizer))
-				continue
-			case "var":
-				panic("not implemented")
-				continue
-			case "const":
-				panic("not implemented")
+			case "let", "var", "const":
+				result.Globals = append(result.Globals, parseVariableDefStmt(tokenizer))
 				continue
 			default:
 			}

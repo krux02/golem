@@ -22,19 +22,8 @@ type StructField struct {
 	TypeExpr TypeExpr
 }
 
-type LetStmt struct {
-	Name     string
-	TypeExpr TypeExpr
-	Value    Expr
-}
-
-type VarStmt struct {
-	Name     string
-	TypeExpr TypeExpr
-	Value    Expr
-}
-
-type ConstStmt struct {
+type VariableDefStmt struct {
+	Kind     SymbolKind // only SkVar SkLet SkConst allowed
 	Name     string
 	TypeExpr TypeExpr
 	Value    Expr
@@ -117,24 +106,22 @@ type ProcDef struct {
 
 type PackageDef struct {
 	Name     string
-	Globals  []LetStmt
+	Globals  []VariableDefStmt
 	TypeDefs []StructDef
 	ProcDefs []ProcDef
 }
 
-func (ident Ident) expression()       {}
-func (block CodeBlock) expression()   {}
-func (lit StrLit) expression()        {}
-func (lit IntLit) expression()        {}
-func (lit FloatLit) expression()      {}
-func (lit ArrayLit) expression()      {}
-func (lit CharLit) expression()       {}
-func (call Call) expression()         {}
-func (stmt LetStmt) expression()      {}
-func (stmt VarStmt) expression()      {}
-func (stmt ConstStmt) expression()    {}
-func (stmt ForLoopStmt) expression()  {}
-func (stmt IfStmt) expression()       {}
-func (stmt ReturnStmt) expression()   {}
-func (stmt BreakStmt) expression()    {}
-func (stmt ContinueStmt) expression() {}
+func (ident Ident) expression()          {}
+func (block CodeBlock) expression()      {}
+func (lit StrLit) expression()           {}
+func (lit IntLit) expression()           {}
+func (lit FloatLit) expression()         {}
+func (lit ArrayLit) expression()         {}
+func (lit CharLit) expression()          {}
+func (call Call) expression()            {}
+func (stmt VariableDefStmt) expression() {}
+func (stmt ForLoopStmt) expression()     {}
+func (stmt IfStmt) expression()          {}
+func (stmt ReturnStmt) expression()      {}
+func (stmt BreakStmt) expression()       {}
+func (stmt ContinueStmt) expression()    {}

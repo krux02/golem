@@ -1,9 +1,7 @@
 
 
 #  array[6,Int]
-let myArray = [123, 456, 789, 234, 567, 891]
-
-
+let myArray = [123, 456, 789, 234, 567, 891, 123]
 
 type MyStruct = struct {
   a: int
@@ -16,11 +14,18 @@ proc myfun1(a, b, c: int): int = {
   # a + b * c
 }
 
-proc myfun2(a,b:int; c: int) : int = a * b + a * c
+proc myfun2(a,b:int; c: int): int = a * b + a * c
 #proc myfun2(a,b,c: int): int = a * b + a * c
 
 # empty function with nothing in it
 proc myfun3(a,b,c,d,e,f: string): void = {}
+
+proc max(a,b: int): int = {
+  if a > b {
+    return a
+  }
+  return b
+}
 
 proc maxParenDepth(expr: string): int = {
   var depth: int = 0
@@ -45,6 +50,7 @@ proc main():int = {
   printf("x: %d y: %d\n", x, y)
 
   let exprStr = "(1+(2*3)+((8)/4))+1"
-
+  let depth = maxParenDepth(exprStr)
+  printf("max paren depth: %d\n", depth)
   0
 }
