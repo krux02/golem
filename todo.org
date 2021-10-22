@@ -1,4 +1,5 @@
 * DONE implement type checking on 'return'
 * TODO implement 'context' type and parameter for TypeCheck functions
+* TODO provide proper error messages or error instead of panic
 * TODO split IfStmt and IfElseStmt as different ast nodes
 * TODO introduce C code generation pre transformation that transforms all codeblock expressions into pure code blocks statements
