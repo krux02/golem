@@ -41,6 +41,12 @@ type IfStmt struct {
 	Else      CodeBlock
 }
 
+type IfElseStmt struct {
+	Condition Expr
+	Body      CodeBlock
+	Else      CodeBlock
+}
+
 type BreakStmt struct {
 	Source string
 }
@@ -123,6 +129,7 @@ func (call Call) expression()            {}
 func (stmt VariableDefStmt) expression() {}
 func (stmt ForLoopStmt) expression()     {}
 func (stmt IfStmt) expression()          {}
+func (stmt IfElseStmt) expression()      {}
 func (stmt ReturnStmt) expression()      {}
 func (stmt BreakStmt) expression()       {}
 func (stmt ContinueStmt) expression()    {}

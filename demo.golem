@@ -24,6 +24,22 @@ proc max(a,b: int): int = {
   if a > b {a} else {b}
 }
 
+# proc test(): void = {
+#   var arr: array[2, bool] = [true, false]
+#   for c1 in arr {
+#     for c2 in arr {
+#       for c3 in arr {
+#         for c4 in arr {
+#           if { printf("1"); c1} and { printf("2"); c2} or {printf("3"); c3} and {printf("4"); c4} {
+#              printf("5")
+#           }
+#         }
+#       }
+#     }
+#   }
+# }
+
+
 proc maxParenDepth(expr: string): int = {
   var depth: int = 0
   var maxDepth: int = 0

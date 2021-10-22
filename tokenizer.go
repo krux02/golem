@@ -189,13 +189,18 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 
 	switch {
 	case u.IsLetter(c):
-		result.kind = TkIdent
 		result.value = code
 		for pos, rune := range code {
 			if !u.IsDigit(rune) && !u.IsLetter(rune) {
 				result.value = code[:pos]
 				break
 			}
+		}
+		switch result.value {
+		case "or", "and", "in":
+			result.kind = TkOperator
+		default:
+			result.kind = TkIdent
 		}
 	case u.IsDigit(c):
 		result.kind = TkIntLit

@@ -60,6 +60,11 @@ type TcForLoopStmt struct {
 type TcIfStmt struct {
 	Condition TcExpr
 	Body      TcCodeBlock
+}
+
+type TcIfElseStmt struct {
+	Condition TcExpr
+	Body      TcCodeBlock
 	Else      TcCodeBlock
 }
 
@@ -106,5 +111,6 @@ func (stmt TcVariableDefStmt) expression() {}
 func (stmt TcReturnStmt) expression()      {}
 func (stmt TcForLoopStmt) expression()     {}
 func (stmt TcIfStmt) expression()          {}
+func (stmt TcIfElseStmt) expression()      {}
 func (block TcCodeBlock) expression()      {}
 func (call TcCall) expression()            {}

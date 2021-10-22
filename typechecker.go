@@ -302,9 +302,10 @@ func UnifyType(a, b Type) Type {
 }
 
 func (stmt TcIfStmt) Type() Type {
-	if len(stmt.Else.Items) == 0 {
-		return TypeVoid
-	}
+	return TypeVoid
+}
+
+func (stmt TcIfElseStmt) Type() Type {
 	return UnifyType(stmt.Body.Type(), stmt.Else.Type())
 }
 
@@ -343,7 +344,10 @@ func TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExpr {
 		ExpectType(TypeVoid, expected)
 		return (TcExpr)(TypeCheckForLoopStmt(scope, arg))
 	case IfStmt:
-		return (TcExpr)(TypeCheckIfStmt(scope, arg, expected))
+		ExpectType(TypeVoid, expected)
+		return (TcExpr)(TypeCheckIfStmt(scope, arg))
+	case IfElseStmt:
+		return (TcExpr)(TypeCheckIfElseStmt(scope, arg, expected))
 	default:
 		panic(fmt.Sprintf("not implemented %T", arg))
 	}
@@ -352,17 +356,18 @@ func TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExpr {
 	return result
 }
 
-func TypeCheckIfStmt(scope Scope, stmt IfStmt, expected Type) (result TcIfStmt) {
+func TypeCheckIfStmt(scope Scope, stmt IfStmt) (result TcIfStmt) {
 	// currently only iteration on strings in possible (of course that is not final)
 	result.Condition = TypeCheckExpr(scope, stmt.Condition, TypeBoolean)
-	if len(stmt.Else.Items) == 0 {
-		ExpectType(TypeVoid, expected)
-		result.Body = TypeCheckCodeBlock(scope, stmt.Body, TypeVoid)
-	} else {
-		result.Body = TypeCheckCodeBlock(scope, stmt.Body, expected)
-		result.Else = TypeCheckCodeBlock(scope, stmt.Else, expected)
-	}
+	result.Body = TypeCheckCodeBlock(scope, stmt.Body, TypeVoid)
+	return
+}
 
+func TypeCheckIfElseStmt(scope Scope, stmt IfElseStmt, expected Type) (result TcIfElseStmt) {
+	// currently only iteration on strings in possible (of course that is not final)
+	result.Condition = TypeCheckExpr(scope, stmt.Condition, TypeBoolean)
+	result.Body = TypeCheckCodeBlock(scope, stmt.Body, expected)
+	result.Else = TypeCheckCodeBlock(scope, stmt.Else, expected)
 	return
 }
 

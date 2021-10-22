@@ -24,6 +24,11 @@ func parseTypeExpr(tokenizer *Tokenizer) (result TypeExpr) {
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkIdent)
 	result.Ident = token.value
+
+	if tokenizer.lookAheadToken.kind == TkOpenBracket {
+		// TODO this must be used
+		_ = parseArrayLit(tokenizer)
+	}
 	return
 }
 
@@ -81,22 +86,24 @@ func parseForLoop(tokenizer *Tokenizer) (result ForLoopStmt) {
 	tokenizer.expectIdent(token, "for")
 	result.LoopIdent = parseIdent(tokenizer)
 	token = tokenizer.Next()
-	tokenizer.expectIdent(token, "in")
+	tokenizer.expectOperator(token, "in")
 	result.Collection = parseExpr(tokenizer)
 	result.Body = parseCodeBlock(tokenizer)
 	return
 }
 
-func parseIfStmt(tokenizer *Tokenizer) (result IfStmt) {
+func parseIfStmt(tokenizer *Tokenizer) (result Expr) {
 	token := tokenizer.Next()
 	tokenizer.expectIdent(token, "if")
-	result.Condition = parseExpr(tokenizer)
-	result.Body = parseCodeBlock(tokenizer)
+
+	condition := parseExpr(tokenizer)
+	body := parseCodeBlock(tokenizer)
 	if tokenizer.lookAheadToken.kind == TkIdent && tokenizer.lookAheadToken.value == "else" {
 		tokenizer.Next()
-		result.Else = parseCodeBlock(tokenizer)
+		elseBlock := parseCodeBlock(tokenizer)
+		return IfElseStmt{Condition: condition, Body: body, Else: elseBlock}
 	}
-	return
+	return IfStmt{Condition: condition, Body: body}
 }
 
 func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
@@ -112,7 +119,7 @@ func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
 		case "break":
 			return (Expr)(parseBreakStmt(tokenizer))
 		case "continue":
-			return (Expr)(parseBreakStmt(tokenizer))
+			return (Expr)(parseContinueStmt(tokenizer))
 		case "if":
 			return (Expr)(parseIfStmt(tokenizer))
 		}
@@ -263,6 +270,7 @@ func parseCall(tokenizer *Tokenizer, callee Expr) Call {
 	// parse call expr
 	var args []Expr
 	tokenizer.Next()
+	// TODO this need a clean revisit
 	for true {
 		switch tokenizer.lookAheadToken.kind {
 		case TkIdent, TkStrLit, TkIntLit:
