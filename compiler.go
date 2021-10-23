@@ -123,7 +123,7 @@ func (context *CCodeGeneratorContext) compileSymbol(sym TcSymbol) {
 }
 
 func (context *CCodeGeneratorContext) compileExpr(expr TcExpr) {
-	context.compileExprWithPrefix(expr, "")
+	context.compileExprWithPrefix(expr, false)
 }
 
 func (context *CCodeGeneratorContext) compileVariableDefStmt(stmt TcVariableDefStmt) {
@@ -134,29 +134,26 @@ func (context *CCodeGeneratorContext) compileVariableDefStmt(stmt TcVariableDefS
 	context.compileExpr(stmt.Value)
 }
 
-func (context *CCodeGeneratorContext) compileIfStmt(stmt TcIfStmt, lastExprPrefix string) {
-	if lastExprPrefix != "" {
-		panic(fmt.Sprintf("internal error, cannot inject '%s' in if statement", lastExprPrefix))
-	}
+func (context *CCodeGeneratorContext) compileIfStmt(stmt TcIfStmt) {
 	context.WriteString("if (")
 	context.compileExpr(stmt.Condition)
 	context.WriteString(") ")
-	context.compileCodeBlockWithPrefix(stmt.Body, lastExprPrefix)
+	context.compileCodeBlock(stmt.Body, false)
 }
 
-func (context *CCodeGeneratorContext) compileIfElseStmt(stmt TcIfElseStmt, lastExprPrefix string) {
+func (context *CCodeGeneratorContext) compileIfElseStmt(stmt TcIfElseStmt, injectReturn bool) {
 	context.WriteString("if (")
 	context.compileExpr(stmt.Condition)
 	context.WriteString(") ")
-	context.compileCodeBlockWithPrefix(stmt.Body, lastExprPrefix)
+	context.compileCodeBlock(stmt.Body, injectReturn)
 	context.WriteString(" else ")
-	context.compileCodeBlockWithPrefix(stmt.Else, lastExprPrefix)
+	context.compileCodeBlock(stmt.Else, injectReturn)
 }
 
 func (context *CCodeGeneratorContext) compileForLoopStmt(stmt TcForLoopStmt) {
 	// currently only iterating a cstring is possible, this code is
-	// temporaray and written to work only for that (for now)
-
+	// temporaray and written to work only for that (for now), type
+	// arguments (e.g. for seq[int]) don't exist yet.
 	/*
 		for(const char *c = mystring; *c != '\0'; *c++) {
 		  printf("char: %c\n", *c);
@@ -173,49 +170,55 @@ func (context *CCodeGeneratorContext) compileForLoopStmt(stmt TcForLoopStmt) {
 	context.WriteString(" != '\\0'; ")
 	context.compileSymbol(stmt.LoopSym)
 	context.WriteString("++) ")
-	context.compileCodeBlock(stmt.Body)
+	context.compileCodeBlock(stmt.Body, false)
+}
+
+func (context *CCodeGeneratorContext) injectReturn(injectReturn bool) {
+	if injectReturn {
+		context.WriteString("return ")
+	}
 }
 
 // lastExprPrefix is used to inject a return statement at each control
 // flow end in procedures, as in C code
-func (context *CCodeGeneratorContext) compileExprWithPrefix(expr TcExpr, lastExprPrefix string) {
+func (context *CCodeGeneratorContext) compileExprWithPrefix(expr TcExpr, injectReturn bool) {
 	switch ex := expr.(type) {
 	case TcCodeBlock:
-		context.compileCodeBlockWithPrefix(ex, lastExprPrefix)
+		context.compileCodeBlock(ex, injectReturn)
 	case TcCall:
-		context.WriteString(lastExprPrefix)
+		context.injectReturn(injectReturn)
 		context.compileCall(ex)
 	case StrLit:
-		context.WriteString(lastExprPrefix)
+		context.injectReturn(injectReturn)
 		context.compileStrLit(ex)
 	case CharLit:
-		context.WriteString(lastExprPrefix)
+		context.injectReturn(injectReturn)
 		context.compileCharLit(ex)
 	case IntLit:
-		context.WriteString(lastExprPrefix)
+		context.injectReturn(injectReturn)
 		context.compileIntLit(ex)
 	case TcSymbol:
-		context.WriteString(lastExprPrefix)
+		context.injectReturn(injectReturn)
 		context.compileSymbol(ex)
 	case TcVariableDefStmt:
-		if lastExprPrefix != "" {
-			panic(fmt.Sprintf("internal error, lastExprPrefix not supported here", lastExprPrefix))
+		if injectReturn {
+			panic(fmt.Sprintf("internal error, injectReturn not supported here", injectReturn))
 		}
 		context.compileVariableDefStmt(ex)
 	case TcReturnStmt:
-		if lastExprPrefix == "" || lastExprPrefix == "return " {
-			context.WriteString("return ")
-			context.compileExpr(ex.Value)
-			return
-		}
-		panic(fmt.Sprintf("internal error, cannot inject '%s' in return statement", lastExprPrefix))
+		// ignore the value of injectReturn here
+		context.WriteString("return ")
+		context.compileExpr(ex.Value)
 	case TcIfStmt:
-		context.compileIfStmt(ex, lastExprPrefix)
+		if injectReturn {
+			panic(fmt.Sprintf("internal error, injectReturn not supported here", injectReturn))
+		}
+		context.compileIfStmt(ex)
 	case TcIfElseStmt:
-		context.compileIfElseStmt(ex, lastExprPrefix)
+		context.compileIfElseStmt(ex, injectReturn)
 	case TcForLoopStmt:
-		if lastExprPrefix != "" {
-			panic(fmt.Sprintf("internal error, cannot inject '%s' in for loop statement", lastExprPrefix))
+		if injectReturn {
+			panic(fmt.Sprintf("internal error, injectReturn not supported here", injectReturn))
 		}
 		context.compileForLoopStmt(ex)
 	case nil:
@@ -225,25 +228,19 @@ func (context *CCodeGeneratorContext) compileExprWithPrefix(expr TcExpr, lastExp
 	}
 }
 
-func (context *CCodeGeneratorContext) compileCodeBlock(block TcCodeBlock) {
-	context.compileCodeBlockWithPrefix(block, "")
-}
-
-func (context *CCodeGeneratorContext) compileCodeBlockWithPrefix(block TcCodeBlock, lastExprPrefix string) {
+func (context *CCodeGeneratorContext) compileCodeBlock(block TcCodeBlock, injectReturn bool) {
 	context.WriteString("{")
 	context.Indentation += 1
-
 	N := len(block.Items)
 	for i, expr := range block.Items {
 		context.newlineAndIndent()
 		if i == N-1 {
-			context.compileExprWithPrefix(expr, lastExprPrefix)
+			context.compileExprWithPrefix(expr, injectReturn)
 		} else {
 			context.compileExpr(expr)
 		}
 		context.WriteRune(';')
 	}
-
 	context.Indentation -= 1
 	context.newlineAndIndent()
 	context.WriteString("}")
@@ -271,7 +268,8 @@ func (context *CCodeGeneratorContext) compileProcDef(procDef TcProcDef) {
 	if !ok {
 		body.Items = []TcExpr{procDef.Body}
 	}
-	context.compileCodeBlockWithPrefix(body, "return ")
+	// instruct to inject "return" at the end of each control flow
+	context.compileCodeBlock(body, true)
 }
 
 func (context *CCodeGeneratorContext) compileStructDef(structDef TcStructDef) {
