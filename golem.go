@@ -31,7 +31,7 @@ func main() {
 	pak := parsePackage(string(bytes), filename)
 	fmt.Println(AstFormat(pak))
 	fmt.Println("--------------------- typechecked code ---------------------")
-	var tc *TypeChecker
+	tc := NewTypeChecker(string(bytes), filename)
 	typedPak := tc.TypeCheckPackage(pak)
 	fmt.Println(AstFormat(typedPak))
 	fmt.Println("-------------------------- C code --------------------------")

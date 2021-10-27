@@ -9,7 +9,12 @@ type BuiltinType struct {
 }
 
 type TypeChecker struct {
+	code string
+	filename string
+}
 
+func NewTypeChecker(code, filename string) *TypeChecker {
+	return &TypeChecker{code: code, filename: filename}
 }
 
 func (typ *BuiltinType) Name() string {
