@@ -91,7 +91,6 @@ func parseForLoop(tokenizer *Tokenizer) (result ForLoopStmt) {
 func parseIfStmt(tokenizer *Tokenizer) (result Expr) {
 	token := tokenizer.Next()
 	tokenizer.expectIdent(token, "if")
-
 	condition := parseExpr(tokenizer)
 	body := parseCodeBlock(tokenizer)
 	if tokenizer.lookAheadToken.kind == TkIdent && tokenizer.lookAheadToken.value == "else" {

@@ -38,7 +38,6 @@ type ForLoopStmt struct {
 type IfStmt struct {
 	Condition Expr
 	Body      CodeBlock
-	Else      CodeBlock
 }
 
 type IfElseStmt struct {
