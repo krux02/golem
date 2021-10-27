@@ -8,6 +8,10 @@ type BuiltinType struct {
 	name string
 }
 
+type TypeChecker struct {
+
+}
+
 func (typ *BuiltinType) Name() string {
 	return typ.name
 }
@@ -98,7 +102,7 @@ func (scope Scope) LookUpLetSym(ident Ident) TcSymbol {
 	return scope.Parent.LookUpLetSym(ident)
 }
 
-func TypeCheckStructDef(scope Scope, def StructDef) TcStructDef {
+func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def StructDef) TcStructDef {
 	var result TcStructDef
 	result.Name = def.Name
 	for _, field := range def.Fields {
@@ -110,7 +114,7 @@ func TypeCheckStructDef(scope Scope, def StructDef) TcStructDef {
 	return result
 }
 
-func TypeCheckProcDef(parentScope Scope, def ProcDef) (result TcProcDef) {
+func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result TcProcDef) {
 	scope := parentScope.NewSubScope()
 	scope.CurrentProc = &result
 	result.Name = def.Name
@@ -120,7 +124,7 @@ func TypeCheckProcDef(parentScope Scope, def ProcDef) (result TcProcDef) {
 	}
 	resultType := scope.LookUpType(def.ResultType)
 	result.ResultType = resultType
-	result.Body = TypeCheckExpr(scope, def.Body, resultType)
+	result.Body = tc.TypeCheckExpr(scope, def.Body, resultType)
 
 	// TODO this is very ugly, store a pointer to a local, return a copy
 	parentScope.Procedures[result.Name] = &result
@@ -148,7 +152,7 @@ func ExpectMinArgsLen(gotten, expected int) {
 	}
 }
 
-func TypeCheckCallPrintf(scope Scope, printfSym TcProcSymbol, args []Expr) TcCall {
+func (tc *TypeChecker) TypeCheckCallPrintf(scope Scope, printfSym TcProcSymbol, args []Expr) TcCall {
 	var result TcCall
 	result.Sym = printfSym
 	result.Args = make([]TcExpr, 0, len(args))
@@ -158,11 +162,11 @@ func TypeCheckCallPrintf(scope Scope, printfSym TcProcSymbol, args []Expr) TcCal
 
 	for i := 0; i < len(prefixArgs); i++ {
 		expectedType := prefixArgs[i].Typ
-		tcArg := TypeCheckExpr(scope, args[i], expectedType)
+		tcArg := tc.TypeCheckExpr(scope, args[i], expectedType)
 		result.Args = append(result.Args, tcArg)
 	}
 
-	formatExpr := TypeCheckExpr(scope, args[len(prefixArgs)], TypeString)
+	formatExpr := tc.TypeCheckExpr(scope, args[len(prefixArgs)], TypeString)
 	result.Args = append(result.Args, formatExpr)
 	i := len(prefixArgs) + 1
 	// format string must me a string literal
@@ -193,7 +197,7 @@ func TypeCheckCallPrintf(scope Scope, printfSym TcProcSymbol, args []Expr) TcCal
 		if i == len(args) {
 			panic(fmt.Sprintf("not enough arguments for %s", AstFormat(formatExpr)))
 		}
-		tcArg := TypeCheckExpr(scope, args[i], argType)
+		tcArg := tc.TypeCheckExpr(scope, args[i], argType)
 		result.Args = append(result.Args, tcArg)
 		i++
 	}
@@ -201,11 +205,11 @@ func TypeCheckCallPrintf(scope Scope, printfSym TcProcSymbol, args []Expr) TcCal
 	return result
 }
 
-func TypeCheckCall(scope Scope, call Call, expected Type) TcCall {
+func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcCall {
 	procSym := scope.LookUpProc(call.Sym)
 	ExpectType(procSym.Impl.ResultType, expected)
 	if procSym.Impl.printfargs {
-		return TypeCheckCallPrintf(scope, procSym, call.Args)
+		return tc.TypeCheckCallPrintf(scope, procSym, call.Args)
 	}
 	var result TcCall
 	result.Sym = procSym
@@ -214,22 +218,22 @@ func TypeCheckCall(scope Scope, call Call, expected Type) TcCall {
 	ExpectArgsLen(len(call.Args), len(expectedArgs))
 	for i, arg := range call.Args {
 		expectedType := expectedArgs[i].Typ
-		tcArg := TypeCheckExpr(scope, arg, expectedType)
+		tcArg := tc.TypeCheckExpr(scope, arg, expectedType)
 		result.Args = append(result.Args, tcArg)
 	}
 	return result
 }
 
-func TypeCheckCodeBlock(scope Scope, arg CodeBlock, expected Type) TcCodeBlock {
+func (tc *TypeChecker) TypeCheckCodeBlock(scope Scope, arg CodeBlock, expected Type) TcCodeBlock {
 	var result TcCodeBlock
 	N := len(arg.Items)
 	if N > 0 {
 		result.Items = make([]TcExpr, N)
 		for i, item := range arg.Items {
 			if i == N-1 {
-				result.Items[i] = TypeCheckExpr(scope, item, expected)
+				result.Items[i] = tc.TypeCheckExpr(scope, item, expected)
 			} else {
-				result.Items[i] = TypeCheckExpr(scope, item, TypeVoid)
+				result.Items[i] = tc.TypeCheckExpr(scope, item, TypeVoid)
 			}
 		}
 	} else {
@@ -243,20 +247,20 @@ func (expr TypeExpr) IsSet() bool {
 	return expr.Ident != ""
 }
 
-func TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt) TcVariableDefStmt {
+func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt) TcVariableDefStmt {
 	var expected Type = TypeUnspecified
 	if arg.TypeExpr.IsSet() {
 		expected = scope.LookUpType(arg.TypeExpr)
 	}
 
 	var result TcVariableDefStmt
-	result.Value = TypeCheckExpr(scope, arg.Value, expected)
+	result.Value = tc.TypeCheckExpr(scope, arg.Value, expected)
 	result.Sym = scope.NewSymbol(arg.Name, arg.Kind, result.Value.Type())
 	return result
 }
 
-func TypeCheckReturnStmt(scope Scope, arg ReturnStmt) TcReturnStmt {
-	return TcReturnStmt{TypeCheckExpr(scope, arg.Value, scope.CurrentProc.ResultType)}
+func (tc *TypeChecker) TypeCheckReturnStmt(scope Scope, arg ReturnStmt) TcReturnStmt {
+	return TcReturnStmt{tc.TypeCheckExpr(scope, arg.Value, scope.CurrentProc.ResultType)}
 }
 
 func (block TcCodeBlock) Type() Type {
@@ -313,13 +317,13 @@ func (returnStmt TcReturnStmt) Type() Type {
 	return TypeNoReturn
 }
 
-func TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExpr {
+func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExpr {
 	var result TcExpr
 	switch arg := arg.(type) {
 	case Call:
-		return (TcExpr)(TypeCheckCall(scope, arg, expected))
+		return (TcExpr)(tc.TypeCheckCall(scope, arg, expected))
 	case CodeBlock:
-		return (TcExpr)(TypeCheckCodeBlock(scope, arg, expected))
+		return (TcExpr)(tc.TypeCheckCodeBlock(scope, arg, expected))
 	case Ident:
 		sym := scope.LookUpLetSym(arg)
 		ExpectType(sym.Typ, expected)
@@ -336,18 +340,18 @@ func TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExpr {
 	case ReturnStmt:
 		// ignoring expected type here, because the return as expression
 		// never evaluates to anything
-		return (TcExpr)(TypeCheckReturnStmt(scope, arg))
+		return (TcExpr)(tc.TypeCheckReturnStmt(scope, arg))
 	case VariableDefStmt:
 		ExpectType(TypeVoid, expected)
-		return (TcExpr)(TypeCheckVariableDefStmt(scope, arg))
+		return (TcExpr)(tc.TypeCheckVariableDefStmt(scope, arg))
 	case ForLoopStmt:
 		ExpectType(TypeVoid, expected)
-		return (TcExpr)(TypeCheckForLoopStmt(scope, arg))
+		return (TcExpr)(tc.TypeCheckForLoopStmt(scope, arg))
 	case IfStmt:
 		ExpectType(TypeVoid, expected)
-		return (TcExpr)(TypeCheckIfStmt(scope, arg))
+		return (TcExpr)(tc.TypeCheckIfStmt(scope, arg))
 	case IfElseStmt:
-		return (TcExpr)(TypeCheckIfElseStmt(scope, arg, expected))
+		return (TcExpr)(tc.TypeCheckIfElseStmt(scope, arg, expected))
 	default:
 		panic(fmt.Sprintf("not implemented %T", arg))
 	}
@@ -356,38 +360,38 @@ func TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExpr {
 	return result
 }
 
-func TypeCheckIfStmt(scope Scope, stmt IfStmt) (result TcIfStmt) {
+func (tc *TypeChecker) TypeCheckIfStmt(scope Scope, stmt IfStmt) (result TcIfStmt) {
 	// currently only iteration on strings in possible (of course that is not final)
-	result.Condition = TypeCheckExpr(scope, stmt.Condition, TypeBoolean)
-	result.Body = TypeCheckCodeBlock(scope, stmt.Body, TypeVoid)
+	result.Condition = tc.TypeCheckExpr(scope, stmt.Condition, TypeBoolean)
+	result.Body = tc.TypeCheckCodeBlock(scope, stmt.Body, TypeVoid)
 	return
 }
 
-func TypeCheckIfElseStmt(scope Scope, stmt IfElseStmt, expected Type) (result TcIfElseStmt) {
+func (tc *TypeChecker) TypeCheckIfElseStmt(scope Scope, stmt IfElseStmt, expected Type) (result TcIfElseStmt) {
 	// currently only iteration on strings in possible (of course that is not final)
-	result.Condition = TypeCheckExpr(scope, stmt.Condition, TypeBoolean)
-	result.Body = TypeCheckCodeBlock(scope, stmt.Body, expected)
-	result.Else = TypeCheckCodeBlock(scope, stmt.Else, expected)
+	result.Condition = tc.TypeCheckExpr(scope, stmt.Condition, TypeBoolean)
+	result.Body = tc.TypeCheckCodeBlock(scope, stmt.Body, expected)
+	result.Else = tc.TypeCheckCodeBlock(scope, stmt.Else, expected)
 	return
 }
 
-func TypeCheckForLoopStmt(scope Scope, loopArg ForLoopStmt) (result TcForLoopStmt) {
+func (tc *TypeChecker) TypeCheckForLoopStmt(scope Scope, loopArg ForLoopStmt) (result TcForLoopStmt) {
 	scope = scope.NewSubScope()
 	// currently only iteration on strings in possible (of course that is not final)
-	result.Collection = TypeCheckExpr(scope, loopArg.Collection, TypeString)
+	result.Collection = tc.TypeCheckExpr(scope, loopArg.Collection, TypeString)
 	result.LoopSym = scope.NewSymbol(loopArg.LoopIdent.Name, SkLoopIterator, TypeChar)
-	result.Body = TypeCheckCodeBlock(scope, loopArg.Body, TypeVoid)
+	result.Body = tc.TypeCheckCodeBlock(scope, loopArg.Body, TypeVoid)
 	return
 }
 
-func TypeCheckPackage(arg PackageDef) (result TcPackageDef) {
+func (tc *TypeChecker) TypeCheckPackage(arg PackageDef) (result TcPackageDef) {
 	scope := builtinScope.NewSubScope()
 	result.Name = arg.Name
 	for _, typeDef := range arg.TypeDefs {
-		result.TypeDefs = append(result.TypeDefs, TypeCheckStructDef(scope, typeDef))
+		result.TypeDefs = append(result.TypeDefs, tc.TypeCheckStructDef(scope, typeDef))
 	}
 	for _, procDef := range arg.ProcDefs {
-		result.ProcDefs = append(result.ProcDefs, TypeCheckProcDef(scope, procDef))
+		result.ProcDefs = append(result.ProcDefs, tc.TypeCheckProcDef(scope, procDef))
 	}
 	return
 }

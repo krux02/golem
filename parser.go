@@ -8,10 +8,6 @@ import (
 	"unicode/utf8"
 )
 
-type Parser struct {
-	tokenizer *Tokenizer
-}
-
 // TODO this is not a function sybol table, it is just an Operator Precedence table
 var OperatorPrecedence map[string]int = map[string]int{
 	"*": 6,

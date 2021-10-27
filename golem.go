@@ -26,11 +26,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
 	fmt.Println("----------------------- parsed  code -----------------------")
 	pak := parsePackage(string(bytes), filename)
 	fmt.Println(AstFormat(pak))
 	fmt.Println("--------------------- typechecked code ---------------------")
-	typedPak := TypeCheckPackage(pak)
+	var tc *TypeChecker
+	typedPak := tc.TypeCheckPackage(pak)
 	fmt.Println(AstFormat(typedPak))
 	fmt.Println("-------------------------- C code --------------------------")
 	sourceCodeC := compilePackageToC(typedPak)
