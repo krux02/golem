@@ -157,10 +157,8 @@ func ExpectMinArgsLen(gotten, expected int) {
 	}
 }
 
-func (tc *TypeChecker) TypeCheckCallPrintf(scope Scope, printfSym TcProcSymbol, args []Expr) TcCall {
-	var result TcCall
-	result.Sym = printfSym
-	result.Args = make([]TcExpr, 0, len(args))
+func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, args []Expr) (result []TcExpr) {
+	result = make([]TcExpr, 0, len(args))
 
 	prefixArgs := printfSym.Impl.Args
 	ExpectMinArgsLen(len(args), len(prefixArgs))
@@ -168,11 +166,11 @@ func (tc *TypeChecker) TypeCheckCallPrintf(scope Scope, printfSym TcProcSymbol, 
 	for i := 0; i < len(prefixArgs); i++ {
 		expectedType := prefixArgs[i].Typ
 		tcArg := tc.TypeCheckExpr(scope, args[i], expectedType)
-		result.Args = append(result.Args, tcArg)
+		result = append(result, tcArg)
 	}
 
 	formatExpr := tc.TypeCheckExpr(scope, args[len(prefixArgs)], TypeString)
-	result.Args = append(result.Args, formatExpr)
+	result = append(result, formatExpr)
 	i := len(prefixArgs) + 1
 	// format string must me a string literal
 	formatStr := formatExpr.(StrLit).Value
@@ -203,21 +201,21 @@ func (tc *TypeChecker) TypeCheckCallPrintf(scope Scope, printfSym TcProcSymbol, 
 			panic(fmt.Sprintf("not enough arguments for %s", AstFormat(formatExpr)))
 		}
 		tcArg := tc.TypeCheckExpr(scope, args[i], argType)
-		result.Args = append(result.Args, tcArg)
+		result = append(result, tcArg)
 		i++
 	}
 
 	return result
 }
 
-func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcCall {
+func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) (result TcCall) {
 	procSym := scope.LookUpProc(call.Sym)
 	ExpectType(procSym.Impl.ResultType, expected)
-	if procSym.Impl.printfargs {
-		return tc.TypeCheckCallPrintf(scope, procSym, call.Args)
-	}
-	var result TcCall
 	result.Sym = procSym
+	if procSym.Impl.printfargs {
+		result.Args = tc.TypeCheckPrintfArgs(scope, procSym, call.Args)
+		return
+	}
 	result.Args = make([]TcExpr, 0, len(call.Args))
 	expectedArgs := procSym.Impl.Args
 	ExpectArgsLen(len(call.Args), len(expectedArgs))
@@ -226,7 +224,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcCa
 		tcArg := tc.TypeCheckExpr(scope, arg, expectedType)
 		result.Args = append(result.Args, tcArg)
 	}
-	return result
+	return
 }
 
 func (tc *TypeChecker) TypeCheckCodeBlock(scope Scope, arg CodeBlock, expected Type) TcCodeBlock {
