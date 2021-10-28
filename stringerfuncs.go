@@ -314,10 +314,10 @@ func (pak PackageDef) prettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (breakstmt BreakStmt) prettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString(breakstmt.Source)
+	builder.WriteString("break")
 }
 func (continuestmt ContinueStmt) prettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString(continuestmt.Source)
+	builder.WriteString("continue")
 }
 
 // format type checked ast nodes

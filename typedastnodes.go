@@ -15,22 +15,26 @@ type TcExpr interface {
 }
 
 type TcStructField struct {
+	AbstractAstNode
 	Name string
 	Type Type
 }
 
 type TcStructDef struct {
+	AbstractAstNode
 	Name   string
 	Fields []TcStructField
 }
 
 type TcCodeBlock struct {
+	AbstractAstNode
 	Items []TcExpr
 }
 
 // TODO unify TcProcSym with the othe symbol types
 
 type TcProcSymbol struct {
+	AbstractAstNode
 	Name string
 	Impl *TcProcDef
 }
@@ -46,29 +50,34 @@ const (
 )
 
 type TcSymbol struct {
+	AbstractAstNode
 	Name string
 	Kind SymbolKind
 	Typ  Type
 }
 
 type TcForLoopStmt struct {
+	AbstractAstNode
 	LoopSym    TcSymbol
 	Collection TcExpr
 	Body       TcCodeBlock
 }
 
 type TcIfStmt struct {
+	AbstractAstNode
 	Condition TcExpr
 	Body      TcCodeBlock
 }
 
 type TcIfElseStmt struct {
+	AbstractAstNode
 	Condition TcExpr
 	Body      TcCodeBlock
 	Else      TcCodeBlock
 }
 
 type TcCall struct {
+	AbstractAstNode
 	Sym  TcProcSymbol
 	Args []TcExpr
 	// other properties
@@ -76,15 +85,18 @@ type TcCall struct {
 }
 
 type TcVariableDefStmt struct {
+	AbstractAstNode
 	Sym   TcSymbol
 	Value TcExpr
 }
 
 type TcReturnStmt struct {
+	AbstractAstNode
 	Value TcExpr
 }
 
 type TcProcDef struct {
+	AbstractAstNode
 	Name       string
 	Args       []TcSymbol
 	ResultType Type
@@ -101,6 +113,7 @@ type TcProcDef struct {
 }
 
 type TcPackageDef struct {
+	AbstractAstNode
 	Name     string
 	TypeDefs []TcStructDef
 	ProcDefs []TcProcDef

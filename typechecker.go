@@ -262,8 +262,9 @@ func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt
 	return result
 }
 
-func (tc *TypeChecker) TypeCheckReturnStmt(scope Scope, arg ReturnStmt) TcReturnStmt {
-	return TcReturnStmt{tc.TypeCheckExpr(scope, arg.Value, scope.CurrentProc.ResultType)}
+func (tc *TypeChecker) TypeCheckReturnStmt(scope Scope, arg ReturnStmt) (result TcReturnStmt) {
+	result.Value = tc.TypeCheckExpr(scope, arg.Value, scope.CurrentProc.ResultType)
+	return
 }
 
 func (block TcCodeBlock) Type() Type {

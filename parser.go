@@ -66,14 +66,14 @@ func parseVariableDefStmt(tokenizer *Tokenizer) (result VariableDefStmt) {
 func parseBreakStmt(tokenizer *Tokenizer) (result BreakStmt) {
 	token := tokenizer.Next()
 	tokenizer.expectIdent(token, "break")
-	result.Source = token.value
+	result.source = token.value
 	return
 }
 
 func parseContinueStmt(tokenizer *Tokenizer) (result ContinueStmt) {
 	token := tokenizer.Next()
 	tokenizer.expectIdent(token, "continue")
-	result.Source = token.value
+	result.source = token.value
 	return
 }
 

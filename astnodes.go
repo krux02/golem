@@ -9,20 +9,35 @@ type AstNode interface {
 
 type Expr interface {
 	AstNode
+	// get the substring of the original source string. This needs to be
+	// a real substring to be convertible into line column
+	// representation
+	Source() string
 	expression()
 }
 
+type AbstractAstNode struct {
+	source string
+}
+
+func (astNode AbstractAstNode) Source() string {
+	return astNode.source
+}
+
 type TypeExpr struct {
+	AbstractAstNode
 	// this type is a placeholder, it is supposed to become more complex
 	Ident string
 }
 
 type StructField struct {
+	AbstractAstNode
 	Name     string
 	TypeExpr TypeExpr
 }
 
 type VariableDefStmt struct {
+	AbstractAstNode
 	Kind     SymbolKind // only SkVar SkLet SkConst allowed
 	Name     string
 	TypeExpr TypeExpr
@@ -30,73 +45,87 @@ type VariableDefStmt struct {
 }
 
 type ForLoopStmt struct {
+	AbstractAstNode
 	LoopIdent  Ident
 	Collection Expr
 	Body       CodeBlock
 }
 
 type IfStmt struct {
+	AbstractAstNode
 	Condition Expr
 	Body      CodeBlock
 }
 
 type IfElseStmt struct {
+	AbstractAstNode
 	Condition Expr
 	Body      CodeBlock
 	Else      CodeBlock
 }
 
 type BreakStmt struct {
-	Source string
+	AbstractAstNode
 }
 
 type ContinueStmt struct {
-	Source string
+	AbstractAstNode
 }
 
 type ReturnStmt struct {
+	AbstractAstNode
 	Value Expr
 }
 
 type StructDef struct {
+	AbstractAstNode
 	Name   string
 	Fields []StructField
 }
 
 type ProcArgument struct {
+	AbstractAstNode
 	Name string
 	Type TypeExpr
 }
 
 type CodeBlock struct {
+	AbstractAstNode
 	Items []Expr
 }
 
 type Ident struct {
+	AbstractAstNode
 	Name string
 }
 
 type StrLit struct {
+	AbstractAstNode
 	Value string
 }
 
 type CharLit struct {
+	AbstractAstNode
 	Rune rune
 }
 
 type IntLit struct {
+	AbstractAstNode
 	Value int
 }
 
 type FloatLit struct {
+	AbstractAstNode
 	Value float64
 }
 
 type ArrayLit struct {
+	AbstractAstNode
 	Items []Expr
 }
 
 type Call struct {
+	AbstractAstNode
 	Sym  Ident
 	Args []Expr
 	// other properties
@@ -104,6 +133,7 @@ type Call struct {
 }
 
 type ProcDef struct {
+	AbstractAstNode
 	Name       string
 	Args       []ProcArgument
 	ResultType TypeExpr
@@ -111,6 +141,7 @@ type ProcDef struct {
 }
 
 type PackageDef struct {
+	AbstractAstNode
 	Name     string
 	Globals  []VariableDefStmt
 	TypeDefs []StructDef
