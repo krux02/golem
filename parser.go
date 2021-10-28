@@ -181,7 +181,7 @@ func parseCharLit(tokenizer *Tokenizer) (result CharLit) {
 	return CharLit{Rune: rune1}
 }
 
-func parseStrLit(tokenizer *Tokenizer) StrLit {
+func parseStrLit(tokenizer *Tokenizer) (result StrLit) {
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkStrLit)
 	var b strings.Builder
@@ -225,43 +225,46 @@ func parseStrLit(tokenizer *Tokenizer) StrLit {
 		}
 	}
 
-	return StrLit{Value: b.String()}
+	result.Value = b.String()
+	return
 }
 
-func parseIntLit(tokenizer *Tokenizer) IntLit {
+func parseIntLit(tokenizer *Tokenizer) (result IntLit) {
 	token := tokenizer.Next()
 	intValue, err := strconv.Atoi(token.value)
 	if err != nil {
 		panic("internal error invalid int token")
 	}
-	return IntLit{Value: intValue}
+	result.Value = intValue
+	return
 }
 
-func parseIdent(tokenizer *Tokenizer) Ident {
+func parseIdent(tokenizer *Tokenizer) (result Ident) {
 	// this func implementation is a joke, but it should be consistent with the other parse thingies
 	token := tokenizer.Next()
-	return Ident{Name: token.value}
+	result.Name = token.value
+	return
 }
 
-func parseInfixCall(tokenizer *Tokenizer, lhs Expr) Call {
+func parseInfixCall(tokenizer *Tokenizer, lhs Expr) (result Call) {
 	token := tokenizer.Next()
 	operator := Ident{Name: token.value}
 	rhs := parseExpr(tokenizer)
-	call := Call{Sym: operator, Args: []Expr{lhs, rhs}}
+	result = Call{Sym: operator, Args: []Expr{lhs, rhs}}
 
 	if rhsCall, ok := rhs.(Call); ok && !rhsCall.Braced {
 		rhsOperator := rhsCall.Sym
 		if OperatorPrecedence[operator.Name] > OperatorPrecedence[rhsOperator.Name] {
 			// operator precedence
-			call.Args[1] = rhsCall.Args[0]
-			rhsCall.Args[0] = call
+			result.Args[1] = rhsCall.Args[0]
+			rhsCall.Args[0] = result
 			return rhsCall
 		}
 	}
-	return call
+	return
 }
 
-func parseCall(tokenizer *Tokenizer, callee Expr) Call {
+func parseCall(tokenizer *Tokenizer, callee Expr) (result Call) {
 	// parse call expr
 	var args []Expr
 	tokenizer.Next()
@@ -283,7 +286,9 @@ func parseCall(tokenizer *Tokenizer, callee Expr) Call {
 			panic(tokenizer.wrongKind(tokenizer.lookAheadToken))
 		case TkCloseBrace:
 			tokenizer.Next()
-			return Call{Sym: callee.(Ident), Args: args}
+			result.Sym = callee.(Ident)
+			result.Args = args
+			return
 		}
 		panic(tokenizer.wrongKind(tokenizer.lookAheadToken))
 	}
@@ -305,21 +310,20 @@ func parseArrayLit(tokenizer *Tokenizer) (result ArrayLit) {
 	return
 }
 
-func parseExpr(tokenizer *Tokenizer) Expr {
-	var expr Expr
+func parseExpr(tokenizer *Tokenizer) (result Expr) {
 	switch tokenizer.lookAheadToken.kind {
 	case TkIdent:
-		expr = (Expr)(parseIdent(tokenizer))
+		result = (Expr)(parseIdent(tokenizer))
 	case TkOpenCurly:
-		expr = (Expr)(parseCodeBlock(tokenizer))
+		result = (Expr)(parseCodeBlock(tokenizer))
 	case TkCharLit:
-		expr = (Expr)(parseCharLit(tokenizer))
+		result = (Expr)(parseCharLit(tokenizer))
 	case TkStrLit:
-		expr = (Expr)(parseStrLit(tokenizer))
+		result = (Expr)(parseStrLit(tokenizer))
 	case TkIntLit:
-		expr = (Expr)(parseIntLit(tokenizer))
+		result = (Expr)(parseIntLit(tokenizer))
 	case TkOpenBracket:
-		expr = (Expr)(parseArrayLit(tokenizer))
+		result = (Expr)(parseArrayLit(tokenizer))
 	default:
 		tokenizer.wrongKind(tokenizer.lookAheadToken)
 	}
@@ -330,12 +334,12 @@ func parseExpr(tokenizer *Tokenizer) Expr {
 	lookAhead := tokenizer.lookAheadToken
 	switch lookAhead.kind {
 	case TkOperator:
-		expr = (Expr)(parseInfixCall(tokenizer, expr))
+		result = (Expr)(parseInfixCall(tokenizer, result))
 	case TkOpenBrace:
-		expr = (Expr)(parseCall(tokenizer, expr))
+		result = (Expr)(parseCall(tokenizer, result))
 	}
 
-	return expr
+	return
 }
 
 func parseTypeDef(tokenizer *Tokenizer) (result StructDef) {
