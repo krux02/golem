@@ -21,7 +21,7 @@ proc myfun2(a,b:int; c: int): int = a * b + a * c
 proc myfun3(a,b,c,d,e,f: string): void = {}
 
 proc max(a,b: int): int = {
-  if a > b {a} else {b}
+  if a > b do a else b
 }
 
 # proc test(): void = {
@@ -43,13 +43,9 @@ proc max(a,b: int): int = {
 proc maxParenDepth(expr: string): int = {
   var depth: int = 0
   var maxDepth: int = 0
-  for c in expr {
-    if c == '(' {
-      depth += 1
-    }
-    if c == ')' {
-      depth -= 1
-    }
+  for c in expr do {
+    if c == '(' do depth += 1
+    if c == ')' do depth -= 1
     maxDepth = max(depth, maxDepth)
   }
   maxDepth

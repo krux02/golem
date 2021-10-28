@@ -284,7 +284,7 @@ func (ifStmt IfElseStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(" ")
 	builder.WriteAstNode(ifStmt.Body)
 	builder.WriteString(" else ")
-	builder.WriteAstNode(ifStmt.Body)
+	builder.WriteAstNode(ifStmt.Else)
 }
 
 func (ifStmt TcIfElseStmt) prettyPrint(builder *AstPrettyPrinter) {
@@ -293,7 +293,7 @@ func (ifStmt TcIfElseStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(" ")
 	builder.WriteAstNode(ifStmt.Body)
 	builder.WriteString(" else ")
-	builder.WriteAstNode(ifStmt.Body)
+	builder.WriteAstNode(ifStmt.Else)
 }
 
 func (pak PackageDef) prettyPrint(builder *AstPrettyPrinter) {

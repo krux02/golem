@@ -367,15 +367,16 @@ func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExp
 func (tc *TypeChecker) TypeCheckIfStmt(scope Scope, stmt IfStmt) (result TcIfStmt) {
 	// currently only iteration on strings in possible (of course that is not final)
 	result.Condition = tc.TypeCheckExpr(scope, stmt.Condition, TypeBoolean)
-	result.Body = tc.TypeCheckCodeBlock(scope, stmt.Body, TypeVoid)
+	result.Body = tc.TypeCheckExpr(scope, stmt.Body, TypeVoid)
 	return
 }
 
 func (tc *TypeChecker) TypeCheckIfElseStmt(scope Scope, stmt IfElseStmt, expected Type) (result TcIfElseStmt) {
 	// currently only iteration on strings in possible (of course that is not final)
+	fmt.Println(AstFormat(stmt))
 	result.Condition = tc.TypeCheckExpr(scope, stmt.Condition, TypeBoolean)
-	result.Body = tc.TypeCheckCodeBlock(scope, stmt.Body, expected)
-	result.Else = tc.TypeCheckCodeBlock(scope, stmt.Else, expected)
+	result.Body = tc.TypeCheckExpr(scope, stmt.Body, expected)
+	result.Else = tc.TypeCheckExpr(scope, stmt.Else, expected)
 	return
 }
 
@@ -384,7 +385,7 @@ func (tc *TypeChecker) TypeCheckForLoopStmt(scope Scope, loopArg ForLoopStmt) (r
 	// currently only iteration on strings in possible (of course that is not final)
 	result.Collection = tc.TypeCheckExpr(scope, loopArg.Collection, TypeString)
 	result.LoopSym = scope.NewSymbol(loopArg.LoopIdent.Name, SkLoopIterator, TypeChar)
-	result.Body = tc.TypeCheckCodeBlock(scope, loopArg.Body, TypeVoid)
+	result.Body = tc.TypeCheckExpr(scope, loopArg.Body, TypeVoid)
 	return
 }
 

@@ -138,16 +138,24 @@ func (context *CCodeGeneratorContext) compileIfStmt(stmt TcIfStmt) {
 	context.WriteString("if (")
 	context.compileExpr(stmt.Condition)
 	context.WriteString(") ")
-	context.compileCodeBlock(stmt.Body, false)
+	context.compileExpr(stmt.Body)
+}
+
+func wrapInCodeBlock(expr TcExpr) TcCodeBlock {
+	// I hope this function is temporary and can be removed at some point in the future
+	if cb, ok := expr.(TcCodeBlock); ok {
+		return cb
+	}
+  return TcCodeBlock{Items: []TcExpr{expr}}
 }
 
 func (context *CCodeGeneratorContext) compileIfElseStmt(stmt TcIfElseStmt, injectReturn bool) {
 	context.WriteString("if (")
 	context.compileExpr(stmt.Condition)
 	context.WriteString(") ")
-	context.compileCodeBlock(stmt.Body, injectReturn)
+	context.compileCodeBlock( wrapInCodeBlock(stmt.Body), injectReturn)
 	context.WriteString(" else ")
-	context.compileCodeBlock(stmt.Else, injectReturn)
+	context.compileCodeBlock( wrapInCodeBlock(stmt.Else), injectReturn)
 }
 
 func (context *CCodeGeneratorContext) compileForLoopStmt(stmt TcForLoopStmt) {
@@ -170,7 +178,7 @@ func (context *CCodeGeneratorContext) compileForLoopStmt(stmt TcForLoopStmt) {
 	context.WriteString(" != '\\0'; ")
 	context.compileSymbol(stmt.LoopSym)
 	context.WriteString("++) ")
-	context.compileCodeBlock(stmt.Body, false)
+	context.compileCodeBlock(wrapInCodeBlock(stmt.Body), false)
 }
 
 func (context *CCodeGeneratorContext) injectReturn(injectReturn bool) {

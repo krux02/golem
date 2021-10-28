@@ -48,20 +48,20 @@ type ForLoopStmt struct {
 	AbstractAstNode
 	LoopIdent  Ident
 	Collection Expr
-	Body       CodeBlock
+	Body       Expr
 }
 
 type IfStmt struct {
 	AbstractAstNode
 	Condition Expr
-	Body      CodeBlock
+	Body      Expr
 }
 
 type IfElseStmt struct {
 	AbstractAstNode
 	Condition Expr
-	Body      CodeBlock
-	Else      CodeBlock
+	Body      Expr
+	Else      Expr
 }
 
 type BreakStmt struct {

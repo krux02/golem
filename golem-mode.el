@@ -17,8 +17,9 @@
      (cons "\t+" font-lock-warning-face)
      ;; anchored pattern to match `in' keyword in a for loop
      (list (rx stmt-context (group "for") eow) (list 1 font-lock-keyword-face)
-           (list (rx bow "in" eow) nil nil (list 0 font-lock-keyword-face)))
-           ;;'("^ *\\<for\\>"                      (0 font-lock-keyword-face) )
+           (list (rx bow (or "do" "in") eow) nil nil (list 0 font-lock-keyword-face)))
+     (list (rx stmt-context (group "if") eow) (list 1 font-lock-keyword-face)
+           (list (rx bow (or "do" "else") eow) nil nil (list 0 font-lock-keyword-face)))
      (list (rx (group ident) "(") 1 font-lock-function-name-face)
      (list (rx ":" (* " ") (group ident)) 1 font-lock-type-face)
      (list (rx (group-n 1 "struct") (* " ") "{") 1 font-lock-keyword-face)

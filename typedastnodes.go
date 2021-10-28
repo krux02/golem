@@ -60,20 +60,20 @@ type TcForLoopStmt struct {
 	AbstractAstNode
 	LoopSym    TcSymbol
 	Collection TcExpr
-	Body       TcCodeBlock
+	Body       TcExpr
 }
 
 type TcIfStmt struct {
 	AbstractAstNode
 	Condition TcExpr
-	Body      TcCodeBlock
+	Body      TcExpr
 }
 
 type TcIfElseStmt struct {
 	AbstractAstNode
 	Condition TcExpr
-	Body      TcCodeBlock
-	Else      TcCodeBlock
+	Body      TcExpr
+	Else      TcExpr
 }
 
 type TcCall struct {

@@ -24,6 +24,24 @@ const (
 	TkCharLit
 	TkDocComment
 
+	// keywords
+	TkType
+	TkProc
+  TkVar
+  TkLet
+  TkConst
+  TkReturn
+  TkBreak
+  TkContinue
+
+	TkOr
+	TkAnd
+	TkIn
+  TkIf
+	TkElse
+	TkFor
+	TkDo
+
 	// These tokens must be convertible from Open/Close by flipping the last bit
 	TkOpenBrace    TokenKind = 100
 	TkCloseBrace   TokenKind = 101
@@ -48,6 +66,21 @@ var TokenKindNames = [...]string{
 	TkFloatLit:     "FloatLit",
 	TkCharLit:      "CharLit",
 	TkDocComment:   "DocComment",
+  TkType: "Type",
+	TkProc: "Proc",
+  TkVar: "Var",
+  TkLet: "Let",
+  TkConst: "Const",
+  TkReturn: "Return",
+  TkBreak: "Break",
+  TkContinue: "Continue",
+	TkOr:						"Or",
+	TkAnd:					"And",
+  TkIn:						"In",
+	TkIf:           "If",
+	TkElse:         "Else",
+	TkFor:          "For",
+	TkDo:						"Do",
 	TkOpenBrace:    "OpenBrace",
 	TkCloseBrace:   "CloseBrace",
 	TkOpenBracket:  "OpenBracket",
@@ -197,8 +230,38 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			}
 		}
 		switch result.value {
-		case "or", "and", "in":
-			result.kind = TkOperator
+
+		case "type":
+      result.kind = TkType
+    case "proc":
+			result.kind = TkProc
+		case "var":
+			result.kind = TkVar
+		case "let":
+			result.kind = TkLet
+		case "const":
+			result.kind = TkConst
+		case "return":
+			result.kind = TkReturn
+		case "break":
+			result.kind = TkBreak
+		case "continue":
+			result.kind = TkContinue
+
+		case "or":
+			result.kind = TkOr
+		case "and":
+			result.kind = TkAnd
+		case "in":
+			result.kind = TkIn
+		case "if":
+			result.kind = TkIf
+		case "else":
+			result.kind = TkElse
+		case "for":
+			result.kind = TkFor
+		case "do":
+			result.kind = TkDo
 		default:
 			result.kind = TkIdent
 		}
