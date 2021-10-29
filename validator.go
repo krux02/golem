@@ -3,11 +3,43 @@ package main
 import (
 	"fmt"
 	"reflect"
+	"unsafe"
 )
+
+// joins str1 and str2 within parent. Both str1 and str2 must be
+// direct substrings in parent. Does not allocate a new string object
+func joinSubstr(parent, str1, str2 string) (result string) {
+	header1 := (*reflect.StringHeader)(unsafe.Pointer(&str1))
+	header2 := (*reflect.StringHeader)(unsafe.Pointer(&str2))
+
+	// do rage checks
+	if *header1 == *header2 {
+		return str1
+	}
+
+	if header2.Data <= header1.Data {
+		panic(fmt.Sprintf("illegal argument order of %#v and %#v", str1, str2))
+	}
+
+	header0 := (*reflect.StringHeader)(unsafe.Pointer(&parent))
+	begin := header0.Data
+	end := header0.Data + uintptr(header0.Len)
+
+	if header1.Data < begin || end < (header1.Data+uintptr(header1.Len)) {
+		panic("str1 out of range")
+	}
+	if header2.Data < begin || end < (header2.Data+uintptr(header2.Len)) {
+		panic("str1 out of range")
+	}
+
+	resultHeader := (*reflect.StringHeader)(unsafe.Pointer(&result))
+	resultHeader.Data = header1.Data
+	resultHeader.Len = int(header2.Data-header1.Data) + header2.Len
+	return
+}
 
 // ensure recursively that all nodes have `source` set, and that
 // `source` is substring of outer string.
-
 func validateSourceSet(code string, pak AstNode) {
 	validateSourceSetInternal(code, reflect.ValueOf(pak))
 }

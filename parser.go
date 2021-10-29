@@ -31,7 +31,7 @@ func parseOperator(tokenizer *Tokenizer) (result Ident) {
 }
 
 func parseTypeExpr(tokenizer *Tokenizer) (result TypeExpr) {
-	// firstToken := tokenizer.lookAheadToken
+	firstToken := tokenizer.lookAheadToken
 	result.Ident = parseIdent(tokenizer)
 	// TODO this must be used
 	if tokenizer.lookAheadToken.kind == TkOpenBrace {
@@ -40,22 +40,25 @@ func parseTypeExpr(tokenizer *Tokenizer) (result TypeExpr) {
 	if tokenizer.lookAheadToken.kind == TkOpenBracket {
 		_ = parseExprList(tokenizer, TkOpenBracket, TkCloseBracket)
 	}
-	// lastToken := tokenizer.token
+	lastToken := tokenizer.token
+	result.source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
 	return
 }
 
 func parseReturnStmt(tokenizer *Tokenizer) (result ReturnStmt) {
-	token := tokenizer.Next()
-	tokenizer.expectKind(token, TkReturn)
+	firstToken := tokenizer.Next()
+	tokenizer.expectKind(firstToken, TkReturn)
 	result.Value = parseExpr(tokenizer)
+	lastToken := tokenizer.token
+	result.source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
 	return
 }
 
 /* (name string, typ TypeExpr, expr Expr) */
 
 func parseVariableDefStmt(tokenizer *Tokenizer) (result VariableDefStmt) {
-	next := tokenizer.Next()
-	switch next.kind {
+	firstToken := tokenizer.Next()
+	switch firstToken.kind {
 	case TkLet:
 		result.Kind = SkLet
 	case TkVar:
@@ -63,17 +66,19 @@ func parseVariableDefStmt(tokenizer *Tokenizer) (result VariableDefStmt) {
 	case TkConst:
 		result.Kind = SkConst
 	default:
-		tokenizer.wrongIdent(next)
+		tokenizer.wrongIdent(firstToken)
 	}
 
 	result.Name = parseIdent(tokenizer)
-	next = tokenizer.Next()
+	next := tokenizer.Next()
 	if next.kind == TkColon {
 		result.TypeExpr = parseTypeExpr(tokenizer)
 		next = tokenizer.Next()
 	}
 	tokenizer.expectKind(next, TkOperator)
 	result.Value = parseExpr(tokenizer)
+	lastToken := tokenizer.token
+	result.source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
 	return
 }
 
@@ -92,31 +97,41 @@ func parseContinueStmt(tokenizer *Tokenizer) (result ContinueStmt) {
 }
 
 func parseForLoop(tokenizer *Tokenizer) (result ForLoopStmt) {
-	token := tokenizer.Next()
-	tokenizer.expectKind(token, TkFor)
+	firstToken := tokenizer.Next()
+	tokenizer.expectKind(firstToken, TkFor)
 	result.LoopIdent = parseIdent(tokenizer)
-	token = tokenizer.Next()
+	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkIn)
 	result.Collection = parseExpr(tokenizer)
 	token = tokenizer.Next()
 	tokenizer.expectKind(token, TkDo)
 	result.Body = parseExpr(tokenizer)
+	lastToken := tokenizer.token
+	result.source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
 	return
 }
 
-func parseIfStmt(tokenizer *Tokenizer) (result Expr) {
-	token := tokenizer.Next()
-	tokenizer.expectKind(token, TkIf)
+func parseIfStmt(tokenizer *Tokenizer) Expr {
+	firstToken := tokenizer.Next()
+	tokenizer.expectKind(firstToken, TkIf)
 	condition := parseExpr(tokenizer)
-	token = tokenizer.Next()
+	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkDo)
 	body := parseExpr(tokenizer)
 	if tokenizer.lookAheadToken.kind == TkElse {
 		tokenizer.Next()
 		elseExpr := parseExpr(tokenizer)
-		return IfElseStmt{Condition: condition, Body: body, Else: elseExpr}
+
+		result := IfElseStmt{Condition: condition, Body: body, Else: elseExpr}
+		lastToken := tokenizer.token
+		result.source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
+		return result
+		// return IfElseStmt{Condition: condition, Body: body, Else: elseExpr}
 	}
-	return IfStmt{Condition: condition, Body: body}
+	result := IfStmt{Condition: condition, Body: body}
+	lastToken := tokenizer.token
+	result.source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
+	return result
 }
 
 func (tokenizer *Tokenizer) eatSemicolon() {
@@ -126,16 +141,17 @@ func (tokenizer *Tokenizer) eatSemicolon() {
 }
 
 func parseCodeBlock(tokenizer *Tokenizer) (result CodeBlock) {
-	startToken := tokenizer.Next()
-	tokenizer.expectKind(startToken, TkOpenCurly)
+	firstToken := tokenizer.Next()
+	tokenizer.expectKind(firstToken, TkOpenCurly)
 	tokenizer.eatSemicolon()
 	for tokenizer.lookAheadToken.kind != TkCloseCurly {
 		item := parseStmtOrExpr(tokenizer)
 		result.Items = append(result.Items, item)
 		tokenizer.eatSemicolon()
 	}
-	endToken := tokenizer.Next()
-	tokenizer.expectKind(endToken, TkCloseCurly)
+	lastToken := tokenizer.Next()
+	tokenizer.expectKind(lastToken, TkCloseCurly)
+	result.source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
 	return
 }
 
@@ -175,8 +191,8 @@ func parseCharLit(tokenizer *Tokenizer) (result CharLit) {
 		//rune3, rune3Length = utf8.DecodeRuneInString(token.value[1+rune1Len+rune2Len:])
 		return
 	}
-
-	return CharLit{Rune: rune1}
+	result.Rune = rune1
+	return
 }
 
 func parseStrLit(tokenizer *Tokenizer) (result StrLit) {
@@ -250,10 +266,13 @@ func parseInfixCall(tokenizer *Tokenizer, lhs Expr) (result Call) {
 		if isIdent && OperatorPrecedence[operator.source] > OperatorPrecedence[rhsOperator.source] {
 			// operator precedence
 			result.Args[1] = rhsCall.Args[0]
+			result.source = joinSubstr(tokenizer.code, result.Args[0].Source(), result.Args[1].Source())
 			rhsCall.Args[0] = result
+			rhsCall.source = joinSubstr(tokenizer.code, rhsCall.Args[0].Source(), rhsCall.Args[1].Source())
 			return rhsCall
 		}
 	}
+	result.source = joinSubstr(tokenizer.code, lhs.Source(), rhs.Source())
 	return
 }
 
@@ -277,11 +296,16 @@ func parseCall(tokenizer *Tokenizer, callee Expr) (result Call) {
 	// parse call expr
 	result.Callee = callee
 	result.Args = parseExprList(tokenizer, TkOpenBrace, TkCloseBrace)
+	lastToken := tokenizer.token
+	result.source = joinSubstr(tokenizer.code, callee.Source(), lastToken.value)
 	return
 }
 
 func parseArrayLit(tokenizer *Tokenizer) (result ArrayLit) {
+	firstToken := tokenizer.lookAheadToken
 	result.Items = parseExprList(tokenizer, TkOpenBracket, TkCloseBracket)
+	lastToken := tokenizer.token
+	result.source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
 	return
 }
 
@@ -336,25 +360,26 @@ func parseExpr(tokenizer *Tokenizer) (result Expr) {
 }
 
 func parseStructField(tokenizer *Tokenizer) (result StructField) {
+	firstToken := tokenizer.lookAheadToken
 	result.Name = parseIdent(tokenizer)
 	colon := tokenizer.Next()
 	tokenizer.expectKind(colon, TkColon)
 	result.TypeExpr = parseTypeExpr(tokenizer)
+	lastToken := tokenizer.token
+	result.source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
 	return
 }
 
 func parseTypeDef(tokenizer *Tokenizer) (result StructDef) {
-	var token Token
-	token = tokenizer.Next()
-	tokenizer.expectKind(token, TkType)
+	firstToken := tokenizer.Next()
+	tokenizer.expectKind(firstToken, TkType)
 	result.Name = parseIdent(tokenizer)
-	token = tokenizer.Next()
+	token := tokenizer.Next()
 	tokenizer.expectOperator(token, "=")
 	token = tokenizer.Next()
 	tokenizer.expectIdent(token, "struct")
 	openBrace := tokenizer.Next()
 	tokenizer.expectKind(openBrace, TkOpenCurly)
-
 	tokenizer.eatSemicolon()
 	for tokenizer.lookAheadToken.kind != TkCloseCurly {
 		field := parseStructField(tokenizer)
@@ -362,8 +387,9 @@ func parseTypeDef(tokenizer *Tokenizer) (result StructDef) {
 		tokenizer.eatSemicolon()
 	}
 
-	token = tokenizer.Next()
-	tokenizer.expectKind(token, TkCloseCurly)
+	lastToken := tokenizer.Next()
+	tokenizer.expectKind(lastToken, TkCloseCurly)
+	result.source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
 	return
 }
 
@@ -378,17 +404,20 @@ func parseProcArgumentGroup(tokenizer *Tokenizer) (result []ProcArgument) {
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkColon)
 	typ := parseTypeExpr(tokenizer)
+	lastToken := tokenizer.token
 	for i := range result {
 		result[i].Type = typ
+		// the code is not continuous, doing best effort here
+		result[i].source = joinSubstr(tokenizer.code, result[i].Name.source, lastToken.value)
 	}
 	return
 }
 
 func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
-	token := tokenizer.Next()
-	tokenizer.expectKind(token, TkProc)
+	firstToken := tokenizer.Next()
+	tokenizer.expectKind(firstToken, TkProc)
 	result.Name = parseIdent(tokenizer)
-	token = tokenizer.Next()
+	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkOpenBrace)
 
 	tokenizer.eatSemicolon()
@@ -408,6 +437,8 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 
 	result.Body = parseExpr(tokenizer)
 
+	lastToken := tokenizer.token
+	result.source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
 	return
 }
 
