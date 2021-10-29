@@ -31,6 +31,7 @@ func parseOperator(tokenizer *Tokenizer) (result Ident) {
 }
 
 func parseTypeExpr(tokenizer *Tokenizer) (result TypeExpr) {
+	// firstToken := tokenizer.lookAheadToken
 	result.Ident = parseIdent(tokenizer)
 	// TODO this must be used
 	if tokenizer.lookAheadToken.kind == TkOpenBrace {
@@ -39,6 +40,7 @@ func parseTypeExpr(tokenizer *Tokenizer) (result TypeExpr) {
 	if tokenizer.lookAheadToken.kind == TkOpenBracket {
 		_ = parseExprList(tokenizer, TkOpenBracket, TkCloseBracket)
 	}
+	// lastToken := tokenizer.token
 	return
 }
 
@@ -140,6 +142,7 @@ func parseCodeBlock(tokenizer *Tokenizer) (result CodeBlock) {
 func parseCharLit(tokenizer *Tokenizer) (result CharLit) {
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkCharLit)
+	result.source = token.value
 
 	rune1, rune1Len := utf8.DecodeRuneInString(token.value[1:])
 	if rune1 == '\\' {
@@ -227,6 +230,8 @@ func parseStrLit(tokenizer *Tokenizer) (result StrLit) {
 
 func parseIntLit(tokenizer *Tokenizer) (result IntLit) {
 	token := tokenizer.Next()
+	tokenizer.expectKind(token, TkIntLit)
+	result.source = token.value
 	intValue, err := strconv.Atoi(token.value)
 	if err != nil {
 		panic("internal error invalid int token")
@@ -256,7 +261,7 @@ func parseInfixCall(tokenizer *Tokenizer, lhs Expr) (result Call) {
 func parseExprList(tokenizer *Tokenizer, tkOpen, tkClose TokenKind) (result []Expr) {
 	next := tokenizer.Next()
 	tokenizer.expectKind(next, tkOpen)
- 	if tokenizer.lookAheadToken.kind != tkClose {
+	if tokenizer.lookAheadToken.kind != tkClose {
 		result = append(result, parseExpr(tokenizer))
 		for tokenizer.lookAheadToken.kind == TkComma {
 			tokenizer.Next()
@@ -357,7 +362,7 @@ func parseTypeDef(tokenizer *Tokenizer) (result StructDef) {
 		tokenizer.eatSemicolon()
 	}
 
-  token = tokenizer.Next()
+	token = tokenizer.Next()
 	tokenizer.expectKind(token, TkCloseCurly)
 	return
 }
@@ -408,6 +413,7 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 
 func parsePackage(code, filename string) (result PackageDef) {
 	result.Name = path.Base(filename)
+	result.source = code
 	fmt.Println("processing package: ", result.Name)
 	var tokenizer = NewTokenizer(code, filename)
 	for true {

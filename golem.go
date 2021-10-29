@@ -29,6 +29,7 @@ func main() {
 
 	fmt.Println("----------------------- parsed  code -----------------------")
 	pak := parsePackage(string(bytes), filename)
+	validateSourceSet(pak.source, pak)
 	fmt.Println(AstFormat(pak))
 	fmt.Println("--------------------- typechecked code ---------------------")
 	tc := NewTypeChecker(string(bytes), filename)
