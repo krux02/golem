@@ -4,6 +4,7 @@ package main
 
 type AstNode interface {
 	prettyPrint(*AstPrettyPrinter)
+	Source() string
 	// TODO add something here to access original source string.
 }
 
@@ -12,7 +13,6 @@ type Expr interface {
 	// get the substring of the original source string. This needs to be
 	// a real substring to be convertible into line column
 	// representation
-	Source() string
 	expression()
 }
 
@@ -126,9 +126,9 @@ type ArrayLit struct {
 
 type Call struct {
 	AbstractAstNode
-	Sym  Ident
+	Callee Expr
 	Args []Expr
-	// other properties
+	// other properties (TODO can this be removed?)
 	Braced bool // true for (a+b) +(a,b), false for a+b
 }
 

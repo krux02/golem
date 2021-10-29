@@ -822,6 +822,7 @@ from. Exchanging data from different heaps requires explicit
 conversions. Either to raw pointers (unmanaged and unchecked) or to
 other pointer/ref types with appropriate conversion operations.
 
+**
 
 * A defensive justification for macros
 

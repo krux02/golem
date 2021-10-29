@@ -45,7 +45,7 @@ func (ident Ident) prettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (call Call) prettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString(call.Sym.Name)
+	builder.WriteAstNode(call.Callee)
 	builder.WriteString("(")
 	for i, arg := range call.Args {
 		if i != 0 {
@@ -251,7 +251,7 @@ func (loopStmt ForLoopStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(loopStmt.LoopIdent.Name)
 	builder.WriteString(" in ")
 	builder.WriteAstNode(loopStmt.Collection)
-	builder.WriteString(" ")
+	builder.WriteString(" do ")
 	builder.WriteAstNode(loopStmt.Body)
 }
 
@@ -260,28 +260,28 @@ func (loopStmt TcForLoopStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(loopStmt.LoopSym.Name)
 	builder.WriteString(" in ")
 	builder.WriteAstNode(loopStmt.Collection)
-	builder.WriteString(" ")
+	builder.WriteString(" do ")
 	builder.WriteAstNode(loopStmt.Body)
 }
 
 func (ifStmt IfStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("if ")
 	builder.WriteAstNode(ifStmt.Condition)
-	builder.WriteString(" ")
+	builder.WriteString(" do ")
 	builder.WriteAstNode(ifStmt.Body)
 }
 
 func (ifStmt TcIfStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("if ")
 	builder.WriteAstNode(ifStmt.Condition)
-	builder.WriteString(" ")
+	builder.WriteString(" do ")
 	builder.WriteAstNode(ifStmt.Body)
 }
 
 func (ifStmt IfElseStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("if ")
 	builder.WriteAstNode(ifStmt.Condition)
-	builder.WriteString(" ")
+	builder.WriteString(" do ")
 	builder.WriteAstNode(ifStmt.Body)
 	builder.WriteString(" else ")
 	builder.WriteAstNode(ifStmt.Else)
@@ -290,7 +290,7 @@ func (ifStmt IfElseStmt) prettyPrint(builder *AstPrettyPrinter) {
 func (ifStmt TcIfElseStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("if ")
 	builder.WriteAstNode(ifStmt.Condition)
-	builder.WriteString(" ")
+	builder.WriteString(" do ")
 	builder.WriteAstNode(ifStmt.Body)
 	builder.WriteString(" else ")
 	builder.WriteAstNode(ifStmt.Else)

@@ -21,9 +21,12 @@ func parseTypeExpr(tokenizer *Tokenizer) (result TypeExpr) {
 	tokenizer.expectKind(token, TkIdent)
 	result.Ident = token.value
 
+	// TODO this must be used
+	if tokenizer.lookAheadToken.kind == TkOpenBrace {
+		_ = parseExprList(tokenizer, TkOpenBrace, TkCloseBrace)
+	}
 	if tokenizer.lookAheadToken.kind == TkOpenBracket {
-		// TODO this must be used
-		_ = parseArrayLit(tokenizer)
+		_ = parseExprList(tokenizer, TkOpenBracket, TkCloseBracket)
 	}
 	return
 }
@@ -233,11 +236,11 @@ func parseInfixCall(tokenizer *Tokenizer, lhs Expr) (result Call) {
 	token := tokenizer.Next()
 	operator := Ident{Name: token.value}
 	rhs := parseExpr(tokenizer)
-	result = Call{Sym: operator, Args: []Expr{lhs, rhs}}
+	result = Call{Callee: operator, Args: []Expr{lhs, rhs}}
 
 	if rhsCall, ok := rhs.(Call); ok && !rhsCall.Braced {
-		rhsOperator := rhsCall.Sym
-		if OperatorPrecedence[operator.Name] > OperatorPrecedence[rhsOperator.Name] {
+		rhsOperator, isIdent := rhsCall.Callee.(Ident)
+		if isIdent && OperatorPrecedence[operator.Name] > OperatorPrecedence[rhsOperator.Name] {
 			// operator precedence
 			result.Args[1] = rhsCall.Args[0]
 			rhsCall.Args[0] = result
@@ -247,49 +250,31 @@ func parseInfixCall(tokenizer *Tokenizer, lhs Expr) (result Call) {
 	return
 }
 
-func parseCall(tokenizer *Tokenizer, callee Expr) (result Call) {
-	// parse call expr
-	var args []Expr
-	tokenizer.Next()
-	// TODO this need a clean revisit
-	for true {
-		switch tokenizer.lookAheadToken.kind {
-		case TkIdent, TkStrLit, TkIntLit:
-			args = append(args, parseExpr(tokenizer))
-			switch tokenizer.lookAheadToken.kind {
-			case TkComma:
-				tokenizer.Next()
-				continue
-			case TkCloseBrace:
-				// TkCloseBrace is already handled in the outer switch
-				// this is really ugly, why? I must be doing something wrong
-				continue
-			default:
-			}
-			panic(tokenizer.wrongKind(tokenizer.lookAheadToken))
-		case TkCloseBrace:
-			tokenizer.Next()
-			result.Sym = callee.(Ident)
-			result.Args = args
-			return
-		}
-		panic(tokenizer.wrongKind(tokenizer.lookAheadToken))
-	}
-	panic("unreachable")
-}
-
-func parseArrayLit(tokenizer *Tokenizer) (result ArrayLit) {
+// comma separated list of expressions. used for call arguments and array literals
+func parseExprList(tokenizer *Tokenizer, tkOpen, tkClose TokenKind) (result []Expr) {
 	next := tokenizer.Next()
-	tokenizer.expectKind(next, TkOpenBracket)
-	if tokenizer.lookAheadToken.kind != TkCloseBracket {
-		result.Items = append(result.Items, parseExpr(tokenizer))
+	tokenizer.expectKind(next, tkOpen)
+ 	if tokenizer.lookAheadToken.kind != tkClose {
+		result = append(result, parseExpr(tokenizer))
 		for tokenizer.lookAheadToken.kind == TkComma {
 			tokenizer.Next()
-			result.Items = append(result.Items, parseExpr(tokenizer))
+			result = append(result, parseExpr(tokenizer))
 		}
 	}
 	next = tokenizer.Next()
-	tokenizer.expectKind(next, TkCloseBracket)
+	tokenizer.expectKind(next, tkClose)
+	return
+}
+
+func parseCall(tokenizer *Tokenizer, callee Expr) (result Call) {
+	// parse call expr
+	result.Callee = callee
+	result.Args = parseExprList(tokenizer, TkOpenBrace, TkCloseBrace)
+	return
+}
+
+func parseArrayLit(tokenizer *Tokenizer) (result ArrayLit) {
+	result.Items = parseExprList(tokenizer, TkOpenBracket, TkCloseBracket)
 	return
 }
 

@@ -8,6 +8,11 @@ type BuiltinType struct {
 	name string
 }
 
+func (typ BuiltinType) Source() string {
+	// should this panic?
+	return ""
+}
+
 type TypeChecker struct {
 	code string
 	filename string
@@ -209,7 +214,7 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 }
 
 func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) (result TcCall) {
-	procSym := scope.LookUpProc(call.Sym)
+	procSym := scope.LookUpProc(call.Callee.(Ident))
 	ExpectType(procSym.Impl.ResultType, expected)
 	result.Sym = procSym
 	if procSym.Impl.printfargs {
