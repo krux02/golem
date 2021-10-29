@@ -41,7 +41,9 @@ func AstFormat(node AstNode) string {
 }
 
 func (ident Ident) prettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString(ident.Name)
+	// the only exception where pretty Print may print the original
+	// source.
+	builder.WriteString(ident.source)
 }
 
 func (call Call) prettyPrint(builder *AstPrettyPrinter) {
@@ -171,17 +173,17 @@ func (lit IntLit) prettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (typeExpr TypeExpr) prettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString(typeExpr.Ident)
+	builder.WriteString(typeExpr.Ident.source)
 }
 
 func (structDef StructDef) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("type ")
-	builder.WriteString(structDef.Name)
+	builder.WriteAstNode(structDef.Name)
 	builder.WriteString(" = struct {")
 	builder.Indentation++
 	for _, field := range structDef.Fields {
 		builder.NewlineAndIndent()
-		builder.WriteString(field.Name)
+		builder.WriteAstNode(field.Name)
 		builder.WriteString(": ")
 		builder.WriteAstNode(field.TypeExpr)
 	}
@@ -192,13 +194,13 @@ func (structDef StructDef) prettyPrint(builder *AstPrettyPrinter) {
 
 func (procDef ProcDef) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("proc ")
-	builder.WriteString(procDef.Name)
+	builder.WriteAstNode(procDef.Name)
 	builder.WriteString("(")
 	if len(procDef.Args) > 3 {
 		builder.Indentation += 2
 		for _, arg := range procDef.Args {
 			builder.NewlineAndIndent()
-			builder.WriteString(arg.Name)
+			builder.WriteAstNode(arg.Name)
 			builder.WriteString(": ")
 			builder.WriteAstNode(arg.Type)
 		}
@@ -210,7 +212,7 @@ func (procDef ProcDef) prettyPrint(builder *AstPrettyPrinter) {
 			if i != 0 {
 				builder.WriteString("; ")
 			}
-			builder.WriteString(arg.Name)
+			builder.WriteAstNode(arg.Name)
 			builder.WriteString(": ")
 			builder.WriteAstNode(arg.Type)
 		}
@@ -237,7 +239,7 @@ func (stmt VariableDefStmt) prettyPrint(builder *AstPrettyPrinter) {
 	default:
 		panic("illegal or not implemented")
 	}
-	builder.WriteString(stmt.Name)
+	builder.WriteAstNode(stmt.Name)
 	if stmt.TypeExpr.IsSet() {
 		builder.WriteString(": ")
 		builder.WriteAstNode(stmt.TypeExpr)
@@ -248,7 +250,7 @@ func (stmt VariableDefStmt) prettyPrint(builder *AstPrettyPrinter) {
 
 func (loopStmt ForLoopStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("for ")
-	builder.WriteString(loopStmt.LoopIdent.Name)
+	builder.WriteAstNode(loopStmt.LoopIdent)
 	builder.WriteString(" in ")
 	builder.WriteAstNode(loopStmt.Collection)
 	builder.WriteString(" do ")

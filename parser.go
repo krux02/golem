@@ -16,11 +16,22 @@ var OperatorPrecedence map[string]int = map[string]int{
 	"-": 5,
 }
 
-func parseTypeExpr(tokenizer *Tokenizer) (result TypeExpr) {
+func parseIdent(tokenizer *Tokenizer) (result Ident) {
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkIdent)
-	result.Ident = token.value
+	result.source = token.value
+	return
+}
 
+func parseOperator(tokenizer *Tokenizer) (result Ident) {
+	token := tokenizer.Next()
+	tokenizer.expectKind(token, TkOperator)
+	result.source = token.value
+	return
+}
+
+func parseTypeExpr(tokenizer *Tokenizer) (result TypeExpr) {
+	result.Ident = parseIdent(tokenizer)
 	// TODO this must be used
 	if tokenizer.lookAheadToken.kind == TkOpenBrace {
 		_ = parseExprList(tokenizer, TkOpenBrace, TkCloseBrace)
@@ -53,9 +64,7 @@ func parseVariableDefStmt(tokenizer *Tokenizer) (result VariableDefStmt) {
 		tokenizer.wrongIdent(next)
 	}
 
-	next = tokenizer.Next()
-	tokenizer.expectKind(next, TkIdent)
-	result.Name = next.value
+	result.Name = parseIdent(tokenizer)
 	next = tokenizer.Next()
 	if next.kind == TkColon {
 		result.TypeExpr = parseTypeExpr(tokenizer)
@@ -170,6 +179,7 @@ func parseCharLit(tokenizer *Tokenizer) (result CharLit) {
 func parseStrLit(tokenizer *Tokenizer) (result StrLit) {
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkStrLit)
+	result.source = token.value
 	var b strings.Builder
 	b.Grow(len(token.value) - 2)
 	var processEscape bool
@@ -225,22 +235,14 @@ func parseIntLit(tokenizer *Tokenizer) (result IntLit) {
 	return
 }
 
-func parseIdent(tokenizer *Tokenizer) (result Ident) {
-	// this func implementation is a joke, but it should be consistent with the other parse thingies
-	token := tokenizer.Next()
-	result.Name = token.value
-	return
-}
-
 func parseInfixCall(tokenizer *Tokenizer, lhs Expr) (result Call) {
-	token := tokenizer.Next()
-	operator := Ident{Name: token.value}
+	operator := parseOperator(tokenizer)
 	rhs := parseExpr(tokenizer)
 	result = Call{Callee: operator, Args: []Expr{lhs, rhs}}
 
 	if rhsCall, ok := rhs.(Call); ok && !rhsCall.Braced {
 		rhsOperator, isIdent := rhsCall.Callee.(Ident)
-		if isIdent && OperatorPrecedence[operator.Name] > OperatorPrecedence[rhsOperator.Name] {
+		if isIdent && OperatorPrecedence[operator.source] > OperatorPrecedence[rhsOperator.source] {
 			// operator precedence
 			result.Args[1] = rhsCall.Args[0]
 			rhsCall.Args[0] = result
@@ -328,81 +330,69 @@ func parseExpr(tokenizer *Tokenizer) (result Expr) {
 	return
 }
 
+func parseStructField(tokenizer *Tokenizer) (result StructField) {
+	result.Name = parseIdent(tokenizer)
+	colon := tokenizer.Next()
+	tokenizer.expectKind(colon, TkColon)
+	result.TypeExpr = parseTypeExpr(tokenizer)
+	return
+}
+
 func parseTypeDef(tokenizer *Tokenizer) (result StructDef) {
 	var token Token
 	token = tokenizer.Next()
 	tokenizer.expectKind(token, TkType)
-	token = tokenizer.Next()
-	tokenizer.expectKind(token, TkIdent)
-	result.Name = token.value
+	result.Name = parseIdent(tokenizer)
 	token = tokenizer.Next()
 	tokenizer.expectOperator(token, "=")
 	token = tokenizer.Next()
 	tokenizer.expectIdent(token, "struct")
-
 	openBrace := tokenizer.Next()
 	tokenizer.expectKind(openBrace, TkOpenCurly)
 
-	token = tokenizer.Next()
-
-	for token.kind == TkSemicolon {
-		token = tokenizer.Next()
+	tokenizer.eatSemicolon()
+	for tokenizer.lookAheadToken.kind != TkCloseCurly {
+		field := parseStructField(tokenizer)
+		result.Fields = append(result.Fields, field)
+		tokenizer.eatSemicolon()
 	}
 
-	for token.kind == TkIdent {
-		var structField StructField
-		name := token
-		tokenizer.expectKind(name, TkIdent)
-		structField.Name = name.value
-		colon := tokenizer.Next()
-		tokenizer.expectKind(colon, TkColon)
-		structField.TypeExpr = parseTypeExpr(tokenizer)
-		token = tokenizer.Next()
-		tokenizer.expectKind(token, TkSemicolon)
-		for token.kind == TkSemicolon {
-			token = tokenizer.Next()
-		}
-		result.Fields = append(result.Fields, structField)
-	}
-
+  token = tokenizer.Next()
 	tokenizer.expectKind(token, TkCloseCurly)
+	return
+}
+
+func parseProcArgumentGroup(tokenizer *Tokenizer) (result []ProcArgument) {
+	name := parseIdent(tokenizer)
+	result = append(result, ProcArgument{Name: name})
+	for tokenizer.lookAheadToken.kind == TkComma {
+		_ = tokenizer.Next() // throw away the comma
+		name := parseIdent(tokenizer)
+		result = append(result, ProcArgument{Name: name})
+	}
+	token := tokenizer.Next()
+	tokenizer.expectKind(token, TkColon)
+	typ := parseTypeExpr(tokenizer)
+	for i := range result {
+		result[i].Type = typ
+	}
 	return
 }
 
 func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkProc)
-	token = tokenizer.Next()
-	tokenizer.expectKind(token, TkIdent)
-	result.Name = token.value
+	result.Name = parseIdent(tokenizer)
 	token = tokenizer.Next()
 	tokenizer.expectKind(token, TkOpenBrace)
-	token = tokenizer.Next()
 
-	for token.kind == TkIdent {
-		startIndex := len(result.Args)
-
-		result.Args = append(result.Args, ProcArgument{Name: token.value})
-		token = tokenizer.Next()
-		for token.kind == TkComma {
-			token = tokenizer.Next()
-			tokenizer.expectKind(token, TkIdent)
-			result.Args = append(result.Args, ProcArgument{Name: token.value})
-			token = tokenizer.Next()
-		}
-
-		tokenizer.expectKind(token, TkColon)
-
-		typ := parseTypeExpr(tokenizer)
-
-		for i := startIndex; i < len(result.Args); i++ {
-			result.Args[i].Type = typ
-		}
-		token = tokenizer.Next()
-		if token.kind == TkSemicolon {
-			token = tokenizer.Next()
-		}
+	tokenizer.eatSemicolon()
+	for tokenizer.lookAheadToken.kind != TkCloseBrace {
+		result.Args = append(result.Args, parseProcArgumentGroup(tokenizer)...)
+		tokenizer.eatSemicolon()
 	}
+
+	token = tokenizer.Next()
 	tokenizer.expectKind(token, TkCloseBrace)
 
 	token = tokenizer.Next()

@@ -70,15 +70,15 @@ func (scope Scope) NewSubScope() Scope {
 	}
 }
 
-func (scope Scope) NewSymbol(name string, kind SymbolKind, typ Type) TcSymbol {
-	result := TcSymbol{Name: name, Kind: kind, Typ: typ}
-	scope.Variables[name] = result
+func (scope Scope) NewSymbol(name Ident, kind SymbolKind, typ Type) TcSymbol {
+	result := TcSymbol{Name: name.source, Kind: kind, Typ: typ}
+	scope.Variables[name.source] = result
 	return result
 }
 
 func (scope Scope) LookUpType(expr TypeExpr) Type {
 	// TODO really slow lookup, should really be faster
-	name := expr.Ident
+	name := expr.Ident.source
 	for key, value := range scope.Types {
 		if key == name {
 			return value
@@ -92,21 +92,21 @@ func (scope Scope) LookUpType(expr TypeExpr) Type {
 
 func (scope Scope) LookUpProc(ident Ident) TcProcSymbol {
 	if scope == nil {
-		panic(fmt.Sprintf("Proc not found: %s", ident.Name))
+		panic(fmt.Sprintf("Proc not found: %s", ident.source))
 	}
 
-	if impl, ok := scope.Procedures[ident.Name]; ok {
-		return TcProcSymbol{Name: ident.Name, Impl: impl}
+	if impl, ok := scope.Procedures[ident.source]; ok {
+		return TcProcSymbol{Name: ident.source, Impl: impl}
 	}
 	return scope.Parent.LookUpProc(ident)
 }
 
 func (scope Scope) LookUpLetSym(ident Ident) TcSymbol {
 	if scope == nil {
-		panic(fmt.Sprintf("let sym not found: %s", ident.Name))
+		panic(fmt.Sprintf("let sym not found: %s", ident.source))
 	}
 
-	if sym, ok := scope.Variables[ident.Name]; ok {
+	if sym, ok := scope.Variables[ident.source]; ok {
 		return sym
 	}
 	return scope.Parent.LookUpLetSym(ident)
@@ -114,10 +114,10 @@ func (scope Scope) LookUpLetSym(ident Ident) TcSymbol {
 
 func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def StructDef) TcStructDef {
 	var result TcStructDef
-	result.Name = def.Name
+	result.Name = def.Name.source
 	for _, field := range def.Fields {
 		var tcField TcStructField
-		tcField.Name = field.Name
+		tcField.Name = field.Name.source
 		tcField.Type = scope.LookUpType(field.TypeExpr)
 		result.Fields = append(result.Fields, tcField)
 	}
@@ -127,7 +127,7 @@ func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def StructDef) TcStructDe
 func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result TcProcDef) {
 	scope := parentScope.NewSubScope()
 	scope.CurrentProc = &result
-	result.Name = def.Name
+	result.Name = def.Name.source
 	for _, arg := range def.Args {
 		tcArg := scope.NewSymbol(arg.Name, SkProcArg, scope.LookUpType(arg.Type))
 		result.Args = append(result.Args, tcArg)
@@ -252,7 +252,7 @@ func (tc *TypeChecker) TypeCheckCodeBlock(scope Scope, arg CodeBlock, expected T
 }
 
 func (expr TypeExpr) IsSet() bool {
-	return expr.Ident != ""
+	return expr.source != ""
 }
 
 func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt) TcVariableDefStmt {
@@ -389,7 +389,7 @@ func (tc *TypeChecker) TypeCheckForLoopStmt(scope Scope, loopArg ForLoopStmt) (r
 	scope = scope.NewSubScope()
 	// currently only iteration on strings in possible (of course that is not final)
 	result.Collection = tc.TypeCheckExpr(scope, loopArg.Collection, TypeString)
-	result.LoopSym = scope.NewSymbol(loopArg.LoopIdent.Name, SkLoopIterator, TypeChar)
+	result.LoopSym = scope.NewSymbol(loopArg.LoopIdent, SkLoopIterator, TypeChar)
 	result.Body = tc.TypeCheckExpr(scope, loopArg.Body, TypeVoid)
 	return
 }

@@ -406,6 +406,12 @@ func (tokenizer *Tokenizer) expectKind(token Token, kind TokenKind) {
 	}
 }
 
+func (tokenizer *Tokenizer) expectKind2(token Token, kind1, kind2 TokenKind) {
+	if token.kind != kind1 && token.kind != kind2 {
+		panic(tokenizer.wrongKind(token))
+	}
+}
+
 func (tokenizer *Tokenizer) expectIdent(token Token, arg string) {
 	tokenizer.expectKind(token, TkIdent)
 	if token.value != arg {

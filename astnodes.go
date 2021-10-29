@@ -24,22 +24,29 @@ func (astNode AbstractAstNode) Source() string {
 	return astNode.source
 }
 
+
+// most simple AST node
+type Ident struct {
+	AbstractAstNode
+	// the abstract source field is the identifier value
+}
+
 type TypeExpr struct {
 	AbstractAstNode
 	// this type is a placeholder, it is supposed to become more complex
-	Ident string
+	Ident Ident
 }
 
 type StructField struct {
 	AbstractAstNode
-	Name     string
+	Name     Ident
 	TypeExpr TypeExpr
 }
 
 type VariableDefStmt struct {
 	AbstractAstNode
 	Kind     SymbolKind // only SkVar SkLet SkConst allowed
-	Name     string
+	Name     Ident
 	TypeExpr TypeExpr
 	Value    Expr
 }
@@ -79,24 +86,19 @@ type ReturnStmt struct {
 
 type StructDef struct {
 	AbstractAstNode
-	Name   string
+	Name   Ident
 	Fields []StructField
 }
 
 type ProcArgument struct {
 	AbstractAstNode
-	Name string
+	Name Ident
 	Type TypeExpr
 }
 
 type CodeBlock struct {
 	AbstractAstNode
 	Items []Expr
-}
-
-type Ident struct {
-	AbstractAstNode
-	Name string
 }
 
 type StrLit struct {
@@ -134,7 +136,7 @@ type Call struct {
 
 type ProcDef struct {
 	AbstractAstNode
-	Name       string
+	Name       Ident
 	Args       []ProcArgument
 	ResultType TypeExpr
 	Body       Expr
