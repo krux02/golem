@@ -269,9 +269,17 @@ all lead to poor decision making. Decisions that are often hard to
 revert later.
 
 The solution here is simple. The language should have a clear opinion
-on what solution is best and flatten the path to get to this
+on what solution is best and even out the path to get to this
 solution. But the language should never make it impossible or even
 hard for people who disagree on these decisions.
+
+* Performance Matters
+
+Any language design that would prevent a theoretical speed limit that
+is worse than C is rejected because of it.
+
+hard for people who disagree on these decisions. Different
+distributions (flavors) of the same language should be possible.
 
 * Performance Matters
 
@@ -497,7 +505,7 @@ is just classical doc comments. They are interleaved, because there is
 source code, then there is documentation (comment), and then source
 code again. Orthogonal documentation is documentation out of
 source. It is orthogonal, because it doesn't touch the source code.
-
+a
 Interleaved documentation is best when there isn't a lot of
 documentation to begin with. It is just simpler to start this
 way. When the documentation becomes more complex and detailed, it can
@@ -822,7 +830,60 @@ from. Exchanging data from different heaps requires explicit
 conversions. Either to raw pointers (unmanaged and unchecked) or to
 other pointer/ref types with appropriate conversion operations.
 
-**
+** managing unavoidable complexity in compiler/language development.
+
+Tha language that I worked on for a long time (Nim) accumulated over
+the past many experimental programming language features there were
+never rolled back. The implementation was almost never isolated in one
+location in the compiler. Logic was scattered around. One field in the
+ast node, and the rest distributed in the big semantic checker that
+did almost everything. Over time the semantic checker becomes less and
+less readable and maintaining old features or fixing bugs becomes a
+real problem.
+
+Theoretically it is possible to develop each language feature or
+extension as its own compilation pass in the compiler. This would
+allow to isolate that language feature, enable easy removal and last
+but not least, it would keep the other language features in isolation
+(maintains their readability). Overall this approach would have good
+code maintainability. But in the long run this would cause compile
+time explosion, as the amount of compile time features only goes up,
+not down.
+
+This problem exists in more than just compile development. Therefore a
+solution in a language that helps to aid this problem is beneficial in
+more than just compiler development.
+
+** Auto Option Wrapping
+
+automatic packing and unpacking in and out of the Option type.
+
+#+begin_src
+
+typeof(if (...) { "str" }) == type(Option[string])
+typeof(if (...) { "str" } else { 123 }) == type(Either[string, int])
+typeof(if (...) { "str" } else {"str"}) == type(string)
+
+var tmp: Option[int]
+
+if (tmp) {
+  typeof(tmp) == type(int)
+}
+
+typeof(if (...) { "str" } else {"str"}) == type(string)
+#+end_src
+
+The idea here came from emacs lisp, where ~(when <cond> body...)~
+returns either the result of body, ~nil~. This works very elegantly
+within elisp, because everything here is a pointer type. There are no
+value types. Therefore the (hypothetical) type ~Option[string]~ has
+conceptually no overhead. This idea is in conflict with the ~bool~
+type and ~bool~ values. ~elisp~ doesn't have a dedicated ~bool~ type,
+every value, including ~0~ is equivalent to a ~true~ in a
+conditional. A ~false~ value that isn't ~nil~ would be in conflict
+with the design of ~elisp~. The bool type must be implemented as
+~Option[t]~ (Option[Unit]).
+
 
 * A defensive justification for macros
 
