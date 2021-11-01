@@ -1,9 +1,18 @@
 
+negative integer literals:
+
+When `-123` is a single negative integer token, then x-1 are just two
+consecutive tokens, no operator present: problem.
+
+When -128 is negation operator on literal, expressing the most
+negative integer becomes a problem (there is no positive version of
+it)
+
+currest solution is bad
 
 statement vs expression
 
 untyped vs typed
-
 
 An Expression Can be a Statement,
 A Statement can't be an expression
@@ -14,9 +23,5 @@ AST? Do we need typechecking for this?
 Parsing a block expression, everything is a statement, except the last
 entry, which is an expression. But during parsing it is unknown if we
 are already
-
-
-
-
 
 A Semicolon Token is never an Expression it is always just a token

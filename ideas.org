@@ -236,6 +236,9 @@ symbols, or to declare an offical pronounciation for each symbol that
 is used. Focussing too much on humans might harm compilation
 time.
 
+Studies have shown that reading out code, knowing its pronunciation
+greatly improves learnability.
+
 Things to avoid in a human friendly language:
 
   * underscores and the start or end of symbol

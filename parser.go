@@ -48,7 +48,7 @@ func parseTypeExpr(tokenizer *Tokenizer) (result TypeExpr) {
 func parseReturnStmt(tokenizer *Tokenizer) (result ReturnStmt) {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkReturn)
-	result.Value = parseExpr(tokenizer)
+	result.Value = parseExpr(tokenizer, false)
 	lastToken := tokenizer.token
 	result.source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
 	return
@@ -76,7 +76,7 @@ func parseVariableDefStmt(tokenizer *Tokenizer) (result VariableDefStmt) {
 		next = tokenizer.Next()
 	}
 	tokenizer.expectKind(next, TkOperator)
-	result.Value = parseExpr(tokenizer)
+	result.Value = parseExpr(tokenizer, false)
 	lastToken := tokenizer.token
 	result.source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
 	return
@@ -102,10 +102,10 @@ func parseForLoop(tokenizer *Tokenizer) (result ForLoopStmt) {
 	result.LoopIdent = parseIdent(tokenizer)
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkIn)
-	result.Collection = parseExpr(tokenizer)
+	result.Collection = parseExpr(tokenizer, false)
 	token = tokenizer.Next()
 	tokenizer.expectKind(token, TkDo)
-	result.Body = parseExpr(tokenizer)
+	result.Body = parseExpr(tokenizer, false)
 	lastToken := tokenizer.token
 	result.source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
 	return
@@ -114,13 +114,13 @@ func parseForLoop(tokenizer *Tokenizer) (result ForLoopStmt) {
 func parseIfStmt(tokenizer *Tokenizer) Expr {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkIf)
-	condition := parseExpr(tokenizer)
+	condition := parseExpr(tokenizer, false)
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkDo)
-	body := parseExpr(tokenizer)
+	body := parseExpr(tokenizer, false)
 	if tokenizer.lookAheadToken.kind == TkElse {
 		tokenizer.Next()
-		elseExpr := parseExpr(tokenizer)
+		elseExpr := parseExpr(tokenizer, false)
 
 		result := IfElseStmt{Condition: condition, Body: body, Else: elseExpr}
 		lastToken := tokenizer.token
@@ -258,7 +258,7 @@ func parseIntLit(tokenizer *Tokenizer) (result IntLit) {
 
 func parseInfixCall(tokenizer *Tokenizer, lhs Expr) (result Call) {
 	operator := parseOperator(tokenizer)
-	rhs := parseExpr(tokenizer)
+	rhs := parseExpr(tokenizer, false)
 	result = Call{Callee: operator, Args: []Expr{lhs, rhs}}
 
 	if rhsCall, ok := rhs.(Call); ok && !rhsCall.Braced {
@@ -281,10 +281,10 @@ func parseExprList(tokenizer *Tokenizer, tkOpen, tkClose TokenKind) (result []Ex
 	next := tokenizer.Next()
 	tokenizer.expectKind(next, tkOpen)
 	if tokenizer.lookAheadToken.kind != tkClose {
-		result = append(result, parseExpr(tokenizer))
+		result = append(result, parseExpr(tokenizer, false))
 		for tokenizer.lookAheadToken.kind == TkComma {
 			tokenizer.Next()
-			result = append(result, parseExpr(tokenizer))
+			result = append(result, parseExpr(tokenizer, false))
 		}
 	}
 	next = tokenizer.Next()
@@ -324,10 +324,29 @@ func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
 	case TkIf:
 		return (Expr)(parseIfStmt(tokenizer))
 	}
-	return parseExpr(tokenizer)
+	return parseExpr(tokenizer, false)
 }
 
-func parseExpr(tokenizer *Tokenizer) (result Expr) {
+func parsePrefixCall(tokenizer *Tokenizer) (result Call) {
+	firstToken := tokenizer.lookAheadToken
+	op := parseOperator(tokenizer)
+	kind := tokenizer.lookAheadToken.kind
+
+	// this would be the place to introduce negative integer literals
+	// if op.source == "-" && (kind == TkIntLit || kind == TkFloatLit) {
+	// }
+
+	result.Callee = op
+	result.Args = []Expr{parseExpr(tokenizer, true)}
+	// other properties (TODO can this be removed?)
+	result.Prefix = true
+	result.Braced = true
+	lastToken := tokenizer.token
+	result.source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
+	return
+}
+
+func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 	switch tokenizer.lookAheadToken.kind {
 	case TkIdent:
 		result = (Expr)(parseIdent(tokenizer))
@@ -341,6 +360,13 @@ func parseExpr(tokenizer *Tokenizer) (result Expr) {
 		result = (Expr)(parseIntLit(tokenizer))
 	case TkOpenBracket:
 		result = (Expr)(parseArrayLit(tokenizer))
+	case TkOperator:
+		if prefixExpr {
+			// do not allow prefix prefix expression?
+			panic(tokenizer.wrongKind(tokenizer.lookAheadToken))
+		} else {
+			result = (Expr)(parsePrefixCall(tokenizer))
+		}
 	default:
 		panic(tokenizer.wrongKind(tokenizer.lookAheadToken))
 	}
@@ -435,7 +461,7 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 	token = tokenizer.Next()
 	tokenizer.expectOperator(token, "=")
 
-	result.Body = parseExpr(tokenizer)
+	result.Body = parseExpr(tokenizer, false)
 
 	lastToken := tokenizer.token
 	result.source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)

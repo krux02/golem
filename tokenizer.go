@@ -27,17 +27,17 @@ const (
 	// keywords
 	TkType
 	TkProc
-  TkVar
-  TkLet
-  TkConst
-  TkReturn
-  TkBreak
-  TkContinue
+	TkVar
+	TkLet
+	TkConst
+	TkReturn
+	TkBreak
+	TkContinue
 
 	TkOr
 	TkAnd
 	TkIn
-  TkIf
+	TkIf
 	TkElse
 	TkFor
 	TkDo
@@ -66,21 +66,21 @@ var TokenKindNames = [...]string{
 	TkFloatLit:     "FloatLit",
 	TkCharLit:      "CharLit",
 	TkDocComment:   "DocComment",
-  TkType: "Type",
-	TkProc: "Proc",
-  TkVar: "Var",
-  TkLet: "Let",
-  TkConst: "Const",
-  TkReturn: "Return",
-  TkBreak: "Break",
-  TkContinue: "Continue",
-	TkOr:						"Or",
-	TkAnd:					"And",
-  TkIn:						"In",
+	TkType:         "Type",
+	TkProc:         "Proc",
+	TkVar:          "Var",
+	TkLet:          "Let",
+	TkConst:        "Const",
+	TkReturn:       "Return",
+	TkBreak:        "Break",
+	TkContinue:     "Continue",
+	TkOr:           "Or",
+	TkAnd:          "And",
+	TkIn:           "In",
 	TkIf:           "If",
 	TkElse:         "Else",
 	TkFor:          "For",
-	TkDo:						"Do",
+	TkDo:           "Do",
 	TkOpenBrace:    "OpenBrace",
 	TkCloseBrace:   "CloseBrace",
 	TkOpenBracket:  "OpenBracket",
@@ -232,8 +232,8 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 		switch result.value {
 
 		case "type":
-      result.kind = TkType
-    case "proc":
+			result.kind = TkType
+		case "proc":
 			result.kind = TkProc
 		case "var":
 			result.kind = TkVar

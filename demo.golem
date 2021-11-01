@@ -1,7 +1,7 @@
 
 
 # (progn (load (expand-file-name "golem-mode.el")) (golem-mode))
-let myArray: array(7)[int] = [123, 456, 789, 234, 567, 891, 123]
+let myArray: array(7)[int] = [123, -456, 789, -234, 567, 891, -123]
 
 type MyStruct = struct {
   a: int

@@ -24,7 +24,6 @@ func (astNode AbstractAstNode) Source() string {
 	return astNode.source
 }
 
-
 // most simple AST node
 type Ident struct {
 	AbstractAstNode
@@ -129,9 +128,10 @@ type ArrayLit struct {
 type Call struct {
 	AbstractAstNode
 	Callee Expr
-	Args []Expr
+	Args   []Expr
 	// other properties (TODO can this be removed?)
 	Braced bool // true for (a+b) +(a,b), false for a+b
+	Prefix bool // true for -a ++x etc, false for everything else
 }
 
 type ProcDef struct {
