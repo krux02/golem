@@ -112,6 +112,11 @@ type TcProcDef struct {
 	printfargs bool
 }
 
+type TcArrayLit struct {
+	AbstractAstNode
+	Items []TcExpr
+}
+
 type TcPackageDef struct {
 	AbstractAstNode
 	Name     string
@@ -127,3 +132,4 @@ func (stmt TcIfStmt) expression()          {}
 func (stmt TcIfElseStmt) expression()      {}
 func (block TcCodeBlock) expression()      {}
 func (call TcCall) expression()            {}
+func (call TcArrayLit) expression()        {}

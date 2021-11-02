@@ -35,10 +35,10 @@ func parseTypeExpr(tokenizer *Tokenizer) (result TypeExpr) {
 	result.Ident = parseIdent(tokenizer)
 	// TODO this must be used
 	if tokenizer.lookAheadToken.kind == TkOpenBrace {
-		_ = parseExprList(tokenizer, TkOpenBrace, TkCloseBrace)
+		result.ExprArgs = parseExprList(tokenizer, TkOpenBrace, TkCloseBrace)
 	}
 	if tokenizer.lookAheadToken.kind == TkOpenBracket {
-		_ = parseExprList(tokenizer, TkOpenBracket, TkCloseBracket)
+		result.TypeArgs = parseTypeExprList(tokenizer, TkOpenBracket, TkCloseBracket)
 	}
 	lastToken := tokenizer.token
 	result.source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
@@ -276,6 +276,21 @@ func parseInfixCall(tokenizer *Tokenizer, lhs Expr) (result Call) {
 	return
 }
 
+func parseTypeExprList(tokenizer *Tokenizer, tkOpen, tkClose TokenKind) (result []TypeExpr) {
+	next := tokenizer.Next()
+	tokenizer.expectKind(next, tkOpen)
+	if tokenizer.lookAheadToken.kind != tkClose {
+		result = append(result, parseTypeExpr(tokenizer))
+		for tokenizer.lookAheadToken.kind == TkComma {
+			tokenizer.Next()
+			result = append(result, parseTypeExpr(tokenizer))
+		}
+	}
+	next = tokenizer.Next()
+	tokenizer.expectKind(next, tkClose)
+	return
+}
+
 // comma separated list of expressions. used for call arguments and array literals
 func parseExprList(tokenizer *Tokenizer, tkOpen, tkClose TokenKind) (result []Expr) {
 	next := tokenizer.Next()
@@ -330,9 +345,8 @@ func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
 func parsePrefixCall(tokenizer *Tokenizer) (result Call) {
 	firstToken := tokenizer.lookAheadToken
 	op := parseOperator(tokenizer)
-	kind := tokenizer.lookAheadToken.kind
-
 	// this would be the place to introduce negative integer literals
+	// kind := tokenizer.lookAheadToken.kind
 	// if op.source == "-" && (kind == TkIntLit || kind == TkFloatLit) {
 	// }
 

@@ -4,45 +4,14 @@ import (
 	"fmt"
 )
 
-type BuiltinType struct {
-	name string
-}
-
-func (typ BuiltinType) Source() string {
-	// should this panic?
-	return ""
-}
-
 type TypeChecker struct {
-	code string
+	code     string
 	filename string
 }
 
 func NewTypeChecker(code, filename string) *TypeChecker {
 	return &TypeChecker{code: code, filename: filename}
 }
-
-func (typ *BuiltinType) Name() string {
-	return typ.name
-}
-
-// **** Constants ****
-
-// These type names are by no means final, there are just to get
-// something working.
-var TypeBoolean = &BuiltinType{"bool"}
-var TypeInt = &BuiltinType{"int"}
-var TypeFloat = &BuiltinType{"float"}
-var TypeString = &BuiltinType{"string"}
-var TypeChar = &BuiltinType{"char"}
-var TypeVoid = &BuiltinType{"void"}
-
-// This type is used to tag that a function never returns.
-var TypeNoReturn = &BuiltinType{"noreturn"}
-
-// this type is the internal representation when no type has been
-// specified. It is not a type by its own.
-var TypeUnspecified = &BuiltinType{"<unspecified>"}
 
 // ****
 
@@ -77,6 +46,15 @@ func (scope Scope) NewSymbol(name Ident, kind SymbolKind, typ Type) TcSymbol {
 }
 
 func (scope Scope) LookUpType(expr TypeExpr) Type {
+	// TODO this is a temporary hack to get arrays somehow working
+
+	if expr.Ident.source == "array" {
+		var at ArrayType
+		at.Len = expr.ExprArgs[0].(IntLit).Value
+		at.Elem = scope.LookUpType(expr.TypeArgs[0])
+		return at
+	}
+
 	// TODO really slow lookup, should really be faster
 	name := expr.Ident.source
 	for key, value := range scope.Types {
@@ -295,6 +273,13 @@ func (lit IntLit) Type() Type {
 	return TypeInt
 }
 
+func (lit TcArrayLit) Type() Type {
+	if len(lit.Items) > 0 {
+		return lit.Items[0].Type()
+	}
+	return TypeNoReturn
+}
+
 func (sym TcSymbol) Type() Type {
 	return sym.Typ
 }
@@ -361,12 +346,26 @@ func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExp
 		return (TcExpr)(tc.TypeCheckIfStmt(scope, arg))
 	case IfElseStmt:
 		return (TcExpr)(tc.TypeCheckIfElseStmt(scope, arg, expected))
+	case ArrayLit:
+		return (TcExpr)(tc.TypeCheckArrayLit(scope, arg, expected))
 	default:
 		panic(fmt.Sprintf("not implemented %T", arg))
 	}
 
 	// TODO not implemented
 	return result
+}
+
+func (tc *TypeChecker) TypeCheckArrayLit(scope Scope, arg ArrayLit, expected Type) (result TcArrayLit) {
+	// TODO expect use expect length
+	//expectedLen := expected.(ArrayType).Len
+	expected = expected.(ArrayType).Elem
+	result.Items = make([]TcExpr, len(arg.Items))
+
+	for i, item := range arg.Items {
+		result.Items[i] = tc.TypeCheckExpr(scope, item, expected)
+	}
+	return
 }
 
 func (tc *TypeChecker) TypeCheckIfStmt(scope Scope, stmt IfStmt) (result TcIfStmt) {

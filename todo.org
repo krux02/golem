@@ -4,3 +4,4 @@
 * TODO provide proper error messages or error instead of panic
 * DONE split IfStmt and IfElseStmt as different ast nodes
 * TODO negative literals
+* TODO introduce expectAndEatToken

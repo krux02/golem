@@ -147,6 +147,17 @@ func (lit ArrayLit) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteRune(']')
 }
 
+func (lit TcArrayLit) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteRune('[')
+	for i, expr := range lit.Items {
+		if i != 0 {
+			builder.WriteString(", ")
+		}
+		builder.WriteAstNode(expr)
+	}
+	builder.WriteRune(']')
+}
+
 func WriteIntLit(builder *strings.Builder, value int) {
 	if value == 0 {
 		builder.WriteByte('0')
@@ -174,6 +185,26 @@ func (lit IntLit) prettyPrint(builder *AstPrettyPrinter) {
 
 func (typeExpr TypeExpr) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(typeExpr.Ident.source)
+	if len(typeExpr.ExprArgs) > 0 {
+		builder.WriteString("(")
+		for i, arg := range typeExpr.ExprArgs {
+			if i != 0 {
+				builder.WriteString(", ")
+			}
+			builder.WriteAstNode(arg)
+		}
+		builder.WriteString(")")
+	}
+	if len(typeExpr.TypeArgs) > 0 {
+		builder.WriteString("[")
+		for i, arg := range typeExpr.TypeArgs {
+			if i != 0 {
+				builder.WriteString(", ")
+			}
+			builder.WriteAstNode(arg)
+		}
+		builder.WriteString("]")
+	}
 }
 
 func (structDef StructDef) prettyPrint(builder *AstPrettyPrinter) {
@@ -326,6 +357,14 @@ func (continuestmt ContinueStmt) prettyPrint(builder *AstPrettyPrinter) {
 
 func (typ BuiltinType) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(typ.name)
+}
+
+func (typ ArrayType) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("array(")
+	WriteIntLit(&builder.Builder, typ.Len)
+	builder.WriteString(")[")
+	builder.WriteAstNode(typ.Elem)
+	builder.WriteString("]")
 }
 
 func (call TcCall) prettyPrint(builder *AstPrettyPrinter) {

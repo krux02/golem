@@ -33,7 +33,9 @@ type Ident struct {
 type TypeExpr struct {
 	AbstractAstNode
 	// this type is a placeholder, it is supposed to become more complex
-	Ident Ident
+	Ident    Ident
+	ExprArgs []Expr
+	TypeArgs []TypeExpr
 }
 
 type StructField struct {
