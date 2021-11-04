@@ -90,6 +90,10 @@ func (scope Scope) LookUpLetSym(ident Ident) TcSymbol {
 	return scope.Parent.LookUpLetSym(ident)
 }
 
+func (tc *TypeChecker) LineColumnNode(node AstNode) (line, columnStart, columnEnd int) {
+	return LineColumnStr(tc.code, node.Source())
+}
+
 func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def StructDef) TcStructDef {
 	var result TcStructDef
 	result.Name = def.Name.source
@@ -126,10 +130,15 @@ func ExpectType(gotten, expected Type) {
 	}
 }
 
-func ExpectArgsLen(gotten, expected int) {
+func (tc *TypeChecker) ExpectArgsLen(node AstNode, gotten, expected int) {
 	if expected != gotten {
-		panic(fmt.Sprintf("Expected %d arguments, but got %d.",
-			expected, gotten))
+
+		fmt.Println(node.Source())
+		line, columnStart, columnEnd := tc.LineColumnNode(node)
+		fmt.Println(line, columnStart, columnEnd)
+
+		panic(fmt.Sprintf("%s(%d, %d-%d) Error: Expected %d arguments, but got %d.",
+			tc.filename, line, columnStart, columnEnd, expected, gotten))
 	}
 }
 
@@ -201,7 +210,9 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) (res
 	}
 	result.Args = make([]TcExpr, 0, len(call.Args))
 	expectedArgs := procSym.Impl.Args
-	ExpectArgsLen(len(call.Args), len(expectedArgs))
+
+	tc.ExpectArgsLen(call, len(call.Args), len(expectedArgs))
+
 	for i, arg := range call.Args {
 		expectedType := expectedArgs[i].Typ
 		tcArg := tc.TypeCheckExpr(scope, arg, expectedType)

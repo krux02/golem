@@ -110,10 +110,10 @@ func NewTokenizer(code string, filename string) (result *Tokenizer) {
 	return
 }
 
-func (this *Tokenizer) LineColumnOffset(offset int) (line, column int) {
+func LineColumnOffset(code string, offset int) (line, column int) {
 	line = 1
 	lineStart := 0
-	for pos, rune := range this.code {
+	for pos, rune := range code {
 		if offset <= pos {
 			column = pos - lineStart
 			return
@@ -126,17 +126,25 @@ func (this *Tokenizer) LineColumnOffset(offset int) (line, column int) {
 	return -1, -1
 }
 
-func (this *Tokenizer) LineColumnToken(token Token) (line, columnStart, columnEnd int) {
-	header1 := (*reflect.StringHeader)(unsafe.Pointer(&this.code))
-	header2 := (*reflect.StringHeader)(unsafe.Pointer(&token.value))
+func LineColumnStr(str, substr string) (line, columnStart, columnEnd int) {
+	header1 := (*reflect.StringHeader)(unsafe.Pointer(&str))
+	header2 := (*reflect.StringHeader)(unsafe.Pointer(&substr))
+	if header2.Data < header1.Data {
+		fmt.Printf("%#v\n%#v\n", header1, header2)
+		panic("no substring")
+	}
 	offset := int(header2.Data - header1.Data)
-	line, columnStart = this.LineColumnOffset(offset)
+	line, columnStart = LineColumnOffset(str, offset)
 	columnEnd = columnStart + header2.Len
 	return
 }
 
 func (this *Tokenizer) LineColumnCurrent() (line, column int) {
-	return this.LineColumnOffset(this.offset)
+	return LineColumnOffset(this.code, this.offset)
+}
+
+func (this *Tokenizer) LineColumnToken(token Token) (line, columnStart, columnEnd int) {
+	return LineColumnStr(this.code, token.value)
 }
 
 func (this *Tokenizer) Next() Token {
