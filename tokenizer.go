@@ -130,8 +130,7 @@ func LineColumnStr(str, substr string) (line, columnStart, columnEnd int) {
 	header1 := (*reflect.StringHeader)(unsafe.Pointer(&str))
 	header2 := (*reflect.StringHeader)(unsafe.Pointer(&substr))
 	if header2.Data < header1.Data {
-		fmt.Printf("%#v\n%#v\n", header1, header2)
-		panic("no substring")
+		panic(fmt.Sprintf("internal error, no substring, %#v %#v", header1, header2))
 	}
 	offset := int(header2.Data - header1.Data)
 	line, columnStart = LineColumnOffset(str, offset)

@@ -28,11 +28,12 @@ func main() {
 	}
 
 	fmt.Println("----------------------- parsed  code -----------------------")
-	pak := parsePackage(string(bytes), filename)
+	source := string(bytes)
+	pak := parsePackage(source, filename)
 	validateSourceSet(pak.source, pak)
-	fmt.Println(AstFormat(pak))
+	//fmt.Println(AstFormat(pak))
 	fmt.Println("--------------------- typechecked code ---------------------")
-	tc := NewTypeChecker(string(bytes), filename)
+	tc := NewTypeChecker(source, filename)
 	typedPak := tc.TypeCheckPackage(pak)
 	fmt.Println(AstFormat(typedPak))
 	fmt.Println("-------------------------- C code --------------------------")
