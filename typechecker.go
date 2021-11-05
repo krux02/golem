@@ -132,11 +132,7 @@ func ExpectType(gotten, expected Type) {
 
 func (tc *TypeChecker) ExpectArgsLen(node AstNode, gotten, expected int) {
 	if expected != gotten {
-
-		fmt.Println(node.Source())
 		line, columnStart, columnEnd := tc.LineColumnNode(node)
-		fmt.Println(line, columnStart, columnEnd)
-
 		panic(fmt.Sprintf("%s(%d, %d-%d) Error: Expected %d arguments, but got %d.",
 			tc.filename, line, columnStart, columnEnd, expected, gotten))
 	}
@@ -322,10 +318,29 @@ func (returnStmt TcReturnStmt) Type() Type {
 	return TypeNoReturn
 }
 
+func MatchNegativeNumber(arg Call) (number IntLit, ok bool) {
+	if ident, kk := arg.Callee.(Ident); kk && ident.source == "-" {
+		if len(arg.Args) == 1 {
+			switch lit := arg.Args[0].(type) {
+			case IntLit:
+				ok = true
+				number = lit
+			}
+		}
+	}
+	return
+}
+
 func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExpr {
 	var result TcExpr
 	switch arg := arg.(type) {
 	case Call:
+		// HACK: support for negative literals
+		if number, ok := MatchNegativeNumber(arg); ok {
+			number.Value = -number.Value
+			number.source = arg.source
+			return (TcExpr)(number)
+		}
 		return (TcExpr)(tc.TypeCheckCall(scope, arg, expected))
 	case CodeBlock:
 		return (TcExpr)(tc.TypeCheckCodeBlock(scope, arg, expected))

@@ -146,28 +146,27 @@ func wrapInCodeBlock(expr TcExpr) TcCodeBlock {
 	if cb, ok := expr.(TcCodeBlock); ok {
 		return cb
 	}
-  return TcCodeBlock{Items: []TcExpr{expr}}
+	return TcCodeBlock{Items: []TcExpr{expr}}
 }
 
 func (context *CCodeGeneratorContext) compileIfElseStmt(stmt TcIfElseStmt, injectReturn bool) {
 	context.WriteString("if (")
 	context.compileExpr(stmt.Condition)
 	context.WriteString(") ")
-	context.compileCodeBlock( wrapInCodeBlock(stmt.Body), injectReturn)
+	context.compileCodeBlock(wrapInCodeBlock(stmt.Body), injectReturn)
 	context.WriteString(" else ")
-	context.compileCodeBlock( wrapInCodeBlock(stmt.Else), injectReturn)
+	context.compileCodeBlock(wrapInCodeBlock(stmt.Else), injectReturn)
 }
 
 func (context *CCodeGeneratorContext) compileForLoopStmt(stmt TcForLoopStmt) {
-	// currently only iterating a cstring is possible, this code is
-	// temporaray and written to work only for that (for now), type
+	// HACK: currently only iterating a cstring is possible, this code
+	// is temporaray and written to work only for that (for now), type
 	// arguments (e.g. for seq[int]) don't exist yet.
 	/*
 		for(const char *c = mystring; *c != '\0'; *c++) {
 		  printf("char: %c\n", *c);
 		}
 	*/
-
 	context.WriteString("for(const char ")
 	context.compileSymbol(stmt.LoopSym)
 	context.WriteString(" = ")
@@ -179,6 +178,18 @@ func (context *CCodeGeneratorContext) compileForLoopStmt(stmt TcForLoopStmt) {
 	context.compileSymbol(stmt.LoopSym)
 	context.WriteString("++) ")
 	context.compileCodeBlock(wrapInCodeBlock(stmt.Body), false)
+}
+
+func (context *CCodeGeneratorContext) compileArrayLit(lit TcArrayLit) {
+	context.WriteString("{")
+	for i, it := range lit.Items {
+		if i != 0 {
+			context.WriteString(", ")
+		}
+		context.compileExpr(it)
+	}
+	context.WriteString("}")
+
 }
 
 func (context *CCodeGeneratorContext) injectReturn(injectReturn bool) {
@@ -205,6 +216,9 @@ func (context *CCodeGeneratorContext) compileExprWithPrefix(expr TcExpr, injectR
 	case IntLit:
 		context.injectReturn(injectReturn)
 		context.compileIntLit(ex)
+	case TcArrayLit:
+		context.injectReturn(injectReturn)
+		context.compileArrayLit(ex)
 	case TcSymbol:
 		context.injectReturn(injectReturn)
 		context.compileSymbol(ex)

@@ -887,6 +887,16 @@ conditional. A ~false~ value that isn't ~nil~ would be in conflict
 with the design of ~elisp~. The bool type must be implemented as
 ~Option[t]~ (Option[Unit]).
 
+** Implicit generic type requirements
+
+#+begin_src
+proc foo[T](a: T) {
+  bar(a)
+}
+#+end_src
+
+this should implicitly put the constraint on T to be a type with an
+overload ~bar(T): void~
 
 * A defensive justification for macros
 
