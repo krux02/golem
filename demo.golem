@@ -1,6 +1,7 @@
 # (progn (load (expand-file-name "golem-mode.el")) (golem-mode))
 
 
+
 type MyStruct = struct {
   a: int
   b: float
