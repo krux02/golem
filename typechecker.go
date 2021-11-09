@@ -85,6 +85,7 @@ func (scope Scope) LookUpLetSym(ident Ident) TcSymbol {
 	}
 
 	if sym, ok := scope.Variables[ident.source]; ok {
+		sym.source = ident.source
 		return sym
 	}
 	return scope.Parent.LookUpLetSym(ident)
@@ -123,10 +124,12 @@ func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result 
 	return
 }
 
-func ExpectType(gotten, expected Type) {
+func (tc *TypeChecker) ExpectType(node AstNode, gotten, expected Type) {
 	if expected != TypeUnspecified && expected != gotten {
+		line, columnStart, columnEnd := tc.LineColumnNode(node)
 		// TODO print proper line information here
-		panic(fmt.Sprintf("Expected type '%s' but got type '%s'", expected.Name(), gotten.Name()))
+		panic(fmt.Sprintf("%s(%d, %d-%d) Error: Expected type '%s' but got type '%s'",
+			tc.filename, line, columnStart, columnEnd, expected.Name(), gotten.Name()))
 	}
 }
 
@@ -198,7 +201,7 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 
 func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) (result TcCall) {
 	procSym := scope.LookUpProc(call.Callee.(Ident))
-	ExpectType(procSym.Impl.ResultType, expected)
+	tc.ExpectType(call, procSym.Impl.ResultType, expected)
 	result.Sym = procSym
 	if procSym.Impl.printfargs {
 		result.Args = tc.TypeCheckPrintfArgs(scope, procSym, call.Args)
@@ -231,7 +234,7 @@ func (tc *TypeChecker) TypeCheckCodeBlock(scope Scope, arg CodeBlock, expected T
 		}
 	} else {
 		// empty block is type void
-		ExpectType(TypeVoid, expected)
+		tc.ExpectType(arg, TypeVoid, expected)
 	}
 	return result
 }
@@ -346,29 +349,29 @@ func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExp
 		return (TcExpr)(tc.TypeCheckCodeBlock(scope, arg, expected))
 	case Ident:
 		sym := scope.LookUpLetSym(arg)
-		ExpectType(sym.Typ, expected)
+		tc.ExpectType(sym, sym.Typ, expected)
 		return (TcExpr)(sym)
 	case StrLit:
-		ExpectType(TypeString, expected)
+		tc.ExpectType(arg, TypeString, expected)
 		return (TcExpr)(arg)
 	case CharLit:
-		ExpectType(TypeChar, expected)
+		tc.ExpectType(arg, TypeChar, expected)
 		return (TcExpr)(arg)
 	case IntLit:
-		ExpectType(TypeInt, expected)
+		tc.ExpectType(arg, TypeInt, expected)
 		return (TcExpr)(arg)
 	case ReturnStmt:
 		// ignoring expected type here, because the return as expression
 		// never evaluates to anything
 		return (TcExpr)(tc.TypeCheckReturnStmt(scope, arg))
 	case VariableDefStmt:
-		ExpectType(TypeVoid, expected)
+		tc.ExpectType(arg, TypeVoid, expected)
 		return (TcExpr)(tc.TypeCheckVariableDefStmt(scope, arg))
 	case ForLoopStmt:
-		ExpectType(TypeVoid, expected)
+		tc.ExpectType(arg, TypeVoid, expected)
 		return (TcExpr)(tc.TypeCheckForLoopStmt(scope, arg))
 	case IfStmt:
-		ExpectType(TypeVoid, expected)
+		tc.ExpectType(arg, TypeVoid, expected)
 		return (TcExpr)(tc.TypeCheckIfStmt(scope, arg))
 	case IfElseStmt:
 		return (TcExpr)(tc.TypeCheckIfElseStmt(scope, arg, expected))

@@ -59,6 +59,7 @@ var BuiltinPrintf *TcProcDef = &TcProcDef{
 var builtinScope Scope = &ScopeImpl{
 	Parent: nil,
 	Types: map[string]Type{
+		"bool":     TypeBoolean,
 		"int":      TypeInt,
 		"float":    TypeFloat,
 		"string":   TypeString,
@@ -69,6 +70,7 @@ var builtinScope Scope = &ScopeImpl{
 	Procedures: map[string]*TcProcDef{
 		"printf": BuiltinPrintf,
 	},
+	Variables: map[string]TcSymbol{},
 }
 
 func registerBuiltin(name string, args []Type, result Type) {
@@ -83,13 +85,18 @@ func registerBuiltin(name string, args []Type, result Type) {
 	builtinScope.Procedures[name] = procDef
 }
 
+func registerConstant(name string, typ Type) {
+	// TODO this is wrong, a constant isn't a variable
+    _ = builtinScope.NewSymbol(Ident{AbstractAstNode{source: name}}, SkConst, typ)
+}
+
 func init() {
 	// currently overloading isn't supported
 	registerBuiltin("+", []Type{TypeInt, TypeInt}, TypeInt)
 	registerBuiltin("-", []Type{TypeInt, TypeInt}, TypeInt)
 	registerBuiltin("*", []Type{TypeInt, TypeInt}, TypeInt)
 
-	// NOTE, there is something written about weirdo in ideos.org
+	// NOTE, there is something written about weirdo in ideas.org
 	registerBuiltin("/", []Type{TypeFloat, TypeFloat}, TypeFloat)
 
 	// this has no structure, just made to make the example compile
@@ -100,4 +107,9 @@ func init() {
 	registerBuiltin("+=", []Type{TypeInt, TypeInt}, TypeVoid)
 	registerBuiltin("-=", []Type{TypeInt, TypeInt}, TypeVoid)
 	registerBuiltin("=", []Type{TypeInt, TypeInt}, TypeVoid)
+	registerBuiltin("and",[]Type{TypeBoolean, TypeBoolean}, TypeBoolean)
+	registerBuiltin("or",[]Type{TypeBoolean, TypeBoolean}, TypeBoolean)
+
+	registerConstant("true", TypeBoolean)
+	registerConstant("false", TypeBoolean)
 }

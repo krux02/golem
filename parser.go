@@ -25,7 +25,10 @@ func parseIdent(tokenizer *Tokenizer) (result Ident) {
 
 func parseOperator(tokenizer *Tokenizer) (result Ident) {
 	token := tokenizer.Next()
-	tokenizer.expectKind(token, TkOperator)
+	tk := token.kind
+	if tk != TkOperator && tk != TkAnd && tk != TkOr {
+		tokenizer.wrongKind(token)
+	}
 	result.source = token.value
 	return
 }
@@ -390,7 +393,8 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 
 	lookAhead := tokenizer.lookAheadToken
 	switch lookAhead.kind {
-	case TkOperator:
+	// and and or is an operator token?
+	case TkOperator, TkAnd, TkOr:
 		result = (Expr)(parseInfixCall(tokenizer, result))
 	case TkOpenBrace:
 		result = (Expr)(parseCall(tokenizer, result))
