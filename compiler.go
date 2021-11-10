@@ -18,12 +18,33 @@ func (context *CCodeGeneratorContext) newlineAndIndent() {
 	}
 }
 
+// TODO array types should probably be implicitly generated types
 func (context *CCodeGeneratorContext) compileTypeExpr(typ Type) {
 	switch typ := typ.(type) {
 	case *BuiltinType:
 		context.WriteString(typ.name)
 	case ArrayType:
+		// TODO this is wrong.
 		context.compileTypeExpr(typ.Elem)
+		context.WriteByte('[')
+		WriteIntLit(&context.Builder, typ.Len)
+		context.WriteByte(']')
+	default:
+		panic("not implemented")
+	}
+}
+
+func (context *CCodeGeneratorContext) compileSymWithType(sym TcSymbol) {
+	switch typ := sym.Type().(type) {
+	case *BuiltinType:
+		context.WriteString(typ.name)
+		context.WriteString(" ")
+		context.WriteString(sym.Name)
+	case ArrayType:
+		// TODO this is wrong for nested arrays
+		context.compileTypeExpr(typ.Elem)
+		context.WriteString(" ")
+		context.WriteString(sym.Name)
 		context.WriteByte('[')
 		WriteIntLit(&context.Builder, typ.Len)
 		context.WriteByte(']')
@@ -34,7 +55,7 @@ func (context *CCodeGeneratorContext) compileTypeExpr(typ Type) {
 
 func (context *CCodeGeneratorContext) compileCall(call TcCall) {
 	switch call.Sym.Name {
-	case "+", "-", "*", "/", "<", ">", "==", "=", "-=", "+=":
+	case "+", "-", "*", "/", "<", ">", "==", "=", "-=", "+=", "and", "or":
 		context.WriteString("(")
 		for i, it := range call.Args {
 			if i != 0 {
@@ -137,9 +158,7 @@ func (context *CCodeGeneratorContext) compileExpr(expr TcExpr) {
 }
 
 func (context *CCodeGeneratorContext) compileVariableDefStmt(stmt TcVariableDefStmt) {
-	context.compileTypeExpr(stmt.Sym.Typ)
-	context.WriteByte(' ')
-	context.compileSymbol(stmt.Sym)
+	context.compileSymWithType(stmt.Sym)
 	context.WriteString(" = ")
 	context.compileExpr(stmt.Value)
 }
@@ -177,16 +196,41 @@ func (context *CCodeGeneratorContext) compileForLoopStmt(stmt TcForLoopStmt) {
 		  printf("char: %c\n", *c);
 		}
 	*/
-	context.WriteString("for(const char ")
-	context.compileSymbol(stmt.LoopSym)
-	context.WriteString(" = ")
-	// TODO this is still wrong, it doesn't work for CodeBlock expressions here
-	context.compileExpr(stmt.Collection)
-	context.WriteString("; ")
-	context.compileSymbol(stmt.LoopSym)
-	context.WriteString(" != '\\0'; ")
-	context.compileSymbol(stmt.LoopSym)
-	context.WriteString("++) ")
+
+	if stmt.Collection.Type() == TypeString {
+		context.WriteString("for(const char ")
+		context.compileSymbol(stmt.LoopSym)
+		context.WriteString(" = ")
+		// TODO this is still wrong, it doesn't work for CodeBlock expressions here
+		context.compileExpr(stmt.Collection)
+		context.WriteString("; ")
+		context.compileSymbol(stmt.LoopSym)
+		context.WriteString(" != '\\0'; ")
+		context.compileSymbol(stmt.LoopSym)
+		context.WriteString("++) ")
+	} else if arrayType, ok := stmt.Collection.Type().(ArrayType); ok {
+		context.WriteString("for(")
+        context.compileTypeExpr(arrayType.Elem)
+		context.WriteString(" const ")
+		context.compileSymbol(stmt.LoopSym)
+		context.WriteString(" = ")
+		context.compileExpr(stmt.Collection)
+		context.WriteString(", ")
+		context.compileSymbol(stmt.LoopSym)
+		context.WriteString("_END = ")
+		context.WriteString(stmt.LoopSym.Name)
+		context.WriteString(" + ")
+		WriteIntLit(&context.Builder, arrayType.Len)
+		context.WriteString("; ")
+		context.WriteString(stmt.LoopSym.Name)
+		context.WriteString(" != ")
+		context.WriteString(stmt.LoopSym.Name)
+		context.WriteString("_END; ++")
+		context.WriteString(stmt.LoopSym.Name)
+		context.WriteString(") ")
+	} else {
+		panic("not implemented")
+	}
 	context.compileCodeBlock(wrapInCodeBlock(stmt.Body), false)
 }
 
@@ -261,9 +305,13 @@ func (context *CCodeGeneratorContext) compileExprWithPrefix(expr TcExpr, injectR
 }
 
 func (context *CCodeGeneratorContext) compileCodeBlock(block TcCodeBlock, injectReturn bool) {
+	N := len(block.Items)
+	isExpr := !injectReturn && block.Type() != TypeVoid
+	if isExpr {
+		context.WriteString("(")
+	}
 	context.WriteString("{")
 	context.Indentation += 1
-	N := len(block.Items)
 	for i, expr := range block.Items {
 		context.newlineAndIndent()
 		if i == N-1 {
@@ -276,6 +324,9 @@ func (context *CCodeGeneratorContext) compileCodeBlock(block TcCodeBlock, inject
 	context.Indentation -= 1
 	context.newlineAndIndent()
 	context.WriteString("}")
+	if isExpr {
+		context.WriteString(")")
+	}
 }
 
 func (context *CCodeGeneratorContext) compileProcDef(procDef TcProcDef) {
@@ -330,7 +381,12 @@ func compilePackageToC(pak TcPackageDef) string {
 	builder.WriteString("\n#include <stdio.h>")
 	// TODO this sholud depend on the usage of `string` as a type
 	builder.newlineAndIndent()
-	builder.WriteString("typedef char* string;")
+	builder.WriteString("typedef char* string;\n")
+	builder.WriteString("typedef unsigned char bool;\n")
+	builder.WriteString("#define true 1\n")
+	builder.WriteString("#define false 0\n")
+	builder.WriteString("#define and &&\n")
+	builder.WriteString("#define or ||\n")
 	for _, typ := range pak.TypeDefs {
 		builder.compileStructDef(typ)
 	}

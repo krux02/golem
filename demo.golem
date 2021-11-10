@@ -23,15 +23,17 @@ proc max(a,b: int): int = {
   if a > b do a else b
 }
 
-proc test(): void = {
+## Tests side effects behavior of `and` and `or` operators.
+proc testBooleanOpsWithBlockExpr(): void = {
   var arr: array(2)[bool] = [true, false]
-  for c1 in arr do {
-    for c2 in arr do {
-      for c3 in arr do {
-        for c4 in arr do {
+  for c4 in arr do {
+    for c3 in arr do {
+      for c2 in arr do {
+        for c1 in arr do {
           if { printf("1"); c1} and { printf("2"); c2} or {printf("3"); c3} and {printf("4"); c4} do {
-             printf("5\n")
+             printf("5")
           }
+          printf("\n")
         }
       }
     }
@@ -59,9 +61,7 @@ proc main():int = {
   let exprStr = "(1+(2*3)+((8)/4))+1"
   let depth = maxParenDepth(exprStr)
   printf("max paren depth: %d\n", depth)
-
-  test()
-
+  testBooleanOpsWithBlockExpr()
   let myArray: array(7)[int] = [123, -456, -789, -234, 567, 891, -123]
   0
 }

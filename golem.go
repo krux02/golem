@@ -57,6 +57,8 @@ func main() {
 	}
 	binaryAbsFilename := path.Join(tempDir, base)
 	cmd := exec.Command("gcc", absFilename, "-o", binaryAbsFilename)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	err = cmd.Run()
 	if err != nil {
 		log.Fatal(err)
