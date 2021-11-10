@@ -1,7 +1,6 @@
 * TODO just use keywords
 * DONE implement type checking on 'return'
-* DONE implement 'context' type and parameter for TypeCheck functions
+* DONE implement ~context~ type and parameter for ~TypeCheck~ functions
 * TODO provide proper error messages or error instead of panic
-* DONE split IfStmt and IfElseStmt as different ast nodes
-* TODO negative literals
-* TODO introduce expectAndEatToken
+* DONE negative literals
+* TODO introduce ~expectAndEatToken~

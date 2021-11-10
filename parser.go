@@ -27,7 +27,7 @@ func parseOperator(tokenizer *Tokenizer) (result Ident) {
 	token := tokenizer.Next()
 	tk := token.kind
 	if tk != TkOperator && tk != TkAnd && tk != TkOr {
-		tokenizer.wrongKind(token)
+		tokenizer.formatWrongKind(token)
 	}
 	result.source = token.value
 	return
@@ -69,7 +69,7 @@ func parseVariableDefStmt(tokenizer *Tokenizer) (result VariableDefStmt) {
 	case TkConst:
 		result.Kind = SkConst
 	default:
-		tokenizer.wrongIdent(firstToken)
+		tokenizer.formatWrongIdent(firstToken)
 	}
 
 	result.Name = parseIdent(tokenizer)
@@ -188,10 +188,8 @@ func parseCharLit(tokenizer *Tokenizer) (result CharLit) {
 		case '"':
 			result.Rune = '"'
 		default:
-			panic("illegal escale sequence")
+			panic(tokenizer.formatError(token, "invalid escape \\%c in char literal", rune2))
 		}
-
-		//rune3, rune3Length = utf8.DecodeRuneInString(token.value[1+rune1Len+rune2Len:])
 		return
 	}
 	result.Rune = rune1
@@ -229,7 +227,7 @@ func parseStrLit(tokenizer *Tokenizer) (result StrLit) {
 			case '"':
 				b.WriteRune('"')
 			default:
-				panic("illegal escale sequence")
+				panic(tokenizer.formatError(token, "invalid escape \\%c in string literal", rune))
 			}
 			processEscape = false
 			continue
@@ -380,12 +378,12 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 	case TkOperator:
 		if prefixExpr {
 			// do not allow prefix prefix expression?
-			panic(tokenizer.wrongKind(tokenizer.lookAheadToken))
+			panic(tokenizer.formatWrongKind(tokenizer.lookAheadToken))
 		} else {
 			result = (Expr)(parsePrefixCall(tokenizer))
 		}
 	default:
-		panic(tokenizer.wrongKind(tokenizer.lookAheadToken))
+		panic(tokenizer.formatWrongKind(tokenizer.lookAheadToken))
 	}
 
 	// any expression could be the start of a longer expression, this is
@@ -510,7 +508,7 @@ func parsePackage(code, filename string) (result PackageDef) {
 			result.Globals = append(result.Globals, parseVariableDefStmt(tokenizer))
 			continue
 		}
-		panic(tokenizer.wrongKind(tokenizer.lookAheadToken))
+		panic(tokenizer.formatWrongKind(tokenizer.lookAheadToken))
 	}
 	panic("unreachable")
 }

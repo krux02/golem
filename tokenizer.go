@@ -290,7 +290,7 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			rune, _ := utf8.DecodeRuneInString(code[it:])
 
 			if !u.IsDigit(rune) {
-				panic("incomplete floating point literal")
+				panic(this.formatError(result, "incomplete floating point literal"))
 			}
 
 			var idx2 = len(code)
@@ -383,8 +383,7 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 		result.kind = TkOperator
 		result.value = code[:idx2]
 	default:
-		fmt.Printf("ispunct %v\n", u.IsSymbol(c))
-		panic(fmt.Sprintf("unexpected input: %c %d\n", c, c))
+		panic(this.formatError(result, "unexpected input: %c %d", c, c))
 	}
 
 	newOffset += len(result.value)
@@ -395,27 +394,30 @@ func (this *Tokenizer) AtEnd() bool {
 	return this.offset == len(this.code)
 }
 
-func (tokenizer *Tokenizer) wrongKind(token Token) string {
+func (tokenizer *Tokenizer) formatError(token Token, msg string, args ...interface{}) string {
 	line, columnStart, columnEnd := tokenizer.LineColumnToken(token)
-	return fmt.Sprintf("%s(%d, %d-%d) Error: unexpected Token: %v",
-		tokenizer.filename, line, columnStart, columnEnd, token)
+	return fmt.Sprintf("%s(%d, %d-%d) Error: %s",
+		tokenizer.filename, line, columnStart, columnEnd,
+	  fmt.Sprintf(msg, args...))
 }
 
-func (tokenizer *Tokenizer) wrongIdent(token Token) string {
-	line, columnStart, columnEnd := tokenizer.LineColumnToken(token)
-	return fmt.Sprintf("%s(%d, %d-%d) Error: unexpected identifier: %s",
-		tokenizer.filename, line, columnStart, columnEnd, token.value)
+func (tokenizer *Tokenizer) formatWrongKind(token Token) string {
+	return tokenizer.formatError(token, "unexpected token: %v", token)
+}
+
+func (tokenizer *Tokenizer) formatWrongIdent(token Token) string {
+	return tokenizer.formatError(token, "unexpected identifier: %s", token.value)
 }
 
 func (tokenizer *Tokenizer) expectKind(token Token, kind TokenKind) {
 	if token.kind != kind {
-		panic(tokenizer.wrongKind(token))
+		panic(tokenizer.formatWrongKind(token))
 	}
 }
 
 func (tokenizer *Tokenizer) expectKind2(token Token, kind1, kind2 TokenKind) {
 	if token.kind != kind1 && token.kind != kind2 {
-		panic(tokenizer.wrongKind(token))
+		panic(tokenizer.formatWrongKind(token))
 	}
 }
 
