@@ -184,6 +184,7 @@ func (lit IntLit) prettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (typeExpr TypeExpr) prettyPrint(builder *AstPrettyPrinter) {
+	fmt.Println("src: ", typeExpr.source)
 	builder.WriteString(typeExpr.Ident.source)
 	if len(typeExpr.ExprArgs) > 0 {
 		builder.WriteString("(")
@@ -427,7 +428,8 @@ func (stmt TcVariableDefStmt) prettyPrint(builder *AstPrettyPrinter) {
 	}
 	builder.WriteAstNode(stmt.Sym)
 	builder.WriteString(": ")
-	builder.WriteString(stmt.Sym.Typ.Name())
+	builder.WriteAstNode(stmt.Sym.Typ)
+	// builder.WriteString(stmt.Sym.Typ.Name())
 	builder.WriteString(" = ")
 	builder.WriteAstNode(stmt.Value)
 }

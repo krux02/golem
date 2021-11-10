@@ -124,12 +124,19 @@ func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result 
 	return
 }
 
+func (tc *TypeChecker) WrongType(message string, node AstNode) string {
+	line, columnStart, columnEnd := tc.LineColumnNode(node)
+	// TODO print proper line information here
+	return fmt.Sprintf("%s(%d, %d-%d) Error: %s",
+		tc.filename, line, columnStart, columnEnd, message)
+}
+
 func (tc *TypeChecker) ExpectType(node AstNode, gotten, expected Type) {
 	if expected != TypeUnspecified && expected != gotten {
 		line, columnStart, columnEnd := tc.LineColumnNode(node)
 		// TODO print proper line information here
 		panic(fmt.Sprintf("%s(%d, %d-%d) Error: Expected type '%s' but got type '%s'",
-			tc.filename, line, columnStart, columnEnd, expected.Name(), gotten.Name()))
+			tc.filename, line, columnStart, columnEnd, AstFormat(expected), AstFormat(gotten)))
 	}
 }
 
@@ -284,10 +291,14 @@ func (lit IntLit) Type() Type {
 }
 
 func (lit TcArrayLit) Type() Type {
+	var result ArrayType
+	result.Len = len(lit.Items)
 	if len(lit.Items) > 0 {
-		return lit.Items[0].Type()
+		result.Elem = lit.Items[0].Type()
+	} else {
+		result.Elem = TypeNoReturn
 	}
-	return TypeNoReturn
+	return result
 }
 
 func (sym TcSymbol) Type() Type {
@@ -413,11 +424,25 @@ func (tc *TypeChecker) TypeCheckIfElseStmt(scope Scope, stmt IfElseStmt, expecte
 	return
 }
 
+// TODO ElementType should be some form of language feature
+func (tc *TypeChecker) ElementType(expr TcExpr) Type {
+	switch typ := expr.Type().(type) {
+	case ArrayType:
+		return typ.Elem
+	case *BuiltinType:
+		if typ.name == "string" {
+			return TypeChar
+		}
+	}
+	panic(tc.WrongType("expect type with elements to iterate over", expr))
+}
+
 func (tc *TypeChecker) TypeCheckForLoopStmt(scope Scope, loopArg ForLoopStmt) (result TcForLoopStmt) {
 	scope = scope.NewSubScope()
 	// currently only iteration on strings in possible (of course that is not final)
-	result.Collection = tc.TypeCheckExpr(scope, loopArg.Collection, TypeString)
-	result.LoopSym = scope.NewSymbol(loopArg.LoopIdent, SkLoopIterator, TypeChar)
+	result.Collection = tc.TypeCheckExpr(scope, loopArg.Collection, TypeUnspecified)
+	elementType := tc.ElementType(result.Collection)
+	result.LoopSym = scope.NewSymbol(loopArg.LoopIdent, SkLoopIterator, elementType)
 	result.Body = tc.TypeCheckExpr(scope, loopArg.Body, TypeVoid)
 	return
 }

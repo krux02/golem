@@ -14,18 +14,15 @@ func (typ *BuiltinType) Source() string {
 	return ""
 }
 
-func (typ *BuiltinType) Name() string {
-	return typ.name
-}
+func (typ *BuiltinType) typenode() {}
 
 func (typ ArrayType) Source() string {
 	// should this panic?
 	return ""
 }
 
-func (typ ArrayType) Name() string {
-	panic("not implemented")
-}
+func (typ ArrayType) typenode() {}
+
 
 // **** Constants ****
 

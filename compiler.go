@@ -19,7 +19,17 @@ func (context *CCodeGeneratorContext) newlineAndIndent() {
 }
 
 func (context *CCodeGeneratorContext) compileTypeExpr(typ Type) {
-	context.WriteString(typ.Name())
+	switch typ := typ.(type) {
+	case *BuiltinType:
+		context.WriteString(typ.name)
+	case ArrayType:
+		context.compileTypeExpr(typ.Elem)
+		context.WriteByte('[')
+		WriteIntLit(&context.Builder, typ.Len)
+		context.WriteByte(']')
+	default:
+		panic("not implemented")
+	}
 }
 
 func (context *CCodeGeneratorContext) compileCall(call TcCall) {
@@ -291,7 +301,7 @@ func (context *CCodeGeneratorContext) compileProcDef(procDef TcProcDef) {
 		body.Items = []TcExpr{procDef.Body}
 	}
 	// instruct to inject "return" at the end of each control flow
-	context.compileCodeBlock(body, true)
+	context.compileCodeBlock(body, procDef.ResultType != TypeVoid)
 }
 
 func (context *CCodeGeneratorContext) compileStructDef(structDef TcStructDef) {

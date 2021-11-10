@@ -5,7 +5,7 @@ package main
 
 type Type interface {
 	AstNode
-	Name() string
+	typenode()
 }
 
 type TcExpr interface {
