@@ -45,13 +45,13 @@ func (scope Scope) NewSymbol(name Ident, kind SymbolKind, typ Type) TcSymbol {
 	return result
 }
 
-func (scope Scope) LookUpType(expr TypeExpr) Type {
+func (tc *TypeChecker) LookUpType(scope Scope, expr TypeExpr) Type {
 	// TODO this is a temporary hack to get arrays somehow working
 
 	if expr.Ident.source == "array" {
 		var at ArrayType
 		at.Len = expr.ExprArgs[0].(IntLit).Value
-		at.Elem = scope.LookUpType(expr.TypeArgs[0])
+		at.Elem = tc.LookUpType(scope, expr.TypeArgs[0])
 		return at
 	}
 
@@ -63,23 +63,23 @@ func (scope Scope) LookUpType(expr TypeExpr) Type {
 		}
 	}
 	if scope.Parent != nil {
-		return scope.Parent.LookUpType(expr)
+		return tc.LookUpType(scope.Parent, expr)
 	}
-	panic(fmt.Sprintf("Type not found: %s", name)) // some comment
+	panic(tc.Errorf(expr, "Type not found: %s", name)) // some comment
 }
 
-func (scope Scope) LookUpProc(ident Ident) TcProcSymbol {
+func (tc *TypeChecker) LookUpProc(scope Scope, ident Ident) TcProcSymbol {
 	if scope == nil {
-		panic(fmt.Sprintf("Proc not found: %s", ident.source))
+		panic(tc.Errorf(ident, "proc not found: %s", ident.source))
 	}
 
 	if impl, ok := scope.Procedures[ident.source]; ok {
 		return TcProcSymbol{Name: ident.source, Impl: impl}
 	}
-	return scope.Parent.LookUpProc(ident)
+	return tc.LookUpProc(scope.Parent, ident)
 }
 
-func (scope Scope) LookUpLetSym(ident Ident) TcSymbol {
+func (tc *TypeChecker) LookUpLetSym(scope Scope, ident Ident) TcSymbol {
 	if scope == nil {
 		panic(fmt.Sprintf("let sym not found: %s", ident.source))
 	}
@@ -88,7 +88,7 @@ func (scope Scope) LookUpLetSym(ident Ident) TcSymbol {
 		sym.source = ident.source
 		return sym
 	}
-	return scope.Parent.LookUpLetSym(ident)
+	return tc.LookUpLetSym(scope.Parent, ident)
 }
 
 func (tc *TypeChecker) LineColumnNode(node AstNode) (line, columnStart, columnEnd int) {
@@ -101,7 +101,7 @@ func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def StructDef) TcStructDe
 	for _, field := range def.Fields {
 		var tcField TcStructField
 		tcField.Name = field.Name.source
-		tcField.Type = scope.LookUpType(field.TypeExpr)
+		tcField.Type = tc.LookUpType(scope, field.TypeExpr)
 		result.Fields = append(result.Fields, tcField)
 	}
 	return result
@@ -112,10 +112,10 @@ func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result 
 	scope.CurrentProc = &result
 	result.Name = def.Name.source
 	for _, arg := range def.Args {
-		tcArg := scope.NewSymbol(arg.Name, SkProcArg, scope.LookUpType(arg.Type))
+		tcArg := scope.NewSymbol(arg.Name, SkProcArg, tc.LookUpType(scope, arg.Type))
 		result.Args = append(result.Args, tcArg)
 	}
-	resultType := scope.LookUpType(def.ResultType)
+	resultType := tc.LookUpType(scope, def.ResultType)
 	result.ResultType = resultType
 	result.Body = tc.TypeCheckExpr(scope, def.Body, resultType)
 
@@ -203,7 +203,7 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 }
 
 func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) (result TcCall) {
-	procSym := scope.LookUpProc(call.Callee.(Ident))
+	procSym := tc.LookUpProc(scope, call.Callee.(Ident))
 	tc.ExpectType(call, procSym.Impl.ResultType, expected)
 	result.Sym = procSym
 	if procSym.Impl.printfargs {
@@ -249,7 +249,7 @@ func (expr TypeExpr) IsSet() bool {
 func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt) TcVariableDefStmt {
 	var expected Type = TypeUnspecified
 	if arg.TypeExpr.IsSet() {
-		expected = scope.LookUpType(arg.TypeExpr)
+		expected = tc.LookUpType(scope, arg.TypeExpr)
 	}
 
 	var result TcVariableDefStmt
@@ -355,7 +355,7 @@ func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExp
 	case CodeBlock:
 		return (TcExpr)(tc.TypeCheckCodeBlock(scope, arg, expected))
 	case Ident:
-		sym := scope.LookUpLetSym(arg)
+		sym := tc.LookUpLetSym(scope, arg)
 		tc.ExpectType(sym, sym.Typ, expected)
 		return (TcExpr)(sym)
 	case StrLit:
