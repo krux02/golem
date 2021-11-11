@@ -394,18 +394,18 @@ func (this *Tokenizer) AtEnd() bool {
 	return this.offset == len(this.code)
 }
 
-func (tokenizer *Tokenizer) formatError(token Token, msg string, args ...interface{}) string {
+func (tokenizer *Tokenizer) formatError(token Token, msg string, args ...interface{}) error {
 	line, columnStart, columnEnd := tokenizer.LineColumnToken(token)
-	return fmt.Sprintf("%s(%d, %d-%d) Error: %s",
+	return fmt.Errorf("%s(%d, %d-%d) Error: %s",
 		tokenizer.filename, line, columnStart, columnEnd,
 	  fmt.Sprintf(msg, args...))
 }
 
-func (tokenizer *Tokenizer) formatWrongKind(token Token) string {
+func (tokenizer *Tokenizer) formatWrongKind(token Token) error {
 	return tokenizer.formatError(token, "unexpected token: %v", token)
 }
 
-func (tokenizer *Tokenizer) formatWrongIdent(token Token) string {
+func (tokenizer *Tokenizer) formatWrongIdent(token Token) error {
 	return tokenizer.formatError(token, "unexpected identifier: %s", token.value)
 }
 
@@ -424,13 +424,13 @@ func (tokenizer *Tokenizer) expectKind2(token Token, kind1, kind2 TokenKind) {
 func (tokenizer *Tokenizer) expectIdent(token Token, arg string) {
 	tokenizer.expectKind(token, TkIdent)
 	if token.value != arg {
-		panic(fmt.Sprintf("expected ident %v got %v", arg, token.value))
+		panic(tokenizer.formatError(token, "expected ident %v got %v", arg, token.value))
 	}
 }
 
 func (tokenizer *Tokenizer) expectOperator(token Token, arg string) {
 	tokenizer.expectKind(token, TkOperator)
 	if token.value != arg {
-		panic(fmt.Sprintf("expected %v got %v", arg, token.value))
+		panic(tokenizer.formatError(token, "expected %v got %v", arg, token.value))
 	}
 }

@@ -65,7 +65,7 @@ func (scope Scope) LookUpType(expr TypeExpr) Type {
 	if scope.Parent != nil {
 		return scope.Parent.LookUpType(expr)
 	}
-	panic(fmt.Sprintf("Type not found: %s", name))
+	panic(fmt.Sprintf("Type not found: %s", name)) // some comment
 }
 
 func (scope Scope) LookUpProc(ident Ident) TcProcSymbol {
@@ -124,33 +124,29 @@ func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result 
 	return
 }
 
-func (tc *TypeChecker) WrongType(message string, node AstNode) string {
+func (tc *TypeChecker) Errorf(node AstNode, msg string, args ...interface{}) error {
 	line, columnStart, columnEnd := tc.LineColumnNode(node)
-	// TODO print proper line information here
-	return fmt.Sprintf("%s(%d, %d-%d) Error: %s",
-		tc.filename, line, columnStart, columnEnd, message)
+  return fmt.Errorf("%s(%d, %d-%d) Error: %s", tc.filename, line, columnStart, columnEnd,
+		fmt.Sprintf(msg, args...))
 }
 
 func (tc *TypeChecker) ExpectType(node AstNode, gotten, expected Type) {
 	if expected != TypeUnspecified && expected != gotten {
-		line, columnStart, columnEnd := tc.LineColumnNode(node)
-		// TODO print proper line information here
-		panic(fmt.Sprintf("%s(%d, %d-%d) Error: Expected type '%s' but got type '%s'",
-			tc.filename, line, columnStart, columnEnd, AstFormat(expected), AstFormat(gotten)))
+		panic(tc.Errorf(node, "expected type '%s' but got type '%s'",
+			AstFormat(expected), AstFormat(gotten)))
 	}
 }
 
 func (tc *TypeChecker) ExpectArgsLen(node AstNode, gotten, expected int) {
 	if expected != gotten {
-		line, columnStart, columnEnd := tc.LineColumnNode(node)
-		panic(fmt.Sprintf("%s(%d, %d-%d) Error: Expected %d arguments, but got %d.",
-			tc.filename, line, columnStart, columnEnd, expected, gotten))
+		panic(tc.Errorf(node, "expected %d arguments, but got %d",
+			expected, gotten))
 	}
 }
 
-func ExpectMinArgsLen(gotten, expected int) {
+func (tc *TypeChecker) ExpectMinArgsLen(node AstNode, gotten, expected int) {
 	if gotten < expected {
-		panic(fmt.Sprintf("Expected at least %d arguments, but got %d.",
+		panic(tc.Errorf(node, "Expected at least %d arguments, but got %d.",
 			expected, gotten))
 	}
 }
@@ -159,7 +155,7 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 	result = make([]TcExpr, 0, len(args))
 
 	prefixArgs := printfSym.Impl.Args
-	ExpectMinArgsLen(len(args), len(prefixArgs))
+	tc.ExpectMinArgsLen(printfSym, len(args), len(prefixArgs))
 
 	for i := 0; i < len(prefixArgs); i++ {
 		expectedType := prefixArgs[i].Typ
@@ -179,7 +175,7 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 		}
 		j++
 		if j == len(formatStr) {
-			panic(fmt.Sprintf("incomplete format expr at end of format string", formatStr))
+			panic(tc.Errorf(formatExpr, "incomplete format expr at end of format string"))
 		}
 		c2 := formatStr[j]
 		var argType Type
@@ -193,10 +189,10 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 		case 'f':
 			argType = TypeFloat
 		default:
-			panic(fmt.Sprintf("invalid format expr %%%c in %s", c2, AstFormat(formatExpr)))
+			panic(tc.Errorf(formatExpr, "invalid format expr %%%c in %s", c2, AstFormat(formatExpr)))
 		}
 		if i == len(args) {
-			panic(fmt.Sprintf("not enough arguments for %s", AstFormat(formatExpr)))
+			panic(tc.Errorf(formatExpr, "not enough arguments for %s", AstFormat(formatExpr)))
 		}
 		tcArg := tc.TypeCheckExpr(scope, args[i], argType)
 		result = append(result, tcArg)
@@ -389,7 +385,7 @@ func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExp
 	case ArrayLit:
 		return (TcExpr)(tc.TypeCheckArrayLit(scope, arg, expected))
 	default:
-		panic(fmt.Sprintf("not implemented %T", arg))
+		panic(tc.Errorf(arg, "not implemented %T", arg))
 	}
 
 	// TODO not implemented
@@ -434,7 +430,7 @@ func (tc *TypeChecker) ElementType(expr TcExpr) Type {
 			return TypeChar
 		}
 	}
-	panic(tc.WrongType("expect type with elements to iterate over", expr))
+	panic(tc.Errorf(expr, "expect type with elements to iterate over"))
 }
 
 func (tc *TypeChecker) TypeCheckForLoopStmt(scope Scope, loopArg ForLoopStmt) (result TcForLoopStmt) {

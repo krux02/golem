@@ -415,6 +415,10 @@ func (sym TcSymbol) prettyPrint(printer *AstPrettyPrinter) {
 	printer.WriteString(sym.Name)
 }
 
+func (sym TcProcSymbol) prettyPrint(printer *AstPrettyPrinter) {
+	printer.WriteString(sym.Name)
+}
+
 func (stmt TcVariableDefStmt) prettyPrint(builder *AstPrettyPrinter) {
 	switch stmt.Sym.Kind {
 	case SkLet:
