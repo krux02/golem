@@ -106,10 +106,11 @@ type TcProcDef struct {
 	// be a tidy clean minimal definition. This code must be optimized
 	// for reading. Do NOT bloat it with shit for lots of of exceptions
 	// in the language.
-
 	// Exception for printf. It has varargs that are at this point in
 	// time no language feature yet.
 	printfargs bool
+	generateAsOperator bool
+	builtinName string
 }
 
 type TcArrayLit struct {

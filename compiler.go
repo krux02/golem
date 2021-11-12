@@ -54,19 +54,18 @@ func (context *CCodeGeneratorContext) compileSymWithType(sym TcSymbol) {
 }
 
 func (context *CCodeGeneratorContext) compileCall(call TcCall) {
-	switch call.Sym.Name {
-	case "+", "-", "*", "/", "<", ">", "==", "=", "-=", "+=", "and", "or":
+	if call.Sym.Impl.generateAsOperator {
 		context.WriteString("(")
 		for i, it := range call.Args {
 			if i != 0 {
 				context.WriteString(" ")
-				context.WriteString(call.Sym.Name)
+				context.WriteString(call.Sym.Impl.builtinName)
 				context.WriteString(" ")
 			}
 			context.compileExpr(it)
 		}
 		context.WriteString(")")
-	default:
+	} else {
 		context.WriteString(call.Sym.Name)
 		context.WriteString("(")
 		for i, it := range call.Args {
@@ -147,10 +146,18 @@ func (context *CCodeGeneratorContext) compileIntLit(lit IntLit) {
 }
 
 func (context *CCodeGeneratorContext) compileSymbol(sym TcSymbol) {
-	if sym.Kind == SkLoopIterator {
-		context.WriteString("*")
+	fmt.Printf("compile symbol %#v\n", sym)
+	switch sym.Name {
+	case "true":
+		context.WriteString("1")
+	case "false":
+		context.WriteString("0")
+  default:
+		if sym.Kind == SkLoopIterator {
+			context.WriteString("*")
+		}
+		context.WriteString(sym.Name)
 	}
-	context.WriteString(sym.Name)
 }
 
 func (context *CCodeGeneratorContext) compileExpr(expr TcExpr) {
@@ -383,10 +390,6 @@ func compilePackageToC(pak TcPackageDef) string {
 	builder.newlineAndIndent()
 	builder.WriteString("typedef char* string;\n")
 	builder.WriteString("typedef unsigned char bool;\n")
-	builder.WriteString("#define true 1\n")
-	builder.WriteString("#define false 0\n")
-	builder.WriteString("#define and &&\n")
-	builder.WriteString("#define or ||\n")
 	for _, typ := range pak.TypeDefs {
 		builder.compileStructDef(typ)
 	}

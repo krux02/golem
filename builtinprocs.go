@@ -70,11 +70,13 @@ var builtinScope Scope = &ScopeImpl{
 	Variables: map[string]TcSymbol{},
 }
 
-func registerBuiltin(name string, args []Type, result Type) {
+func registerBuiltin(name, builtinName string, isOperator bool, args []Type, result Type) {
 	procDef := &TcProcDef{
 		Name:       name,
 		Args:       make([]TcSymbol, len(args)),
 		ResultType: result,
+		generateAsOperator: isOperator,
+		builtinName: builtinName,
 	}
 	for i, arg := range args {
 		procDef.Args[i].Typ = arg
@@ -89,23 +91,23 @@ func registerConstant(name string, typ Type) {
 
 func init() {
 	// currently overloading isn't supported
-	registerBuiltin("+", []Type{TypeInt, TypeInt}, TypeInt)
-	registerBuiltin("-", []Type{TypeInt, TypeInt}, TypeInt)
-	registerBuiltin("*", []Type{TypeInt, TypeInt}, TypeInt)
+	registerBuiltin("+", "+", true, []Type{TypeInt, TypeInt}, TypeInt)
+	registerBuiltin("-", "+", true, []Type{TypeInt, TypeInt}, TypeInt)
+	registerBuiltin("*", "+", true, []Type{TypeInt, TypeInt}, TypeInt)
 
 	// NOTE, there is something written about weirdo in ideas.org
-	registerBuiltin("/", []Type{TypeFloat, TypeFloat}, TypeFloat)
+	registerBuiltin("/", "/", true, []Type{TypeFloat, TypeFloat}, TypeFloat)
 
 	// this has no structure, just made to make the example compile
-	registerBuiltin("==", []Type{TypeChar, TypeChar}, TypeBoolean)
-	registerBuiltin("<", []Type{TypeInt, TypeInt}, TypeBoolean)
-	registerBuiltin(">", []Type{TypeInt, TypeInt}, TypeBoolean)
+	registerBuiltin("==", "==", true, []Type{TypeChar, TypeChar}, TypeBoolean)
+	registerBuiltin("<", "<", true, []Type{TypeInt, TypeInt}, TypeBoolean)
+	registerBuiltin(">", ">", true, []Type{TypeInt, TypeInt}, TypeBoolean)
 
-	registerBuiltin("+=", []Type{TypeInt, TypeInt}, TypeVoid)
-	registerBuiltin("-=", []Type{TypeInt, TypeInt}, TypeVoid)
-	registerBuiltin("=", []Type{TypeInt, TypeInt}, TypeVoid)
-	registerBuiltin("and",[]Type{TypeBoolean, TypeBoolean}, TypeBoolean)
-	registerBuiltin("or",[]Type{TypeBoolean, TypeBoolean}, TypeBoolean)
+	registerBuiltin("+=", "+=", true, []Type{TypeInt, TypeInt}, TypeVoid)
+	registerBuiltin("-=", "-=", true, []Type{TypeInt, TypeInt}, TypeVoid)
+	registerBuiltin("=", "=", true, []Type{TypeInt, TypeInt}, TypeVoid)
+	registerBuiltin("and", "&&", true, []Type{TypeBoolean, TypeBoolean}, TypeBoolean)
+	registerBuiltin("or", "||", true, []Type{TypeBoolean, TypeBoolean}, TypeBoolean)
 
 	registerConstant("true", TypeBoolean)
 	registerConstant("false", TypeBoolean)
