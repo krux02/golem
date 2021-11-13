@@ -48,7 +48,8 @@ var TypeUnspecified = &BuiltinType{"<unspecified>"}
 // specified out as soon as it becomes necessary.
 var BuiltinPrintf *TcProcDef = &TcProcDef{
 	Name: "printf",
-	// TODO support argument list
+	// Support for type checking arguments for printf is currently a language
+	// feature.
 	printfargs: true,
 	ResultType: TypeVoid,
 }

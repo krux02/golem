@@ -388,7 +388,6 @@ func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExp
 		panic(tc.Errorf(arg, "not implemented %T", arg))
 	}
 
-	// TODO not implemented
 	return result
 }
 

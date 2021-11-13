@@ -18,7 +18,6 @@ func (context *CCodeGeneratorContext) newlineAndIndent() {
 	}
 }
 
-// TODO array types should probably be implicitly generated types
 func (context *CCodeGeneratorContext) compileTypeExpr(typ Type) {
 	switch typ := typ.(type) {
 	case *BuiltinType:
@@ -208,7 +207,6 @@ func (context *CCodeGeneratorContext) compileForLoopStmt(stmt TcForLoopStmt) {
 		context.WriteString("for(const char ")
 		context.compileSymbol(stmt.LoopSym)
 		context.WriteString(" = ")
-		// TODO this is still wrong, it doesn't work for CodeBlock expressions here
 		context.compileExpr(stmt.Collection)
 		context.WriteString("; ")
 		context.compileSymbol(stmt.LoopSym)

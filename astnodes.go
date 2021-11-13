@@ -5,7 +5,6 @@ package main
 type AstNode interface {
 	prettyPrint(*AstPrettyPrinter)
 	Source() string
-	// TODO add something here to access original source string.
 }
 
 type Expr interface {

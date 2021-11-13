@@ -3,4 +3,16 @@
 * DONE implement ~context~ type and parameter for ~TypeCheck~ functions
 * DONE provide proper error messages or error instead of panic
 * DONE negative literals
+* TODO restrict operator precedence to common knowledeg cases (+-*/) require explicit braces everywhere else.
 * TODO introduce ~expectAndEatToken~
+* TODO static overloading
+* TODO C++ interop
+* TODO full set of types 
+** TODO int float in all sizes
+** TODO vector/simd types
+** TODO string
+** TODO array
+** TODO seq
+
+
+
