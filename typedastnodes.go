@@ -123,6 +123,7 @@ type TcPackageDef struct {
 	Name     string
 	TypeDefs []TcStructDef
 	ProcDefs []TcProcDef
+	Main 		 TcProcDef // main entry point
 }
 
 func (sym TcSymbol) expression()           {}

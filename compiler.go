@@ -341,7 +341,8 @@ func (context *CodeBuilder) compileCodeBlock(block TcCodeBlock, injectReturn boo
 	}
 }
 
-func (context *CodeBuilder) compileProcDef(procDef TcProcDef) {
+func (context *CodeBuilder) compileProcDef(procDef TcProcDef, justforward bool) {
+	fmt.Printf("%#v\n", procDef)
 	context.newlineAndIndent()
 	context.compileTypeExpr(procDef.ResultType)
 	// context.compileTypeExpr(procDef.ResultType)
@@ -358,13 +359,17 @@ func (context *CodeBuilder) compileProcDef(procDef TcProcDef) {
 	}
 	context.WriteString(")")
 
-	body, ok := procDef.Body.(TcCodeBlock)
-	// ensure code block for code generation
-	if !ok {
-		body.Items = []TcExpr{procDef.Body}
+	if justforward {
+		context.WriteByte(';')
+	} else {
+		body, ok := procDef.Body.(TcCodeBlock)
+		// ensure code block for code generation
+		if !ok {
+			body.Items = []TcExpr{procDef.Body}
+		}
+		// instruct to inject "return" at the end of each control flow
+		context.compileCodeBlock(body, procDef.ResultType != TypeVoid)
 	}
-	// instruct to inject "return" at the end of each control flow
-	context.compileCodeBlock(body, procDef.ResultType != TypeVoid)
 }
 
 func (context *CodeBuilder) compileStructDef(structDef TcStructDef) {
@@ -387,24 +392,30 @@ func (context *CodeBuilder) compileStructDef(structDef TcStructDef) {
 	context.WriteString(";")
 }
 
+func (context *PackageGeneratorContext) compileProcDef(procDef TcProcDef) {
+	context.forwardDecl.compileProcDef(procDef, true)
+	context.functions.compileProcDef(procDef, false)
+}
+
 func compilePackageToC(pak TcPackageDef) string {
-	builder := &PackageGeneratorContext{Pak: pak}
+	context := &PackageGeneratorContext{Pak: pak}
 	// TODO this sholud depend on the usage of `printf`
-	builder.includes.WriteString("#include <stdio.h>\n")
+	context.includes.WriteString("#include <stdio.h>\n")
 	// TODO this sholud depend on the usage of `string` as a type
-	builder.typeDecl.WriteString("typedef char* string;\n")
-	builder.typeDecl.WriteString("typedef unsigned char bool;\n")
-	for _, typ := range pak.TypeDefs {
-		builder.typeDecl.compileStructDef(typ)
-	}
-	for _, proc := range pak.ProcDefs {
-		builder.typeDecl.compileProcDef(proc)
-	}
+	context.typeDecl.WriteString("typedef char* string;\n")
+	context.typeDecl.WriteString("typedef unsigned char bool;\n")
+	//for _, typ := range pak.TypeDefs {
+	//context.typeDecl.compileStructDef(typ)
+	//}
+	//for _, proc := range pak.ProcDefs {
+	//context.typeDecl.compileProcDef(proc)
+	//}
+	context.compileProcDef(pak.Main)
 
 	final := &strings.Builder{}
-	final.WriteString(builder.includes.String())
-	final.WriteString(builder.typeDecl.String())
-	final.WriteString(builder.forwardDecl.String())
-	final.WriteString(builder.functions.String())
+	final.WriteString(context.includes.String())
+	final.WriteString(context.typeDecl.String())
+	final.WriteString(context.forwardDecl.String())
+	final.WriteString(context.functions.String())
 	return final.String()
 }

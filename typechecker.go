@@ -126,7 +126,7 @@ func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result 
 
 func (tc *TypeChecker) Errorf(node AstNode, msg string, args ...interface{}) error {
 	line, columnStart, columnEnd := tc.LineColumnNode(node)
-  return fmt.Errorf("%s(%d, %d-%d) Error: %s", tc.filename, line, columnStart, columnEnd,
+	return fmt.Errorf("%s(%d, %d-%d) Error: %s", tc.filename, line, columnStart, columnEnd,
 		fmt.Sprintf(msg, args...))
 }
 
@@ -449,7 +449,11 @@ func (tc *TypeChecker) TypeCheckPackage(arg PackageDef) (result TcPackageDef) {
 		result.TypeDefs = append(result.TypeDefs, tc.TypeCheckStructDef(scope, typeDef))
 	}
 	for _, procDef := range arg.ProcDefs {
-		result.ProcDefs = append(result.ProcDefs, tc.TypeCheckProcDef(scope, procDef))
+		procDef := tc.TypeCheckProcDef(scope, procDef)
+		result.ProcDefs = append(result.ProcDefs, procDef)
+		if procDef.Name == "main" {
+			result.Main = procDef
+		}
 	}
 	return
 }
