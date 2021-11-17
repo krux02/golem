@@ -59,7 +59,7 @@ func (builder *CodeBuilder) compileSymWithType(sym TcSymbol) {
 	}
 }
 
-func (builder *CodeBuilder) compileCall(call TcCall) {
+func (builder *CodeBuilder) compileCall(context *PackageGeneratorContext, call TcCall) {
 	if call.Sym.Impl.generateAsOperator {
 		builder.WriteString("(")
 		for i, it := range call.Args {
@@ -68,7 +68,7 @@ func (builder *CodeBuilder) compileCall(call TcCall) {
 				builder.WriteString(call.Sym.Impl.builtinName)
 				builder.WriteString(" ")
 			}
-			builder.compileExpr(it)
+			builder.compileExpr(context, it)
 		}
 		builder.WriteString(")")
 	} else {
@@ -78,7 +78,7 @@ func (builder *CodeBuilder) compileCall(call TcCall) {
 			if i != 0 {
 				builder.WriteString(", ")
 			}
-			builder.compileExpr(it)
+			builder.compileExpr(context, it)
 		}
 		builder.WriteString(")")
 	}
@@ -166,24 +166,24 @@ func (builder *CodeBuilder) compileSymbol(sym TcSymbol) {
 	}
 }
 
-func (builder *CodeBuilder) compileExpr(expr TcExpr) {
-	builder.compileExprWithPrefix(expr, false)
+func (builder *CodeBuilder) compileExpr(context *PackageGeneratorContext, expr TcExpr) {
+	builder.compileExprWithPrefix(context, expr, false)
 }
 
-func (builder *CodeBuilder) compileVariableDefStmt(stmt TcVariableDefStmt) {
+func (builder *CodeBuilder) compileVariableDefStmt(context *PackageGeneratorContext, stmt TcVariableDefStmt) {
 	builder.compileSymWithType(stmt.Sym)
 	builder.WriteString(" = ")
-	builder.compileExpr(stmt.Value)
+	builder.compileExpr(context, stmt.Value)
 }
 
-func (builder *CodeBuilder) compileIfStmt(stmt TcIfStmt) {
+func (builder *CodeBuilder) compileIfStmt(context *PackageGeneratorContext, stmt TcIfStmt) {
 	builder.WriteString("if (")
-	builder.compileExpr(stmt.Condition)
+	builder.compileExpr(context, stmt.Condition)
 	builder.WriteString(") ")
-	builder.compileExpr(stmt.Body)
+	builder.compileExpr(context, stmt.Body)
 }
 
-func wrapInCodeBlock(expr TcExpr) TcCodeBlock {
+func wrapInCodeBlock(context *PackageGeneratorContext, expr TcExpr) TcCodeBlock {
 	// I hope this function is temporary and can be removed at some point in the future
 	if cb, ok := expr.(TcCodeBlock); ok {
 		return cb
@@ -191,16 +191,16 @@ func wrapInCodeBlock(expr TcExpr) TcCodeBlock {
 	return TcCodeBlock{Items: []TcExpr{expr}}
 }
 
-func (builder *CodeBuilder) compileIfElseStmt(stmt TcIfElseStmt, injectReturn bool) {
+func (builder *CodeBuilder) compileIfElseStmt(context *PackageGeneratorContext, stmt TcIfElseStmt, injectReturn bool) {
 	builder.WriteString("if (")
-	builder.compileExpr(stmt.Condition)
+	builder.compileExpr(context, stmt.Condition)
 	builder.WriteString(") ")
-	builder.compileCodeBlock(wrapInCodeBlock(stmt.Body), injectReturn)
+	builder.compileCodeBlock(context, wrapInCodeBlock(context, stmt.Body), injectReturn)
 	builder.WriteString(" else ")
-	builder.compileCodeBlock(wrapInCodeBlock(stmt.Else), injectReturn)
+	builder.compileCodeBlock(context, wrapInCodeBlock(context, stmt.Else), injectReturn)
 }
 
-func (builder *CodeBuilder) compileForLoopStmt(stmt TcForLoopStmt) {
+func (builder *CodeBuilder) compileForLoopStmt(context *PackageGeneratorContext, stmt TcForLoopStmt) {
 	// HACK: currently only iterating a cstring is possible, this code
 	// is temporaray and written to work only for that (for now), type
 	// arguments (e.g. for seq[int]) don't exist yet.
@@ -214,7 +214,7 @@ func (builder *CodeBuilder) compileForLoopStmt(stmt TcForLoopStmt) {
 		builder.WriteString("for(const char ")
 		builder.compileSymbol(stmt.LoopSym)
 		builder.WriteString(" = ")
-		builder.compileExpr(stmt.Collection)
+		builder.compileExpr(context, stmt.Collection)
 		builder.WriteString("; ")
 		builder.compileSymbol(stmt.LoopSym)
 		builder.WriteString(" != '\\0'; ")
@@ -226,7 +226,7 @@ func (builder *CodeBuilder) compileForLoopStmt(stmt TcForLoopStmt) {
 		builder.WriteString(" const ")
 		builder.compileSymbol(stmt.LoopSym)
 		builder.WriteString(" = ")
-		builder.compileExpr(stmt.Collection)
+		builder.compileExpr(context, stmt.Collection)
 		builder.WriteString(", ")
 		builder.compileSymbol(stmt.LoopSym)
 		builder.WriteString("_END = ")
@@ -243,16 +243,16 @@ func (builder *CodeBuilder) compileForLoopStmt(stmt TcForLoopStmt) {
 	} else {
 		panic("not implemented")
 	}
-	builder.compileCodeBlock(wrapInCodeBlock(stmt.Body), false)
+	builder.compileCodeBlock(context, wrapInCodeBlock(context, stmt.Body), false)
 }
 
-func (builder *CodeBuilder) compileArrayLit(lit TcArrayLit) {
+func (builder *CodeBuilder) compileArrayLit(context *PackageGeneratorContext,lit TcArrayLit) {
 	builder.WriteString("{")
 	for i, it := range lit.Items {
 		if i != 0 {
 			builder.WriteString(", ")
 		}
-		builder.compileExpr(it)
+		builder.compileExpr(context, it)
 	}
 	builder.WriteString("}")
 
@@ -266,13 +266,13 @@ func (builder *CodeBuilder) injectReturn(injectReturn bool) {
 
 // lastExprPrefix is used to inject a return statement at each control
 // flow end in procedures, as in C code
-func (builder *CodeBuilder) compileExprWithPrefix(expr TcExpr, injectReturn bool) {
+func (builder *CodeBuilder) compileExprWithPrefix(context *PackageGeneratorContext, expr TcExpr, injectReturn bool) {
 	switch ex := expr.(type) {
 	case TcCodeBlock:
-		builder.compileCodeBlock(ex, injectReturn)
+		builder.compileCodeBlock(context, ex, injectReturn)
 	case TcCall:
 		builder.injectReturn(injectReturn)
-		builder.compileCall(ex)
+		builder.compileCall(context, ex)
 	case StrLit:
 		builder.injectReturn(injectReturn)
 		builder.compileStrLit(ex)
@@ -284,7 +284,7 @@ func (builder *CodeBuilder) compileExprWithPrefix(expr TcExpr, injectReturn bool
 		builder.compileIntLit(ex)
 	case TcArrayLit:
 		builder.injectReturn(injectReturn)
-		builder.compileArrayLit(ex)
+		builder.compileArrayLit(context, ex)
 	case TcSymbol:
 		builder.injectReturn(injectReturn)
 		builder.compileSymbol(ex)
@@ -292,23 +292,23 @@ func (builder *CodeBuilder) compileExprWithPrefix(expr TcExpr, injectReturn bool
 		if injectReturn {
 			panic(fmt.Sprintf("internal error, injectReturn not supported here", injectReturn))
 		}
-		builder.compileVariableDefStmt(ex)
+		builder.compileVariableDefStmt(context, ex)
 	case TcReturnStmt:
 		// ignore the value of injectReturn here
 		builder.WriteString("return ")
-		builder.compileExpr(ex.Value)
+		builder.compileExpr(context, ex.Value)
 	case TcIfStmt:
 		if injectReturn {
 			panic(fmt.Sprintf("internal error, injectReturn not supported here", injectReturn))
 		}
-		builder.compileIfStmt(ex)
+		builder.compileIfStmt(context, ex)
 	case TcIfElseStmt:
-		builder.compileIfElseStmt(ex, injectReturn)
+		builder.compileIfElseStmt(context, ex, injectReturn)
 	case TcForLoopStmt:
 		if injectReturn {
 			panic(fmt.Sprintf("internal error, injectReturn not supported here", injectReturn))
 		}
-		builder.compileForLoopStmt(ex)
+		builder.compileForLoopStmt(context, ex)
 	case nil:
 		panic(fmt.Sprintf("invalid Ast, expression is nil %T", expr))
 	default:
@@ -316,7 +316,7 @@ func (builder *CodeBuilder) compileExprWithPrefix(expr TcExpr, injectReturn bool
 	}
 }
 
-func (builder *CodeBuilder) compileCodeBlock(block TcCodeBlock, injectReturn bool) {
+func (builder *CodeBuilder) compileCodeBlock(context *PackageGeneratorContext, block TcCodeBlock, injectReturn bool) {
 	N := len(block.Items)
 	isExpr := !injectReturn && block.Type() != TypeVoid
 	if isExpr {
@@ -327,9 +327,9 @@ func (builder *CodeBuilder) compileCodeBlock(block TcCodeBlock, injectReturn boo
 	for i, expr := range block.Items {
 		builder.newlineAndIndent()
 		if i == N-1 {
-			builder.compileExprWithPrefix(expr, injectReturn)
+			builder.compileExprWithPrefix(context, expr, injectReturn)
 		} else {
-			builder.compileExpr(expr)
+			builder.compileExpr(context, expr)
 		}
 		builder.WriteRune(';')
 	}
@@ -341,7 +341,7 @@ func (builder *CodeBuilder) compileCodeBlock(block TcCodeBlock, injectReturn boo
 	}
 }
 
-func (builder *CodeBuilder) compileStructDef(structDef TcStructDef) {
+func (builder *CodeBuilder) compileStructDef(context *PackageGeneratorContext, structDef TcStructDef) {
 	builder.newlineAndIndent()
 	builder.WriteString("typedef struct ")
 	builder.WriteString(structDef.Name)
@@ -361,27 +361,29 @@ func (builder *CodeBuilder) compileStructDef(structDef TcStructDef) {
 	builder.WriteString(";")
 }
 
-func (context *PackageGeneratorContext) compileProcDef(procDef TcProcDef) {
+func compileProcDef(context *PackageGeneratorContext, procDef TcProcDef) {
 	// reuse string here
-	builder := &CodeBuilder{}
-	builder.compileTypeExpr(procDef.ResultType)
-	// builder.compileTypeExpr(procDef.ResultType)
-	builder.WriteString(" ")
-	builder.WriteString(procDef.Name)
-	builder.WriteString("(")
+
+	headBuilder := &CodeBuilder{}
+	headBuilder.compileTypeExpr(procDef.ResultType)
+	// headBuilder.compileTypeExpr(procDef.ResultType)
+	headBuilder.WriteString(" ")
+	headBuilder.WriteString(procDef.Name)
+	headBuilder.WriteString("(")
 	for i, arg := range procDef.Args {
 		if i != 0 {
-			builder.WriteString(", ")
+			headBuilder.WriteString(", ")
 		}
-		builder.compileTypeExpr(arg.Typ)
-		builder.WriteString(" ")
-		builder.WriteString(arg.Name)
+		headBuilder.compileTypeExpr(arg.Typ)
+		headBuilder.WriteString(" ")
+		headBuilder.WriteString(arg.Name)
 	}
-	builder.WriteString(")")
+	headBuilder.WriteString(")")
 
-	builderStr := builder.String()
+	builderStr := headBuilder.String()
 	context.forwardDecl.WriteString(builderStr)
 	context.forwardDecl.WriteString(";")
+
 	context.functions.WriteString(builderStr)
 	body, ok := procDef.Body.(TcCodeBlock)
 	// ensure code block for code generation
@@ -389,7 +391,7 @@ func (context *PackageGeneratorContext) compileProcDef(procDef TcProcDef) {
 		body.Items = []TcExpr{procDef.Body}
 	}
 	// instruct to inject "return" at the end of each control flow
-	context.functions.compileCodeBlock(body, procDef.ResultType != TypeVoid)
+	context.functions.compileCodeBlock(context, body, procDef.ResultType != TypeVoid)
 }
 
 func compilePackageToC(pak TcPackageDef) string {
@@ -405,7 +407,7 @@ func compilePackageToC(pak TcPackageDef) string {
 	//for _, proc := range pak.ProcDefs {
 	//context.typeDecl.compileProcDef(proc)
 	//}
-	context.compileProcDef(pak.Main)
+	compileProcDef(context, pak.Main)
 
 	final := &strings.Builder{}
 	final.WriteString(context.includes.String())
