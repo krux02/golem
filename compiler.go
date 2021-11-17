@@ -341,37 +341,6 @@ func (context *CodeBuilder) compileCodeBlock(block TcCodeBlock, injectReturn boo
 	}
 }
 
-func (context *CodeBuilder) compileProcDef(procDef TcProcDef, justforward bool) {
-	fmt.Printf("%#v\n", procDef)
-	context.newlineAndIndent()
-	context.compileTypeExpr(procDef.ResultType)
-	// context.compileTypeExpr(procDef.ResultType)
-	context.WriteString(" ")
-	context.WriteString(procDef.Name)
-	context.WriteString("(")
-	for i, arg := range procDef.Args {
-		if i != 0 {
-			context.WriteString(", ")
-		}
-		context.compileTypeExpr(arg.Typ)
-		context.WriteString(" ")
-		context.WriteString(arg.Name)
-	}
-	context.WriteString(")")
-
-	if justforward {
-		context.WriteByte(';')
-	} else {
-		body, ok := procDef.Body.(TcCodeBlock)
-		// ensure code block for code generation
-		if !ok {
-			body.Items = []TcExpr{procDef.Body}
-		}
-		// instruct to inject "return" at the end of each control flow
-		context.compileCodeBlock(body, procDef.ResultType != TypeVoid)
-	}
-}
-
 func (context *CodeBuilder) compileStructDef(structDef TcStructDef) {
 	context.newlineAndIndent()
 	context.WriteString("typedef struct ")
@@ -393,8 +362,34 @@ func (context *CodeBuilder) compileStructDef(structDef TcStructDef) {
 }
 
 func (context *PackageGeneratorContext) compileProcDef(procDef TcProcDef) {
-	context.forwardDecl.compileProcDef(procDef, true)
-	context.functions.compileProcDef(procDef, false)
+	// reuse string here
+	builder := &CodeBuilder{}
+	builder.compileTypeExpr(procDef.ResultType)
+	// builder.compileTypeExpr(procDef.ResultType)
+	builder.WriteString(" ")
+	builder.WriteString(procDef.Name)
+	builder.WriteString("(")
+	for i, arg := range procDef.Args {
+		if i != 0 {
+			builder.WriteString(", ")
+		}
+		builder.compileTypeExpr(arg.Typ)
+		builder.WriteString(" ")
+		builder.WriteString(arg.Name)
+	}
+	builder.WriteString(")")
+
+	builderStr := builder.String()
+	context.forwardDecl.WriteString(builderStr)
+	context.forwardDecl.WriteString(";")
+	context.functions.WriteString(builderStr)
+	body, ok := procDef.Body.(TcCodeBlock)
+	// ensure code block for code generation
+	if !ok {
+		body.Items = []TcExpr{procDef.Body}
+	}
+	// instruct to inject "return" at the end of each control flow
+	context.functions.compileCodeBlock(body, procDef.ResultType != TypeVoid)
 }
 
 func compilePackageToC(pak TcPackageDef) string {
