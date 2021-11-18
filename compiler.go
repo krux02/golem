@@ -157,7 +157,6 @@ func (builder *CodeBuilder) compileIntLit(lit IntLit) {
 }
 
 func (builder *CodeBuilder) compileSymbol(sym TcSymbol) {
-	fmt.Printf("compile symbol %#v\n", sym)
 	switch sym.Name {
 	case "true":
 		builder.WriteString("1")
@@ -332,7 +331,6 @@ func (builder *CodeBuilder) compileCodeBlock(context *PackageGeneratorContext, b
 	for i, expr := range block.Items {
 		builder.newlineAndIndent()
 		if i == N-1 {
-			fmt.Println("debug context: ", AstFormat(expr))
 			builder.compileExprWithPrefix(context, expr, injectReturn)
 		} else {
 			builder.compileExpr(context, expr)
@@ -348,7 +346,6 @@ func (builder *CodeBuilder) compileCodeBlock(context *PackageGeneratorContext, b
 }
 
 func (builder *CodeBuilder) compileStructDef(context *PackageGeneratorContext, structDef TcStructDef) {
-	builder.newlineAndIndent()
 	builder.WriteString("typedef struct ")
 	builder.WriteString(structDef.Name)
 	builder.WriteString(" {")
@@ -388,8 +385,9 @@ func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 
 	builderStr := headBuilder.String()
 	context.forwardDecl.WriteString(builderStr)
-	context.forwardDecl.WriteString(";")
+	context.forwardDecl.WriteString(";\n")
 
+	context.functions.newlineAndIndent()
 	context.functions.WriteString(builderStr)
 	body, ok := procDef.Body.(TcCodeBlock)
 	// ensure code block for code generation
@@ -402,7 +400,7 @@ func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 
 func (context *PackageGeneratorContext) markForGeneration(procDef *TcProcDef) {
 
-	if procDef == nil {
+	if procDef.Body == nil {
 		return // builtin procs don't have a procDef to point to
 	}
 	if procDef.scheduledforgeneration {
@@ -430,13 +428,6 @@ func compilePackageToC(pak TcPackageDef) string {
 	// TODO this sholud depend on the usage of `string` as a type
 	context.typeDecl.WriteString("typedef char* string;\n")
 	context.typeDecl.WriteString("typedef unsigned char bool;\n")
-	//for _, typ := range pak.TypeDefs {
-	//context.typeDecl.compileStructDef(typ)
-	//}
-	//for _, proc := range pak.ProcDefs {
-	//context.typeDecl.compileProcDef(proc)
-	//}
-	//
 	context.markForGeneration(pak.Main)
 	for procDef := context.popMarkedForGenerationProcDef(); procDef != nil; procDef = context.popMarkedForGenerationProcDef() {
 		compileProcDef(context, procDef)
