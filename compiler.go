@@ -16,6 +16,9 @@ type PackageGeneratorContext struct {
 	forwardDecl CodeBuilder
 	functions   CodeBuilder
 	Pak         TcPackageDef
+
+	// functions marked for code generation
+	TodoList []*TcProcDef
 }
 
 func (builder *CodeBuilder) newlineAndIndent() {
@@ -60,6 +63,8 @@ func (builder *CodeBuilder) compileSymWithType(sym TcSymbol) {
 }
 
 func (builder *CodeBuilder) compileCall(context *PackageGeneratorContext, call TcCall) {
+	context.markForGeneration(call.Sym.Impl)
+
 	if call.Sym.Impl.generateAsOperator {
 		builder.WriteString("(")
 		for i, it := range call.Args {
@@ -246,7 +251,7 @@ func (builder *CodeBuilder) compileForLoopStmt(context *PackageGeneratorContext,
 	builder.compileCodeBlock(context, wrapInCodeBlock(context, stmt.Body), false)
 }
 
-func (builder *CodeBuilder) compileArrayLit(context *PackageGeneratorContext,lit TcArrayLit) {
+func (builder *CodeBuilder) compileArrayLit(context *PackageGeneratorContext, lit TcArrayLit) {
 	builder.WriteString("{")
 	for i, it := range lit.Items {
 		if i != 0 {
@@ -327,6 +332,7 @@ func (builder *CodeBuilder) compileCodeBlock(context *PackageGeneratorContext, b
 	for i, expr := range block.Items {
 		builder.newlineAndIndent()
 		if i == N-1 {
+			fmt.Println("debug context: ", AstFormat(expr))
 			builder.compileExprWithPrefix(context, expr, injectReturn)
 		} else {
 			builder.compileExpr(context, expr)
@@ -361,7 +367,7 @@ func (builder *CodeBuilder) compileStructDef(context *PackageGeneratorContext, s
 	builder.WriteString(";")
 }
 
-func compileProcDef(context *PackageGeneratorContext, procDef TcProcDef) {
+func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 	// reuse string here
 
 	headBuilder := &CodeBuilder{}
@@ -394,6 +400,29 @@ func compileProcDef(context *PackageGeneratorContext, procDef TcProcDef) {
 	context.functions.compileCodeBlock(context, body, procDef.ResultType != TypeVoid)
 }
 
+func (context *PackageGeneratorContext) markForGeneration(procDef *TcProcDef) {
+
+	if procDef == nil {
+		return // builtin procs don't have a procDef to point to
+	}
+	if procDef.scheduledforgeneration {
+		return // nothing to do when already scheduled
+	}
+	context.TodoList = append(context.TodoList, procDef)
+	procDef.scheduledforgeneration = true
+}
+
+// might return nil when nothing to do
+func (context *PackageGeneratorContext) popMarkedForGenerationProcDef() *TcProcDef {
+	N := len(context.TodoList)
+	if N > 0 {
+		result := context.TodoList[N-1]
+		context.TodoList = context.TodoList[:N-1]
+		return result
+	}
+	return nil
+}
+
 func compilePackageToC(pak TcPackageDef) string {
 	context := &PackageGeneratorContext{Pak: pak}
 	// TODO this sholud depend on the usage of `printf`
@@ -407,7 +436,11 @@ func compilePackageToC(pak TcPackageDef) string {
 	//for _, proc := range pak.ProcDefs {
 	//context.typeDecl.compileProcDef(proc)
 	//}
-	compileProcDef(context, pak.Main)
+	//
+	context.markForGeneration(pak.Main)
+	for procDef := context.popMarkedForGenerationProcDef(); procDef != nil; procDef = context.popMarkedForGenerationProcDef() {
+		compileProcDef(context, procDef)
+	}
 
 	final := &strings.Builder{}
 	final.WriteString(context.includes.String())

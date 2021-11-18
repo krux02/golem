@@ -108,9 +108,17 @@ type TcProcDef struct {
 	// in the language.
 	// Exception for printf. It has varargs that are at this point in
 	// time no language feature yet.
+	builtinName string
 	printfargs bool
 	generateAsOperator bool
-	builtinName string
+
+	// This code here is still supposed to be temporary. But from here on is used
+	// for the code generator
+
+	// this value is set to true in the code generator to mark this function as
+	// already scheduled for code generation. This flag is used to prevent
+	// generating the same function multiple times.
+	scheduledforgeneration bool
 }
 
 type TcArrayLit struct {
@@ -121,9 +129,9 @@ type TcArrayLit struct {
 type TcPackageDef struct {
 	AbstractAstNode
 	Name     string
-	TypeDefs []TcStructDef
-	ProcDefs []TcProcDef
-	Main 		 TcProcDef // main entry point
+	TypeDefs []*TcStructDef
+	ProcDefs []*TcProcDef
+	Main 		 *TcProcDef // main entry point
 }
 
 func (sym TcSymbol) expression()           {}

@@ -95,8 +95,8 @@ func (tc *TypeChecker) LineColumnNode(node AstNode) (line, columnStart, columnEn
 	return LineColumnStr(tc.code, node.Source())
 }
 
-func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def StructDef) TcStructDef {
-	var result TcStructDef
+func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def StructDef) (result *TcStructDef) {
+	result = &TcStructDef{}
 	result.Name = def.Name.source
 	for _, field := range def.Fields {
 		var tcField TcStructField
@@ -107,9 +107,10 @@ func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def StructDef) TcStructDe
 	return result
 }
 
-func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result TcProcDef) {
+func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result *TcProcDef) {
 	scope := parentScope.NewSubScope()
-	scope.CurrentProc = &result
+	result = &TcProcDef{}
+	scope.CurrentProc = result
 	result.Name = def.Name.source
 	for _, arg := range def.Args {
 		tcArg := scope.NewSymbol(arg.Name, SkProcArg, tc.LookUpType(scope, arg.Type))
@@ -120,7 +121,7 @@ func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result 
 	result.Body = tc.TypeCheckExpr(scope, def.Body, resultType)
 
 	// TODO this is very ugly, store a pointer to a local, return a copy
-	parentScope.Procedures[result.Name] = &result
+	parentScope.Procedures[result.Name] = result
 	return
 }
 
