@@ -32,7 +32,7 @@ func (builder *CodeBuilder) compileTypeExpr(typ Type) {
 	switch typ := typ.(type) {
 	case *BuiltinType:
 		builder.WriteString(typ.name)
-	case ArrayType:
+	case *ArrayType:
 		// TODO this is wrong.
 		builder.compileTypeExpr(typ.Elem)
 		builder.WriteByte('[')
@@ -49,7 +49,7 @@ func (builder *CodeBuilder) compileSymWithType(sym TcSymbol) {
 		builder.WriteString(typ.name)
 		builder.WriteString(" ")
 		builder.WriteString(sym.Name)
-	case ArrayType:
+	case *ArrayType:
 		// TODO this is wrong for nested arrays
 		builder.compileTypeExpr(typ.Elem)
 		builder.WriteString(" ")
@@ -224,7 +224,7 @@ func (builder *CodeBuilder) compileForLoopStmt(context *PackageGeneratorContext,
 		builder.WriteString(" != '\\0'; ")
 		builder.compileSymbol(stmt.LoopSym)
 		builder.WriteString("++) ")
-	} else if arrayType, ok := stmt.Collection.Type().(ArrayType); ok {
+	} else if arrayType, ok := stmt.Collection.Type().(*ArrayType); ok {
 		builder.WriteString("for(")
 		builder.compileTypeExpr(arrayType.Elem)
 		builder.WriteString(" const ")

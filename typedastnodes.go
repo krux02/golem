@@ -108,8 +108,8 @@ type TcProcDef struct {
 	// in the language.
 	// Exception for printf. It has varargs that are at this point in
 	// time no language feature yet.
-	builtinName string
-	printfargs bool
+	builtinName        string
+	printfargs         bool
 	generateAsOperator bool
 
 	// This code here is still supposed to be temporary. But from here on is used
@@ -131,7 +131,7 @@ type TcPackageDef struct {
 	Name     string
 	TypeDefs []*TcStructDef
 	ProcDefs []*TcProcDef
-	Main 		 *TcProcDef // main entry point
+	Main     *TcProcDef // main entry point
 }
 
 func (sym TcSymbol) expression()           {}

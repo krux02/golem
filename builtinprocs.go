@@ -16,13 +16,12 @@ func (typ *BuiltinType) Source() string {
 
 func (typ *BuiltinType) typenode() {}
 
-func (typ ArrayType) Source() string {
+func (typ *ArrayType) Source() string {
 	// should this panic?
 	return ""
 }
 
-func (typ ArrayType) typenode() {}
-
+func (typ *ArrayType) typenode() {}
 
 // **** Constants ****
 
@@ -73,11 +72,11 @@ var builtinScope Scope = &ScopeImpl{
 
 func registerBuiltin(name, builtinName string, isOperator bool, args []Type, result Type) {
 	procDef := &TcProcDef{
-		Name:       name,
-		Args:       make([]TcSymbol, len(args)),
-		ResultType: result,
+		Name:               name,
+		Args:               make([]TcSymbol, len(args)),
+		ResultType:         result,
 		generateAsOperator: isOperator,
-		builtinName: builtinName,
+		builtinName:        builtinName,
 	}
 	for i, arg := range args {
 		procDef.Args[i].Typ = arg
@@ -87,7 +86,7 @@ func registerBuiltin(name, builtinName string, isOperator bool, args []Type, res
 
 func registerConstant(name string, typ Type) {
 	// TODO this is wrong, a constant isn't a variable
-    _ = builtinScope.NewSymbol(Ident{AbstractAstNode{source: name}}, SkConst, typ)
+	_ = builtinScope.NewSymbol(Ident{AbstractAstNode{source: name}}, SkConst, typ)
 }
 
 func init() {

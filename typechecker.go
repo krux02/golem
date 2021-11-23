@@ -52,7 +52,7 @@ func (tc *TypeChecker) LookUpType(scope Scope, expr TypeExpr) Type {
 		var at ArrayType
 		at.Len = expr.ExprArgs[0].(IntLit).Value
 		at.Elem = tc.LookUpType(scope, expr.TypeArgs[0])
-		return at
+		return &at
 	}
 
 	// TODO really slow lookup, should really be faster
@@ -132,6 +132,7 @@ func (tc *TypeChecker) Errorf(node AstNode, msg string, args ...interface{}) err
 }
 
 func (tc *TypeChecker) ExpectType(node AstNode, gotten, expected Type) {
+	// TODO this doesn't work for partial types (e.g. array[<unspecified>])
 	if expected != TypeUnspecified && expected != gotten {
 		panic(tc.Errorf(node, "expected type '%s' but got type '%s'",
 			AstFormat(expected), AstFormat(gotten)))
@@ -295,7 +296,7 @@ func (lit TcArrayLit) Type() Type {
 	} else {
 		result.Elem = TypeNoReturn
 	}
-	return result
+	return &result
 }
 
 func (sym TcSymbol) Type() Type {
@@ -392,10 +393,27 @@ func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExp
 	return result
 }
 
+type ArrayTypeMapKey struct {
+	elem Type
+	len  int
+}
+
+var arrayTypeMap map[ArrayTypeMapKey]*ArrayType
+
+func GetArrayType(elem Type, len int) (result *ArrayType) {
+	// TODO all types in the `Type` interface must be pointer types
+	result = arrayTypeMap[ArrayTypeMapKey{elem, len}]
+	if result == nil {
+		result = &ArrayType{Elem: elem, Len: len}
+		arrayTypeMap[ArrayTypeMapKey{elem, len}] = result
+	}
+	return
+}
+
 func (tc *TypeChecker) TypeCheckArrayLit(scope Scope, arg ArrayLit, expected Type) (result TcArrayLit) {
 	// TODO expect use expect length
 	//expectedLen := expected.(ArrayType).Len
-	expected = expected.(ArrayType).Elem
+	expected = expected.(*ArrayType).Elem
 	result.Items = make([]TcExpr, len(arg.Items))
 
 	for i, item := range arg.Items {
@@ -423,7 +441,7 @@ func (tc *TypeChecker) TypeCheckIfElseStmt(scope Scope, stmt IfElseStmt, expecte
 // TODO ElementType should be some form of language feature
 func (tc *TypeChecker) ElementType(expr TcExpr) Type {
 	switch typ := expr.Type().(type) {
-	case ArrayType:
+	case *ArrayType:
 		return typ.Elem
 	case *BuiltinType:
 		if typ.name == "string" {

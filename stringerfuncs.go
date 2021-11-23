@@ -360,7 +360,7 @@ func (typ BuiltinType) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(typ.name)
 }
 
-func (typ ArrayType) prettyPrint(builder *AstPrettyPrinter) {
+func (typ *ArrayType) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("array(")
 	WriteIntLit(&builder.Builder, typ.Len)
 	builder.WriteString(")[")
