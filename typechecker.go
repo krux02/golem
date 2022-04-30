@@ -288,6 +288,10 @@ func (lit IntLit) Type() Type {
 	return TypeInt
 }
 
+func (lit FloatLit) Type() Type {
+	return TypeFloat
+}
+
 func (lit TcArrayLit) Type() Type {
 	var result ArrayType
 	result.Len = len(lit.Items)
@@ -368,6 +372,9 @@ func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExp
 		return (TcExpr)(arg)
 	case IntLit:
 		tc.ExpectType(arg, TypeInt, expected)
+		return (TcExpr)(arg)
+	case FloatLit:
+		tc.ExpectType(arg, TypeFloat, expected)
 		return (TcExpr)(arg)
 	case ReturnStmt:
 		// ignoring expected type here, because the return as expression

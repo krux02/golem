@@ -183,6 +183,11 @@ func (lit IntLit) prettyPrint(builder *AstPrettyPrinter) {
 	WriteIntLit(&builder.Builder, lit.Value)
 }
 
+func (lit FloatLit) prettyPrint(builder *AstPrettyPrinter) {
+	str := fmt.Sprintf("%f", lit.Value)
+	builder.WriteString(str)
+}
+
 func (typeExpr TypeExpr) prettyPrint(builder *AstPrettyPrinter) {
 	fmt.Println("src: ", typeExpr.source)
 	builder.WriteString(typeExpr.Ident.source)

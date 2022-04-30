@@ -3,6 +3,8 @@
 * DONE implement ~context~ type and parameter for ~TypeCheck~ functions
 * DONE provide proper error messages or error instead of panic
 * DONE negative literals
+* TODO float literals
+* TODO generic comparison < and >
 * TODO generic arguments
 * TODO vm for compile time code execution
 * TODO restrict operator precedence to common knowledeg cases (+-*/) require explicit braces everywhere else.

@@ -156,6 +156,11 @@ func (builder *CodeBuilder) compileIntLit(lit IntLit) {
 	WriteIntLit(&builder.Builder, lit.Value)
 }
 
+func (builder *CodeBuilder) compileFloatLit(lit FloatLit) {
+	str := fmt.Sprintf("%f", lit.Value)
+	builder.Builder.WriteString(str)
+}
+
 func (builder *CodeBuilder) compileSymbol(sym TcSymbol) {
 	switch sym.Name {
 	case "true":
@@ -286,6 +291,9 @@ func (builder *CodeBuilder) compileExprWithPrefix(context *PackageGeneratorConte
 	case IntLit:
 		builder.injectReturn(injectReturn)
 		builder.compileIntLit(ex)
+	case FloatLit:
+		builder.injectReturn(injectReturn)
+		builder.compileFloatLit(ex)
 	case TcArrayLit:
 		builder.injectReturn(injectReturn)
 		builder.compileArrayLit(context, ex)

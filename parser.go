@@ -257,6 +257,18 @@ func parseIntLit(tokenizer *Tokenizer) (result IntLit) {
 	return
 }
 
+func parseFloatLit(tokenizer *Tokenizer) (result FloatLit) {
+	token := tokenizer.Next()
+	tokenizer.expectKind(token, TkFloatLit)
+	result.source = token.value
+	floatValue, err := strconv.ParseFloat(token.value, 64)
+	if err != nil {
+		panic("internal error invalid float token")
+	}
+	result.Value = floatValue
+	return
+}
+
 func parseInfixCall(tokenizer *Tokenizer, lhs Expr) (result Call) {
 	operator := parseOperator(tokenizer)
 	rhs := parseExpr(tokenizer, false)
@@ -373,6 +385,8 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 		result = (Expr)(parseStrLit(tokenizer))
 	case TkIntLit:
 		result = (Expr)(parseIntLit(tokenizer))
+	case TkFloatLit:
+		result = (Expr)(parseFloatLit(tokenizer))
 	case TkOpenBracket:
 		result = (Expr)(parseArrayLit(tokenizer))
 	case TkOperator:

@@ -23,6 +23,10 @@ proc max(a,b: int): int = {
   if a > b do a else b
 }
 
+# proc max(a,b: float): float = {
+#   if a > b do a else b
+# }
+
 ## Tests side effects behavior of `and` and `or` operators.
 proc testBooleanOpsWithBlockExpr(): void = {
   var arr: array(2)[bool] = [true, false]
@@ -63,6 +67,13 @@ proc main():int = {
   printf("max paren depth: %d\n", depth)
   testBooleanOpsWithBlockExpr()
   let myArray: array(7)[int] = [123, -456, -789, -234, 567, 891, -123]
+
+  printf("max test: max(a,b): %d\n", max(x,y))
+
+  let f1: float = 123.456
+  let f2: float = 654.321
+  printf("f1: %f f2: %f\n", f1, f2);
+  # printf("max test: max(fx,f2): %f\n", max(f1,f2))
   0
 }
 
