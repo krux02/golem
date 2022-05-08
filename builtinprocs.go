@@ -64,8 +64,8 @@ var builtinScope Scope = &ScopeImpl{
 		"noreturn": TypeNoReturn,
 	},
 	// these are builtin procedures, therefore their Impl is nil
-	Procedures: map[string]*TcProcDef{
-		"printf": BuiltinPrintf,
+	Procedures: map[string]([]*TcProcDef){
+		"printf": []*TcProcDef{BuiltinPrintf},
 	},
 	Variables: map[string]TcSymbol{},
 }
@@ -80,8 +80,9 @@ func registerBuiltin(name, builtinName string, isOperator bool, args []Type, res
 	}
 	for i, arg := range args {
 		procDef.Args[i].Typ = arg
+		procDef.Args[i].Kind = SkProcArg
 	}
-	builtinScope.Procedures[name] = procDef
+	builtinScope.Procedures[name] = append(builtinScope.Procedures[name], procDef)
 }
 
 func registerConstant(name string, typ Type) {
@@ -92,16 +93,23 @@ func registerConstant(name string, typ Type) {
 func init() {
 	// currently overloading isn't supported
 	registerBuiltin("+", "+", true, []Type{TypeInt, TypeInt}, TypeInt)
-	registerBuiltin("-", "+", true, []Type{TypeInt, TypeInt}, TypeInt)
-	registerBuiltin("*", "+", true, []Type{TypeInt, TypeInt}, TypeInt)
-
-	// NOTE, there is something written about weirdo in ideas.org
+	registerBuiltin("+", "+", true, []Type{TypeFloat, TypeFloat}, TypeFloat)
+	registerBuiltin("-", "-", true, []Type{TypeInt, TypeInt}, TypeInt)
+	registerBuiltin("-", "-", true, []Type{TypeFloat, TypeFloat}, TypeFloat)
+	registerBuiltin("*", "*", true, []Type{TypeInt, TypeInt}, TypeInt)
+	registerBuiltin("*", "*", true, []Type{TypeFloat, TypeFloat}, TypeFloat)
+	registerBuiltin("/", "/", true, []Type{TypeInt, TypeInt}, TypeInt) // TODO, maybe return TypeFloat like in Nim?
 	registerBuiltin("/", "/", true, []Type{TypeFloat, TypeFloat}, TypeFloat)
 
 	// this has no structure, just made to make the example compile
-	registerBuiltin("==", "==", true, []Type{TypeChar, TypeChar}, TypeBoolean)
-	registerBuiltin("<", "<", true, []Type{TypeInt, TypeInt}, TypeBoolean)
-	registerBuiltin(">", ">", true, []Type{TypeInt, TypeInt}, TypeBoolean)
+	for _, typ := range []Type{TypeChar, TypeInt, TypeFloat} {
+		registerBuiltin("==", "==", true, []Type{typ, typ}, TypeBoolean)
+		registerBuiltin("<", "<", true, []Type{typ, typ}, TypeBoolean)
+		registerBuiltin("<=", "<=", true, []Type{typ, typ}, TypeBoolean)
+		registerBuiltin(">", ">", true, []Type{typ, typ}, TypeBoolean)
+		registerBuiltin(">=", ">=", true, []Type{typ, typ}, TypeBoolean)
+		registerBuiltin("!=", "!=", true, []Type{typ, typ}, TypeBoolean)
+	}
 
 	registerBuiltin("+=", "+=", true, []Type{TypeInt, TypeInt}, TypeVoid)
 	registerBuiltin("-=", "-=", true, []Type{TypeInt, TypeInt}, TypeVoid)
@@ -111,4 +119,14 @@ func init() {
 
 	registerConstant("true", TypeBoolean)
 	registerConstant("false", TypeBoolean)
+
+	// lessOpDef := &TcProcDef{
+	// 	Name:               "<",
+	// 	Args:               []TcSymbol{TcSymbol{Name: "", Kind: SkProcArg, Typ: TypeUnspecified}},
+	// 	ResultType:         TypeBoolean,
+	// 	generateAsOperator: true,
+	// 	builtinName:        "<",
+	// }
+
+	// builtinScope.Procedures["<"] = lessOpDef
 }

@@ -1,7 +1,5 @@
 # (progn (load (expand-file-name "golem-mode.el")) (golem-mode))
 
-
-
 type MyStruct = struct {
   a: int
   b: float
@@ -19,13 +17,13 @@ proc myfun2(a,b:int; c: int): int = a * b + a * c
 # empty function with nothing in it
 proc myfun3(a,b,c,d,e,f: string): void = {}
 
-proc max(a,b: int): int = {
+proc maxInt(a,b: int): int = {
   if a > b do a else b
 }
 
-# proc max(a,b: float): float = {
-#   if a > b do a else b
-# }
+proc maxFloat(a,b: float): float = {
+  if a < b do b else a
+}
 
 ## Tests side effects behavior of `and` and `or` operators.
 proc testBooleanOpsWithBlockExpr(): void = {
@@ -50,7 +48,7 @@ proc maxParenDepth(expr: string): int = {
   for c in expr do {
     if c == '(' do depth += 1
     if c == ')' do depth -= 1
-    maxDepth = max(depth, maxDepth)
+    maxDepth = maxInt(depth, maxDepth)
   }
   maxDepth
 }
@@ -68,12 +66,12 @@ proc main():int = {
   testBooleanOpsWithBlockExpr()
   let myArray: array(7)[int] = [123, -456, -789, -234, 567, 891, -123]
 
-  printf("max test: max(a,b): %d\n", max(x,y))
+  printf("max test: max(a,b): %d\n", maxInt(x,y))
 
   let f1: float = 123.456
   let f2: float = 654.321
   printf("f1: %f f2: %f\n", f1, f2);
-  # printf("max test: max(fx,f2): %f\n", max(f1,f2))
+  printf("max test: max(fx,f2): %f\n", maxFloat(f1,f2))
   0
 }
 

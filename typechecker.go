@@ -24,7 +24,7 @@ type ScopeImpl struct {
 	// probably be redued to be just the proc signature.
 	CurrentProc *TcProcDef
 	Variables   map[string]TcSymbol
-	Procedures  map[string]*TcProcDef
+	Procedures  map[string][]*TcProcDef
 	Types       map[string]Type
 }
 
@@ -34,7 +34,7 @@ func (scope Scope) NewSubScope() Scope {
 	return &ScopeImpl{
 		Parent:     scope,
 		Variables:  make(map[string]TcSymbol),
-		Procedures: make(map[string]*TcProcDef),
+		Procedures: make(map[string][]*TcProcDef),
 		Types:      make(map[string]Type),
 	}
 }
@@ -68,15 +68,17 @@ func (tc *TypeChecker) LookUpType(scope Scope, expr TypeExpr) Type {
 	panic(tc.Errorf(expr, "Type not found: %s", name)) // some comment
 }
 
-func (tc *TypeChecker) LookUpProc(scope Scope, ident Ident) TcProcSymbol {
-	if scope == nil {
-		panic(tc.Errorf(ident, "proc not found: %s", ident.source))
+func (tc *TypeChecker) LookUpProc(scope Scope, ident Ident, procSyms []TcProcSymbol) []TcProcSymbol {
+	for scope != nil {
+		if impls, ok := scope.Procedures[ident.source]; ok {
+			for _, impl := range impls {
+				procSym := TcProcSymbol{Name: ident.source, Impl: impl}
+				procSyms = append(procSyms, procSym)
+			}
+		}
+		scope = scope.Parent
 	}
-
-	if impl, ok := scope.Procedures[ident.source]; ok {
-		return TcProcSymbol{Name: ident.source, Impl: impl}
-	}
-	return tc.LookUpProc(scope.Parent, ident)
+	return procSyms
 }
 
 func (tc *TypeChecker) LookUpLetSym(scope Scope, ident Ident) TcSymbol {
@@ -119,9 +121,7 @@ func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result 
 	resultType := tc.LookUpType(scope, def.ResultType)
 	result.ResultType = resultType
 	result.Body = tc.TypeCheckExpr(scope, def.Body, resultType)
-
-	// TODO this is very ugly, store a pointer to a local, return a copy
-	parentScope.Procedures[result.Name] = result
+	parentScope.Procedures[result.Name] = append(parentScope.Procedures[result.Name], result)
 	return
 }
 
@@ -205,28 +205,67 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 }
 
 func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) (result TcCall) {
-	procSym := tc.LookUpProc(scope, call.Callee.(Ident))
-	tc.ExpectType(call, procSym.Impl.ResultType, expected)
-	result.Sym = procSym
-	if procSym.Impl.printfargs {
-		result.Args = tc.TypeCheckPrintfArgs(scope, procSym, call.Args)
-		return
-	}
-	result.Args = make([]TcExpr, 0, len(call.Args))
-	expectedArgs := procSym.Impl.Args
+	ident := call.Callee.(Ident)
+	procSyms := tc.LookUpProc(scope, ident, nil)
 
-	tc.ExpectArgsLen(call, len(call.Args), len(expectedArgs))
+	switch len(procSyms) {
+	case 0:
+		panic(tc.Errorf(ident, "proc not found: %s", ident.source))
+	case 1:
+		procSym := procSyms[0]
+		fmt.Printf("%v\n", procSym)
+		tc.ExpectType(call, procSym.Impl.ResultType, expected)
+		result.Sym = procSym
 
-	for i, arg := range call.Args {
-		expectedType := expectedArgs[i].Typ
-		tcArg := tc.TypeCheckExpr(scope, arg, expectedType)
-		result.Args = append(result.Args, tcArg)
+		if procSym.Impl.printfargs {
+			result.Args = tc.TypeCheckPrintfArgs(scope, procSym, call.Args)
+			return
+		}
+
+		result.Args = make([]TcExpr, 0, len(call.Args))
+		expectedArgs := procSym.Impl.Args
+
+		tc.ExpectArgsLen(call, len(call.Args), len(expectedArgs))
+
+		for i, arg := range call.Args {
+			expectedType := expectedArgs[i].Typ
+			tcArg := tc.TypeCheckExpr(scope, arg, expectedType)
+			result.Args = append(result.Args, tcArg)
+		}
+	default:
+		// TODO: this is very quick and dirty. These three branches must be merged into one general algorithm
+		var checkedArgs []TcExpr
+
+		for i, arg := range call.Args {
+			tcArg := tc.TypeCheckExpr(scope, arg, TypeUnspecified)
+
+			// filter procedures for right one
+			n := 0
+			for _, procSym := range procSyms {
+				expectedArg := procSym.Impl.Args[i]
+				if tcArg.Type() == expectedArg.Typ {
+					procSyms[n] = procSym
+					n++
+				}
+			}
+			procSyms = procSyms[:n]
+
+			checkedArgs = append(checkedArgs, tcArg)
+		}
+		if len(procSyms) == 0 {
+			panic(tc.Errorf(ident, "proc not found: %s(%v, %v)", ident.source, checkedArgs[0].Type(), checkedArgs[1].Type()))
+		}
+		if len(procSyms) > 1 {
+			panic(tc.Errorf(ident, "too many overloads: %s", ident.source))
+		}
+
+		result.Sym = procSyms[0]
+		result.Args = checkedArgs
 	}
 	return
 }
 
-func (tc *TypeChecker) TypeCheckCodeBlock(scope Scope, arg CodeBlock, expected Type) TcCodeBlock {
-	var result TcCodeBlock
+func (tc *TypeChecker) TypeCheckCodeBlock(scope Scope, arg CodeBlock, expected Type) (result TcCodeBlock) {
 	N := len(arg.Items)
 	if N > 0 {
 		result.Items = make([]TcExpr, N)
@@ -241,7 +280,7 @@ func (tc *TypeChecker) TypeCheckCodeBlock(scope Scope, arg CodeBlock, expected T
 		// empty block is type void
 		tc.ExpectType(arg, TypeVoid, expected)
 	}
-	return result
+	return
 }
 
 func (expr TypeExpr) IsSet() bool {
