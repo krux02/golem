@@ -63,7 +63,7 @@ var TypeUnspecified = &BuiltinType{"<unspecified>", ','}
 // specified out as soon as it becomes necessary.
 var BuiltinPrintf *TcProcDef = &TcProcDef{
 	Name:        "printf",
-	builtinName: "printf",
+	MangledName: "printf",
 	// Support for type checking arguments for printf is currently a language
 	// feature.
 	printfargs: true,
@@ -93,7 +93,7 @@ func registerBuiltin(name, builtinName string, isOperator bool, args []Type, res
 		Args:               make([]TcSymbol, len(args)),
 		ResultType:         result,
 		generateAsOperator: isOperator,
-		builtinName:        builtinName,
+		MangledName:        builtinName,
 	}
 	for i, arg := range args {
 		procDef.Args[i].Typ = arg

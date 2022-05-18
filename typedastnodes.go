@@ -100,10 +100,11 @@ type TcReturnStmt struct {
 
 type TcProcDef struct {
 	AbstractAstNode
-	Name       string
-	Args       []TcSymbol
-	ResultType Type
-	Body       TcExpr
+	Name        string
+	MangledName string
+	Args        []TcSymbol
+	ResultType  Type
+	Body        TcExpr
 
 	// This code here is supposed to be temporary code. TcProcDef should
 	// be a tidy clean minimal definition. This code must be optimized
@@ -111,7 +112,6 @@ type TcProcDef struct {
 	// in the language.
 	// Exception for printf. It has varargs that are at this point in
 	// time no language feature yet.
-	builtinName        string
 	printfargs         bool
 	generateAsOperator bool
 

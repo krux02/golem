@@ -132,9 +132,9 @@ func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result 
 
 	// TODO, don't special case it like this here
 	if def.Name.source == "main" {
-		result.builtinName = "main"
+		result.MangledName = "main"
 	} else {
-		result.builtinName = mangledNameBuilder.String()
+		result.MangledName = mangledNameBuilder.String()
 	}
 
 	return
