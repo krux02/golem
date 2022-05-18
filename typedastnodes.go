@@ -1,10 +1,13 @@
 package main
 
+import "strings"
+
 // The ast after beeing processed by the typechecker. Tc prefix is for
 // type checked.
 
 type Type interface {
 	AstNode
+	ManglePrint(*strings.Builder) // print for name magling
 	typenode()
 }
 

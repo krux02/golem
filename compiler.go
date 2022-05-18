@@ -77,7 +77,7 @@ func (builder *CodeBuilder) compileCall(context *PackageGeneratorContext, call T
 		}
 		builder.WriteString(")")
 	} else {
-		builder.WriteString(call.Sym.Name)
+		builder.WriteString(call.Sym.Impl.builtinName)
 		builder.WriteString("(")
 		for i, it := range call.Args {
 			if i != 0 {
@@ -379,7 +379,7 @@ func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 	headBuilder.compileTypeExpr(procDef.ResultType)
 	// headBuilder.compileTypeExpr(procDef.ResultType)
 	headBuilder.WriteString(" ")
-	headBuilder.WriteString(procDef.Name)
+	headBuilder.WriteString(procDef.builtinName)
 	headBuilder.WriteString("(")
 	for i, arg := range procDef.Args {
 		if i != 0 {

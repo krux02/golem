@@ -1,12 +1,28 @@
 package main
 
+import (
+	"fmt"
+	"strings"
+)
+
 type BuiltinType struct {
-	name string
+	name       string
+	mangleChar rune
+}
+
+func (typ *BuiltinType) ManglePrint(builder *strings.Builder) {
+	builder.WriteRune(typ.mangleChar)
 }
 
 type ArrayType struct {
 	Len  int
 	Elem Type
+}
+
+func (typ *ArrayType) ManglePrint(builder *strings.Builder) {
+	builder.WriteRune('A')
+	builder.WriteString(fmt.Sprintf("A%d", typ.Len))
+	typ.Elem.ManglePrint(builder)
 }
 
 func (typ *BuiltinType) Source() string {
@@ -27,26 +43,27 @@ func (typ *ArrayType) typenode() {}
 
 // These type names are by no means final, there are just to get
 // something working.
-var TypeBoolean = &BuiltinType{"bool"}
-var TypeInt = &BuiltinType{"int"}
-var TypeFloat = &BuiltinType{"float"}
-var TypeString = &BuiltinType{"string"}
-var TypeChar = &BuiltinType{"char"}
-var TypeVoid = &BuiltinType{"void"}
+var TypeBoolean = &BuiltinType{"bool", 'b'}
+var TypeInt = &BuiltinType{"int", 'i'}
+var TypeFloat = &BuiltinType{"float", 'f'}
+var TypeString = &BuiltinType{"string", 's'}
+var TypeChar = &BuiltinType{"char", 'c'}
+var TypeVoid = &BuiltinType{"void", 'v'}
 
 // This type is used to tag that a function never returns.
-var TypeNoReturn = &BuiltinType{"noreturn"}
+var TypeNoReturn = &BuiltinType{"noreturn", '-'}
 
 // this type is the internal representation when no type has been
 // specified. It is not a type by its own.
-var TypeUnspecified = &BuiltinType{"<unspecified>"}
+var TypeUnspecified = &BuiltinType{"<unspecified>", ','}
 
 // Printf is literally the only use case for real varargs that I
 // know. Therefore the implementation for varargs will be strictly
 // tied to printf for now. A general concept for varargs will be
 // specified out as soon as it becomes necessary.
 var BuiltinPrintf *TcProcDef = &TcProcDef{
-	Name: "printf",
+	Name:        "printf",
+	builtinName: "printf",
 	// Support for type checking arguments for printf is currently a language
 	// feature.
 	printfargs: true,
@@ -87,7 +104,7 @@ func registerBuiltin(name, builtinName string, isOperator bool, args []Type, res
 
 func registerConstant(name string, typ Type) {
 	// TODO this is wrong, a constant isn't a variable
-	_ = builtinScope.NewSymbol(Ident{AbstractAstNode{source: name}}, SkConst, typ)
+	_ = builtinScope.NewSymbol(name, SkConst, typ)
 }
 
 func init() {

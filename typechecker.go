@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 )
 
 type TypeChecker struct {
@@ -39,9 +40,10 @@ func (scope Scope) NewSubScope() Scope {
 	}
 }
 
-func (scope Scope) NewSymbol(name Ident, kind SymbolKind, typ Type) TcSymbol {
-	result := TcSymbol{Name: name.source, Kind: kind, Typ: typ}
-	scope.Variables[name.source] = result
+func (scope Scope) NewSymbol(name string, kind SymbolKind, typ Type) TcSymbol {
+	//result := TcSymbol{Name: name.source, Kind: kind, Typ: typ}
+	result := TcSymbol{Name: name, Kind: kind, Typ: typ}
+	scope.Variables[name] = result
 	return result
 }
 
@@ -114,14 +116,27 @@ func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result 
 	result = &TcProcDef{}
 	scope.CurrentProc = result
 	result.Name = def.Name.source
+	mangledNameBuilder := &strings.Builder{}
+	mangledNameBuilder.WriteString(def.Name.source)
+	mangledNameBuilder.WriteRune('_')
 	for _, arg := range def.Args {
-		tcArg := scope.NewSymbol(arg.Name, SkProcArg, tc.LookUpType(scope, arg.Type))
+		typ := tc.LookUpType(scope, arg.Type)
+		tcArg := scope.NewSymbol(arg.Name.source, SkProcArg, typ)
 		result.Args = append(result.Args, tcArg)
+		typ.ManglePrint(mangledNameBuilder)
 	}
 	resultType := tc.LookUpType(scope, def.ResultType)
 	result.ResultType = resultType
 	result.Body = tc.TypeCheckExpr(scope, def.Body, resultType)
 	parentScope.Procedures[result.Name] = append(parentScope.Procedures[result.Name], result)
+
+	// TODO, don't special case it like this here
+	if def.Name.source == "main" {
+		result.builtinName = "main"
+	} else {
+		result.builtinName = mangledNameBuilder.String()
+	}
+
 	return
 }
 
@@ -295,7 +310,7 @@ func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt
 
 	var result TcVariableDefStmt
 	result.Value = tc.TypeCheckExpr(scope, arg.Value, expected)
-	result.Sym = scope.NewSymbol(arg.Name, arg.Kind, result.Value.Type())
+	result.Sym = scope.NewSymbol(arg.Name.source, arg.Kind, result.Value.Type())
 	return result
 }
 
@@ -502,7 +517,7 @@ func (tc *TypeChecker) TypeCheckForLoopStmt(scope Scope, loopArg ForLoopStmt) (r
 	// currently only iteration on strings in possible (of course that is not final)
 	result.Collection = tc.TypeCheckExpr(scope, loopArg.Collection, TypeUnspecified)
 	elementType := tc.ElementType(result.Collection)
-	result.LoopSym = scope.NewSymbol(loopArg.LoopIdent, SkLoopIterator, elementType)
+	result.LoopSym = scope.NewSymbol(loopArg.LoopIdent.source, SkLoopIterator, elementType)
 	result.Body = tc.TypeCheckExpr(scope, loopArg.Body, TypeVoid)
 	return
 }
