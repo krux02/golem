@@ -379,7 +379,6 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 				break
 			}
 		}
-
 		result.kind = TkOperator
 		result.value = code[:idx2]
 	default:
@@ -398,7 +397,7 @@ func (tokenizer *Tokenizer) formatError(token Token, msg string, args ...interfa
 	line, columnStart, columnEnd := tokenizer.LineColumnToken(token)
 	return fmt.Errorf("%s(%d, %d-%d) Error: %s",
 		tokenizer.filename, line, columnStart, columnEnd,
-	  fmt.Sprintf(msg, args...))
+		fmt.Sprintf(msg, args...))
 }
 
 func (tokenizer *Tokenizer) formatWrongKind(token Token) error {

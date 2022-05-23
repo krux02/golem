@@ -73,13 +73,15 @@ func parseVariableDefStmt(tokenizer *Tokenizer) (result VariableDefStmt) {
 	}
 
 	result.Name = parseIdent(tokenizer)
-	next := tokenizer.Next()
-	if next.kind == TkColon {
+	if tokenizer.lookAheadToken.kind == TkColon {
+		_ = tokenizer.Next()
 		result.TypeExpr = parseTypeExpr(tokenizer)
-		next = tokenizer.Next()
 	}
-	tokenizer.expectKind(next, TkOperator)
-	result.Value = parseExpr(tokenizer, false)
+	if tokenizer.lookAheadToken.kind == TkOperator {
+		op := tokenizer.Next()
+		tokenizer.expectOperator(op, "=")
+		result.Value = parseExpr(tokenizer, false)
+	}
 	lastToken := tokenizer.token
 	result.source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
 	return

@@ -52,6 +52,9 @@ func shortenMessage(msg string, maxLen int) string {
 }
 
 func validateSourceSetInternal(code string, node reflect.Value) {
+	if node.Kind() == reflect.Invalid {
+		return
+	}
 	typ := node.Type()
 	switch node.Kind() {
 	case reflect.String, reflect.Int, reflect.Bool, reflect.Int32, reflect.Float64:
