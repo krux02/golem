@@ -4,6 +4,9 @@
 * DONE provide proper error messages or error instead of panic
 * DONE negative literals
 * DONE float literals
+* TODO pointer
+* TODO call by reference
+* TODO better distinguish go type information vs golem type information better
 * TODO generic comparison < and >
 * TODO generic arguments
 * TODO vm for compile time code execution

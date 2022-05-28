@@ -29,6 +29,15 @@ type TcStructDef struct {
 	Fields []TcStructField
 }
 
+func (structDef *TcStructDef) GetField(name string) (fild TcStructField, ok bool) {
+	for _, field := range structDef.Fields {
+		if field.Name == name {
+			return field, true
+		}
+	}
+	return
+}
+
 type TcCodeBlock struct {
 	AbstractAstNode
 	Items []TcExpr
@@ -146,3 +155,5 @@ func (stmt TcIfElseStmt) expression()      {}
 func (block TcCodeBlock) expression()      {}
 func (call TcCall) expression()            {}
 func (call TcArrayLit) expression()        {}
+
+func (typ *TcStructDef) typenode() {}

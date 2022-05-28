@@ -108,6 +108,7 @@ func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def StructDef) (result *T
 		tcField.Type = tc.LookUpType(scope, field.TypeExpr)
 		result.Fields = append(result.Fields, tcField)
 	}
+	scope.Types[result.Name] = result
 	return result
 }
 
@@ -219,10 +220,32 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 	return result
 }
 
-func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) (result TcCall) {
+func (tc *TypeChecker) TypeCheckDotExpr(scope Scope, lhs, rhs Expr, expected Type) (result TcExpr) {
+
+	tcLhs := tc.TypeCheckExpr(scope, lhs, TypeUnspecified)
+	typ := tcLhs.Type()
+
+	fmt.Printf("dot call: %v\n", tcLhs.Type())
+
+	switch t := typ.(type) {
+	case *TcStructDef:
+		tcRhs, ok := t.GetField(rhs.Source())
+	default:
+		panic("dot call is only supported on struct field")
+	}
+
+	return tcLhs
+}
+
+func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcExpr {
 	ident := call.Callee.(Ident)
+	if ident.source == "." && len(call.Args) == 2 {
+		return tc.TypeCheckDotExpr(scope, call.Args[0], call.Args[1], expected)
+	}
+
 	procSyms := tc.LookUpProc(scope, ident, nil)
 
+	var result TcCall
 	switch len(procSyms) {
 	case 0:
 		panic(tc.Errorf(ident, "proc not found: %s", ident.source))
@@ -234,7 +257,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) (res
 
 		if procSym.Impl.printfargs {
 			result.Args = tc.TypeCheckPrintfArgs(scope, procSym, call.Args)
-			return
+			return result
 		}
 
 		result.Args = make([]TcExpr, 0, len(call.Args))
@@ -277,7 +300,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) (res
 		result.Sym = procSyms[0]
 		result.Args = checkedArgs
 	}
-	return
+	return result
 }
 
 func (tc *TypeChecker) TypeCheckCodeBlock(scope Scope, arg CodeBlock, expected Type) (result TcCodeBlock) {

@@ -19,11 +19,11 @@ proc myfun3(a,b,c,d,e,f: string): void = {
 
 }
 
-# proc foobar(arg: MyStruct): void = {
-#   printf("a: %d\n", arg.a)
-#   printf("b: %f\n", arg.b)
-#   printf("c: %s\n", arg.c)
-# }
+proc foobar(arg: MyStruct): void = {
+  printf("a: %d\n", arg.a)
+  printf("b: %f\n", arg.b)
+  printf("c: %s\n", arg.c)
+}
 
 proc max(a,b: int): int = {
   if a > b do a else b

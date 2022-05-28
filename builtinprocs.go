@@ -25,6 +25,12 @@ func (typ *ArrayType) ManglePrint(builder *strings.Builder) {
 	typ.Elem.ManglePrint(builder)
 }
 
+func (typ *TcStructDef) ManglePrint(builder *strings.Builder) {
+	builder.WriteRune('S')
+	builder.WriteString(typ.Name)
+	builder.WriteRune('_')
+}
+
 func (typ *BuiltinType) Source() string {
 	// should this panic?
 	return ""
