@@ -1,6 +1,9 @@
 package main
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 // The ast after beeing processed by the typechecker. Tc prefix is for
 // type checked.
@@ -29,12 +32,13 @@ type TcStructDef struct {
 	Fields []TcStructField
 }
 
-func (structDef *TcStructDef) GetField(name string) (fild TcStructField, ok bool) {
+func (structDef *TcStructDef) GetField(name string) (resField TcStructField, err error) {
 	for _, field := range structDef.Fields {
 		if field.Name == name {
-			return field, true
+			return field, nil
 		}
 	}
+	err = fmt.Errorf("type %s has no member named %s", structDef.Name, name)
 	return
 }
 
@@ -86,6 +90,12 @@ type TcIfElseStmt struct {
 	Condition TcExpr
 	Body      TcExpr
 	Else      TcExpr
+}
+
+type TcDotExpr struct {
+	AbstractAstNode
+	Lhs TcExpr
+	Rhs TcStructField
 }
 
 type TcCall struct {
@@ -146,6 +156,7 @@ type TcPackageDef struct {
 	Main     *TcProcDef // main entry point
 }
 
+func (sym TcDotExpr) expression()          {}
 func (sym TcSymbol) expression()           {}
 func (stmt TcVariableDefStmt) expression() {}
 func (stmt TcReturnStmt) expression()      {}

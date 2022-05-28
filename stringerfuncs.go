@@ -448,6 +448,12 @@ func (returnStmt TcReturnStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteAstNode(returnStmt.Value)
 }
 
+func (expr TcDotExpr) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteAstNode(expr.Lhs)
+	builder.WriteByte('.')
+	builder.WriteString(expr.Rhs.Name)
+}
+
 func (procDef TcProcDef) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("proc ")
 	builder.WriteString(procDef.Name)

@@ -229,7 +229,11 @@ func (tc *TypeChecker) TypeCheckDotExpr(scope Scope, lhs, rhs Expr, expected Typ
 
 	switch t := typ.(type) {
 	case *TcStructDef:
-		tcRhs, ok := t.GetField(rhs.Source())
+		tcRhs, err := t.GetField(rhs.Source())
+		if err != nil {
+			panic(err)
+		}
+		return TcDotExpr{Lhs: tcLhs, Rhs: tcRhs}
 	default:
 		panic("dot call is only supported on struct field")
 	}
@@ -409,6 +413,10 @@ func (stmt TcIfElseStmt) Type() Type {
 
 func (returnStmt TcReturnStmt) Type() Type {
 	return TypeNoReturn
+}
+
+func (expr TcDotExpr) Type() Type {
+	return expr.Rhs.Type
 }
 
 func MatchNegativeNumber(arg Call) (number IntLit, ok bool) {
