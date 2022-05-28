@@ -10,10 +10,12 @@ import (
 
 // TODO this is not a function sybol table, it is just an Operator Precedence table
 var OperatorPrecedence map[string]int = map[string]int{
-	"*": 6,
-	"/": 6,
-	"+": 5,
-	"-": 5,
+	".": 10,
+	"*": 6, "/": 6,
+	"+": 5, "-": 5,
+	">": 4, "<": 4, ">=": 4, "<=": 4, "==": 4,
+	"and": 3, "or": 2,
+	"=": 1, "+=": 1, "-=": 1, "*=": 1, "/=": 1,
 }
 
 func parseIdent(tokenizer *Tokenizer) (result Ident) {
@@ -30,6 +32,11 @@ func parseOperator(tokenizer *Tokenizer) (result Ident) {
 		tokenizer.formatWrongKind(token)
 	}
 	result.source = token.value
+
+	_, ok := OperatorPrecedence[result.source]
+	if !ok {
+		panic(tokenizer.formatError(token, "invalid operator %s", result.source))
+	}
 	return
 }
 
@@ -326,6 +333,7 @@ func parseCall(tokenizer *Tokenizer, callee Expr) (result Call) {
 	// parse call expr
 	result.Callee = callee
 	result.Args = parseExprList(tokenizer, TkOpenBrace, TkCloseBrace)
+	result.Braced = true
 	lastToken := tokenizer.token
 	result.source = joinSubstr(tokenizer.code, callee.Source(), lastToken.value)
 	return

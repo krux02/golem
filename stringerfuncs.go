@@ -281,8 +281,10 @@ func (stmt VariableDefStmt) prettyPrint(builder *AstPrettyPrinter) {
 		builder.WriteString(": ")
 		builder.WriteAstNode(stmt.TypeExpr)
 	}
-	builder.WriteString(" = ")
-	builder.WriteAstNode(stmt.Value)
+	if stmt.Value != nil {
+		builder.WriteString(" = ")
+		builder.WriteAstNode(stmt.Value)
+	}
 }
 
 func (loopStmt ForLoopStmt) prettyPrint(builder *AstPrettyPrinter) {
@@ -439,8 +441,10 @@ func (stmt TcVariableDefStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(": ")
 	builder.WriteAstNode(stmt.Sym.Typ)
 	// builder.WriteString(stmt.Sym.Typ.Name())
-	builder.WriteString(" = ")
-	builder.WriteAstNode(stmt.Value)
+	if stmt.Value != nil {
+		builder.WriteString(" = ")
+		builder.WriteAstNode(stmt.Value)
+	}
 }
 
 func (returnStmt TcReturnStmt) prettyPrint(builder *AstPrettyPrinter) {

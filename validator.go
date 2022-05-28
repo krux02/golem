@@ -78,7 +78,7 @@ func validateSourceSetInternal(code string, node reflect.Value) {
 			validateSourceSetInternal(code, node.Index(i))
 		}
 	default:
-		fmt.Println(typ.Name, ": ", node.Kind())
+		fmt.Println(typ.Name(), ": ", node.Kind())
 		panic("not implemented")
 	}
 

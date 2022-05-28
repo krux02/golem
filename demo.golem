@@ -74,13 +74,10 @@ proc main():int = {
   testBooleanOpsWithBlockExpr()
   let myArray: array(7)[int] = [123, -456, -789, -234, 567, 891, -123]
   let myOtherArray: array(2)[float] = [12.34, 56.78]
-  # var myStruct: MyStruct# = :MyStruct{, a:12, b:34.56, c:"def"}
+  var myStruct: MyStruct# = :MyStruct{, a:12, b:34.56, c:"def"}
   # myStruct.a = 12
   # myStruct.b = 34.56
   # myStruct.c = "def"
-  # foobar(myStruct)
-
-
 
   printf("max test: max(a,b): %d\n", max(x,y))
 

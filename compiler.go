@@ -44,6 +44,7 @@ func (builder *CodeBuilder) compileTypeExpr(typ Type) {
 }
 
 func (builder *CodeBuilder) compileSymWithType(sym TcSymbol) {
+	// TODO rename this, it is a declaration, not just a symbol that has a type
 	switch typ := sym.Type().(type) {
 	case *BuiltinType:
 		builder.WriteString(typ.name)
@@ -57,8 +58,12 @@ func (builder *CodeBuilder) compileSymWithType(sym TcSymbol) {
 		builder.WriteByte('[')
 		WriteIntLit(&builder.Builder, typ.Len)
 		builder.WriteByte(']')
+	case *TcStructDef:
+		builder.WriteString(typ.Name)
+		builder.WriteString(" ")
+		builder.WriteString(sym.Name)
 	default:
-		panic("not implemented")
+		panic(fmt.Errorf("not implemented %T", typ))
 	}
 }
 
@@ -181,8 +186,10 @@ func (builder *CodeBuilder) compileExpr(context *PackageGeneratorContext, expr T
 
 func (builder *CodeBuilder) compileVariableDefStmt(context *PackageGeneratorContext, stmt TcVariableDefStmt) {
 	builder.compileSymWithType(stmt.Sym)
-	builder.WriteString(" = ")
-	builder.compileExpr(context, stmt.Value)
+	if stmt.Value != nil {
+		builder.WriteString(" = ")
+		builder.compileExpr(context, stmt.Value)
+	}
 }
 
 func (builder *CodeBuilder) compileIfStmt(context *PackageGeneratorContext, stmt TcIfStmt) {
@@ -302,7 +309,7 @@ func (builder *CodeBuilder) compileExprWithPrefix(context *PackageGeneratorConte
 		builder.compileSymbol(ex)
 	case TcVariableDefStmt:
 		if injectReturn {
-			panic(fmt.Sprintf("internal error, injectReturn not supported here", injectReturn))
+			panic(fmt.Sprintf("internal error, injectReturn not supported here"))
 		}
 		builder.compileVariableDefStmt(context, ex)
 	case TcReturnStmt:
@@ -311,14 +318,14 @@ func (builder *CodeBuilder) compileExprWithPrefix(context *PackageGeneratorConte
 		builder.compileExpr(context, ex.Value)
 	case TcIfStmt:
 		if injectReturn {
-			panic(fmt.Sprintf("internal error, injectReturn not supported here", injectReturn))
+			panic(fmt.Sprintf("internal error, injectReturn not supported here"))
 		}
 		builder.compileIfStmt(context, ex)
 	case TcIfElseStmt:
 		builder.compileIfElseStmt(context, ex, injectReturn)
 	case TcForLoopStmt:
 		if injectReturn {
-			panic(fmt.Sprintf("internal error, injectReturn not supported here", injectReturn))
+			panic(fmt.Sprintf("internal error, injectReturn not supported here"))
 		}
 		builder.compileForLoopStmt(context, ex)
 	case nil:

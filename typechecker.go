@@ -142,9 +142,13 @@ func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result 
 }
 
 func (tc *TypeChecker) Errorf(node AstNode, msg string, args ...interface{}) error {
-	line, columnStart, columnEnd := tc.LineColumnNode(node)
-	return fmt.Errorf("%s(%d, %d-%d) Error: %s", tc.filename, line, columnStart, columnEnd,
-		fmt.Sprintf(msg, args...))
+	if node == nil {
+		return fmt.Errorf(msg, args...)
+	} else {
+		line, columnStart, columnEnd := tc.LineColumnNode(node)
+		return fmt.Errorf("%s(%d, %d-%d) Error: %s", tc.filename, line, columnStart, columnEnd,
+			fmt.Sprintf(msg, args...))
+	}
 }
 
 func (tc *TypeChecker) ExpectType(node AstNode, gotten, expected Type) {
@@ -223,11 +227,7 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 func (tc *TypeChecker) TypeCheckDotExpr(scope Scope, lhs, rhs Expr, expected Type) (result TcExpr) {
 
 	tcLhs := tc.TypeCheckExpr(scope, lhs, TypeUnspecified)
-	typ := tcLhs.Type()
-
-	fmt.Printf("dot call: %v\n", tcLhs.Type())
-
-	switch t := typ.(type) {
+	switch t := tcLhs.Type().(type) {
 	case *TcStructDef:
 		tcRhs, err := t.GetField(rhs.Source())
 		if err != nil {
@@ -237,8 +237,6 @@ func (tc *TypeChecker) TypeCheckDotExpr(scope Scope, lhs, rhs Expr, expected Typ
 	default:
 		panic("dot call is only supported on struct field")
 	}
-
-	return tcLhs
 }
 
 func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcExpr {
@@ -255,7 +253,6 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		panic(tc.Errorf(ident, "proc not found: %s", ident.source))
 	case 1:
 		procSym := procSyms[0]
-		fmt.Printf("%v\n", procSym)
 		tc.ExpectType(call, procSym.Impl.ResultType, expected)
 		result.Sym = procSym
 
@@ -329,16 +326,21 @@ func (expr TypeExpr) IsSet() bool {
 	return expr.source != ""
 }
 
-func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt) TcVariableDefStmt {
+func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt) (result TcVariableDefStmt) {
 	var expected Type = TypeUnspecified
 	if arg.TypeExpr.IsSet() {
 		expected = tc.LookUpType(scope, arg.TypeExpr)
 	}
-
-	var result TcVariableDefStmt
-	result.Value = tc.TypeCheckExpr(scope, arg.Value, expected)
-	result.Sym = scope.NewSymbol(arg.Name.source, arg.Kind, result.Value.Type())
-	return result
+	if arg.Value == nil {
+		if expected == TypeUnspecified {
+			panic(tc.Errorf(arg, "variable definitions statements must have at least one, a type or a value expression"))
+		}
+		result.Sym = scope.NewSymbol(arg.Name.source, arg.Kind, expected)
+	} else {
+		result.Value = tc.TypeCheckExpr(scope, arg.Value, expected)
+		result.Sym = scope.NewSymbol(arg.Name.source, arg.Kind, result.Value.Type())
+	}
+	return
 }
 
 func (tc *TypeChecker) TypeCheckReturnStmt(scope Scope, arg ReturnStmt) (result TcReturnStmt) {
@@ -433,7 +435,6 @@ func MatchNegativeNumber(arg Call) (number IntLit, ok bool) {
 }
 
 func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExpr {
-	var result TcExpr
 	switch arg := arg.(type) {
 	case Call:
 		// HACK: support for negative literals
@@ -481,8 +482,6 @@ func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExp
 	default:
 		panic(tc.Errorf(arg, "not implemented %T", arg))
 	}
-
-	return result
 }
 
 type ArrayTypeMapKey struct {
@@ -523,7 +522,6 @@ func (tc *TypeChecker) TypeCheckIfStmt(scope Scope, stmt IfStmt) (result TcIfStm
 
 func (tc *TypeChecker) TypeCheckIfElseStmt(scope Scope, stmt IfElseStmt, expected Type) (result TcIfElseStmt) {
 	// currently only iteration on strings in possible (of course that is not final)
-	fmt.Println(AstFormat(stmt))
 	result.Condition = tc.TypeCheckExpr(scope, stmt.Condition, TypeBoolean)
 	result.Body = tc.TypeCheckExpr(scope, stmt.Body, expected)
 	result.Else = tc.TypeCheckExpr(scope, stmt.Else, expected)
