@@ -43,7 +43,7 @@ func (builder *CodeBuilder) compileTypeExpr(typ Type) {
 	}
 }
 
-func (builder *CodeBuilder) compileSymWithType(sym TcSymbol) {
+func (builder *CodeBuilder) compileSymWithType(context *PackageGeneratorContext, sym TcSymbol) {
 	// TODO rename this, it is a declaration, not just a symbol that has a type
 	switch typ := sym.Type().(type) {
 	case *BuiltinType:
@@ -59,6 +59,9 @@ func (builder *CodeBuilder) compileSymWithType(sym TcSymbol) {
 		WriteIntLit(&builder.Builder, typ.Len)
 		builder.WriteByte(']')
 	case *TcStructDef:
+		// TODO this creates a type declaration for every usage. Should be done only once
+		context.typeDecl.compileStructDef(context, typ)
+		// TODO this should be the mangled name
 		builder.WriteString(typ.Name)
 		builder.WriteString(" ")
 		builder.WriteString(sym.Name)
@@ -185,7 +188,7 @@ func (builder *CodeBuilder) compileExpr(context *PackageGeneratorContext, expr T
 }
 
 func (builder *CodeBuilder) compileVariableDefStmt(context *PackageGeneratorContext, stmt TcVariableDefStmt) {
-	builder.compileSymWithType(stmt.Sym)
+	builder.compileSymWithType(context, stmt.Sym)
 	if stmt.Value != nil {
 		builder.WriteString(" = ")
 		builder.compileExpr(context, stmt.Value)
@@ -214,6 +217,12 @@ func (builder *CodeBuilder) compileIfElseStmt(context *PackageGeneratorContext, 
 	builder.compileCodeBlock(context, wrapInCodeBlock(context, stmt.Body), injectReturn)
 	builder.WriteString(" else ")
 	builder.compileCodeBlock(context, wrapInCodeBlock(context, stmt.Else), injectReturn)
+}
+
+func (builder *CodeBuilder) compileDotExpr(context *PackageGeneratorContext, dotExpr TcDotExpr) {
+	builder.compileExpr(context, dotExpr.Lhs)
+	builder.WriteString(".")
+	builder.WriteString(dotExpr.Rhs.Name)
 }
 
 func (builder *CodeBuilder) compileForLoopStmt(context *PackageGeneratorContext, stmt TcForLoopStmt) {
@@ -289,6 +298,9 @@ func (builder *CodeBuilder) compileExprWithPrefix(context *PackageGeneratorConte
 	case TcCall:
 		builder.injectReturn(injectReturn)
 		builder.compileCall(context, ex)
+	case TcDotExpr:
+		builder.injectReturn(injectReturn)
+		builder.compileDotExpr(context, ex)
 	case StrLit:
 		builder.injectReturn(injectReturn)
 		builder.compileStrLit(ex)
@@ -360,7 +372,7 @@ func (builder *CodeBuilder) compileCodeBlock(context *PackageGeneratorContext, b
 	}
 }
 
-func (builder *CodeBuilder) compileStructDef(context *PackageGeneratorContext, structDef TcStructDef) {
+func (builder *CodeBuilder) compileStructDef(context *PackageGeneratorContext, structDef *TcStructDef) {
 	builder.WriteString("typedef struct ")
 	builder.WriteString(structDef.Name)
 	builder.WriteString(" {")
