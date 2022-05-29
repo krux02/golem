@@ -137,6 +137,8 @@ func init() {
 	registerBuiltin("+=", "+=", true, []Type{TypeInt, TypeInt}, TypeVoid)
 	registerBuiltin("-=", "-=", true, []Type{TypeInt, TypeInt}, TypeVoid)
 	registerBuiltin("=", "=", true, []Type{TypeInt, TypeInt}, TypeVoid)
+	registerBuiltin("=", "=", true, []Type{TypeFloat, TypeFloat}, TypeVoid)
+	registerBuiltin("=", "=", true, []Type{TypeString, TypeString}, TypeVoid)
 	registerBuiltin("and", "&&", true, []Type{TypeBoolean, TypeBoolean}, TypeBoolean)
 	registerBuiltin("or", "||", true, []Type{TypeBoolean, TypeBoolean}, TypeBoolean)
 

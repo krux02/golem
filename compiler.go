@@ -388,7 +388,7 @@ func (builder *CodeBuilder) compileStructDef(context *PackageGeneratorContext, s
 	builder.newlineAndIndent()
 	builder.WriteString("} ")
 	builder.WriteString(structDef.Name)
-	builder.WriteString(";")
+	builder.WriteString(";\n")
 }
 
 func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
@@ -461,9 +461,13 @@ func compilePackageToC(pak TcPackageDef) string {
 	}
 
 	final := &strings.Builder{}
+	final.WriteString("/* includes */\n")
 	final.WriteString(context.includes.String())
+	final.WriteString("/* typeDecl */\n")
 	final.WriteString(context.typeDecl.String())
+	final.WriteString("/* forwardDecl */\n")
 	final.WriteString(context.forwardDecl.String())
+	final.WriteString("/* functions */\n")
 	final.WriteString(context.functions.String())
 	return final.String()
 }

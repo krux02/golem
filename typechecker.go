@@ -253,8 +253,13 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		panic(tc.Errorf(ident, "proc not found: %s", ident.source))
 	case 1:
 		procSym := procSyms[0]
+		// procSym := procSyms[0]
 		tc.ExpectType(call, procSym.Impl.ResultType, expected)
 		result.Sym = procSym
+
+		if procSym.Name == "=" {
+			fmt.Printf("proc sym: %#v\n", procSym.Impl)
+		}
 
 		if procSym.Impl.printfargs {
 			result.Args = tc.TypeCheckPrintfArgs(scope, procSym, call.Args)
