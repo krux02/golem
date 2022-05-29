@@ -18,7 +18,9 @@ type PackageGeneratorContext struct {
 	Pak         TcPackageDef
 
 	// functions marked for code generation
-	TodoList []*TcProcDef
+	TodoListProc []*TcProcDef
+	// types marked for code generation
+	TodoListType []*TcStructDef
 }
 
 func (builder *CodeBuilder) newlineAndIndent() {
@@ -59,8 +61,7 @@ func (builder *CodeBuilder) compileSymWithType(context *PackageGeneratorContext,
 		WriteIntLit(&builder.Builder, typ.Len)
 		builder.WriteByte(']')
 	case *TcStructDef:
-		// TODO this creates a type declaration for every usage. Should be done only once
-		context.typeDecl.compileStructDef(context, typ)
+		context.markTypeForGeneration(typ)
 		// TODO this should be the mangled name
 		builder.WriteString(typ.Name)
 		builder.WriteString(" ")
@@ -71,7 +72,7 @@ func (builder *CodeBuilder) compileSymWithType(context *PackageGeneratorContext,
 }
 
 func (builder *CodeBuilder) compileCall(context *PackageGeneratorContext, call TcCall) {
-	context.markForGeneration(call.Sym.Impl)
+	context.markProcForGeneration(call.Sym.Impl)
 
 	if call.Sym.Impl.generateAsOperator {
 		builder.WriteString("(")
@@ -372,7 +373,8 @@ func (builder *CodeBuilder) compileCodeBlock(context *PackageGeneratorContext, b
 	}
 }
 
-func (builder *CodeBuilder) compileStructDef(context *PackageGeneratorContext, structDef *TcStructDef) {
+func compileStructDef(context *PackageGeneratorContext, structDef *TcStructDef) {
+	builder := &context.typeDecl
 	builder.WriteString("typedef struct ")
 	builder.WriteString(structDef.Name)
 	builder.WriteString(" {")
@@ -425,27 +427,42 @@ func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 	context.functions.compileCodeBlock(context, body, procDef.ResultType != TypeVoid)
 }
 
-func (context *PackageGeneratorContext) markForGeneration(procDef *TcProcDef) {
-
+func (context *PackageGeneratorContext) markProcForGeneration(procDef *TcProcDef) {
 	if procDef.Body == nil {
 		return // builtin procs don't have a procDef to point to
 	}
 	if procDef.scheduledforgeneration {
 		return // nothing to do when already scheduled
 	}
-	context.TodoList = append(context.TodoList, procDef)
+	context.TodoListProc = append(context.TodoListProc, procDef)
 	procDef.scheduledforgeneration = true
 }
 
-// might return nil when nothing to do
-func (context *PackageGeneratorContext) popMarkedForGenerationProcDef() *TcProcDef {
-	N := len(context.TodoList)
-	if N > 0 {
-		result := context.TodoList[N-1]
-		context.TodoList = context.TodoList[:N-1]
-		return result
+func (context *PackageGeneratorContext) markTypeForGeneration(typeDef *TcStructDef) {
+	if typeDef.scheduledforgeneration {
+		return // nothing to do when already scheduled
 	}
-	return nil
+	context.TodoListType = append(context.TodoListType, typeDef)
+	typeDef.scheduledforgeneration = true
+}
+
+// might return nil when nothing to do
+func (context *PackageGeneratorContext) popMarkedForGenerationProcDef() (result *TcProcDef) {
+	N := len(context.TodoListProc)
+	if N > 0 {
+		result = context.TodoListProc[N-1]
+		context.TodoListProc = context.TodoListProc[:N-1]
+	}
+	return
+}
+
+func (context *PackageGeneratorContext) popMarkedForGenerationTypeDef() (result *TcStructDef) {
+	N := len(context.TodoListType)
+	if N > 0 {
+		result = context.TodoListType[N-1]
+		context.TodoListType = context.TodoListType[:N-1]
+	}
+	return
 }
 
 func compilePackageToC(pak TcPackageDef) string {
@@ -455,10 +472,14 @@ func compilePackageToC(pak TcPackageDef) string {
 	// TODO this sholud depend on the usage of `string` as a type
 	context.typeDecl.WriteString("typedef char* string;\n")
 	context.typeDecl.WriteString("typedef unsigned char bool;\n")
-	context.markForGeneration(pak.Main)
+	context.markProcForGeneration(pak.Main)
 	for procDef := context.popMarkedForGenerationProcDef(); procDef != nil; procDef = context.popMarkedForGenerationProcDef() {
 		compileProcDef(context, procDef)
 	}
+	for typeDef := context.popMarkedForGenerationTypeDef(); typeDef != nil; typeDef = context.popMarkedForGenerationTypeDef() {
+		compileStructDef(context, typeDef)
+	}
+	// TODO this creates a type declaration for every usage. Should be done only once
 
 	final := &strings.Builder{}
 	final.WriteString("/* includes */\n")

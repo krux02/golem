@@ -30,6 +30,11 @@ type TcStructDef struct {
 	AbstractAstNode
 	Name   string
 	Fields []TcStructField
+
+	// this value is set to true in the code generator to mark this type as
+	// already scheduled for code generation. This flag is used to prevent
+	// generating the same type multiple times.
+	scheduledforgeneration bool
 }
 
 func (structDef *TcStructDef) GetField(name string) (resField TcStructField, err error) {
