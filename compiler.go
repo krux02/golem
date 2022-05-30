@@ -40,6 +40,8 @@ func (builder *CodeBuilder) compileTypeExpr(typ Type) {
 		builder.WriteByte('[')
 		WriteIntLit(&builder.Builder, typ.Len)
 		builder.WriteByte(']')
+	case *TcStructDef:
+		builder.WriteString(typ.Name)
 	default:
 		panic("not implemented")
 	}
@@ -190,10 +192,8 @@ func (builder *CodeBuilder) compileExpr(context *PackageGeneratorContext, expr T
 
 func (builder *CodeBuilder) compileVariableDefStmt(context *PackageGeneratorContext, stmt TcVariableDefStmt) {
 	builder.compileSymWithType(context, stmt.Sym)
-	if stmt.Value != nil {
-		builder.WriteString(" = ")
-		builder.compileExpr(context, stmt.Value)
-	}
+	builder.WriteString(" = ")
+	builder.compileExpr(context, stmt.Value)
 }
 
 func (builder *CodeBuilder) compileIfStmt(context *PackageGeneratorContext, stmt TcIfStmt) {
@@ -341,6 +341,11 @@ func (builder *CodeBuilder) compileExprWithPrefix(context *PackageGeneratorConte
 			panic(fmt.Sprintf("internal error, injectReturn not supported here"))
 		}
 		builder.compileForLoopStmt(context, ex)
+	case TcStructInitializer:
+		builder.injectReturn(injectReturn)
+		builder.WriteString("(")
+		builder.compileTypeExpr(ex.structDef)
+		builder.WriteString("){}")
 	case nil:
 		panic(fmt.Sprintf("invalid Ast, expression is nil %T", expr))
 	default:

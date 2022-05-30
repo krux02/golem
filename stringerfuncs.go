@@ -403,6 +403,12 @@ func (structDef TcStructDef) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("}")
 }
 
+func (structInit TcStructInitializer) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("(")
+	builder.WriteString(structInit.structDef.Name)
+	builder.WriteString("){}")
+}
+
 func (codeBlock TcCodeBlock) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("{")
 	builder.Indentation++

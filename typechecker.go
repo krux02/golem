@@ -337,10 +337,33 @@ func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt
 		expected = tc.LookUpType(scope, arg.TypeExpr)
 	}
 	if arg.Value == nil {
-		if expected == TypeUnspecified {
-			panic(tc.Errorf(arg, "variable definitions statements must have at least one, a type or a value expression"))
-		}
 		result.Sym = scope.NewSymbol(arg.Name.source, arg.Kind, expected)
+
+		switch typ := expected.(type) {
+		case *BuiltinType:
+			if typ == TypeUnspecified {
+				panic(tc.Errorf(arg, "variable definitions statements must have at least one, a type or a value expression"))
+			} else if typ == TypeNoReturn {
+				panic("a default value of no retrun does not exist")
+			} else if typ == TypeFloat {
+				result.Value = FloatLit{}
+			} else if typ == TypeChar {
+				result.Value = CharLit{}
+			} else if typ == TypeInt {
+				result.Value = IntLit{}
+			} else if typ == TypeBoolean {
+				panic("not implemented bool default value")
+			} else if typ == TypeVoid {
+				panic("not implemented void default value")
+			} else {
+				panic(fmt.Errorf("not implemented %#v", typ))
+			}
+		case *TcStructDef:
+			result.Value = TcStructInitializer{structDef: typ}
+		default:
+			panic(fmt.Errorf("not implemented %T", expected))
+		}
+
 	} else {
 		result.Value = tc.TypeCheckExpr(scope, arg.Value, expected)
 		result.Sym = scope.NewSymbol(arg.Name.source, arg.Kind, result.Value.Type())
@@ -424,6 +447,10 @@ func (returnStmt TcReturnStmt) Type() Type {
 
 func (expr TcDotExpr) Type() Type {
 	return expr.Rhs.Type
+}
+
+func (expr TcStructInitializer) Type() Type {
+	return expr.structDef
 }
 
 func MatchNegativeNumber(arg Call) (number IntLit, ok bool) {

@@ -37,6 +37,12 @@ type TcStructDef struct {
 	scheduledforgeneration bool
 }
 
+type TcStructInitializer struct {
+	AbstractAstNode
+	structDef *TcStructDef
+	// TODO add field values
+}
+
 func (structDef *TcStructDef) GetField(name string) (resField TcStructField, err error) {
 	for _, field := range structDef.Fields {
 		if field.Name == name {
@@ -161,15 +167,16 @@ type TcPackageDef struct {
 	Main     *TcProcDef // main entry point
 }
 
-func (sym TcDotExpr) expression()          {}
-func (sym TcSymbol) expression()           {}
-func (stmt TcVariableDefStmt) expression() {}
-func (stmt TcReturnStmt) expression()      {}
-func (stmt TcForLoopStmt) expression()     {}
-func (stmt TcIfStmt) expression()          {}
-func (stmt TcIfElseStmt) expression()      {}
-func (block TcCodeBlock) expression()      {}
-func (call TcCall) expression()            {}
-func (call TcArrayLit) expression()        {}
+func (sym TcDotExpr) expression()            {}
+func (sym TcSymbol) expression()             {}
+func (stmt TcVariableDefStmt) expression()   {}
+func (stmt TcReturnStmt) expression()        {}
+func (stmt TcForLoopStmt) expression()       {}
+func (stmt TcIfStmt) expression()            {}
+func (stmt TcIfElseStmt) expression()        {}
+func (block TcCodeBlock) expression()        {}
+func (call TcCall) expression()              {}
+func (call TcArrayLit) expression()          {}
+func (expr TcStructInitializer) expression() {}
 
 func (typ *TcStructDef) typenode() {}
