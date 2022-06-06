@@ -8,8 +8,8 @@
 * TODO pointer
 * TODO call by reference
 * TODO better distinguish go type information vs golem type information better
-* TODO generic comparison < and >
 * TODO generic arguments
+* TODO generic comparison < and >
 * TODO vm for compile time code execution
 * TODO restrict operator precedence to common knowledeg cases (+-*/) require explicit braces everywhere else.
 * TODO introduce ~expectAndEatToken~

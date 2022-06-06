@@ -12,12 +12,14 @@ import (
 )
 
 func main() {
-	var filename string
 	if len(os.Args) == 2 {
-		filename = os.Args[1]
+		compileAndRunFile(os.Args[1])
 	} else {
 		panic("program needs one argument only, the input file")
 	}
+}
+
+func compileAndRunFile(filename string) {
 	filename, err := filepath.Abs(filename)
 	if err != nil {
 		panic(err)
