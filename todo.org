@@ -4,6 +4,7 @@
 * DONE provide proper error messages or error instead of panic
 * DONE negative literals
 * DONE float literals
+* TODO tests
 * TODO pointer
 * TODO call by reference
 * TODO better distinguish go type information vs golem type information better

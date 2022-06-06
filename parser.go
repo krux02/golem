@@ -11,9 +11,10 @@ import (
 // TODO this is not a function sybol table, it is just an Operator Precedence table
 var OperatorPrecedence map[string]int = map[string]int{
 	".": 10,
-	"*": 6, "/": 6,
-	"+": 5, "-": 5,
-	">": 4, "<": 4, ">=": 4, "<=": 4, "==": 4,
+	"*": 7, "/": 7,
+	"+": 6, "-": 6,
+	">": 5, "<": 5, ">=": 5, "<=": 5,
+	"==": 4, "!=": 4,
 	"and": 3, "or": 2,
 	"=": 1, "+=": 1, "-=": 1, "*=": 1, "/=": 1,
 }
@@ -399,6 +400,12 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 		result = (Expr)(parseFloatLit(tokenizer))
 	case TkOpenBracket:
 		result = (Expr)(parseArrayLit(tokenizer))
+	case TkOpenBrace:
+		exprList := parseExprList(tokenizer, TkOpenBrace, TkCloseBrace)
+		if len(exprList) != 1 {
+			panic("braced expression must have a single brace")
+		}
+		result = exprList[0]
 	case TkOperator:
 		if prefixExpr {
 			// do not allow prefix prefix expression?

@@ -472,8 +472,10 @@ func (context *PackageGeneratorContext) popMarkedForGenerationTypeDef() (result 
 
 func compilePackageToC(pak TcPackageDef) string {
 	context := &PackageGeneratorContext{Pak: pak}
-	// TODO this sholud depend on the usage of `printf`
+	// TODO this should depend on the usage of `printf`
 	context.includes.WriteString("#include <stdio.h>\n")
+	// TODO this should depend on the usage of `assert`
+	context.includes.WriteString("#include <assert.h>\n")
 	// TODO this sholud depend on the usage of `string` as a type
 	context.typeDecl.WriteString("typedef char* string;\n")
 	context.typeDecl.WriteString("typedef unsigned char bool;\n")
