@@ -472,6 +472,7 @@ func (context *PackageGeneratorContext) popMarkedForGenerationTypeDef() (result 
 
 func compilePackageToC(pak TcPackageDef) string {
 	context := &PackageGeneratorContext{Pak: pak}
+	context.includes.WriteString("#include <stdint.h>\n")
 	// TODO this should depend on the usage of `printf`
 	context.includes.WriteString("#include <stdio.h>\n")
 	// TODO this should depend on the usage of `assert`

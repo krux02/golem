@@ -1,18 +1,18 @@
 # (progn (load (expand-file-name "golem-mode.el")) (golem-mode))
 
 type MyStruct = struct {
-  a: int
-  b: float
+  a: int64
+  b: float64
   c: string
 }
 
-proc myfun1(a, b, c: int): int = {
+proc myfun1(a, b, c: int64): int64 = {
   return a + b * c
   # a + b * c
 }
 
-proc myfun2(a,b:int; c: int): int = a * b + a * c
-#proc myfun2(a,b,c: int): int = a * b + a * c
+proc myfun2(a,b:int64; c: int64): int64 = a * b + a * c
+#proc myfun2(a,b,c: int64): int64 = a * b + a * c
 
 # empty function with nothing in it
 proc myfun3(a,b,c,d,e,f: string): void = {
@@ -25,11 +25,11 @@ proc foobar(arg: MyStruct): void = {
   printf("c: %s\n", arg.c)
 }
 
-proc max(a,b: int): int = {
+proc max(a,b: int64): int64 = {
   if a > b do a else b
 }
 
-proc max(a,b: float): float = {
+proc max(a,b: float64): float64 = {
   if a < b do b else a
 }
 
@@ -50,9 +50,9 @@ proc testBooleanOpsWithBlockExpr(): void = {
   }
 }
 
-proc maxParenDepth(expr: string): int = {
-  var depth: int = 0
-  var maxDepth: int = 0
+proc maxParenDepth(expr: string): int64 = {
+  var depth: int64 = 0
+  var maxDepth: int64 = 0
   for c in expr do {
     if c == '(' do depth += 1
     if c == ')' do depth -= 1
@@ -62,18 +62,18 @@ proc maxParenDepth(expr: string): int = {
 }
 
 ## this should be a doc comment.
-proc main():int = {
-  let x:int = myfun1(12, 13, 14)
+proc main():int64 = {
+  let x:int64 = myfun1(12, 13, 14)
   let y = myfun2(15, 16, 17)
   printf("Hallo Welt!\n")
-  printf("x: %d y: %d\n", x, y)
+  printf("x: %d y: %d\n", int32(x), int32(y))
 
   let exprStr = "(1+(2*3)+((8)/4))+1"
   let depth = maxParenDepth(exprStr)
-  printf("max paren depth: %d\n", depth)
+  printf("max paren depth: %d\n", int32(depth))
   testBooleanOpsWithBlockExpr()
-  let myArray: array(7)[int] = [123, -456, -789, -234, 567, 891, -123]
-  let myOtherArray: array(2)[float] = [12.34, 56.78]
+  let myArray: array(7)[int64] = [123, -456, -789, -234, 567, 891, -123]
+  let myOtherArray: array(2)[float64] = [12.34, 56.78]
   var myStruct: MyStruct# = :MyStruct{, a:12, b:34.56, c:"def"}
   printf("default Values\n")
   printf("a: %d b: %f c: %s\n", myStruct.a, myStruct.b, myStruct.c)
@@ -85,8 +85,8 @@ proc main():int = {
 
   printf("max test: max(a,b): %d\n", max(x,y))
 
-  let f1: float = 123.456
-  let f2: float = 654.321
+  let f1: float64 = 123.456
+  let f2: float64 = 654.321
   printf("f1: %f f2: %f\n", f1, f2);
   printf("max test: max(fx,f2): %f\n", max(f1,f2))
   0

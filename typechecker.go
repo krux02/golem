@@ -207,9 +207,9 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 		case 's':
 			argType = TypeString
 		case 'd':
-			argType = TypeInt
+			argType = TypeInt32
 		case 'f':
-			argType = TypeFloat
+			argType = TypeFloat64
 		default:
 			panic(tc.Errorf(formatExpr, "invalid format expr %%%c in %s", c2, AstFormat(formatExpr)))
 		}
@@ -345,11 +345,19 @@ func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt
 				panic(tc.Errorf(arg, "variable definitions statements must have at least one, a type or a value expression"))
 			} else if typ == TypeNoReturn {
 				panic("a default value of no retrun does not exist")
-			} else if typ == TypeFloat {
+			} else if typ == TypeFloat32 {
+				result.Value = FloatLit{}
+			} else if typ == TypeFloat64 {
 				result.Value = FloatLit{}
 			} else if typ == TypeChar {
 				result.Value = CharLit{}
-			} else if typ == TypeInt {
+			} else if typ == TypeInt8 {
+				result.Value = IntLit{}
+			} else if typ == TypeInt16 {
+				result.Value = IntLit{}
+			} else if typ == TypeInt32 {
+				result.Value = IntLit{}
+			} else if typ == TypeInt64 {
 				result.Value = IntLit{}
 			} else if typ == TypeBoolean {
 				panic("not implemented bool default value")
@@ -396,11 +404,11 @@ func (lit CharLit) Type() Type {
 }
 
 func (lit IntLit) Type() Type {
-	return TypeInt
+	return TypeInt64
 }
 
 func (lit FloatLit) Type() Type {
-	return TypeFloat
+	return TypeFloat64
 }
 
 func (lit TcArrayLit) Type() Type {
@@ -489,10 +497,10 @@ func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExp
 		tc.ExpectType(arg, TypeChar, expected)
 		return (TcExpr)(arg)
 	case IntLit:
-		tc.ExpectType(arg, TypeInt, expected)
+		tc.ExpectType(arg, TypeInt64, expected)
 		return (TcExpr)(arg)
 	case FloatLit:
-		tc.ExpectType(arg, TypeFloat, expected)
+		tc.ExpectType(arg, TypeFloat64, expected)
 		return (TcExpr)(arg)
 	case ReturnStmt:
 		// ignoring expected type here, because the return as expression

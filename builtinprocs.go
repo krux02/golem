@@ -49,10 +49,15 @@ func (typ *ArrayType) typenode() {}
 
 // These type names are by no means final, there are just to get
 // something working.
+
 var TypeBoolean = &BuiltinType{"bool", 'b'}
-var TypeInt = &BuiltinType{"int", 'i'}
-var TypeFloat = &BuiltinType{"float", 'f'}
-var TypeString = &BuiltinType{"string", 's'}
+var TypeInt8 = &BuiltinType{"int8_t", 'm'}
+var TypeInt16 = &BuiltinType{"int16_t", 's'}
+var TypeInt32 = &BuiltinType{"int32_t", 'i'}
+var TypeInt64 = &BuiltinType{"int64_t", 'l'}
+var TypeFloat32 = &BuiltinType{"float", 'f'}
+var TypeFloat64 = &BuiltinType{"double", 'd'}
+var TypeString = &BuiltinType{"string", 'S'}
 var TypeChar = &BuiltinType{"char", 'c'}
 var TypeVoid = &BuiltinType{"void", 'v'}
 
@@ -80,8 +85,12 @@ var builtinScope Scope = &ScopeImpl{
 	Parent: nil,
 	Types: map[string]Type{
 		"bool":     TypeBoolean,
-		"int":      TypeInt,
-		"float":    TypeFloat,
+		"int8":     TypeInt8,
+		"int16":    TypeInt16,
+		"int32":    TypeInt32,
+		"int64":    TypeInt64,
+		"float32":  TypeFloat32,
+		"float64":  TypeFloat64,
 		"string":   TypeString,
 		"void":     TypeVoid,
 		"noreturn": TypeNoReturn,
@@ -114,33 +123,41 @@ func registerConstant(name string, typ Type) {
 }
 
 func init() {
-	// currently overloading isn't supported
-	registerBuiltin("+", "+", true, []Type{TypeInt, TypeInt}, TypeInt)
-	registerBuiltin("+", "+", true, []Type{TypeFloat, TypeFloat}, TypeFloat)
-	registerBuiltin("-", "-", true, []Type{TypeInt, TypeInt}, TypeInt)
-	registerBuiltin("-", "-", true, []Type{TypeFloat, TypeFloat}, TypeFloat)
-	registerBuiltin("*", "*", true, []Type{TypeInt, TypeInt}, TypeInt)
-	registerBuiltin("*", "*", true, []Type{TypeFloat, TypeFloat}, TypeFloat)
-	registerBuiltin("/", "/", true, []Type{TypeInt, TypeInt}, TypeInt) // TODO, maybe return TypeFloat like in Nim?
-	registerBuiltin("/", "/", true, []Type{TypeFloat, TypeFloat}, TypeFloat)
-
 	// this has no structure, just made to make the example compile
-	for _, typ := range []Type{TypeChar, TypeInt, TypeFloat} {
+	for _, typ := range []Type{TypeInt8, TypeInt16, TypeInt32, TypeInt64, TypeFloat32, TypeFloat64} {
+		registerBuiltin("+", "+", true, []Type{typ, typ}, typ)
+		registerBuiltin("-", "-", true, []Type{typ, typ}, typ)
+		registerBuiltin("*", "*", true, []Type{typ, typ}, typ)
+		registerBuiltin("/", "/", true, []Type{typ, typ}, typ)
+
 		registerBuiltin("==", "==", true, []Type{typ, typ}, TypeBoolean)
 		registerBuiltin("<", "<", true, []Type{typ, typ}, TypeBoolean)
 		registerBuiltin("<=", "<=", true, []Type{typ, typ}, TypeBoolean)
 		registerBuiltin(">", ">", true, []Type{typ, typ}, TypeBoolean)
 		registerBuiltin(">=", ">=", true, []Type{typ, typ}, TypeBoolean)
 		registerBuiltin("!=", "!=", true, []Type{typ, typ}, TypeBoolean)
+
+		registerBuiltin("+=", "+=", true, []Type{typ, typ}, TypeVoid)
+		registerBuiltin("-=", "-=", true, []Type{typ, typ}, TypeVoid)
+		registerBuiltin("*=", "*=", true, []Type{typ, typ}, TypeVoid)
+		registerBuiltin("/=", "/=", true, []Type{typ, typ}, TypeVoid)
+		registerBuiltin("=", "=", true, []Type{typ, typ}, TypeVoid)
+
+		registerBuiltin("int8", "(int8_t)", false, []Type{typ}, TypeInt8)
+		registerBuiltin("int16", "(int16_t)", false, []Type{typ}, TypeInt16)
+		registerBuiltin("int32", "(int32_t)", false, []Type{typ}, TypeInt32)
+		registerBuiltin("int64", "(int64_t)", false, []Type{typ}, TypeInt64)
+
+		registerBuiltin("float32", "(float)", false, []Type{typ}, TypeFloat32)
+		registerBuiltin("float64", "(double)", false, []Type{typ}, TypeFloat64)
 	}
+
+	registerBuiltin("=", "=", true, []Type{TypeString, TypeString}, TypeVoid)
+	registerBuiltin("==", "==", true, []Type{TypeChar, TypeChar}, TypeBoolean)
+	registerBuiltin("!=", "!=", true, []Type{TypeChar, TypeChar}, TypeBoolean)
 	registerBuiltin("==", "==", true, []Type{TypeBoolean, TypeBoolean}, TypeBoolean)
 	registerBuiltin("!=", "!=", true, []Type{TypeBoolean, TypeBoolean}, TypeBoolean)
 
-	registerBuiltin("+=", "+=", true, []Type{TypeInt, TypeInt}, TypeVoid)
-	registerBuiltin("-=", "-=", true, []Type{TypeInt, TypeInt}, TypeVoid)
-	registerBuiltin("=", "=", true, []Type{TypeInt, TypeInt}, TypeVoid)
-	registerBuiltin("=", "=", true, []Type{TypeFloat, TypeFloat}, TypeVoid)
-	registerBuiltin("=", "=", true, []Type{TypeString, TypeString}, TypeVoid)
 	registerBuiltin("and", "&&", true, []Type{TypeBoolean, TypeBoolean}, TypeBoolean)
 	registerBuiltin("or", "||", true, []Type{TypeBoolean, TypeBoolean}, TypeBoolean)
 
