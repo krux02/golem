@@ -189,7 +189,6 @@ func (lit FloatLit) prettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (typeExpr TypeExpr) prettyPrint(builder *AstPrettyPrinter) {
-	fmt.Println("src: ", typeExpr.source)
 	builder.WriteString(typeExpr.Ident.source)
 	if len(typeExpr.ExprArgs) > 0 {
 		builder.WriteString("(")

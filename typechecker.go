@@ -233,6 +233,7 @@ func (tc *TypeChecker) TypeCheckDotExpr(scope Scope, lhs, rhs Expr, expected Typ
 		if err != nil {
 			panic(err)
 		}
+		tc.ExpectType(rhs, tcRhs.Type, expected)
 		return TcDotExpr{Lhs: tcLhs, Rhs: tcRhs}
 	default:
 		panic("dot call is only supported on struct field")
@@ -256,10 +257,6 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		// procSym := procSyms[0]
 		tc.ExpectType(call, procSym.Impl.ResultType, expected)
 		result.Sym = procSym
-
-		if procSym.Name == "=" {
-			fmt.Printf("proc sym: %#v\n", procSym.Impl)
-		}
 
 		if procSym.Impl.printfargs {
 			result.Args = tc.TypeCheckPrintfArgs(scope, procSym, call.Args)

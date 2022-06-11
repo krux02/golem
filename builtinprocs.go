@@ -6,8 +6,9 @@ import (
 )
 
 type BuiltinType struct {
-	name       string
-	mangleChar rune
+	name         string
+	internalName string // name for C code generation
+	mangleChar   rune
 }
 
 func (typ *BuiltinType) ManglePrint(builder *strings.Builder) {
@@ -50,23 +51,23 @@ func (typ *ArrayType) typenode() {}
 // These type names are by no means final, there are just to get
 // something working.
 
-var TypeBoolean = &BuiltinType{"bool", 'b'}
-var TypeInt8 = &BuiltinType{"int8_t", 'm'}
-var TypeInt16 = &BuiltinType{"int16_t", 's'}
-var TypeInt32 = &BuiltinType{"int32_t", 'i'}
-var TypeInt64 = &BuiltinType{"int64_t", 'l'}
-var TypeFloat32 = &BuiltinType{"float", 'f'}
-var TypeFloat64 = &BuiltinType{"double", 'd'}
-var TypeString = &BuiltinType{"string", 'S'}
-var TypeChar = &BuiltinType{"char", 'c'}
-var TypeVoid = &BuiltinType{"void", 'v'}
+var TypeBoolean = &BuiltinType{"bool", "bool", 'b'}
+var TypeInt8 = &BuiltinType{"int8", "int8_t", 'm'}
+var TypeInt16 = &BuiltinType{"int16", "int16_t", 's'}
+var TypeInt32 = &BuiltinType{"int32", "int32_t", 'i'}
+var TypeInt64 = &BuiltinType{"int64", "int64_t", 'l'}
+var TypeFloat32 = &BuiltinType{"float32", "float", 'f'}
+var TypeFloat64 = &BuiltinType{"float64", "double", 'd'}
+var TypeString = &BuiltinType{"string", "string", 'S'}
+var TypeChar = &BuiltinType{"char", "char", 'c'}
+var TypeVoid = &BuiltinType{"void", "void", 'v'}
 
 // This type is used to tag that a function never returns.
-var TypeNoReturn = &BuiltinType{"noreturn", '-'}
+var TypeNoReturn = &BuiltinType{"noreturn", "void", '-'}
 
 // this type is the internal representation when no type has been
 // specified. It is not a type by its own.
-var TypeUnspecified = &BuiltinType{"<unspecified>", ','}
+var TypeUnspecified = &BuiltinType{"???", "<unspecified>", ','}
 
 // Printf is literally the only use case for real varargs that I
 // know. Therefore the implementation for varargs will be strictly
@@ -82,24 +83,14 @@ var BuiltinPrintf *TcProcDef = &TcProcDef{
 }
 
 var builtinScope Scope = &ScopeImpl{
-	Parent: nil,
-	Types: map[string]Type{
-		"bool":     TypeBoolean,
-		"int8":     TypeInt8,
-		"int16":    TypeInt16,
-		"int32":    TypeInt32,
-		"int64":    TypeInt64,
-		"float32":  TypeFloat32,
-		"float64":  TypeFloat64,
-		"string":   TypeString,
-		"void":     TypeVoid,
-		"noreturn": TypeNoReturn,
-	},
-	// these are builtin procedures, therefore their Impl is nil
-	Procedures: map[string]([]*TcProcDef){
-		"printf": []*TcProcDef{BuiltinPrintf},
-	},
-	Variables: map[string]TcSymbol{},
+	Parent:     nil,
+	Types:      make(map[string]Type),
+	Procedures: make(map[string]([]*TcProcDef)),
+	Variables:  make(map[string]TcSymbol),
+}
+
+func registerBuiltinType(typ *BuiltinType) {
+	builtinScope.Types[typ.name] = typ
 }
 
 func registerBuiltin(name, builtinName string, isOperator bool, args []Type, result Type) {
@@ -123,6 +114,18 @@ func registerConstant(name string, typ Type) {
 }
 
 func init() {
+	registerBuiltinType(TypeBoolean)
+	registerBuiltinType(TypeInt8)
+	registerBuiltinType(TypeInt16)
+	registerBuiltinType(TypeInt32)
+	registerBuiltinType(TypeInt64)
+	registerBuiltinType(TypeFloat32)
+	registerBuiltinType(TypeFloat64)
+	registerBuiltinType(TypeString)
+	registerBuiltinType(TypeVoid)
+	registerBuiltinType(TypeNoReturn)
+
+	builtinScope.Procedures["printf"] = append(builtinScope.Procedures["printf"], BuiltinPrintf)
 	// this has no structure, just made to make the example compile
 	for _, typ := range []Type{TypeInt8, TypeInt16, TypeInt32, TypeInt64, TypeFloat32, TypeFloat64} {
 		registerBuiltin("+", "+", true, []Type{typ, typ}, typ)
@@ -165,14 +168,4 @@ func init() {
 
 	registerConstant("true", TypeBoolean)
 	registerConstant("false", TypeBoolean)
-
-	// lessOpDef := &TcProcDef{
-	// 	Name:               "<",
-	// 	Args:               []TcSymbol{TcSymbol{Name: "", Kind: SkProcArg, Typ: TypeUnspecified}},
-	// 	ResultType:         TypeBoolean,
-	// 	generateAsOperator: true,
-	// 	builtinName:        "<",
-	// }
-
-	// builtinScope.Procedures["<"] = lessOpDef
 }

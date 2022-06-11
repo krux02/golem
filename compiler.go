@@ -33,7 +33,7 @@ func (builder *CodeBuilder) newlineAndIndent() {
 func (builder *CodeBuilder) compileTypeExpr(typ Type) {
 	switch typ := typ.(type) {
 	case *BuiltinType:
-		builder.WriteString(typ.name)
+		builder.WriteString(typ.internalName)
 	case *ArrayType:
 		// TODO this is wrong.
 		builder.compileTypeExpr(typ.Elem)
@@ -51,7 +51,7 @@ func (builder *CodeBuilder) compileSymWithType(context *PackageGeneratorContext,
 	// TODO rename this, it is a declaration, not just a symbol that has a type
 	switch typ := sym.Type().(type) {
 	case *BuiltinType:
-		builder.WriteString(typ.name)
+		builder.WriteString(typ.internalName)
 		builder.WriteString(" ")
 		builder.WriteString(sym.Name)
 	case *ArrayType:
