@@ -11,12 +11,40 @@ type BuiltinType struct {
 	mangleChar   rune
 }
 
+var _ Type = &BuiltinType{}
+
+type TypeGroup struct {
+	name  string
+	items []Type
+}
+
+var _ Type = &TypeGroup{}
+
 func (typ *BuiltinType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune(typ.mangleChar)
 }
 
+func (typ *TypeGroup) ManglePrint(builder *strings.Builder) {
+	panic("not a resolved type")
+}
+
+func (typ *TypeGroup) Source() string {
+	panic("type group does not have source")
+}
+
+func (typ TypeGroup) prettyPrint(builder *AstPrettyPrinter) {
+	for i, typ := range typ.items {
+		if i != 0 {
+			builder.WriteString(" | ")
+		}
+		typ.prettyPrint(builder)
+	}
+}
+
+func (typ TypeGroup) typenode() {}
+
 type ArrayType struct {
-	Len  int
+	Len  int64
 	Elem Type
 }
 
@@ -69,6 +97,9 @@ var TypeNoReturn = &BuiltinType{"noreturn", "void", '-'}
 // specified. It is not a type by its own.
 var TypeUnspecified = &BuiltinType{"???", "<unspecified>", ','}
 
+var TypeAnyInt = &TypeGroup{name: "AnyInt", items: []Type{TypeInt8, TypeInt16, TypeInt32, TypeInt64}}
+var TypeAnyFloat = &TypeGroup{name: "AnyFloat", items: []Type{TypeFloat32, TypeFloat64}}
+
 // Printf is literally the only use case for real varargs that I
 // know. Therefore the implementation for varargs will be strictly
 // tied to printf for now. A general concept for varargs will be
@@ -90,6 +121,10 @@ var builtinScope Scope = &ScopeImpl{
 }
 
 func registerBuiltinType(typ *BuiltinType) {
+	builtinScope.Types[typ.name] = typ
+}
+
+func registerTypeGroup(typ *TypeGroup) {
 	builtinScope.Types[typ.name] = typ
 }
 
@@ -124,6 +159,9 @@ func init() {
 	registerBuiltinType(TypeString)
 	registerBuiltinType(TypeVoid)
 	registerBuiltinType(TypeNoReturn)
+
+	registerTypeGroup(TypeAnyFloat)
+	registerTypeGroup(TypeAnyInt)
 
 	builtinScope.Procedures["printf"] = append(builtinScope.Procedures["printf"], BuiltinPrintf)
 	// this has no structure, just made to make the example compile

@@ -57,7 +57,9 @@ func validateSourceSetInternal(code string, node reflect.Value) {
 	}
 	typ := node.Type()
 	switch node.Kind() {
-	case reflect.String, reflect.Int, reflect.Bool, reflect.Int32, reflect.Float64:
+	case reflect.Ptr:
+		validateSourceSetInternal(code, node.Elem())
+	case reflect.String, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Bool, reflect.Float32, reflect.Float64:
 		// skipping
 	case reflect.Struct:
 		// direct ast node
@@ -78,8 +80,7 @@ func validateSourceSetInternal(code string, node reflect.Value) {
 			validateSourceSetInternal(code, node.Index(i))
 		}
 	default:
-		fmt.Println(typ.Name(), ": ", node.Kind())
-		panic("not implemented")
+		panic(fmt.Errorf("not implemented: %s: %s", typ.Name(), node.Kind()))
 	}
 
 }

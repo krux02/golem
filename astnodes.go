@@ -113,11 +113,13 @@ type CharLit struct {
 
 type IntLit struct {
 	AbstractAstNode
-	Value int
+	typ   *BuiltinType
+	Value int64
 }
 
 type FloatLit struct {
 	AbstractAstNode
+	typ   *BuiltinType
 	Value float64
 }
 

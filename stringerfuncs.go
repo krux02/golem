@@ -158,7 +158,7 @@ func (lit TcArrayLit) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteRune(']')
 }
 
-func WriteIntLit(builder *strings.Builder, value int) {
+func WriteIntLit(builder *strings.Builder, value int64) {
 	if value == 0 {
 		builder.WriteByte('0')
 		return

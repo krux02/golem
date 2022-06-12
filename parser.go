@@ -263,7 +263,7 @@ func parseIntLit(tokenizer *Tokenizer) (result IntLit) {
 	if err != nil {
 		panic("internal error invalid int token")
 	}
-	result.Value = intValue
+	result.Value = int64(intValue)
 	return
 }
 
