@@ -24,4 +24,6 @@
 ** TODO set
 * TODO struct
 ** TODO literals
-** TODO passing as function arguments
+** TODO passing as function argument
+* TODO documentation structuere
+* TODO dotExpr should be strictly limited to two elements

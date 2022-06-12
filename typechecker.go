@@ -255,7 +255,6 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 	case 1:
 		procSym := procSyms[0]
 		// procSym := procSyms[0]
-		tc.ExpectType(call, procSym.Impl.ResultType, expected)
 		result.Sym = procSym
 
 		if procSym.Impl.printfargs {
@@ -303,6 +302,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		result.Sym = procSyms[0]
 		result.Args = checkedArgs
 	}
+	tc.ExpectType(call, result.Sym.Impl.ResultType, expected)
 	return result
 }
 

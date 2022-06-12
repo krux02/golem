@@ -66,7 +66,7 @@ proc main():int64 = {
   let x:int64 = myfun1(12, 13, 14)
   let y = myfun2(15, 16, 17)
   printf("Hallo Welt!\n")
-  printf("x: %d y: %d\n", int32(x), int64(y))
+  printf("x: %d y: %d\n", int32(x), int32(y))
 
   let exprStr = "(1+(2*3)+((8)/4))+1"
   let depth = maxParenDepth(exprStr)
@@ -83,7 +83,7 @@ proc main():int64 = {
   printf("initialized Values\n")
   printf("a: %d b: %f c: %s\n", int32(myStruct.a), myStruct.b, myStruct.c)
 
-  printf("max test: max(a,b): %d\n", max(x,y))
+  printf("max test: max(a,b): %d\n", int32(max(x,y)))
 
   let f1: float64 = 123.456
   let f2: float64 = 654.321
