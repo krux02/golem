@@ -24,6 +24,15 @@ proc main():int64 = {
 #+end_src
 
 
+* TODO add ability for type assertions
+
+#+begin_src golem
+
+let tmp1: int8 = 123
+let tmp2 = 123:int8
+let tmp3 = int8(128)
+
+#+end_src
 * TODO maybe return TypeFloat like in Nim for integer division?
 * TODO tests
 * TODO pointer

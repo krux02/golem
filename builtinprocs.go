@@ -80,12 +80,12 @@ func (typ *ArrayType) typenode() {}
 // something working.
 
 var TypeBoolean = &BuiltinType{"bool", "bool", 'b'}
-var TypeInt8 = &BuiltinType{"int8", "int8_t", 'm'}
-var TypeInt16 = &BuiltinType{"int16", "int16_t", 's'}
-var TypeInt32 = &BuiltinType{"int32", "int32_t", 'i'}
-var TypeInt64 = &BuiltinType{"int64", "int64_t", 'l'}
-var TypeFloat32 = &BuiltinType{"float32", "float", 'f'}
-var TypeFloat64 = &BuiltinType{"float64", "double", 'd'}
+var TypeInt8 = &BuiltinType{"i8", "int8_t", 'm'}
+var TypeInt16 = &BuiltinType{"i16", "int16_t", 's'}
+var TypeInt32 = &BuiltinType{"i32", "int32_t", 'i'}
+var TypeInt64 = &BuiltinType{"i64", "int64_t", 'l'}
+var TypeFloat32 = &BuiltinType{"f32", "float", 'f'}
+var TypeFloat64 = &BuiltinType{"f64", "double", 'd'}
 var TypeString = &BuiltinType{"string", "string", 'S'}
 var TypeChar = &BuiltinType{"char", "char", 'c'}
 var TypeVoid = &BuiltinType{"void", "void", 'v'}
@@ -184,13 +184,13 @@ func init() {
 		registerBuiltin("/=", "/=", true, []Type{typ, typ}, TypeVoid)
 		registerBuiltin("=", "=", true, []Type{typ, typ}, TypeVoid)
 
-		registerBuiltin("int8", "(int8_t)", false, []Type{typ}, TypeInt8)
-		registerBuiltin("int16", "(int16_t)", false, []Type{typ}, TypeInt16)
-		registerBuiltin("int32", "(int32_t)", false, []Type{typ}, TypeInt32)
-		registerBuiltin("int64", "(int64_t)", false, []Type{typ}, TypeInt64)
+		registerBuiltin("i8", "(int8_t)", false, []Type{typ}, TypeInt8)
+		registerBuiltin("i16", "(int16_t)", false, []Type{typ}, TypeInt16)
+		registerBuiltin("i32", "(int32_t)", false, []Type{typ}, TypeInt32)
+		registerBuiltin("i64", "(int64_t)", false, []Type{typ}, TypeInt64)
 
-		registerBuiltin("float32", "(float)", false, []Type{typ}, TypeFloat32)
-		registerBuiltin("float64", "(double)", false, []Type{typ}, TypeFloat64)
+		registerBuiltin("f32", "(float)", false, []Type{typ}, TypeFloat32)
+		registerBuiltin("f64", "(double)", false, []Type{typ}, TypeFloat64)
 	}
 
 	registerBuiltin("=", "=", true, []Type{TypeString, TypeString}, TypeVoid)

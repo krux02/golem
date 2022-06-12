@@ -1,9 +1,9 @@
 #proc assert(cond: Bool)
 
-proc main():int32 = {
+proc main():i32 = {
   {
-    let x = int32(1)
-    let y = int32(2)
+    let x:i32 = 1
+    let y:i32 = 2
     assert((x <  y) == true)
     assert((x <= y) == true)
     assert((x == y) == false)
@@ -12,8 +12,8 @@ proc main():int32 = {
   }
 
   {
-    let x = float32(1.0)
-    let y = float32(2.0)
+    let x:f32 = 1.0
+    let y:f32 = 2.0
     assert((x <  y) == true)
     assert((x <= y) == true)
     assert((x == y) == false)
@@ -22,10 +22,10 @@ proc main():int32 = {
   }
 
   {
-    let x = float32(1.0)
-    let y = float32(2.0)
-    let z = float32(3.0)
+    let x:f64 = 1.0
+    let y:f64 = 2.0
+    let z:f64 = 3.0
     printf("abc %f\n", (x + y) * z)
   }
-  int32(0)
+  0
 }

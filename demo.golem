@@ -1,18 +1,18 @@
 # (progn (load (expand-file-name "golem-mode.el")) (golem-mode))
 
 type MyStruct = struct {
-  a: int64
-  b: float64
+  a: i64
+  b: f64
   c: string
 }
 
-proc myfun1(a, b, c: int64): int64 = {
+proc myfun1(a, b, c: i64): i64 = {
   return a + b * c
   # a + b * c
 }
 
-proc myfun2(a,b:int64; c: int64): int64 = a * b + a * c
-#proc myfun2(a,b,c: int64): int64 = a * b + a * c
+proc myfun2(a,b:i64; c: i64): i64 = a * b + a * c
+#proc myfun2(a,b,c: i64): i64 = a * b + a * c
 
 # empty function with nothing in it
 proc myfun3(a,b,c,d,e,f: string): void = {
@@ -20,16 +20,16 @@ proc myfun3(a,b,c,d,e,f: string): void = {
 }
 
 proc foobar(arg: MyStruct): void = {
-  printf("a: %d\n", int32(arg.a))
+  printf("a: %d\n", i32(arg.a))
   printf("b: %f\n", arg.b)
   printf("c: %s\n", arg.c)
 }
 
-proc max(a,b: int64): int64 = {
+proc max(a,b: i64): i64 = {
   if a > b do a else b
 }
 
-proc max(a,b: float64): float64 = {
+proc max(a,b: f64): f64 = {
   if a < b do b else a
 }
 
@@ -50,9 +50,9 @@ proc testBooleanOpsWithBlockExpr(): void = {
   }
 }
 
-proc maxParenDepth(expr: string): int64 = {
-  var depth: int64 = 0
-  var maxDepth: int64 = 0
+proc maxParenDepth(expr: string): i64 = {
+  var depth: i64 = 0
+  var maxDepth: i64 = 0
   for c in expr do {
     if c == '(' do depth += 1
     if c == ')' do depth -= 1
@@ -62,31 +62,31 @@ proc maxParenDepth(expr: string): int64 = {
 }
 
 ## this should be a doc comment.
-proc main():int64 = {
-  let x:int64 = myfun1(12, 13, 14)
+proc main():i64 = {
+  let x:i64 = myfun1(12, 13, 14)
   let y = myfun2(15, 16, 17)
   printf("Hallo Welt!\n")
-  printf("x: %d y: %d\n", int32(x), int32(y))
+  printf("x: %d y: %d\n", i32(x), i32(y))
 
   let exprStr = "(1+(2*3)+((8)/4))+1"
   let depth = maxParenDepth(exprStr)
-  printf("max paren depth: %d\n", int32(depth))
+  printf("max paren depth: %d\n", i32(depth))
   testBooleanOpsWithBlockExpr()
-  let myArray: array(7)[int64] = [123, -456, -789, -234, 567, 891, -123]
-  let myOtherArray: array(2)[float64] = [12.34, 56.78]
+  let myArray: array(7)[i64] = [123, -456, -789, -234, 567, 891, -123]
+  let myOtherArray: array(2)[f64] = [12.34, 56.78]
   var myStruct: MyStruct# = :MyStruct{, a:12, b:34.56, c:"def"}
   printf("default Values\n")
-  printf("a: %d b: %f c: %s\n", int32(myStruct.a), myStruct.b, myStruct.c)
+  printf("a: %d b: %f c: %s\n", i32(myStruct.a), myStruct.b, myStruct.c)
   myStruct.a = 12
   myStruct.b = 34.56
   myStruct.c = "def"
   printf("initialized Values\n")
-  printf("a: %d b: %f c: %s\n", int32(myStruct.a), myStruct.b, myStruct.c)
+  printf("a: %d b: %f c: %s\n", i32(myStruct.a), myStruct.b, myStruct.c)
 
-  printf("max test: max(a,b): %d\n", int32(max(x,y)))
+  printf("max test: max(a,b): %d\n", i32(max(x,y)))
 
-  let f1: float64 = 123.456
-  let f2: float64 = 654.321
+  let f1: f64 = 123.456
+  let f2: f64 = 654.321
   printf("f1: %f f2: %f\n", f1, f2);
   printf("max test: max(fx,f2): %f\n", max(f1,f2))
   0
