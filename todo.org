@@ -24,6 +24,7 @@ proc main():int64 = {
 #+end_src
 
 
+* TODO default int, default float
 * TODO add ability for type assertions
 
 #+begin_src golem

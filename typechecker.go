@@ -406,7 +406,6 @@ func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt
 
 	} else {
 		result.Value = tc.TypeCheckExpr(scope, arg.Value, expected)
-		fmt.Printf("debug: %s\n", AstFormat(result.Value))
 		result.Sym = scope.NewSymbol(arg.Name.source, arg.Kind, result.Value.Type())
 	}
 	return
@@ -513,6 +512,12 @@ func MatchNegativeNumber(arg Call) (number IntLit, ok bool) {
 	return
 }
 
+func (tc *TypeChecker) TypeCheckColonExpr(scope Scope, arg ColonExpr, expected Type) TcExpr {
+	typ := tc.LookUpType(scope, arg.Rhs)
+	typ = tc.ExpectType(arg, typ, expected)
+	return tc.TypeCheckExpr(scope, arg.Lhs, typ)
+}
+
 func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExpr {
 	switch arg := arg.(type) {
 	case Call:
@@ -560,6 +565,8 @@ func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExp
 		return (TcExpr)(tc.TypeCheckIfElseStmt(scope, arg, expected))
 	case ArrayLit:
 		return (TcExpr)(tc.TypeCheckArrayLit(scope, arg, expected))
+	case ColonExpr:
+		return (TcExpr)(tc.TypeCheckColonExpr(scope, arg, expected))
 	default:
 		panic(tc.Errorf(arg, "not implemented %T", arg))
 	}

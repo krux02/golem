@@ -58,6 +58,12 @@ func (call Call) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(")")
 }
 
+func (expr ColonExpr) prettyPrint(builder *AstPrettyPrinter) {
+	expr.Lhs.prettyPrint(builder)
+	builder.WriteString(": ")
+	expr.Rhs.prettyPrint(builder)
+}
+
 func (codeBlock CodeBlock) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("{")
 	builder.Indentation++
@@ -181,11 +187,19 @@ func WriteIntLit(builder *strings.Builder, value int64) {
 
 func (lit IntLit) prettyPrint(builder *AstPrettyPrinter) {
 	WriteIntLit(&builder.Builder, lit.Value)
+	if lit.typ != nil {
+		builder.WriteString(":")
+		lit.typ.prettyPrint(builder)
+	}
 }
 
 func (lit FloatLit) prettyPrint(builder *AstPrettyPrinter) {
 	str := fmt.Sprintf("%f", lit.Value)
 	builder.WriteString(str)
+	if lit.typ != nil {
+		builder.WriteString(":")
+		lit.typ.prettyPrint(builder)
+	}
 }
 
 func (typeExpr TypeExpr) prettyPrint(builder *AstPrettyPrinter) {

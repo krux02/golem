@@ -2,8 +2,8 @@
 
 proc main():i32 = {
   {
-    let x:i32 = 1
-    let y:i32 = 2
+    let x = 1:i32
+    let y = 2:i32
     assert((x <  y) == true)
     assert((x <= y) == true)
     assert((x == y) == false)
@@ -12,8 +12,8 @@ proc main():i32 = {
   }
 
   {
-    let x:f32 = 1.0
-    let y:f32 = 2.0
+    let x = 1.0:f32
+    let y = 2.0:f32
     assert((x <  y) == true)
     assert((x <= y) == true)
     assert((x == y) == false)
@@ -22,9 +22,9 @@ proc main():i32 = {
   }
 
   {
-    let x:f64 = 1.0
-    let y:f64 = 2.0
-    let z:f64 = 3.0
+    let x = 1.0:f64
+    let y = 2.0:f64
+    let z = 3.0:f64
     printf("abc %f\n", (x + y) * z)
   }
   0

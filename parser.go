@@ -384,6 +384,19 @@ func parsePrefixCall(tokenizer *Tokenizer) (result Call) {
 	return
 }
 
+func parseColonExpr(tokenizer *Tokenizer, lhs Expr) Expr {
+	token := tokenizer.Next()
+	tokenizer.expectKind(token, TkColon)
+	rhs := parseTypeExpr(tokenizer)
+
+	result := ColonExpr{
+		Lhs: lhs,
+		Rhs: rhs,
+	}
+	result.source = joinSubstr(tokenizer.code, lhs.Source(), rhs.Source())
+	return result
+}
+
 func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 	switch tokenizer.lookAheadToken.kind {
 	case TkIdent:
@@ -427,6 +440,8 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 		result = (Expr)(parseInfixCall(tokenizer, result))
 	case TkOpenBrace:
 		result = (Expr)(parseCall(tokenizer, result))
+	case TkColon:
+		result = (Expr)(parseColonExpr(tokenizer, result))
 	}
 
 	return

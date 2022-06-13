@@ -137,6 +137,12 @@ type Call struct {
 	Prefix bool // true for -a ++x etc, false for everything else
 }
 
+type ColonExpr struct {
+	AbstractAstNode
+	Lhs Expr
+	Rhs TypeExpr
+}
+
 type ProcDef struct {
 	AbstractAstNode
 	Name       Ident
@@ -161,6 +167,7 @@ func (lit FloatLit) expression()         {}
 func (lit ArrayLit) expression()         {}
 func (lit CharLit) expression()          {}
 func (call Call) expression()            {}
+func (call ColonExpr) expression()       {}
 func (stmt VariableDefStmt) expression() {}
 func (stmt ForLoopStmt) expression()     {}
 func (stmt IfStmt) expression()          {}

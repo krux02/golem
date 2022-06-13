@@ -63,7 +63,7 @@ proc maxParenDepth(expr: string): i64 = {
 
 ## this should be a doc comment.
 proc main():i64 = {
-  let x:i64 = myfun1(12, 13, 14)
+  let x = myfun1(12, 13, 14)
   let y = myfun2(15, 16, 17)
   printf("Hallo Welt!\n")
   printf("x: %d y: %d\n", i32(x), i32(y))
@@ -85,8 +85,8 @@ proc main():i64 = {
 
   printf("max test: max(a,b): %d\n", i32(max(x,y)))
 
-  let f1: f64 = 123.456
-  let f2: f64 = 654.321
+  let f1 = 123.456:f64
+  let f2 = 654.321:f64
   printf("f1: %f f2: %f\n", f1, f2);
   printf("max test: max(fx,f2): %f\n", max(f1,f2))
   0
