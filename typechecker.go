@@ -228,8 +228,10 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 	i := len(prefixArgs) + 1
 	// format string must me a string literal
 	formatStr := formatExpr.(StrLit).Value
+	formatStrC := &strings.Builder{}
 	for j := 0; j < len(formatStr); j++ {
 		c1 := formatStr[j]
+		formatStrC.WriteByte(c1)
 		if c1 != '%' {
 			continue
 		}
@@ -241,6 +243,7 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 		var argType Type
 		switch c2 {
 		case '%':
+			formatStrC.WriteRune('%')
 			continue
 		case 's':
 			argType = TypeString
@@ -255,10 +258,29 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 			panic(tc.Errorf(formatExpr, "not enough arguments for %s", AstFormat(formatExpr)))
 		}
 		tcArg := tc.TypeCheckExpr(scope, args[i], argType)
+		switch tcArg.Type() {
+		case TypeInt8:
+			formatStrC.WriteString("hhd")
+		case TypeInt16:
+			formatStrC.WriteString("hd")
+		case TypeInt32:
+			formatStrC.WriteString("d")
+		case TypeInt64:
+			formatStrC.WriteString("ld")
+		case TypeString:
+			formatStrC.WriteString("s")
+		case TypeFloat32:
+			formatStrC.WriteString("f")
+		case TypeFloat64:
+			formatStrC.WriteString("f")
+		}
 		result = append(result, tcArg)
 		i++
 	}
 
+	result[len(prefixArgs)] = StrLit{Value: formatStrC.String()}
+
+	//formatExpr.(StrLit).Value = formatStrC.String()
 	return result
 }
 

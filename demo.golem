@@ -20,7 +20,7 @@ proc myfun3(a,b,c,d,e,f: string): void = {
 }
 
 proc foobar(arg: MyStruct): void = {
-  printf("a: %d\n", i32(arg.a))
+  printf("a: %d\n", arg.a)
   printf("b: %f\n", arg.b)
   printf("c: %s\n", arg.c)
 }
@@ -66,7 +66,7 @@ proc main():i64 = {
   let x = myfun1(12, 13, 14)
   let y = myfun2(15, 16, 17)
   printf("Hallo Welt!\n")
-  printf("x: %d y: %d\n", i32(x), i32(y))
+  printf("x: %d y: %d\n", x, y)
 
   let exprStr = "(1+(2*3)+((8)/4))+1"
   let depth = maxParenDepth(exprStr)
@@ -76,12 +76,13 @@ proc main():i64 = {
   let myOtherArray: array(2)[f64] = [12.34, 56.78]
   var myStruct: MyStruct# = :MyStruct{, a:12, b:34.56, c:"def"}
   printf("default Values\n")
-  printf("a: %d b: %f c: %s\n", i32(myStruct.a), myStruct.b, myStruct.c)
+  printf("a: %d b: %f c: %s\n", myStruct.a, myStruct.b, myStruct.c)
   myStruct.a = 12
   myStruct.b = 34.56
   myStruct.c = "def"
   printf("initialized Values\n")
-  printf("a: %d b: %f c: %s\n", i32(myStruct.a), myStruct.b, myStruct.c)
+  foobar(myStruct)
+  printf("a: %d b: %f c: %s\n", myStruct.a, myStruct.b, myStruct.c)
 
   printf("max test: max(a,b): %d\n", i32(max(x,y)))
 
