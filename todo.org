@@ -47,10 +47,26 @@ let tmp3 = int8(128)
 * TODO C++ interop
 * TODO automatic narrowing of literals when type is known from outside.
 * TODO make `registerBuiltinX` a method of scope.
-* TODO full set of types 
+* TODO compiler passes for some transformations (e.g. moving literals to constants)
+* TODO statistics about compiler bootstrapping time, lines of code, test time, test lines of code
+* TODO full set of types
 ** DONE int float in all sizes
 ** TODO vector/simd types
 ** TODO string
+
+#+begin_src c
+
+
+typedef struct {uint32_t len; char data[];} string;
+
+const string strLit0 = {.len=12,.data="Hallo Welt!\n"};
+const string strLit56 = {.len=12,.data="x: %d y: %d\n"};
+const string strLit113 = {.len=19,.data="(1+(2*3)+((8)/4))+1"};
+const string strLit177 = {.len=20,.data="max paren depth: %d\n"};
+const string strLit243 = {.len=15,.data="default Values\n"};
+
+#+end_src
+
 ** TODO array
 ** TODO set
 * TODO struct
