@@ -19,7 +19,7 @@ func TestMain(t *testing.T) {
 		name := file.Name()
 		if strings.HasSuffix(name, ".golem") {
 			fmt.Printf("matching file %s\n", name)
-			compileAndRunFile(filepath.Join(testDir, name))
+			compileAndRunFile(filepath.Join(testDir, name), false)
 		}
 	}
 }

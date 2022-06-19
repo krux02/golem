@@ -358,7 +358,18 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 			checkedArgs = append(checkedArgs, tcArg)
 		}
 		if len(procSyms) == 0 {
-			panic(tc.Errorf(ident, "proc not found: %s(%v, %v)", ident.source, checkedArgs[0].Type(), checkedArgs[1].Type()))
+			builder := &AstPrettyPrinter{}
+			builder.WriteString("proc not found: ")
+			builder.WriteString(ident.source)
+			builder.WriteRune('(')
+			for i, arg := range checkedArgs {
+				if i != 0 {
+					builder.WriteString(", ")
+				}
+				arg.Type().prettyPrint(builder)
+			}
+			builder.WriteRune(')')
+			panic(tc.Errorf(ident, "%s", builder.String()))
 		}
 		if len(procSyms) > 1 {
 			panic(tc.Errorf(ident, "too many overloads: %s", ident.source))

@@ -24,6 +24,9 @@ proc main():int64 = {
 #+end_src
 
 
+* TODO error reporting inststead of compiler crashing
+* TODO add error type to to represent invalit / non-typeable ast
+* TODO test compiler error reporting
 * TODO test operator precedence when many `:` are in use`
 * TODO default int, default float
 * TODO add ability for type assertions

@@ -13,13 +13,13 @@ import (
 
 func main() {
 	if len(os.Args) == 2 {
-		compileAndRunFile(os.Args[1])
+		compileAndRunFile(os.Args[1], true)
 	} else {
 		panic("program needs one argument only, the input file")
 	}
 }
 
-func compileAndRunFile(filename string) {
+func compileAndRunFile(filename string, useExec bool) {
 	filename, err := filepath.Abs(filename)
 	if err != nil {
 		panic(err)
@@ -65,7 +65,18 @@ func compileAndRunFile(filename string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	fmt.Println("=========================== exec ===========================")
+	var argv []string = nil
 	// exec should not return
-	log.Fatal(syscall.Exec(binaryAbsFilename, nil, nil))
+	if useExec {
+		log.Fatal(syscall.Exec(binaryAbsFilename, argv, nil))
+		return // dead code
+	} else {
+		err = exec.Command(binaryAbsFilename, argv...).Run()
+		if err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 }
