@@ -3,29 +3,8 @@
 * DONE implement ~context~ type and parameter for ~TypeCheck~ functions
 * DONE provide proper error messages or error instead of panic
 * DONE negative literals
-
-* BUG: compiler crash
-
-#+begin_src golem
-proc foo(arg: i32): void = {
-  printf("foo1: %d\n", int32(arg))
-}
-
-
-proc foo(arg: i64): void = {
-  printf("foo2: %d\n", int32(arg))
-}
-
-## this should be a doc comment.
-proc main():i64 = {
-  let tmp: i8 = 123
-  foo(tmp)
-}
-#+end_src
-
-
-* TODO error reporting inststead of compiler crashing
-* TODO add error type to to represent invalit / non-typeable ast
+* DONE error reporting instead of compiler crashing
+* DONE add error type to represent invalid / non-typeable ast
 * TODO test infrastructure compiler error reporting
 * TODO full coverage of all error messages
 * TODO test operator precedence when many `:` are in use`
