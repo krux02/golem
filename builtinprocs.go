@@ -97,6 +97,11 @@ var TypeNoReturn = &BuiltinType{"noreturn", "void", '-'}
 // specified. It is not a type by its own.
 var TypeUnspecified = &BuiltinType{"???", "<unspecified>", ','}
 
+// this type is the internal representation when the type checker fails to
+// resolve the type. Expressions with this type cannot be further processed in
+// code generation.
+var TypeError = &BuiltinType{"???", "<error>", ','}
+
 var TypeAnyInt = &TypeGroup{name: "AnyInt", items: []Type{TypeInt8, TypeInt16, TypeInt32, TypeInt64}}
 var TypeAnyFloat = &TypeGroup{name: "AnyFloat", items: []Type{TypeFloat32, TypeFloat64}}
 

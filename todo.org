@@ -7,18 +7,18 @@
 * BUG: compiler crash
 
 #+begin_src golem
-proc foo(arg: int32): void = {
+proc foo(arg: i32): void = {
   printf("foo1: %d\n", int32(arg))
 }
 
 
-proc foo(arg: int64): void = {
+proc foo(arg: i64): void = {
   printf("foo2: %d\n", int32(arg))
 }
 
 ## this should be a doc comment.
-proc main():int64 = {
-  let tmp: int8 = 123
+proc main():i64 = {
+  let tmp: i8 = 123
   foo(tmp)
 }
 #+end_src
@@ -26,7 +26,8 @@ proc main():int64 = {
 
 * TODO error reporting inststead of compiler crashing
 * TODO add error type to to represent invalit / non-typeable ast
-* TODO test compiler error reporting
+* TODO test infrastructure compiler error reporting
+* TODO full coverage of all error messages
 * TODO test operator precedence when many `:` are in use`
 * TODO default int, default float
 * TODO add ability for type assertions
@@ -39,7 +40,6 @@ let tmp3 = int8(128)
 
 #+end_src
 * TODO maybe return TypeFloat like in Nim for integer division?
-* TODO tests
 * TODO pointer
 * TODO call by reference
 * TODO better distinguish go type information vs golem type information better

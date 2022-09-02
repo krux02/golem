@@ -5,9 +5,15 @@ import (
 	"strings"
 )
 
+type CompileError struct {
+	node AstNode
+	msg  string
+}
+
 type TypeChecker struct {
 	code     string
 	filename string
+	errors   []CompileError
 }
 
 func NewTypeChecker(code, filename string) *TypeChecker {
@@ -15,7 +21,6 @@ func NewTypeChecker(code, filename string) *TypeChecker {
 }
 
 // ****
-
 // index to refere to a (currently only builtin) type
 // somehow unify this mess
 type ScopeImpl struct {
@@ -67,7 +72,8 @@ func (tc *TypeChecker) LookUpType(scope Scope, expr TypeExpr) Type {
 	if scope.Parent != nil {
 		return tc.LookUpType(scope.Parent, expr)
 	}
-	panic(tc.Errorf(expr, "Type not found: %s", name)) // some comment
+	tc.Errorf(expr, "Type not found: %s", name)
+	return TypeError
 }
 
 func (tc *TypeChecker) LookUpProc(scope Scope, ident Ident, procSyms []TcProcSymbol) []TcProcSymbol {
@@ -141,41 +147,54 @@ func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result 
 	return
 }
 
-func (tc *TypeChecker) Errorf(node AstNode, msg string, args ...interface{}) error {
+func (tc *TypeChecker) Errorf(node AstNode, msg string, args ...interface{}) {
+	newMsg := fmt.Sprintf(msg, args...)
+	tc.errors = append(tc.errors, CompileError{node: node, msg: newMsg})
 	if node == nil {
-		return fmt.Errorf(msg, args...)
+		fmt.Println(msg)
 	} else {
 		line, columnStart, columnEnd := tc.LineColumnNode(node)
-		return fmt.Errorf("%s(%d, %d-%d) Error: %s", tc.filename, line, columnStart, columnEnd,
-			fmt.Sprintf(msg, args...))
+		fmt.Printf("%s(%d, %d-%d) Error: %s\n", tc.filename, line, columnStart, columnEnd, newMsg)
 	}
 }
 
 func (tc *TypeChecker) ExpectType(node AstNode, gotten, expected Type) Type {
 	// TODO this doesn't work for partial types (e.g. array[<unspecified>])
 	// TODO this should have some cleanup, it has redundant code and seems to be error prone
+	if expected == TypeError {
+		return TypeError
+	}
+	if gotten == TypeError {
+		return TypeError
+	}
+
 	if expected == TypeUnspecified {
 		if gotten == TypeUnspecified {
-			panic(tc.Errorf(node, "expression type is unspecified"))
+			tc.Errorf(node, "expression type is unspecified")
+			return TypeError
 		}
 		if gottenTg, ok := gotten.(*TypeGroup); ok {
-			panic(tc.Errorf(node, "narrowing of type '%s' is required", AstFormat(gottenTg)))
+			tc.Errorf(node, "narrowing of type '%s' is required", AstFormat(gottenTg))
+			return TypeError
 		}
 		return gotten
 	}
 	if expectedTg, ok := expected.(*TypeGroup); ok {
 		if gotten == TypeUnspecified {
-			panic(tc.Errorf(node, "narrowing of type '%s' is required", AstFormat(expectedTg)))
+			tc.Errorf(node, "narrowing of type '%s' is required", AstFormat(expectedTg))
+			return TypeError
 		}
 		if gottenTg, ok := gotten.(*TypeGroup); ok {
-			panic(tc.Errorf(node, "internal error: narrowing of type group '%s' and '%s' is not implemented yet", AstFormat(gottenTg), AstFormat(expectedTg)))
+			tc.Errorf(node, "internal error: narrowing of type group '%s' and '%s' is not implemented yet", AstFormat(gottenTg), AstFormat(expectedTg))
+			return TypeError
 		}
 		for _, it := range expectedTg.items {
 			if gotten == it {
 				return gotten
 			}
 		}
-		panic(tc.Errorf(node, "expected type '%s' but got type '%s'", AstFormat(expected), AstFormat(gotten)))
+		tc.Errorf(node, "expected type '%s' but got type '%s'", AstFormat(expected), AstFormat(gotten))
+		return TypeError
 	}
 
 	if gotten == TypeUnspecified {
@@ -193,22 +212,25 @@ func (tc *TypeChecker) ExpectType(node AstNode, gotten, expected Type) Type {
 		return expected
 	}
 
-	panic(tc.Errorf(node, "expected type '%s' but got type '%s'",
-		AstFormat(expected), AstFormat(gotten)))
+	tc.Errorf(node, "expected type '%s' but got type '%s'",
+		AstFormat(expected), AstFormat(gotten))
+	return TypeError
 }
 
-func (tc *TypeChecker) ExpectArgsLen(node AstNode, gotten, expected int) {
+func (tc *TypeChecker) ExpectArgsLen(node AstNode, gotten, expected int) bool {
 	if expected != gotten {
-		panic(tc.Errorf(node, "expected %d arguments, but got %d",
-			expected, gotten))
+		tc.Errorf(node, "expected %d arguments, but got %d", expected, gotten)
+		return false
 	}
+	return true
 }
 
-func (tc *TypeChecker) ExpectMinArgsLen(node AstNode, gotten, expected int) {
+func (tc *TypeChecker) ExpectMinArgsLen(node AstNode, gotten, expected int) bool {
 	if gotten < expected {
-		panic(tc.Errorf(node, "Expected at least %d arguments, but got %d.",
-			expected, gotten))
+		tc.Errorf(node, "Expected at least %d arguments, but got %d.", expected, gotten)
+		return false
 	}
+	return true
 }
 
 func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, args []Expr) (result []TcExpr) {
@@ -237,7 +259,8 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 		}
 		j++
 		if j == len(formatStr) {
-			panic(tc.Errorf(formatExpr, "incomplete format expr at end of format string"))
+			tc.Errorf(formatExpr, "incomplete format expr at end of format string")
+			break
 		}
 		c2 := formatStr[j]
 		var argType Type
@@ -252,10 +275,12 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 		case 'f':
 			argType = TypeAnyFloat
 		default:
-			panic(tc.Errorf(formatExpr, "invalid format expr %%%c in %s", c2, AstFormat(formatExpr)))
+			tc.Errorf(formatExpr, "invalid format expr %%%c in %s", c2, AstFormat(formatExpr))
+			argType = TypeError
 		}
 		if i == len(args) {
-			panic(tc.Errorf(formatExpr, "not enough arguments for %s", AstFormat(formatExpr)))
+			tc.Errorf(formatExpr, "not enough arguments for %s", AstFormat(formatExpr))
+			break
 		}
 		tcArg := tc.TypeCheckExpr(scope, args[i], argType)
 		switch tcArg.Type() {
@@ -273,6 +298,8 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 			formatStrC.WriteString("f")
 		case TypeFloat64:
 			formatStrC.WriteString("f")
+		case TypeError:
+			formatStrC.WriteString("<error>")
 		}
 		result = append(result, tcArg)
 		i++
@@ -300,6 +327,13 @@ func (tc *TypeChecker) TypeCheckDotExpr(scope Scope, lhs, rhs Expr, expected Typ
 	}
 }
 
+func errorProcSym(ident Ident) TcProcSymbol {
+	return TcProcSymbol{
+		Name: ident.Source(),
+		Impl: nil,
+	}
+}
+
 func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcExpr {
 	ident := call.Callee.(Ident)
 	if ident.source == "." && len(call.Args) == 2 {
@@ -311,7 +345,14 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 	var result TcCall
 	switch len(procSyms) {
 	case 0:
-		panic(tc.Errorf(ident, "proc not found: %s", ident.source))
+		tc.Errorf(ident, "proc not found: %s", ident.source)
+		result.Sym = errorProcSym(ident)
+		var tcArgs []TcExpr
+		for _, arg := range call.Args {
+			tcArgs = append(tcArgs, tc.TypeCheckExpr(scope, arg, TypeUnspecified))
+		}
+		result.Args = tcArgs
+		return result
 	case 1:
 		procSym := procSyms[0]
 		// procSym := procSyms[0]
@@ -369,10 +410,16 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 				arg.Type().prettyPrint(builder)
 			}
 			builder.WriteRune(')')
-			panic(tc.Errorf(ident, "%s", builder.String()))
+			tc.Errorf(ident, "%s", builder.String())
+			result.Sym = errorProcSym(ident)
+			result.Args = checkedArgs
+			return result
 		}
 		if len(procSyms) > 1 {
-			panic(tc.Errorf(ident, "too many overloads: %s", ident.source))
+			tc.Errorf(ident, "too many overloads: %s", ident.source)
+			result.Sym = errorProcSym(ident)
+			result.Args = checkedArgs
+			return result
 		}
 
 		result.Sym = procSyms[0]
@@ -415,9 +462,9 @@ func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt
 		switch typ := expected.(type) {
 		case *BuiltinType:
 			if typ == TypeUnspecified {
-				panic(tc.Errorf(arg, "variable definitions statements must have at least one, a type or a value expression"))
+				tc.Errorf(arg, "variable definitions statements must have at least one, a type or a value expression")
 			} else if typ == TypeNoReturn {
-				panic("a default value of no retrun does not exist")
+				tc.Errorf(arg, "a default value of no retrun does not exist")
 			} else if typ == TypeFloat32 || typ == TypeFloat64 {
 				result.Value = FloatLit{typ: typ}
 			} else if typ == TypeChar {
@@ -457,7 +504,11 @@ func (block TcCodeBlock) Type() Type {
 }
 
 func (call TcCall) Type() Type {
-	return call.Sym.Impl.ResultType
+	impl := call.Sym.Impl
+	if impl == nil {
+		return TypeError
+	}
+	return impl.ResultType
 }
 
 func (lit StrLit) Type() Type {
@@ -601,7 +652,7 @@ func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExp
 	case ColonExpr:
 		return (TcExpr)(tc.TypeCheckColonExpr(scope, arg, expected))
 	default:
-		panic(tc.Errorf(arg, "not implemented %T", arg))
+		panic(fmt.Errorf("not implemented %T", arg))
 	}
 }
 
@@ -659,7 +710,8 @@ func (tc *TypeChecker) ElementType(expr TcExpr) Type {
 			return TypeChar
 		}
 	}
-	panic(tc.Errorf(expr, "expect type with elements to iterate over"))
+	tc.Errorf(expr, "expect type with elements to iterate over")
+	return TypeError
 }
 
 func (tc *TypeChecker) TypeCheckForLoopStmt(scope Scope, loopArg ForLoopStmt) (result TcForLoopStmt) {

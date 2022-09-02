@@ -37,6 +37,9 @@ func compileAndRunFile(filename string, useExec bool) {
 	fmt.Println("--------------------- typechecked code ---------------------")
 	tc := NewTypeChecker(source, filename)
 	typedPak := tc.TypeCheckPackage(pak)
+	if len(tc.errors) > 0 {
+		os.Exit(1)
+	}
 	fmt.Println(AstFormat(typedPak))
 	fmt.Println("-------------------------- C code --------------------------")
 	sourceCodeC := compilePackageToC(typedPak)
