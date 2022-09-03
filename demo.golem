@@ -61,9 +61,6 @@ proc maxParenDepth(expr: string): i64 = {
   maxDepth
 }
 
-
-
-
 ## this should be a doc comment.
 proc main():i64 = {
   let x = myfun1(12, 13, 14)

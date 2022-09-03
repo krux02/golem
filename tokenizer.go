@@ -166,6 +166,7 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 		// eat whitespace, maybe emit EndLine token
 		var idx int
 		var gotNewLine = false
+		var gotComment = false
 
 	eatWhiteSpace:
 		rune, length := utf8.DecodeRuneInString(code[idx:])
@@ -180,6 +181,9 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 		case '#': // eat comment as part of whitespace
 			//idx += length
 			gotNewLine = true
+			if rune2, _ := utf8.DecodeRuneInString(code[idx+length:]); rune2 == '#' {
+				gotComment = true
+			}
 			offset := strings.IndexByte(code[idx:], '\n')
 			if offset != -1 {
 				idx = idx + offset + 1
@@ -207,6 +211,13 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 				return
 			}
 		default:
+		}
+
+		if gotComment {
+			newOffset += idx
+			result.kind = TkDocComment
+			result.value = code[:idx]
+			return
 		}
 
 		if gotNewLine {

@@ -10,6 +10,7 @@
 * TODO test operator precedence when many `:` are in use`
 * TODO default int, default float
 * TODO add ability for type assertions
+* TODO performance tracking over time to know when the compiler gets slower and which commits cause compilation slowdowns.
 
 #+begin_src golem
 

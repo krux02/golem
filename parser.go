@@ -65,6 +65,21 @@ func parseReturnStmt(tokenizer *Tokenizer) (result ReturnStmt) {
 	return
 }
 
+func (varDef *VariableDefStmt) parseAndApplyDocComment(doc string) {
+	fmt.Println("parse and apply doc comment not implemented for:")
+	fmt.Println(doc)
+}
+
+func (varDef *ProcDef) parseAndApplyDocComment(doc string) {
+	fmt.Println("parse and apply doc comment not implemented for:")
+	fmt.Println(doc)
+}
+
+func (varDef *StructDef) parseAndApplyDocComment(doc string) {
+	fmt.Println("parse and apply doc comment not implemented for:")
+	fmt.Println(doc)
+}
+
 /* (name string, typ TypeExpr, expr Expr) */
 
 func parseVariableDefStmt(tokenizer *Tokenizer) (result VariableDefStmt) {
@@ -534,6 +549,12 @@ func parsePackage(code, filename string) (result PackageDef) {
 	result.Name = path.Base(filename)
 	result.source = code
 	fmt.Println("processing package: ", result.Name)
+
+	// raw doc comments are literal source code ranges that contain doc comments.
+	// They are completely unparsed, can span multiple lines and unlike normal
+	// comments, must always be attached to something.
+	var rawDocComment string
+
 	var tokenizer = NewTokenizer(code, filename)
 	for true {
 		switch tokenizer.lookAheadToken.kind {
@@ -545,13 +566,36 @@ func parsePackage(code, filename string) (result PackageDef) {
 		case TkEof:
 			return
 		case TkType:
-			result.TypeDefs = append(result.TypeDefs, parseTypeDef(tokenizer))
+			typeDef := parseTypeDef(tokenizer)
+			if rawDocComment != "" {
+				typeDef.parseAndApplyDocComment(rawDocComment)
+				rawDocComment = ""
+			}
+			result.TypeDefs = append(result.TypeDefs, typeDef)
 			continue
 		case TkProc:
-			result.ProcDefs = append(result.ProcDefs, parseProcDef(tokenizer))
+			procDef := parseProcDef(tokenizer)
+			if rawDocComment != "" {
+				procDef.parseAndApplyDocComment(rawDocComment)
+				rawDocComment = ""
+			}
+			result.ProcDefs = append(result.ProcDefs, procDef)
 			continue
 		case TkVar, TkLet, TkConst:
-			result.Globals = append(result.Globals, parseVariableDefStmt(tokenizer))
+			varDef := parseVariableDefStmt(tokenizer)
+			if rawDocComment != "" {
+				varDef.parseAndApplyDocComment(rawDocComment)
+				rawDocComment = ""
+			}
+			result.Globals = append(result.Globals, varDef)
+			continue
+		case TkDocComment:
+			// parsing of doc comments is postphoned until it is known to what type of
+			// ast the doc comment should be attached to. Because only then the
+			// structure of the doc comment, what parts need documentation is known
+			// and the doc comment can sanity checked.
+			token := tokenizer.Next()
+			rawDocComment = token.value
 			continue
 		}
 		panic(tokenizer.formatWrongKind(tokenizer.lookAheadToken))

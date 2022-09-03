@@ -73,14 +73,14 @@
 
 ;;;###autoload
 (define-derived-mode golem-mode prog-mode "golem"
-  "major mode for editing golem language code"
+  "Major mode for editing golem language code."
   :group 'golem
 
   (setq-local comment-start "#")
   (setq-local comment-start-skip "#+ *")
   (setq-local font-lock-defaults '(golem-highlights))
   (setq-local compile-command
-              (concat "golem " (file-relative-name buffer-file-name))))
+              (concat "go build && ./golem " (file-relative-name buffer-file-name))))
 
 (provide 'golem-mode)
 ;;; golem-mode.el ends here
