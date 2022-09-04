@@ -5,6 +5,7 @@
 * DONE negative literals
 * DONE error reporting instead of compiler crashing
 * DONE add error type to represent invalid / non-typeable ast
+* BUG why does ``foo(1) + foo(2) ## doc comment`` work but ``foo(x) ## doc comment`` not?
 * TODO test infrastructure compiler error reporting
 * TODO full coverage of all error messages
 * TODO test operator precedence when many `:` are in use`

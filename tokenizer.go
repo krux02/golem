@@ -22,7 +22,8 @@ const (
 	TkIntLit
 	TkFloatLit
 	TkCharLit
-	TkDocComment
+	TkPrefixDocComment
+	TkPostfixDocComment
 
 	// keywords
 	TkType
@@ -55,39 +56,40 @@ const (
 )
 
 var TokenKindNames = [...]string{
-	TkInvalid:      "Invalid",
-	TkIdent:        "Ident",
-	TkColon:        "Colon",
-	TkSemicolon:    "Semicolon",
-	TkComma:        "Comma",
-	TkOperator:     "Operator",
-	TkStrLit:       "StrLit",
-	TkIntLit:       "IntLit",
-	TkFloatLit:     "FloatLit",
-	TkCharLit:      "CharLit",
-	TkDocComment:   "DocComment",
-	TkType:         "Type",
-	TkProc:         "Proc",
-	TkVar:          "Var",
-	TkLet:          "Let",
-	TkConst:        "Const",
-	TkReturn:       "Return",
-	TkBreak:        "Break",
-	TkContinue:     "Continue",
-	TkOr:           "Or",
-	TkAnd:          "And",
-	TkIn:           "In",
-	TkIf:           "If",
-	TkElse:         "Else",
-	TkFor:          "For",
-	TkDo:           "Do",
-	TkOpenBrace:    "OpenBrace",
-	TkCloseBrace:   "CloseBrace",
-	TkOpenBracket:  "OpenBracket",
-	TkCloseBracket: "CloseBracket",
-	TkOpenCurly:    "OpenCurly",
-	TkCloseCurly:   "CloseCurly",
-	TkEof:          "<EOF>",
+	TkInvalid:           "Invalid",
+	TkIdent:             "Ident",
+	TkColon:             "Colon",
+	TkSemicolon:         "Semicolon",
+	TkComma:             "Comma",
+	TkOperator:          "Operator",
+	TkStrLit:            "StrLit",
+	TkIntLit:            "IntLit",
+	TkFloatLit:          "FloatLit",
+	TkCharLit:           "CharLit",
+	TkPrefixDocComment:  "PrefixDocComment",
+	TkPostfixDocComment: "PostfixDocComment",
+	TkType:              "Type",
+	TkProc:              "Proc",
+	TkVar:               "Var",
+	TkLet:               "Let",
+	TkConst:             "Const",
+	TkReturn:            "Return",
+	TkBreak:             "Break",
+	TkContinue:          "Continue",
+	TkOr:                "Or",
+	TkAnd:               "And",
+	TkIn:                "In",
+	TkIf:                "If",
+	TkElse:              "Else",
+	TkFor:               "For",
+	TkDo:                "Do",
+	TkOpenBrace:         "OpenBrace",
+	TkCloseBrace:        "CloseBrace",
+	TkOpenBracket:       "OpenBracket",
+	TkCloseBracket:      "CloseBracket",
+	TkOpenCurly:         "OpenCurly",
+	TkCloseCurly:        "CloseCurly",
+	TkEof:               "<EOF>",
 }
 
 type Token struct {
@@ -180,17 +182,18 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			goto eatWhiteSpace
 		case '#': // eat comment as part of whitespace
 			//idx += length
-			gotNewLine = true
 			if rune2, _ := utf8.DecodeRuneInString(code[idx+length:]); rune2 == '#' {
 				gotComment = true
 			}
 			offset := strings.IndexByte(code[idx:], '\n')
 			if offset != -1 {
-				idx = idx + offset + 1
+				idx += offset
 			} else {
 				idx = len(code)
 			}
-			goto eatWhiteSpace
+			if gotNewLine || !gotComment {
+				goto eatWhiteSpace
+			}
 		case '\\':
 			idx += length
 		newlineEscape:
@@ -215,7 +218,11 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 
 		if gotComment {
 			newOffset += idx
-			result.kind = TkDocComment
+			if gotNewLine {
+				result.kind = TkPrefixDocComment
+			} else {
+				result.kind = TkPostfixDocComment
+			}
 			result.value = code[:idx]
 			return
 		}

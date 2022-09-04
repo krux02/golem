@@ -67,17 +67,24 @@ func parseReturnStmt(tokenizer *Tokenizer) (result ReturnStmt) {
 
 func (varDef *VariableDefStmt) parseAndApplyDocComment(doc string) {
 	fmt.Println("parse and apply doc comment not implemented for:")
-	fmt.Println(doc)
+	if idx := strings.Index(doc, "##"); idx > 0 {
+		doc = doc[idx:]
+	}
+	fmt.Printf("var def '%s' apply doc: %s", varDef.Name.Source(), doc)
 }
 
-func (varDef *ProcDef) parseAndApplyDocComment(doc string) {
-	fmt.Println("parse and apply doc comment not implemented for:")
-	fmt.Println(doc)
+func (procDef *ProcDef) parseAndApplyDocComment(doc string) {
+	if idx := strings.Index(doc, "##"); idx > 0 {
+		doc = doc[idx:]
+	}
+	fmt.Printf("proc def '%s' apply doc: %s", procDef.Name.Source(), doc)
 }
 
-func (varDef *StructDef) parseAndApplyDocComment(doc string) {
-	fmt.Println("parse and apply doc comment not implemented for:")
-	fmt.Println(doc)
+func (structDef *StructDef) parseAndApplyDocComment(doc string) {
+	if idx := strings.Index(doc, "##"); idx > 0 {
+		doc = doc[idx:]
+	}
+	fmt.Printf("struct def '%s' apply doc: %s", structDef.Name.Source(), doc)
 }
 
 /* (name string, typ TypeExpr, expr Expr) */
@@ -457,6 +464,10 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 		result = (Expr)(parseCall(tokenizer, result))
 	case TkColon:
 		result = (Expr)(parseColonExpr(tokenizer, result))
+	case TkPostfixDocComment:
+		fmt.Println("not implemented")
+		comment := tokenizer.Next().value
+		fmt.Printf("would attach doc comment %s to %s but not implemented\n", comment, result.Source())
 	}
 
 	return
@@ -589,7 +600,7 @@ func parsePackage(code, filename string) (result PackageDef) {
 			}
 			result.Globals = append(result.Globals, varDef)
 			continue
-		case TkDocComment:
+		case TkPrefixDocComment:
 			// parsing of doc comments is postphoned until it is known to what type of
 			// ast the doc comment should be attached to. Because only then the
 			// structure of the doc comment, what parts need documentation is known
