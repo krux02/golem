@@ -455,19 +455,24 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 	// any expression could be the start of a longer expression, this is
 	// explorerd here
 
-	lookAhead := tokenizer.lookAheadToken
-	switch lookAhead.kind {
-	// and and or is an operator token?
-	case TkOperator, TkAnd, TkOr:
-		result = (Expr)(parseInfixCall(tokenizer, result))
-	case TkOpenBrace:
-		result = (Expr)(parseCall(tokenizer, result))
-	case TkColon:
-		result = (Expr)(parseColonExpr(tokenizer, result))
-	case TkPostfixDocComment:
-		fmt.Println("not implemented")
-		comment := tokenizer.Next().value
-		fmt.Printf("would attach doc comment %s to %s but not implemented\n", comment, result.Source())
+	for true {
+		lookAhead := tokenizer.lookAheadToken
+		switch lookAhead.kind {
+		// and and or is an operator token?
+		case TkOperator, TkAnd, TkOr:
+			result = (Expr)(parseInfixCall(tokenizer, result))
+		case TkOpenBrace:
+			result = (Expr)(parseCall(tokenizer, result))
+		case TkColon:
+			result = (Expr)(parseColonExpr(tokenizer, result))
+		case TkPostfixDocComment:
+			fmt.Println("not implemented")
+			comment := tokenizer.Next().value
+			fmt.Printf("would attach doc comment %s to %s but not implemented\n", comment, result.Source())
+			return
+		default:
+			return
+		}
 	}
 
 	return
