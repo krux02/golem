@@ -419,6 +419,28 @@ func parseColonExpr(tokenizer *Tokenizer, lhs Expr) Expr {
 	return result
 }
 
+type DocCommentScanner struct {
+	rawsource string
+}
+
+func (this *DocCommentScanner) Next() (result string) {
+	i := strings.Index(this.rawsource, "##") + 2
+	if i < 0 {
+		this.rawsource = ""
+		return ""
+	}
+	this.rawsource = this.rawsource[i:]
+	j := strings.IndexByte(this.rawsource, '\n')
+	if j < 0 {
+		return this.rawsource
+	}
+	return this.rawsource[:j]
+}
+
+func (this *DocCommentScanner) HasNext() bool {
+	return strings.Contains(this.rawsource, "##")
+}
+
 func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 	switch tokenizer.lookAheadToken.kind {
 	case TkIdent:
@@ -466,8 +488,13 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 		case TkColon:
 			result = (Expr)(parseColonExpr(tokenizer, result))
 		case TkPostfixDocComment:
-			fmt.Println("not implemented")
 			comment := tokenizer.Next().value
+			commentScanner := &DocCommentScanner{comment}
+			for commentScanner.HasNext() {
+				commentLine := commentScanner.Next()
+				fmt.Printf("<comment>%s</comment>\n", commentLine)
+				fmt.Println(commentScanner.rawsource)
+			}
 			fmt.Printf("would attach doc comment %s to %s but not implemented\n", comment, result.Source())
 			return
 		default:

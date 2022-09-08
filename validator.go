@@ -39,7 +39,7 @@ func joinSubstr(parent, str1, str2 string) (result string) {
 }
 
 // ensure recursively that all nodes have `source` set, and that
-// `source` is substring of outer string.
+// `source` is substring of outer string. Purely a debugging function.
 func validateSourceSet(code string, pak AstNode) {
 	validateSourceSetInternal(code, reflect.ValueOf(pak))
 }

@@ -11,12 +11,39 @@ import (
 	"syscall"
 )
 
-func main() {
-	if len(os.Args) == 2 {
-		compileAndRunFile(os.Args[1], true)
-	} else {
-		panic("program needs one argument only, the input file")
+func extractErrorAnnotations(pak PackageDef) (errors []CompileError) {
+	return
+}
+
+func errortest(filename string) {
+	filename, err := filepath.Abs(filename)
+	if err != nil {
+		panic(err)
 	}
+	bytes, err := ioutil.ReadFile(filename)
+	if err != nil {
+		panic(err)
+	}
+
+	source := string(bytes)
+	pak := parsePackage(source, filename)
+
+	validateSourceSet(pak.source, pak)
+
+	errors := extractErrorAnnotations(pak)
+
+	println("-------------------- expected errors -------------------------")
+	for _, error := range errors {
+		fmt.Printf("%v\n", error)
+	}
+
+	println("-------------------- gotten errors ---------------------------")
+	tc := NewTypeChecker(source, filename)
+	_ = tc.TypeCheckPackage(pak)
+	for _, error := range tc.errors {
+		fmt.Printf("%v\n", error)
+	}
+	println("--------------------------------------------------------------")
 }
 
 func compileAndRunFile(filename string, useExec bool) {
