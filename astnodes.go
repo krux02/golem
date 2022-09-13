@@ -27,6 +27,7 @@ func (astNode AbstractAstNode) Source() string {
 type Ident struct {
 	// the abstract source field is the identifier value
 	AbstractAstNode
+	Comment string
 }
 
 type TypeExpr struct {

@@ -441,6 +441,58 @@ func (this *DocCommentScanner) HasNext() bool {
 	return strings.Contains(this.rawsource, "##")
 }
 
+func attachDocComment(expr Expr, target, value string) (result bool) {
+	switch ex := expr.(type) {
+	case Ident:
+		if ex.source == target {
+			ex.Comment = value
+			fmt.Printf("attaching doc comment to %s\n", ex.source)
+			fmt.Printf("%s\n", value)
+			return true
+		} else {
+			return false
+		}
+	case CodeBlock:
+		return false
+	case StrLit:
+		return false
+	case IntLit:
+		return false
+	case FloatLit:
+		return false
+	case ArrayLit:
+		return false
+	case CharLit:
+		return false
+	case Call:
+		result = attachDocComment(ex.Callee, target, value)
+		for _, arg := range ex.Args {
+			if result {
+				return
+			}
+			result = attachDocComment(arg, target, value)
+		}
+		return
+	case ColonExpr:
+		return false
+	case VariableDefStmt:
+		result = attachDocComment(ex.Name, target, value)
+	case ForLoopStmt:
+		return false
+	case IfStmt:
+		return false
+	case IfElseStmt:
+		return false
+	case ReturnStmt:
+		return false
+	case BreakStmt:
+		return false
+	case ContinueStmt:
+		return false
+	}
+	panic("not implementede")
+}
+
 func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 	switch tokenizer.lookAheadToken.kind {
 	case TkIdent:
@@ -492,10 +544,27 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 			commentScanner := &DocCommentScanner{comment}
 			for commentScanner.HasNext() {
 				commentLine := commentScanner.Next()
-				fmt.Printf("<comment>%s</comment>\n", commentLine)
-				fmt.Println(commentScanner.rawsource)
+				idx := strings.IndexByte(commentLine, ':')
+				if idx > 0 {
+					target := commentLine[:idx]
+					for target[0] == ' ' || target[0] == '\t' {
+						target = target[1:]
+					}
+					comment := commentLine[idx+1:]
+					for comment[0] == ' ' || comment[0] == '\t' {
+						comment = comment[1:]
+					}
+
+					success := attachDocComment(result, target, comment)
+					if !success {
+
+						fmt.Printf("could not attach doc comment <%s> to <%s>\n", comment, result.Source())
+						fmt.Printf("key: <%s>, value: <%s> \n", target, comment)
+					}
+				} else {
+					panic("invalid doc comment, proper error message not implemented")
+				}
 			}
-			fmt.Printf("would attach doc comment %s to %s but not implemented\n", comment, result.Source())
 			return
 		default:
 			return

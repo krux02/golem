@@ -1,0 +1,18 @@
+
+proc foo(arg: i32): i64 = {
+  printf("foo1: %d\n", i32(arg))
+  i64(arg) * i64(arg)
+}
+
+proc foo(arg: i64): i64 = {
+  printf("foo2: %d\n", i32(arg))
+  arg * arg
+}
+
+## this should be a doc comment
+## spanning multiple lines
+
+proc main():i64 = {
+  let tmp: i8 = 123
+  foo(tmp) ## foo: Error: proc not found: foo(i8)
+}
