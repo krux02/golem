@@ -14,5 +14,5 @@ proc foo(arg: i64): i64 = {
 
 proc main():i64 = {
   let tmp: i8 = 123
-  foo(tmp) ## foo: Error: proc not found: foo(i8)
+  foo(tmp) # Error: proc not found: foo(i8)
 }

@@ -8,12 +8,9 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 	"syscall"
 )
-
-func extractErrorAnnotations(pak PackageDef) (errors []CompileError) {
-	return
-}
 
 func errortest(filename string) {
 	filename, err := filepath.Abs(filename)
@@ -26,24 +23,49 @@ func errortest(filename string) {
 	}
 
 	source := string(bytes)
+	// TODO this is not safe as it does not check for string content
+	//pattern := regexp.MustCompilePOSIX(`# ((:?Error|Warning):.*)$`)
+
+	// a map from Line to error message
+	var expectedErrors = make(map[int]string)
+	var currentLine = 1
+	{
+		src := source
+		for idx1 := strings.Index(src, "# Error:"); idx1 >= 0; idx1 = strings.Index(src, "# Error:") {
+			idx2 := strings.IndexRune(src[idx1:], '\n')
+			if idx2 >= 0 {
+				idx2 = idx1 + idx2
+			} else {
+				idx2 = len(src)
+			}
+			currentLine += strings.Count(src[:idx1], "\n")
+
+			expectedErrors[currentLine] = src[idx1+9 : idx2]
+			src = src[idx2:]
+		}
+	}
 	pak := parsePackage(source, filename)
 
 	validateSourceSet(pak.source, pak)
 
-	errors := extractErrorAnnotations(pak)
-
-	println("-------------------- expected errors -------------------------")
-	for _, error := range errors {
-		fmt.Printf("%v\n", error)
-	}
-
-	println("-------------------- gotten errors ---------------------------")
 	tc := NewTypeChecker(source, filename)
 	_ = tc.TypeCheckPackage(pak)
+
 	for _, error := range tc.errors {
-		fmt.Printf("%v\n", error)
+		line, _, _ := LineColumnStr(source, error.node.Source())
+		expectedError, ok := expectedErrors[line]
+		if !ok {
+			panic(fmt.Errorf("unexpected error at line %d, proper logging not implemented", line))
+		}
+		if expectedError != error.msg {
+			panic(fmt.Errorf("errormessage does not match, got '%s' but expected '%s'\n", error.msg, expectedError))
+		}
+		delete(expectedErrors, line)
 	}
-	println("--------------------------------------------------------------")
+	for line, expectedError := range expectedErrors {
+		panic(fmt.Errorf("expected error '%s' at line %d not triggered by the compiler", expectedError, line))
+	}
+	fmt.Printf("errortest successful")
 }
 
 func compileAndRunFile(filename string, useExec bool) {
