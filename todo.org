@@ -5,12 +5,11 @@
 * DONE negative literals
 * DONE error reporting instead of compiler crashing
 * DONE add error type to represent invalid / non-typeable ast
-* TODO test infrastructure compiler error reporting
+* DONE test infrastructure compiler error reporting
 * TODO full coverage of all error messages
 * TODO test operator precedence when many `:` are in use`
 * TODO default int, default float
 * TODO add ability for type assertions
-* TODO performance tracking over time to know when the compiler gets slower and which commits cause compilation slowdowns.
 
 #+begin_src golem
 
@@ -19,13 +18,14 @@ let tmp2 = 123:int8
 let tmp3 = int8(128)
 
 #+end_src
+* TODO performance tracking over time to know when the compiler gets slower and which commits cause compilation slowdowns.
 * TODO maybe return TypeFloat like in Nim for integer division?
 * TODO pointer
 * TODO call by reference
 * TODO better distinguish go type information vs golem type information better
 * TODO generic arguments
 * TODO vm for compile time code execution
-* TODO restrict operator precedence to common knowledeg cases (+-*/) require explicit braces everywhere else.
+* TODO restrict operator precedence to common knowledge cases (+-*/) require explicit braces everywhere else.
 * TODO introduce ~expectAndEatToken~
 * DONE static overloading
 * TODO C++ interop
@@ -51,9 +51,10 @@ const string strLit243 = {.len=15,.data="default Values\n"};
 
 #+end_src
 
+** TODO enum
 ** TODO array
 ** TODO set
-* TODO struct
+** TODO struct
 ** TODO literals
 ** TODO passing as function argument
 * TODO documentation structuere

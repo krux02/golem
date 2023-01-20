@@ -14,9 +14,8 @@ proc myfun1(a, b, c: i64): i64 = {
 proc myfun2(a,b:i64; c: i64): i64 = a * b + a * c
 #proc myfun2(a,b,c: i64): i64 = a * b + a * c
 
-# empty function with nothing in it
+## an empty function with nothing in it
 proc myfun3(a,b,c,d,e,f: string): void = {
-
 }
 
 proc foobar(arg: MyStruct): void = {
@@ -90,6 +89,8 @@ proc main():i64 = {
   let f2 = 654.321:f64
   printf("f1: %f f2: %f\n", f1, f2);
   printf("max test: max(fx,f2): %f\n", max(f1,f2))
+  printf("printftest %d %d %s", 1:i32, 2:i32, "mystring")
+
   0
 }
 

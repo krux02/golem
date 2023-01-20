@@ -187,7 +187,7 @@ func (builder *CodeBuilder) compileSymbol(sym TcSymbol) {
 }
 
 func (builder *CodeBuilder) compileExpr(context *PackageGeneratorContext, expr TcExpr) {
-	builder.compileExprWithPrefix(context, expr, false)
+	builder.compileExprWithPrefix(context, expr)
 }
 
 func (builder *CodeBuilder) compileVariableDefStmt(context *PackageGeneratorContext, stmt TcVariableDefStmt) {
@@ -203,7 +203,7 @@ func (builder *CodeBuilder) compileIfStmt(context *PackageGeneratorContext, stmt
 	builder.compileExpr(context, stmt.Body)
 }
 
-func wrapInCodeBlock(context *PackageGeneratorContext, expr TcExpr) TcCodeBlock {
+func wrapInCodeBlock(expr TcExpr) TcCodeBlock {
 	// I hope this function is temporary and can be removed at some point in the future
 	if cb, ok := expr.(TcCodeBlock); ok {
 		return cb
@@ -211,13 +211,26 @@ func wrapInCodeBlock(context *PackageGeneratorContext, expr TcExpr) TcCodeBlock 
 	return TcCodeBlock{Items: []TcExpr{expr}}
 }
 
-func (builder *CodeBuilder) compileIfElseStmt(context *PackageGeneratorContext, stmt TcIfElseStmt, injectReturn bool) {
-	builder.WriteString("if (")
-	builder.compileExpr(context, stmt.Condition)
-	builder.WriteString(") ")
-	builder.compileCodeBlock(context, wrapInCodeBlock(context, stmt.Body), injectReturn)
-	builder.WriteString(" else ")
-	builder.compileCodeBlock(context, wrapInCodeBlock(context, stmt.Else), injectReturn)
+// TODO: rename, it is not a Stmt anymore
+func (builder *CodeBuilder) compileIfElseStmt(context *PackageGeneratorContext, stmt TcIfElseStmt) {
+	typ := stmt.Type()
+	isExpr := typ != TypeVoid && typ != TypeNoReturn
+	if isExpr {
+		builder.WriteString("(")
+		builder.compileExpr(context, stmt.Condition)
+		builder.WriteString(" ? ")
+		builder.compileExpr(context, stmt.Body)
+		builder.WriteString(" : ")
+		builder.compileExpr(context, stmt.Else)
+		builder.WriteString(")")
+	} else {
+		builder.WriteString("if (")
+		builder.compileExpr(context, stmt.Condition)
+		builder.WriteString(") ")
+		builder.compileCodeBlock(context, wrapInCodeBlock(stmt.Body))
+		builder.WriteString(" else ")
+		builder.compileCodeBlock(context, wrapInCodeBlock(stmt.Else))
+	}
 }
 
 func (builder *CodeBuilder) compileDotExpr(context *PackageGeneratorContext, dotExpr TcDotExpr) {
@@ -269,7 +282,7 @@ func (builder *CodeBuilder) compileForLoopStmt(context *PackageGeneratorContext,
 	} else {
 		panic("not implemented")
 	}
-	builder.compileCodeBlock(context, wrapInCodeBlock(context, stmt.Body), false)
+	builder.compileCodeBlock(context, wrapInCodeBlock(stmt.Body))
 }
 
 func (builder *CodeBuilder) compileArrayLit(context *PackageGeneratorContext, lit TcArrayLit) {
@@ -284,65 +297,41 @@ func (builder *CodeBuilder) compileArrayLit(context *PackageGeneratorContext, li
 
 }
 
-func (builder *CodeBuilder) injectReturn(injectReturn bool) {
-	if injectReturn {
-		builder.WriteString("return ")
-	}
-}
-
-// lastExprPrefix is used to inject a return statement at each control
+// lastExprPrefix is not used anymore, rename to not use prefix anymore
 // flow end in procedures, as in C code
-func (builder *CodeBuilder) compileExprWithPrefix(context *PackageGeneratorContext, expr TcExpr, injectReturn bool) {
+func (builder *CodeBuilder) compileExprWithPrefix(context *PackageGeneratorContext, expr TcExpr) {
 	switch ex := expr.(type) {
 	case TcCodeBlock:
-		builder.compileCodeBlock(context, ex, injectReturn)
+		builder.compileCodeBlock(context, ex)
 	case TcCall:
-		builder.injectReturn(injectReturn)
 		builder.compileCall(context, ex)
 	case TcDotExpr:
-		builder.injectReturn(injectReturn)
 		builder.compileDotExpr(context, ex)
 	case StrLit:
-		builder.injectReturn(injectReturn)
 		builder.compileStrLit(ex)
 	case CharLit:
-		builder.injectReturn(injectReturn)
 		builder.compileCharLit(ex)
 	case IntLit:
-		builder.injectReturn(injectReturn)
 		builder.compileIntLit(ex)
 	case FloatLit:
-		builder.injectReturn(injectReturn)
 		builder.compileFloatLit(ex)
 	case TcArrayLit:
-		builder.injectReturn(injectReturn)
 		builder.compileArrayLit(context, ex)
 	case TcSymbol:
-		builder.injectReturn(injectReturn)
 		builder.compileSymbol(ex)
 	case TcVariableDefStmt:
-		if injectReturn {
-			panic(fmt.Sprintf("internal error, injectReturn not supported here"))
-		}
 		builder.compileVariableDefStmt(context, ex)
 	case TcReturnStmt:
 		// ignore the value of injectReturn here
 		builder.WriteString("return ")
 		builder.compileExpr(context, ex.Value)
 	case TcIfStmt:
-		if injectReturn {
-			panic(fmt.Sprintf("internal error, injectReturn not supported here"))
-		}
 		builder.compileIfStmt(context, ex)
 	case TcIfElseStmt:
-		builder.compileIfElseStmt(context, ex, injectReturn)
+		builder.compileIfElseStmt(context, ex)
 	case TcForLoopStmt:
-		if injectReturn {
-			panic(fmt.Sprintf("internal error, injectReturn not supported here"))
-		}
 		builder.compileForLoopStmt(context, ex)
 	case TcStructInitializer:
-		builder.injectReturn(injectReturn)
 		builder.WriteString("(")
 		builder.compileTypeExpr(ex.structDef)
 		builder.WriteString("){}")
@@ -353,9 +342,9 @@ func (builder *CodeBuilder) compileExprWithPrefix(context *PackageGeneratorConte
 	}
 }
 
-func (builder *CodeBuilder) compileCodeBlock(context *PackageGeneratorContext, block TcCodeBlock, injectReturn bool) {
+func (builder *CodeBuilder) compileCodeBlock(context *PackageGeneratorContext, block TcCodeBlock) {
 	N := len(block.Items)
-	isExpr := !injectReturn && block.Type() != TypeVoid
+	isExpr := block.Type() != TypeVoid && block.Type() != TypeNoReturn
 	if isExpr {
 		builder.WriteString("(")
 	}
@@ -364,7 +353,7 @@ func (builder *CodeBuilder) compileCodeBlock(context *PackageGeneratorContext, b
 	for i, expr := range block.Items {
 		builder.newlineAndIndent()
 		if i == N-1 {
-			builder.compileExprWithPrefix(context, expr, injectReturn)
+			builder.compileExprWithPrefix(context, expr)
 		} else {
 			builder.compileExpr(context, expr)
 		}
@@ -423,13 +412,27 @@ func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 
 	context.functions.newlineAndIndent()
 	context.functions.WriteString(builderStr)
-	body, ok := procDef.Body.(TcCodeBlock)
-	// ensure code block for code generation
-	if !ok {
-		body.Items = []TcExpr{procDef.Body}
+
+	// NOTE: body.Type() != ResultType
+	// return statements are of type `NoReturn`, but then ResultType may not be `NoReturn`.//
+	bodyType := procDef.Body.Type()
+	injectReturn := bodyType != TypeVoid && bodyType != TypeNoReturn
+	// code generation needs to have a code block here, otherwise it is not valid C
+	var body TcCodeBlock
+	body.source = procDef.Body.Source()
+
+	if injectReturn {
+		body.Items = append(body.Items, TcReturnStmt{Value: procDef.Body})
+	} else {
+		codeBlockBody, ok := procDef.Body.(TcCodeBlock)
+		if ok {
+			body = codeBlockBody
+		} else {
+			body.Items = append(body.Items, codeBlockBody)
+		}
 	}
-	// instruct to inject "return" at the end of each control flow
-	context.functions.compileCodeBlock(context, body, procDef.ResultType != TypeVoid)
+
+	context.functions.compileCodeBlock(context, body)
 }
 
 func (context *PackageGeneratorContext) markProcForGeneration(procDef *TcProcDef) {
