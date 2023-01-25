@@ -6,6 +6,8 @@
 * DONE error reporting instead of compiler crashing
 * DONE add error type to represent invalid / non-typeable ast
 * DONE test infrastructure compiler error reporting
+* TODO multiple return values
+* TODO add field values to struct literals
 * TODO full coverage of all error messages
 * TODO test operator precedence when many `:` are in use`
 * TODO default int, default float

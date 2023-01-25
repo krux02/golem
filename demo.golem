@@ -24,12 +24,15 @@ proc foobar(arg: MyStruct): void = {
   printf("c: %s\n", arg.c)
 }
 
-proc max(a,b: i64): i64 = {
-  if a > b do a else b
-}
+proc max(a,b: i64): i64 = {if a > b do a else b}
+
 
 proc max(a,b: f64): f64 = {
-  if a < b do b else a
+  if a < b do {
+    return b
+  } else {
+    return a
+  }
 }
 
 ## Tests side effects behavior of `and` and `or` operators.
@@ -67,6 +70,15 @@ proc main():i64 = {
   printf("Hallo Welt!\n")
   printf("x: %d y: %d\n", x, y)
 
+  let f1 = 123:f64
+  let f2: f64 = 567
+  let i1: i64 = 123
+  let i2: i64 = 456
+
+  # let myf32 = 123456789:f32
+  printf("max(f1,f2) = %f\n", max(f1,f2))
+  printf("max(i1,i2) = %d\n", max(i1,i2))
+
   let exprStr = "(1+(2*3)+((8)/4))+1"
   let depth = maxParenDepth(exprStr)
   printf("max paren depth: %d\n", i32(depth))
@@ -85,10 +97,10 @@ proc main():i64 = {
 
   printf("max test: max(a,b): %d\n", i32(max(x,y)))
 
-  let f1 = 123.456:f64
-  let f2 = 654.321:f64
-  printf("f1: %f f2: %f\n", f1, f2);
-  printf("max test: max(fx,f2): %f\n", max(f1,f2))
+  let ff1 = 123.456:f64
+  let ff2 = 654.321:f64
+  printf("ff1: %f ff2: %f\n", ff1, ff2);
+  printf("max test: max(fx,f2): %f\n", max(ff1, ff2))
   printf("printftest %d %d %s", 1:i32, 2:i32, "mystring")
 
   0

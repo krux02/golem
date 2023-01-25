@@ -45,10 +45,15 @@ func (scope Scope) NewSubScope() Scope {
 	}
 }
 
-func (scope Scope) NewSymbol(name string, kind SymbolKind, typ Type) TcSymbol {
+func (scope Scope) NewSymbol(tc *TypeChecker, name Ident, kind SymbolKind, typ Type) TcSymbol {
 	//result := TcSymbol{Name: name.source, Kind: kind, Typ: typ}
-	result := TcSymbol{Name: name, Kind: kind, Typ: typ}
-	scope.Variables[name] = result
+	rawName := name.source
+	result := TcSymbol{Name: rawName, Kind: kind, Typ: typ}
+	_, alreadyExists := scope.Variables[rawName]
+	if alreadyExists {
+		tc.Errorf(name, "redefinition of %s", rawName)
+	}
+	scope.Variables[name.source] = result
 	return result
 }
 
@@ -128,7 +133,7 @@ func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result 
 	mangledNameBuilder.WriteRune('_')
 	for _, arg := range def.Args {
 		typ := tc.LookUpType(scope, arg.Type)
-		tcArg := scope.NewSymbol(arg.Name.source, SkProcArg, typ)
+		tcArg := scope.NewSymbol(tc, arg.Name, SkProcArg, typ)
 		result.Args = append(result.Args, tcArg)
 		typ.ManglePrint(mangledNameBuilder)
 	}
@@ -457,7 +462,7 @@ func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt
 		expected = tc.LookUpType(scope, arg.TypeExpr)
 	}
 	if arg.Value == nil {
-		result.Sym = scope.NewSymbol(arg.Name.source, arg.Kind, expected)
+		result.Sym = scope.NewSymbol(tc, arg.Name, arg.Kind, expected)
 
 		switch typ := expected.(type) {
 		case *BuiltinType:
@@ -486,7 +491,7 @@ func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt
 
 	} else {
 		result.Value = tc.TypeCheckExpr(scope, arg.Value, expected)
-		result.Sym = scope.NewSymbol(arg.Name.source, arg.Kind, result.Value.Type())
+		result.Sym = scope.NewSymbol(tc, arg.Name, arg.Kind, result.Value.Type())
 	}
 	return
 }
@@ -625,7 +630,24 @@ func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExp
 		tc.ExpectType(arg, TypeChar, expected)
 		return (TcExpr)(arg)
 	case IntLit:
-		typ := tc.ExpectType(arg, TypeAnyInt, expected)
+		typ := tc.ExpectType(arg, TypeAnyNumber, expected)
+		if typ == TypeFloat32 || typ == TypeFloat64 {
+			var lit FloatLit
+			lit.AbstractAstNode = arg.AbstractAstNode
+			lit.Value = float64(arg.Value)
+			if typ == TypeFloat32 {
+				lit.typ = TypeFloat32
+				if int64(float32(lit.Value)) != arg.Value {
+					tc.Errorf(arg, "can't represent %d as float32 precisely", arg.Value)
+				}
+			} else if typ == TypeFloat64 {
+				lit.typ = TypeFloat64
+				if int64(lit.Value) != arg.Value {
+					tc.Errorf(arg, "can't represent %d as float64 precisely", arg.Value)
+				}
+			}
+			return lit
+		}
 		arg.typ = typ.(*BuiltinType)
 		return (TcExpr)(arg)
 	case FloatLit:
@@ -719,7 +741,7 @@ func (tc *TypeChecker) TypeCheckForLoopStmt(scope Scope, loopArg ForLoopStmt) (r
 	// currently only iteration on strings in possible (of course that is not final)
 	result.Collection = tc.TypeCheckExpr(scope, loopArg.Collection, TypeUnspecified)
 	elementType := tc.ElementType(result.Collection)
-	result.LoopSym = scope.NewSymbol(loopArg.LoopIdent.source, SkLoopIterator, elementType)
+	result.LoopSym = scope.NewSymbol(tc, loopArg.LoopIdent, SkLoopIterator, elementType)
 	result.Body = tc.TypeCheckExpr(scope, loopArg.Body, TypeVoid)
 	return
 }

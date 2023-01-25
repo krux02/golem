@@ -203,19 +203,24 @@ func (builder *CodeBuilder) compileIfStmt(context *PackageGeneratorContext, stmt
 	builder.compileExpr(context, stmt.Body)
 }
 
-func wrapInCodeBlock(expr TcExpr) TcCodeBlock {
-	// I hope this function is temporary and can be removed at some point in the future
-	if cb, ok := expr.(TcCodeBlock); ok {
-		return cb
-	}
-	return TcCodeBlock{Items: []TcExpr{expr}}
+// func wrapInCodeBlock(expr TcExpr) (result TcCodeBlock) {
+// 	// I hope this function is temporary and can be removed at some point in the future
+// 	if cb, ok := expr.(TcCodeBlock); ok {
+// 		return cb
+// 	}
+// 	result = TcCodeBlock{Items: []TcExpr{expr}}
+// 	result.source = expr.Source()
+// 	return result
+// }
+
+func ExprHasValue(expr TcExpr) bool {
+	typ := expr.Type()
+	return typ != TypeNoReturn && typ != TypeVoid
 }
 
 // TODO: rename, it is not a Stmt anymore
 func (builder *CodeBuilder) compileIfElseStmt(context *PackageGeneratorContext, stmt TcIfElseStmt) {
-	typ := stmt.Type()
-	isExpr := typ != TypeVoid && typ != TypeNoReturn
-	if isExpr {
+	if ExprHasValue(stmt) {
 		builder.WriteString("(")
 		builder.compileExpr(context, stmt.Condition)
 		builder.WriteString(" ? ")
@@ -227,9 +232,9 @@ func (builder *CodeBuilder) compileIfElseStmt(context *PackageGeneratorContext, 
 		builder.WriteString("if (")
 		builder.compileExpr(context, stmt.Condition)
 		builder.WriteString(") ")
-		builder.compileCodeBlock(context, wrapInCodeBlock(stmt.Body))
+		builder.compileExpr(context, stmt.Body)
 		builder.WriteString(" else ")
-		builder.compileCodeBlock(context, wrapInCodeBlock(stmt.Else))
+		builder.compileExpr(context, stmt.Else)
 	}
 }
 
@@ -282,7 +287,7 @@ func (builder *CodeBuilder) compileForLoopStmt(context *PackageGeneratorContext,
 	} else {
 		panic("not implemented")
 	}
-	builder.compileCodeBlock(context, wrapInCodeBlock(stmt.Body))
+	builder.compileExpr(context, stmt.Body)
 }
 
 func (builder *CodeBuilder) compileArrayLit(context *PackageGeneratorContext, lit TcArrayLit) {
@@ -344,7 +349,7 @@ func (builder *CodeBuilder) compileExprWithPrefix(context *PackageGeneratorConte
 
 func (builder *CodeBuilder) compileCodeBlock(context *PackageGeneratorContext, block TcCodeBlock) {
 	N := len(block.Items)
-	isExpr := block.Type() != TypeVoid && block.Type() != TypeNoReturn
+	isExpr := ExprHasValue(block)
 	if isExpr {
 		builder.WriteString("(")
 	}
@@ -389,7 +394,6 @@ func compileStructDef(context *PackageGeneratorContext, structDef *TcStructDef) 
 
 func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 	// reuse string here
-
 	headBuilder := &CodeBuilder{}
 	headBuilder.compileTypeExpr(procDef.ResultType)
 	// headBuilder.compileTypeExpr(procDef.ResultType)
@@ -413,10 +417,10 @@ func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 	context.functions.newlineAndIndent()
 	context.functions.WriteString(builderStr)
 
-	// NOTE: body.Type() != ResultType
+	// NOTE: Body.Type() != ResultType
 	// return statements are of type `NoReturn`, but then ResultType may not be `NoReturn`.//
-	bodyType := procDef.Body.Type()
-	injectReturn := bodyType != TypeVoid && bodyType != TypeNoReturn
+
+	injectReturn := ExprHasValue(procDef.Body)
 	// code generation needs to have a code block here, otherwise it is not valid C
 	var body TcCodeBlock
 	body.source = procDef.Body.Source()

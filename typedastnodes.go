@@ -40,7 +40,6 @@ type TcStructDef struct {
 type TcStructInitializer struct {
 	AbstractAstNode
 	structDef *TcStructDef
-	// TODO add field values
 }
 
 func (structDef *TcStructDef) GetField(name string) (resField TcStructField, err error) {

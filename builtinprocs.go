@@ -104,6 +104,7 @@ var TypeError = &BuiltinType{"???", "<error>", ','}
 
 var TypeAnyInt = &TypeGroup{name: "AnyInt", items: []Type{TypeInt8, TypeInt16, TypeInt32, TypeInt64}}
 var TypeAnyFloat = &TypeGroup{name: "AnyFloat", items: []Type{TypeFloat32, TypeFloat64}}
+var TypeAnyNumber = &TypeGroup{name: "AnyNumber", items: []Type{TypeFloat32, TypeFloat64, TypeInt8, TypeInt16, TypeInt32, TypeInt64}}
 
 // Printf is literally the only use case for real varargs that I
 // know. Therefore the implementation for varargs will be strictly
@@ -150,7 +151,9 @@ func registerBuiltin(name, builtinName string, isOperator bool, args []Type, res
 
 func registerConstant(name string, typ Type) {
 	// TODO this is wrong, a constant isn't a variable
-	_ = builtinScope.NewSymbol(name, SkConst, typ)
+	var ident Ident
+	ident.source = name
+	_ = builtinScope.NewSymbol(nil, ident, SkConst, typ)
 }
 
 func init() {
@@ -167,6 +170,7 @@ func init() {
 
 	registerTypeGroup(TypeAnyFloat)
 	registerTypeGroup(TypeAnyInt)
+	registerTypeGroup(TypeAnyNumber)
 
 	builtinScope.Procedures["printf"] = append(builtinScope.Procedures["printf"], BuiltinPrintf)
 	// this has no structure, just made to make the example compile
