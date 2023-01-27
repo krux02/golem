@@ -68,12 +68,13 @@ func errortest(filename string) {
 	fmt.Printf("errortest successful")
 }
 
-const debugPrintParestCode = false
+const debugPrintParesedCode = false
 const debugPrintTypecheckedCode = false
 const debugPrintGeneratedCode = false
 
 func runAllTests() {
-	recursiveTestScanAndRun("tests")
+	testpath, _ := filepath.Abs("tests")
+	recursiveTestScanAndRun(testpath)
 }
 
 func recursiveTestScanAndRun(dir string) {
@@ -83,31 +84,59 @@ func recursiveTestScanAndRun(dir string) {
 		os.Exit(1)
 	}
 
+	testFails := 0
+	testPasses := 0
+
 	for _, file := range files {
 		name := file.Name()
 		if file.IsDir() {
 			subDir := path.Join(dir, name)
 			recursiveTestScanAndRun(subDir)
 		} else if strings.HasPrefix(name, "test_") && strings.HasSuffix(name, ".golem") {
-			fmt.Printf("would run test: %s\n", name)
+			absName := path.Join(dir, name)
+			binaryAbsFilename, err := compile(absName)
+			if err != nil {
+				fmt.Printf("test compilation fail: %s", name)
+				println(err)
+				testFails += 1
+				continue
+			}
+			err = exec.Command(binaryAbsFilename).Run()
+			if err != nil {
+				fmt.Printf("test execution fail: %s", name)
+				println(err)
+				testFails += 1
+				continue
+			}
+			testPasses += 1
+			fmt.Printf("test passed: %s\n", name)
 		}
 	}
+
+	if testFails > 0 {
+		fmt.Printf("testFails: %v\n", testFails)
+		fmt.Printf("testPasses: %v\n", testPasses)
+		os.Exit(1)
+	}
+
+	fmt.Printf("testPasses: %v\n", testPasses)
 }
 
-func compileAndRunFile(filename string, useExec bool) {
-	filename, err := filepath.Abs(filename)
-	if err != nil {
-		panic(err)
+func compile(filename string) (string, error) {
+	if !filepath.IsAbs(filename) {
+		panic("filename must be absolute")
 	}
+
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
-		panic(err)
+		fmt.Printf("error: %s\n", err.Error())
+		return "", err
 	}
 
 	source := string(bytes)
 	pak := parsePackage(source, filename)
 	validateSourceSet(pak.source, pak)
-	if debugPrintParestCode {
+	if debugPrintParesedCode {
 		fmt.Println("----------------------- parsed  code -----------------------")
 		fmt.Println(AstFormat(pak))
 	}
@@ -118,7 +147,7 @@ func compileAndRunFile(filename string, useExec bool) {
 		fmt.Println(AstFormat(typedPak))
 	}
 	if len(tc.errors) > 0 {
-		os.Exit(1)
+		return "", fmt.Errorf("compilation has errors")
 	}
 
 	sourceCodeC := compilePackageToC(typedPak)
@@ -150,6 +179,11 @@ func compileAndRunFile(filename string, useExec bool) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	return binaryAbsFilename, nil
+}
+
+func compileAndRunFile(filename string, useExec bool) {
+	binaryAbsFilename, err := compile(filename)
 
 	fmt.Println("=========================== exec ===========================")
 	var argv []string = nil

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 func main() {
@@ -20,7 +21,8 @@ func main() {
 	case "build":
 		buildCmd := flag.NewFlagSet("build", flag.ExitOnError)
 		buildCmd.Parse(args)
-		compileAndRunFile(args[0], true)
+		absPath, _ := filepath.Abs(args[0])
+		compileAndRunFile(absPath, true)
 	case "test":
 		testCmd := flag.NewFlagSet("test", flag.ExitOnError)
 		testCmd.Parse(args)
