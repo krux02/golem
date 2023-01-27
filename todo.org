@@ -6,20 +6,13 @@
 * DONE error reporting instead of compiler crashing
 * DONE add error type to represent invalid / non-typeable ast
 * DONE test infrastructure compiler error reporting
+* TODO testing framework to test the compiler
 * TODO multiple return values
 * TODO add field values to struct literals
 * TODO full coverage of all error messages
 * TODO test operator precedence when many `:` are in use`
 * TODO default int, default float
-* TODO add ability for type assertions
-
-#+begin_src golem
-
-let tmp1: int8 = 123
-let tmp2 = 123:int8
-let tmp3 = int8(128)
-
-#+end_src
+* DONE add ability for type assertions
 * TODO performance tracking over time to know when the compiler gets slower and which commits cause compilation slowdowns.
 * TODO maybe return TypeFloat like in Nim for integer division?
 * TODO pointer

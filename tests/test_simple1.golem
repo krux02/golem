@@ -27,5 +27,12 @@ proc main():i32 = {
     let z = 3.0:f64
     printf("abc %f\n", (x + y) * z)
   }
-  0
+
+  { # type assertions
+    let tmp1: i8 = 123
+    let tmp2 = 123:i8
+    # let tmp3 = i8(128) # problem
+  }
+
+  return 0
 }

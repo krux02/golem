@@ -38,10 +38,11 @@ type Scope = *ScopeImpl
 
 func (scope Scope) NewSubScope() Scope {
 	return &ScopeImpl{
-		Parent:     scope,
-		Variables:  make(map[string]TcSymbol),
-		Procedures: make(map[string][]*TcProcDef),
-		Types:      make(map[string]Type),
+		Parent:      scope,
+		CurrentProc: scope.CurrentProc,
+		Variables:   make(map[string]TcSymbol),
+		Procedures:  make(map[string][]*TcProcDef),
+		Types:       make(map[string]Type),
 	}
 }
 
@@ -435,6 +436,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 }
 
 func (tc *TypeChecker) TypeCheckCodeBlock(scope Scope, arg CodeBlock, expected Type) (result TcCodeBlock) {
+	scope = scope.NewSubScope()
 	N := len(arg.Items)
 	if N > 0 {
 		result.Items = make([]TcExpr, N)

@@ -68,6 +68,32 @@ func errortest(filename string) {
 	fmt.Printf("errortest successful")
 }
 
+const debugPrintParestCode = false
+const debugPrintTypecheckedCode = false
+const debugPrintGeneratedCode = false
+
+func runAllTests() {
+	recursiveTestScanAndRun("tests")
+}
+
+func recursiveTestScanAndRun(dir string) {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	for _, file := range files {
+		name := file.Name()
+		if file.IsDir() {
+			subDir := path.Join(dir, name)
+			recursiveTestScanAndRun(subDir)
+		} else if strings.HasPrefix(name, "test_") && strings.HasSuffix(name, ".golem") {
+			fmt.Printf("would run test: %s\n", name)
+		}
+	}
+}
+
 func compileAndRunFile(filename string, useExec bool) {
 	filename, err := filepath.Abs(filename)
 	if err != nil {
@@ -78,21 +104,28 @@ func compileAndRunFile(filename string, useExec bool) {
 		panic(err)
 	}
 
-	fmt.Println("----------------------- parsed  code -----------------------")
 	source := string(bytes)
 	pak := parsePackage(source, filename)
 	validateSourceSet(pak.source, pak)
-	fmt.Println(AstFormat(pak))
-	fmt.Println("--------------------- typechecked code ---------------------")
+	if debugPrintParestCode {
+		fmt.Println("----------------------- parsed  code -----------------------")
+		fmt.Println(AstFormat(pak))
+	}
 	tc := NewTypeChecker(source, filename)
 	typedPak := tc.TypeCheckPackage(pak)
+	if debugPrintTypecheckedCode {
+		fmt.Println("--------------------- typechecked code ---------------------")
+		fmt.Println(AstFormat(typedPak))
+	}
 	if len(tc.errors) > 0 {
 		os.Exit(1)
 	}
-	fmt.Println(AstFormat(typedPak))
-	fmt.Println("-------------------------- C code --------------------------")
+
 	sourceCodeC := compilePackageToC(typedPak)
-	fmt.Println(sourceCodeC)
+	if debugPrintGeneratedCode {
+		fmt.Println("-------------------------- C code --------------------------")
+		fmt.Println(sourceCodeC)
+	}
 	tempDir := path.Join(os.TempDir(), "golem")
 	base := filepath.Base(filename)
 	if base[len(base)-6:] != ".golem" {

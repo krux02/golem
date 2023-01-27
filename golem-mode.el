@@ -80,7 +80,7 @@
   (setq-local comment-start-skip "#+ *")
   (setq-local font-lock-defaults '(golem-highlights))
   (setq-local compile-command
-              (concat "go build && ./golem " (file-relative-name buffer-file-name))))
+              (concat "go build && ./golem build " (file-relative-name buffer-file-name))))
 
 (provide 'golem-mode)
 ;;; golem-mode.el ends here
