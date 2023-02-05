@@ -11,9 +11,10 @@ type CompileError struct {
 }
 
 type TypeChecker struct {
-	code     string
-	filename string
-	errors   []CompileError
+	code         string
+	filename     string
+	silentErrors bool
+	errors       []CompileError
 }
 
 func NewTypeChecker(code, filename string) *TypeChecker {
@@ -156,11 +157,13 @@ func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result 
 func (tc *TypeChecker) Errorf(node AstNode, msg string, args ...interface{}) {
 	newMsg := fmt.Sprintf(msg, args...)
 	tc.errors = append(tc.errors, CompileError{node: node, msg: newMsg})
-	if node == nil {
-		fmt.Println(msg)
-	} else {
-		line, columnStart, columnEnd := tc.LineColumnNode(node)
-		fmt.Printf("%s(%d, %d-%d) Error: %s\n", tc.filename, line, columnStart, columnEnd, newMsg)
+	if !tc.silentErrors {
+		if node == nil {
+			fmt.Println(msg)
+		} else {
+			line, columnStart, columnEnd := tc.LineColumnNode(node)
+			fmt.Printf("%s(%d, %d-%d) Error: %s\n", tc.filename, line, columnStart, columnEnd, newMsg)
+		}
 	}
 }
 

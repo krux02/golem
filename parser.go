@@ -660,7 +660,6 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 func parsePackage(code, filename string) (result PackageDef) {
 	result.Name = path.Base(filename)
 	result.source = code
-	fmt.Println("processing package: ", result.Name)
 
 	// raw doc comments are literal source code ranges that contain doc comments.
 	// They are completely unparsed, can span multiple lines and unlike normal

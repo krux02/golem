@@ -8,7 +8,6 @@ import (
 )
 
 func main() {
-
 	if len(os.Args) < 2 {
 		fmt.Println("not enough arguments")
 		flag.PrintDefaults()
@@ -28,7 +27,11 @@ func main() {
 		testCmd.Parse(args)
 		runAllTests()
 	case "errortest":
-		errortest(args[0])
+		err := errortest(args[0])
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	default:
 		fmt.Println("expected 'build', 'test' or 'errortest' subcommands")
 		os.Exit(1)

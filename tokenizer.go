@@ -122,7 +122,7 @@ func LineColumnOffset(code string, offset int) (line, column int) {
 		}
 		if rune == '\n' {
 			line++
-			lineStart = pos
+			lineStart = pos + 1
 		}
 	}
 	return -1, -1
