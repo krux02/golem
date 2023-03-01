@@ -53,21 +53,22 @@ func (builder *CodeBuilder) compileSymWithType(context *PackageGeneratorContext,
 	case *BuiltinType:
 		builder.WriteString(typ.internalName)
 		builder.WriteString(" ")
-		builder.WriteString(sym.Name)
+		builder.WriteString(sym.source)
 	case *ArrayType:
 		// TODO this is wrong for nested arrays
 		builder.compileTypeExpr(typ.Elem)
 		builder.WriteString(" ")
-		builder.WriteString(sym.Name)
+		builder.WriteString(sym.source)
 		builder.WriteByte('[')
 		WriteIntLit(&builder.Builder, typ.Len)
 		builder.WriteByte(']')
 	case *TcStructDef:
+		fmt.Printf("mark %#v for generation\n", typ)
 		context.markTypeForGeneration(typ)
 		// TODO this should be the mangled name
 		builder.WriteString(typ.Name)
 		builder.WriteString(" ")
-		builder.WriteString(sym.Name)
+		builder.WriteString(sym.source)
 	default:
 		panic(fmt.Errorf("not implemented %T", typ))
 	}
@@ -90,12 +91,7 @@ func (builder *CodeBuilder) compileCall(context *PackageGeneratorContext, call T
 	} else {
 		builder.WriteString(call.Sym.Impl.MangledName)
 		builder.WriteString("(")
-		for i, it := range call.Args {
-			if i != 0 {
-				builder.WriteString(", ")
-			}
-			builder.compileExpr(context, it)
-		}
+		builder.compileCommaSeparatedExprList(context, call.Args)
 		builder.WriteString(")")
 	}
 }
@@ -173,7 +169,7 @@ func (builder *CodeBuilder) compileFloatLit(lit FloatLit) {
 }
 
 func (builder *CodeBuilder) compileSymbol(sym TcSymbol) {
-	switch sym.Name {
+	switch sym.source {
 	case "true":
 		builder.WriteString("1")
 	case "false":
@@ -182,7 +178,7 @@ func (builder *CodeBuilder) compileSymbol(sym TcSymbol) {
 		if sym.Kind == SkLoopIterator {
 			builder.WriteString("*")
 		}
-		builder.WriteString(sym.Name)
+		builder.WriteString(sym.source)
 	}
 }
 
@@ -274,15 +270,15 @@ func (builder *CodeBuilder) compileForLoopStmt(context *PackageGeneratorContext,
 		builder.WriteString(", ")
 		builder.compileSymbol(stmt.LoopSym)
 		builder.WriteString("_END = ")
-		builder.WriteString(stmt.LoopSym.Name)
+		builder.WriteString(stmt.LoopSym.source)
 		builder.WriteString(" + ")
 		WriteIntLit(&builder.Builder, arrayType.Len)
 		builder.WriteString("; ")
-		builder.WriteString(stmt.LoopSym.Name)
+		builder.WriteString(stmt.LoopSym.source)
 		builder.WriteString(" != ")
-		builder.WriteString(stmt.LoopSym.Name)
+		builder.WriteString(stmt.LoopSym.source)
 		builder.WriteString("_END; ++")
-		builder.WriteString(stmt.LoopSym.Name)
+		builder.WriteString(stmt.LoopSym.source)
 		builder.WriteString(") ")
 	} else {
 		panic("not implemented")
@@ -290,16 +286,28 @@ func (builder *CodeBuilder) compileForLoopStmt(context *PackageGeneratorContext,
 	builder.compileExpr(context, stmt.Body)
 }
 
-func (builder *CodeBuilder) compileArrayLit(context *PackageGeneratorContext, lit TcArrayLit) {
-	builder.WriteString("{")
-	for i, it := range lit.Items {
+func (builder *CodeBuilder) compileCommaSeparatedExprList(context *PackageGeneratorContext, list []TcExpr) {
+	for i, it := range list {
 		if i != 0 {
 			builder.WriteString(", ")
 		}
 		builder.compileExpr(context, it)
 	}
+}
+
+func (builder *CodeBuilder) compileArrayLit(context *PackageGeneratorContext, lit TcArrayLit) {
+	builder.WriteString("{")
+	builder.compileCommaSeparatedExprList(context, lit.Items)
 	builder.WriteString("}")
 
+}
+
+func (builder *CodeBuilder) compileStructLit(context *PackageGeneratorContext, lit TcStructLit) {
+	builder.WriteString("(")
+	builder.compileTypeExpr(lit.typ)
+	builder.WriteString("){")
+	builder.compileCommaSeparatedExprList(context, lit.Items)
+	builder.WriteString("}")
 }
 
 // lastExprPrefix is not used anymore, rename to not use prefix anymore
@@ -336,10 +344,8 @@ func (builder *CodeBuilder) compileExprWithPrefix(context *PackageGeneratorConte
 		builder.compileIfElseStmt(context, ex)
 	case TcForLoopStmt:
 		builder.compileForLoopStmt(context, ex)
-	case TcStructInitializer:
-		builder.WriteString("(")
-		builder.compileTypeExpr(ex.structDef)
-		builder.WriteString("){}")
+	case TcStructLit:
+		builder.compileStructLit(context, ex)
 	case nil:
 		panic(fmt.Sprintf("invalid Ast, expression is nil %T", expr))
 	default:
@@ -406,7 +412,7 @@ func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 		}
 		headBuilder.compileTypeExpr(arg.Typ)
 		headBuilder.WriteString(" ")
-		headBuilder.WriteString(arg.Name)
+		headBuilder.WriteString(arg.source)
 	}
 	headBuilder.WriteString(")")
 

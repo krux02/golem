@@ -164,6 +164,19 @@ func (lit TcArrayLit) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteRune(']')
 }
 
+func (lit TcStructLit) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteRune('[')
+	for i, expr := range lit.Items {
+		if i != 0 {
+			builder.WriteString(", ")
+		}
+		builder.WriteAstNode(expr)
+	}
+	builder.WriteString("]:")
+	//builder.WriteAstNode(lit.typ)
+	builder.WriteString(lit.typ.Name)
+}
+
 func WriteIntLit(builder *strings.Builder, value int64) {
 	if value == 0 {
 		builder.WriteByte('0')
@@ -311,7 +324,7 @@ func (loopStmt ForLoopStmt) prettyPrint(builder *AstPrettyPrinter) {
 
 func (loopStmt TcForLoopStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("for ")
-	builder.WriteString(loopStmt.LoopSym.Name)
+	builder.WriteString(loopStmt.LoopSym.source)
 	builder.WriteString(" in ")
 	builder.WriteAstNode(loopStmt.Collection)
 	builder.WriteString(" do ")
@@ -416,12 +429,6 @@ func (structDef TcStructDef) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("}")
 }
 
-func (structInit TcStructInitializer) prettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("(")
-	builder.WriteString(structInit.structDef.Name)
-	builder.WriteString("){}")
-}
-
 func (codeBlock TcCodeBlock) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("{")
 	builder.Indentation++
@@ -438,7 +445,7 @@ func (codeBlock TcCodeBlock) prettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (sym TcSymbol) prettyPrint(printer *AstPrettyPrinter) {
-	printer.WriteString(sym.Name)
+	printer.WriteString(sym.source)
 }
 
 func (sym TcProcSymbol) prettyPrint(printer *AstPrettyPrinter) {
@@ -486,7 +493,7 @@ func (procDef TcProcDef) prettyPrint(builder *AstPrettyPrinter) {
 		builder.NewlineAndIndent()
 		iLast := len(procDef.Args) - 1
 		for i, arg := range procDef.Args {
-			builder.WriteString(arg.Name)
+			builder.WriteString(arg.source)
 			builder.WriteString(": ")
 			builder.WriteAstNode(arg.Type())
 			if i == iLast {
@@ -500,7 +507,7 @@ func (procDef TcProcDef) prettyPrint(builder *AstPrettyPrinter) {
 			if i != 0 {
 				builder.WriteString("; ")
 			}
-			builder.WriteString(arg.Name)
+			builder.WriteString(arg.source)
 			builder.WriteString(": ")
 			builder.WriteAstNode(arg.Type())
 		}

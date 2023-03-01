@@ -36,7 +36,7 @@ func parseOperator(tokenizer *Tokenizer) (result Ident) {
 
 	_, ok := OperatorPrecedence[result.source]
 	if !ok {
-		panic(tokenizer.formatError(token, "invalid operator %s", result.source))
+		panic(tokenizer.formatError(token, "invalid operator '%s'", result.source))
 	}
 	return
 }
@@ -107,9 +107,8 @@ func parseVariableDefStmt(tokenizer *Tokenizer) (result VariableDefStmt) {
 		_ = tokenizer.Next()
 		result.TypeExpr = parseTypeExpr(tokenizer)
 	}
-	if tokenizer.lookAheadToken.kind == TkOperator {
-		op := tokenizer.Next()
-		tokenizer.expectOperator(op, "=")
+	if tokenizer.lookAheadToken.kind == TkAssign {
+		tokenizer.Next()
 		result.Value = parseExpr(tokenizer, false)
 	}
 	lastToken := tokenizer.token
@@ -385,7 +384,8 @@ func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
 	case TkIf:
 		return (Expr)(parseIfStmt(tokenizer))
 	}
-	return parseExpr(tokenizer, false)
+	result = parseExpr(tokenizer, false)
+	return result
 }
 
 func parsePrefixCall(tokenizer *Tokenizer) (result Call) {
@@ -533,7 +533,7 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 		lookAhead := tokenizer.lookAheadToken
 		switch lookAhead.kind {
 		// and and or is an operator token?
-		case TkOperator, TkAnd, TkOr:
+		case TkOperator, TkAnd, TkOr, TkAssign:
 			result = (Expr)(parseInfixCall(tokenizer, result))
 		case TkOpenBrace:
 			result = (Expr)(parseCall(tokenizer, result))
@@ -590,7 +590,7 @@ func parseTypeDef(tokenizer *Tokenizer) (result StructDef) {
 	tokenizer.expectKind(firstToken, TkType)
 	result.Name = parseIdent(tokenizer)
 	token := tokenizer.Next()
-	tokenizer.expectOperator(token, "=")
+	tokenizer.expectKind(token, TkAssign)
 	token = tokenizer.Next()
 	tokenizer.expectIdent(token, "struct")
 	openBrace := tokenizer.Next()
@@ -648,7 +648,7 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 	tokenizer.expectKind(token, TkColon)
 	result.ResultType = parseTypeExpr(tokenizer)
 	token = tokenizer.Next()
-	tokenizer.expectOperator(token, "=")
+	tokenizer.expectKind(token, TkAssign)
 
 	result.Body = parseExpr(tokenizer, false)
 

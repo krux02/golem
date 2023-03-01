@@ -17,6 +17,7 @@ const (
 	TkColon
 	TkSemicolon
 	TkComma
+	TkAssign
 	TkOperator
 	TkStrLit
 	TkIntLit
@@ -61,6 +62,7 @@ var TokenKindNames = [...]string{
 	TkColon:             "Colon",
 	TkSemicolon:         "Semicolon",
 	TkComma:             "Comma",
+	TkAssign:            "Assign",
 	TkOperator:          "Operator",
 	TkStrLit:            "StrLit",
 	TkIntLit:            "IntLit",
@@ -392,13 +394,17 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 	case u.IsSymbol(c) || u.IsPunct(c):
 		var idx2 = len(code)
 		for pos, rune := range code[cLen:] {
-			if !u.IsPunct(rune) && !u.IsSymbol(rune) || strings.ContainsRune("{}[](),;", rune) {
+			if !u.IsPunct(rune) && !u.IsSymbol(rune) || strings.ContainsRune("{}[](),;'\"", rune) {
 				idx2 = cLen + pos
 				break
 			}
 		}
+
 		result.kind = TkOperator
 		result.value = code[:idx2]
+		if result.value == "=" {
+			result.kind = TkAssign
+		}
 	default:
 		panic(this.formatError(result, "unexpected input: %c %d", c, c))
 	}

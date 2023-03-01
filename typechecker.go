@@ -50,7 +50,7 @@ func (scope Scope) NewSubScope() Scope {
 func (scope Scope) NewSymbol(tc *TypeChecker, name Ident, kind SymbolKind, typ Type) TcSymbol {
 	//result := TcSymbol{Name: name.source, Kind: kind, Typ: typ}
 	rawName := name.source
-	result := TcSymbol{Name: rawName, Kind: kind, Typ: typ}
+	result := TcSymbol{AbstractAstNode: AbstractAstNode{source: name.source}, Kind: kind, Typ: typ}
 	_, alreadyExists := scope.Variables[rawName]
 	if alreadyExists {
 		tc.Errorf(name, "redefinition of %s", rawName)
@@ -462,12 +462,12 @@ func (expr TypeExpr) IsSet() bool {
 }
 
 func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt) (result TcVariableDefStmt) {
+	result.source = arg.source
 	var expected Type = TypeUnspecified
 	if arg.TypeExpr.IsSet() {
 		expected = tc.LookUpType(scope, arg.TypeExpr)
 	}
 	if arg.Value == nil {
-		result.Sym = scope.NewSymbol(tc, arg.Name, arg.Kind, expected)
 
 		switch typ := expected.(type) {
 		case *BuiltinType:
@@ -489,14 +489,16 @@ func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt
 				panic(fmt.Errorf("not implemented %#v", typ))
 			}
 		case *TcStructDef:
-			result.Value = TcStructInitializer{structDef: typ}
+			result.Value = TcStructLit{typ: typ}
 		default:
 			panic(fmt.Errorf("not implemented %T", expected))
 		}
+		result.Sym = scope.NewSymbol(tc, arg.Name, arg.Kind, result.Value.Type())
 
 	} else {
 		result.Value = tc.TypeCheckExpr(scope, arg.Value, expected)
 		result.Sym = scope.NewSymbol(tc, arg.Name, arg.Kind, result.Value.Type())
+		fmt.Printf("new sym : %+v\n", result)
 	}
 	return
 }
@@ -554,6 +556,10 @@ func (lit TcArrayLit) Type() Type {
 	return &result
 }
 
+func (lit TcStructLit) Type() Type {
+	return lit.typ
+}
+
 func (sym TcSymbol) Type() Type {
 	return sym.Typ
 }
@@ -587,10 +593,6 @@ func (returnStmt TcReturnStmt) Type() Type {
 
 func (expr TcDotExpr) Type() Type {
 	return expr.Rhs.Type
-}
-
-func (expr TcStructInitializer) Type() Type {
-	return expr.structDef
 }
 
 func MatchNegativeNumber(arg Call) (number IntLit, ok bool) {
@@ -700,16 +702,56 @@ func GetArrayType(elem Type, len int64) (result *ArrayType) {
 	return
 }
 
-func (tc *TypeChecker) TypeCheckArrayLit(scope Scope, arg ArrayLit, expected Type) (result TcArrayLit) {
+func matchAssign(arg Expr) (lhs, rhs Expr, ok bool) {
+	call, isCall := arg.(Call)
+	print(arg)
+	if !isCall || len(call.Args) != 2 || call.Callee.Source() != "=" {
+		return nil, nil, false
+	}
+	return call.Args[0], call.Args[1], true
+}
+
+func (tc *TypeChecker) TypeCheckArrayLit(scope Scope, arg ArrayLit, expected Type) TcExpr {
 	// TODO expect use expect length
 	//expectedLen := expected.(ArrayType).Len
-	expected = expected.(*ArrayType).Elem
-	result.Items = make([]TcExpr, len(arg.Items))
+	//
+	switch exp := expected.(type) {
+	case *ArrayType:
+		var result TcArrayLit
+		result.Items = make([]TcExpr, len(arg.Items))
+		for i, item := range arg.Items {
+			result.Items[i] = tc.TypeCheckExpr(scope, item, exp.Elem)
+		}
+		return result
+	case *TcStructDef:
+		if len(arg.Items) == 0 {
+			panic("not implemented")
+		}
 
-	for i, item := range arg.Items {
-		result.Items[i] = tc.TypeCheckExpr(scope, item, expected)
+		if _, _, isAssign0 := matchAssign(arg.Items[0]); isAssign0 {
+			result := TcStructLit{Items: make([]TcExpr, len(arg.Items))}
+			result.source = arg.source
+			result.typ = exp
+			for i, it := range arg.Items {
+				lhs, rhs, isAssign := matchAssign(it)
+				if !isAssign {
+					panic(isAssign)
+				}
+				lhsIdent := lhs.(Ident)
+				field, hasField := exp.GetField(lhsIdent.source)
+				if hasField != nil {
+					panic(hasField)
+				}
+				tcRhs := tc.TypeCheckExpr(scope, rhs, field.Type)
+				result.Items[i] = tcRhs
+			}
+			return result
+		} else {
+			panic(fmt.Errorf("not implemented %#v", arg.Items[0]))
+		}
+	default:
+		panic(fmt.Errorf("I don't know about type %T!", exp))
 	}
-	return
 }
 
 func (tc *TypeChecker) TypeCheckIfStmt(scope Scope, stmt IfStmt) (result TcIfStmt) {

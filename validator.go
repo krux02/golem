@@ -13,7 +13,7 @@ func joinSubstr(parent, str1, str2 string) (result string) {
 	header2 := (*reflect.StringHeader)(unsafe.Pointer(&str2))
 
 	// do rage checks
-	if *header1 == *header2 {
+	if header1.Data == header2.Data && header1.Len == header2.Len {
 		return str1
 	}
 

@@ -942,3 +942,14 @@ others.
 preprocessor".
 
 ** TODO no Solution yet
+
+* exceptions
+
+  There are heated discussions if it is better to use exceptions for errors, or
+  to wrap errors in an Either[Value,Exception] type. I think it is not only
+  important to support both styles, but to provide help to easily convert
+  between the two styles.
+
+  The inspiration here comes from go type assertions. ~value := expr.(*MyType)~
+  raises an exception, where ~value, ok := expr.(*MyType)~ allows to write a
+  branch.

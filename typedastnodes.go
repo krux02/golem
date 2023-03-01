@@ -37,11 +37,6 @@ type TcStructDef struct {
 	scheduledforgeneration bool
 }
 
-type TcStructInitializer struct {
-	AbstractAstNode
-	structDef *TcStructDef
-}
-
 func (structDef *TcStructDef) GetField(name string) (resField TcStructField, err error) {
 	for _, field := range structDef.Fields {
 		if field.Name == name {
@@ -77,7 +72,6 @@ const (
 
 type TcSymbol struct {
 	AbstractAstNode
-	Name string
 	Kind SymbolKind
 	Typ  Type
 }
@@ -158,6 +152,12 @@ type TcArrayLit struct {
 	Items []TcExpr
 }
 
+type TcStructLit struct {
+	AbstractAstNode
+	Items []TcExpr
+	typ   *TcStructDef
+}
+
 type TcPackageDef struct {
 	AbstractAstNode
 	Name     string
@@ -166,16 +166,16 @@ type TcPackageDef struct {
 	Main     *TcProcDef // main entry point
 }
 
-func (sym TcDotExpr) expression()            {}
-func (sym TcSymbol) expression()             {}
-func (stmt TcVariableDefStmt) expression()   {}
-func (stmt TcReturnStmt) expression()        {}
-func (stmt TcForLoopStmt) expression()       {}
-func (stmt TcIfStmt) expression()            {}
-func (stmt TcIfElseStmt) expression()        {}
-func (block TcCodeBlock) expression()        {}
-func (call TcCall) expression()              {}
-func (call TcArrayLit) expression()          {}
-func (expr TcStructInitializer) expression() {}
+func (sym TcDotExpr) expression()          {}
+func (sym TcSymbol) expression()           {}
+func (stmt TcVariableDefStmt) expression() {}
+func (stmt TcReturnStmt) expression()      {}
+func (stmt TcForLoopStmt) expression()     {}
+func (stmt TcIfStmt) expression()          {}
+func (stmt TcIfElseStmt) expression()      {}
+func (block TcCodeBlock) expression()      {}
+func (call TcCall) expression()            {}
+func (call TcArrayLit) expression()        {}
+func (expr TcStructLit) expression()       {}
 
 func (typ *TcStructDef) typenode() {}
