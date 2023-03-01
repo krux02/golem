@@ -325,9 +325,9 @@ func (tc *TypeChecker) TypeCheckDotExpr(scope Scope, lhs, rhs Expr, expected Typ
 	tcLhs := tc.TypeCheckExpr(scope, lhs, TypeUnspecified)
 	switch t := tcLhs.Type().(type) {
 	case *TcStructDef:
-		tcRhs, err := t.GetField(rhs.Source())
-		if err != nil {
-			panic(err)
+		tcRhs, idx := t.GetField(rhs.Source())
+		if idx < 0 {
+			tc.Errorf(rhs, "type %s has no field %s", t.Name, rhs.Source())
 		}
 		tc.ExpectType(rhs, tcRhs.Type, expected)
 		return TcDotExpr{Lhs: tcLhs, Rhs: tcRhs}
@@ -696,30 +696,51 @@ func (tc *TypeChecker) TypeCheckArrayLit(scope Scope, arg ArrayLit, expected Typ
 		}
 		return result
 	case *TcStructDef:
-		if len(arg.Items) == 0 {
-			panic("not implemented")
-		}
+		result := TcStructLit{}
+		result.Items = make([]TcExpr, len(exp.Fields))
+		result.source = arg.source
+		result.typ = exp
 
-		if _, _, isAssign0 := matchAssign(arg.Items[0]); isAssign0 {
-			result := TcStructLit{Items: make([]TcExpr, len(arg.Items))}
-			result.source = arg.source
-			result.typ = exp
-			for i, it := range arg.Items {
+		if len(arg.Items) == 0 {
+			for i := range result.Items {
+				result.Items[i] = exp.Fields[i].Type.DefaultValue(tc, arg)
+			}
+			return result
+		} else if _, _, isAssign0 := matchAssign(arg.Items[0]); isAssign0 {
+			lastIdx := -1
+			for _, it := range arg.Items {
 				lhs, rhs, isAssign := matchAssign(it)
 				if !isAssign {
 					panic(isAssign)
 				}
 				lhsIdent := lhs.(Ident)
-				field, hasField := exp.GetField(lhsIdent.source)
-				if hasField != nil {
-					panic(hasField)
+				field, idx := exp.GetField(lhsIdent.source)
+				if idx < 0 {
+					tc.Errorf(lhsIdent, "type %s has no field %s", exp.Name, lhsIdent.source)
+				} else {
+					result.Items[idx] = tc.TypeCheckExpr(scope, rhs, field.Type)
+					if idx < lastIdx {
+						tc.Errorf(lhsIdent, "out of order initialization is not allowed (yet?)")
+					}
 				}
-				tcRhs := tc.TypeCheckExpr(scope, rhs, field.Type)
-				result.Items[i] = tcRhs
+				lastIdx = idx
+			}
+			// fill up all unset fields with default values
+			for i := range result.Items {
+				if result.Items[i] == nil {
+					result.Items[i] = exp.Fields[i].Type.DefaultValue(tc, arg)
+				}
 			}
 			return result
 		} else {
-			panic(fmt.Errorf("not implemented %#v", arg.Items[0]))
+			// must have all fields of struct
+			if len(arg.Items) != len(exp.Fields) {
+				tc.Errorf(arg, "literal has %d values, but %s needs %d values", len(arg.Items), exp.Name, len(exp.Fields))
+			}
+			for i := range result.Items {
+				result.Items[i] = tc.TypeCheckExpr(scope, arg.Items[i], exp.Fields[i].Type)
+			}
+			return result
 		}
 	default:
 		panic(fmt.Errorf("I don't know about type %T!", exp))

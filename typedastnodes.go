@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -38,14 +37,13 @@ type TcStructDef struct {
 	scheduledforgeneration bool
 }
 
-func (structDef *TcStructDef) GetField(name string) (resField TcStructField, err error) {
-	for _, field := range structDef.Fields {
+func (structDef *TcStructDef) GetField(name string) (resField TcStructField, idx int) {
+	for i, field := range structDef.Fields {
 		if field.Name == name {
-			return field, nil
+			return field, i
 		}
 	}
-	err = fmt.Errorf("type %s has no member named %s", structDef.Name, name)
-	return
+	return TcStructField{}, -1
 }
 
 type TcCodeBlock struct {
