@@ -1,0 +1,22 @@
+
+
+
+type MyStruct = struct {
+  a: i64
+  b: f64
+  c: string
+}
+
+proc main():i64 = {
+  var myStruct1: MyStruct = [a=12, b=34.56, c="def"]
+  #var myStruct2 = [a=12, b=34.56, c="def"]:MyStruct
+  var myStruct3: MyStruct# = [a=12, b=34.56, c="def"]:MyStruct
+  #printf("default Values\n")
+  #printf("a: %d b: %f c: %s\n", myStruct1.a, myStruct1.b, myStruct1.c)
+  #printf("a: %d b: %f c: %s\n", myStruct2.a, myStruct2.b, myStruct2.c)
+  myStruct3.a = 123
+  myStruct3.b = 45.67
+  myStruct3.c = "ghi"
+  printf("a: %d b: %f c: %s\n", myStruct3.a, myStruct3.b, myStruct3.c)
+  0
+}
