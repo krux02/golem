@@ -468,39 +468,12 @@ func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt
 		expected = tc.LookUpType(scope, arg.TypeExpr)
 	}
 	if arg.Value == nil {
-
-		switch typ := expected.(type) {
-		case *BuiltinType:
-			if typ == TypeUnspecified {
-				tc.Errorf(arg, "variable definitions statements must have at least one, a type or a value expression")
-			} else if typ == TypeNoReturn {
-				tc.Errorf(arg, "a default value of no retrun does not exist")
-			} else if typ == TypeFloat32 || typ == TypeFloat64 {
-				result.Value = FloatLit{typ: typ}
-			} else if typ == TypeChar {
-				result.Value = CharLit{}
-			} else if typ == TypeInt8 || typ == TypeInt16 || typ == TypeInt32 || typ == TypeInt64 {
-				result.Value = IntLit{typ: typ}
-			} else if typ == TypeBoolean {
-				panic("not implemented bool default value")
-			} else if typ == TypeVoid {
-				panic("not implemented void default value")
-			} else {
-				panic(fmt.Errorf("not implemented %#v", typ))
-			}
-		case *TcStructDef:
-			result.Value = TcStructLit{typ: typ}
-		default:
-			panic(fmt.Errorf("not implemented %T", expected))
-		}
-		result.Sym = scope.NewSymbol(tc, arg.Name, arg.Kind, result.Value.Type())
-
+		result.Value = expected.DefaultValue(tc, arg.TypeExpr)
 	} else {
 		result.Value = tc.TypeCheckExpr(scope, arg.Value, expected)
-		result.Sym = scope.NewSymbol(tc, arg.Name, arg.Kind, result.Value.Type())
-		fmt.Printf("new sym : %+v\n", result)
 	}
-	return
+	result.Sym = scope.NewSymbol(tc, arg.Name, arg.Kind, result.Value.Type())
+	return result
 }
 
 func (tc *TypeChecker) TypeCheckReturnStmt(scope Scope, arg ReturnStmt) (result TcReturnStmt) {
@@ -704,7 +677,6 @@ func GetArrayType(elem Type, len int64) (result *ArrayType) {
 
 func matchAssign(arg Expr) (lhs, rhs Expr, ok bool) {
 	call, isCall := arg.(Call)
-	print(arg)
 	if !isCall || len(call.Args) != 2 || call.Callee.Source() != "=" {
 		return nil, nil, false
 	}

@@ -106,6 +106,39 @@ var TypeAnyInt = &TypeGroup{name: "AnyInt", items: []Type{TypeInt8, TypeInt16, T
 var TypeAnyFloat = &TypeGroup{name: "AnyFloat", items: []Type{TypeFloat32, TypeFloat64}}
 var TypeAnyNumber = &TypeGroup{name: "AnyNumber", items: []Type{TypeFloat32, TypeFloat64, TypeInt8, TypeInt16, TypeInt32, TypeInt64}}
 
+func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+	if typ == TypeUnspecified {
+		tc.Errorf(context, "variable definitions statements must have at least one, a type or a value expression")
+	} else if typ == TypeNoReturn {
+		tc.Errorf(context, "a default value of no retrun does not exist")
+	} else if typ == TypeFloat32 || typ == TypeFloat64 {
+		return FloatLit{typ: typ}
+	} else if typ == TypeChar {
+		return CharLit{}
+	} else if typ == TypeInt8 || typ == TypeInt16 || typ == TypeInt32 || typ == TypeInt64 {
+		return IntLit{typ: typ}
+	} else if typ == TypeBoolean {
+		panic("not implemented bool default value")
+	} else if typ == TypeVoid {
+		panic("not implemented void default value")
+	} else {
+		panic(fmt.Errorf("not implemented %+v", typ))
+	}
+	return nil
+}
+
+func (typ *TypeGroup) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+	panic(fmt.Errorf("no default value for abstract type group: %s", typ.name))
+}
+
+func (typ *ArrayType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+	return TcArrayLit{}
+}
+
+func (typ *TcStructDef) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+	return TcStructLit{typ: typ}
+}
+
 // Printf is literally the only use case for real varargs that I
 // know. Therefore the implementation for varargs will be strictly
 // tied to printf for now. A general concept for varargs will be

@@ -63,7 +63,6 @@ func (builder *CodeBuilder) compileSymWithType(context *PackageGeneratorContext,
 		WriteIntLit(&builder.Builder, typ.Len)
 		builder.WriteByte(']')
 	case *TcStructDef:
-		fmt.Printf("mark %#v for generation\n", typ)
 		context.markTypeForGeneration(typ)
 		// TODO this should be the mangled name
 		builder.WriteString(typ.Name)
