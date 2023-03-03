@@ -6,9 +6,10 @@
 * DONE error reporting instead of compiler crashing
 * DONE add error type to represent invalid / non-typeable ast
 * DONE test infrastructure compiler error reporting
-* TODO testing framework to test the compiler
-* TODO multiple return values
-* TODO add field values to struct literals
+* DONE add field values to struct literals
+* DONE testing framework to test the compiler
+* TODO call by reference
+* TODO multiple return values??
 * TODO full coverage of all error messages
 * TODO test operator precedence when many `:` are in use`
 * TODO default int, default float
@@ -16,7 +17,6 @@
 * TODO performance tracking over time to know when the compiler gets slower and which commits cause compilation slowdowns.
 * TODO maybe return TypeFloat like in Nim for integer division?
 * TODO pointer
-* TODO call by reference
 * TODO better distinguish go type information vs golem type information better
 * TODO generic arguments
 * TODO vm for compile time code execution
@@ -30,7 +30,7 @@
 * TODO statistics about compiler bootstrapping time, lines of code, test time, test lines of code
 * TODO full set of types
 ** DONE int float in all sizes
-** TODO vector/simd types
+** TODO vector/matrix/simd types
 ** TODO string
 
 #+begin_src c
