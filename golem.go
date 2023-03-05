@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 )
@@ -40,9 +41,32 @@ func errorTest(filename string) error {
 			src = src[idx2:]
 		}
 	}
+	var expectedNumErrors = -1
+	{
+		src := source
+		idx1 := strings.Index(src, "# NumErrors:")
+		if idx1 < 0 {
+			return fmt.Errorf("no '# NumErrors:' comment found")
+		}
+		idx1 += 12
+		src = src[idx1:]
+		idx2 := strings.IndexRune(src, '\n')
+		if idx2 >= 0 {
+			src = src[:idx2]
+		}
+
+		for len(src) > 0 && (strings.HasPrefix(src, " ") || strings.HasPrefix(src, "\t")) {
+			src = src[1:]
+		}
+
+		expectedNumErrors, err = strconv.Atoi(src)
+		if err != nil {
+			return err
+		}
+	}
 	numErrors := len(expectedErrors)
-	if numErrors <= 0 {
-		return fmt.Errorf("no error comments found in file")
+	if numErrors != expectedNumErrors {
+		return fmt.Errorf("%d number of errors doesn't match the expected %d number of errors", numErrors, expectedNumErrors)
 	}
 	pak := parsePackage(source, filename)
 	validateSourceSet(pak.source, pak)

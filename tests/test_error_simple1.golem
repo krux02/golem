@@ -1,4 +1,6 @@
 
+# NumErrors:      1
+
 proc foo(arg: i32): i64 = {
   printf("foo1: %d\n", i32(arg))
   i64(arg) * i64(arg)
