@@ -8,6 +8,7 @@
 * DONE test infrastructure compiler error reporting
 * DONE add field values to struct literals
 * DONE testing framework to test the compiler
+* TODO mutable flag in type
 * TODO call by reference
 * TODO multiple return values??
 * TODO full coverage of all error messages

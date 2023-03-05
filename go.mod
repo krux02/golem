@@ -1,3 +1,3 @@
 module github.com/krux02/golem
 
-go 1.17
+go 1.18

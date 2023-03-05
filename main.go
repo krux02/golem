@@ -7,6 +7,13 @@ import (
 	"path/filepath"
 )
 
+func Unwrap[T any](arg T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return arg
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("not enough arguments")
@@ -20,20 +27,22 @@ func main() {
 	case "build":
 		buildCmd := flag.NewFlagSet("build", flag.ExitOnError)
 		buildCmd.Parse(args)
-		absPath, _ := filepath.Abs(args[0])
-		compileAndRunFile(absPath, true)
+		compileAndRunFile(args[0], true)
 	case "test":
-		testCmd := flag.NewFlagSet("test", flag.ExitOnError)
-		testCmd.Parse(args)
-		runAllTests()
-	case "errortest":
-		err := errortest(args[0])
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+		var tests []string
+		if len(args) > 0 {
+			tests = args
+		} else {
+			execDir := filepath.Dir(Unwrap(os.Executable()))
+			pattern := filepath.Join(execDir, "tests/test_*.golem")
+			currentDir := Unwrap(filepath.Abs("."))
+			pattern = Unwrap(filepath.Rel(currentDir, pattern))
+			tests = Unwrap(filepath.Glob(pattern))
 		}
+		fmt.Printf("%+v\n", tests)
+		runTests(tests)
 	default:
-		fmt.Println("expected 'build', 'test' or 'errortest' subcommands")
+		fmt.Println("expected 'build', 'test' subcommands")
 		os.Exit(1)
 	}
 

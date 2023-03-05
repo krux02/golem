@@ -12,11 +12,7 @@ import (
 	"syscall"
 )
 
-func errortest(filename string) error {
-	filename, err := filepath.Abs(filename)
-	if err != nil {
-		return err
-	}
+func errorTest(filename string) error {
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return err
@@ -69,7 +65,6 @@ func errortest(filename string) error {
 	for line, expectedError := range expectedErrors {
 		return fmt.Errorf("expected error '%s' at line %d not triggered by the compiler", expectedError, line)
 	}
-	fmt.Printf("test passed %s\n", filename)
 	return nil
 }
 
@@ -77,102 +72,35 @@ const debugPrintParesedCode = false
 const debugPrintTypecheckedCode = false
 const debugPrintGeneratedCode = false
 
-func runAllTests() {
-	testpath, _ := filepath.Abs("tests")
-	recursiveTestScanAndRun(testpath)
+func normalTest(filename string) error {
+	binaryAbsFilename, err := compile(filename)
+	if err != nil {
+		return err
+	}
+	return exec.Command(binaryAbsFilename).Run()
 }
 
-// func scanForErrorDecl(absfilename string) {
-// 	if !filepath.IsAbs(absfilename) {
-// 		panic("absfilename must be absolute")
-// 	}
-
-// 	bytes, err := ioutil.ReadFile(absfilename)
-// 	if err != nil {
-// 		fmt.Printf("error: %s\n", err.Error())
-// 		return
-// 	}
-
-// 	source := string(bytes)
-// 	sourceData := (*reflect.StringHeader)(unsafe.Pointer(&source)).Data
-
-// 	offsets := make([]int, 0)
-// 	{
-// 		currentOffset := 0
-// 		sourceTail := source
-// 		for true {
-// 			idx := strings.Index(sourceTail, "# Error: ")
-// 			if idx < 0 {
-// 				break
-// 			}
-// 			sourceTail = sourceTail[idx:]
-
-// 			sourceTailData := (*reflect.StringHeader)(unsafe.Pointer(&sourceTail)).Data
-// 			currentOffset = int(sourceTailData - sourceData)
-// 			offsets = append(offsets, currentOffset)
-// 			println(LineColumnOffset(source, currentOffset))
-
-// 			idxEol := strings.IndexRune(sourceTail, '\n')
-// 			if idxEol < 0 {
-// 				idxEol = len(sourceTail)
-// 			}
-// 			println(sourceTail[:idxEol])
-// 			sourceTail = sourceTail[idxEol:]
-// 		}
-// 	}
-
-// 	fmt.Printf("offsets: %v\n", offsets)
-
-// 	//pak := parsePackage(source, absfilename)
-// 	//validateSourceSet(pak.source, pak)
-// }
-
-func recursiveTestScanAndRun(dir string) {
-	files, err := ioutil.ReadDir(dir)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+func runTestFile(filename string) error {
+	if strings.HasPrefix(filepath.Base(filename), "test_error_") {
+		return errorTest(filename)
+	} else {
+		return normalTest(filename)
 	}
+}
 
+func runTests(testFiles []string) {
 	testFails := 0
 	testPasses := 0
 
-	for _, file := range files {
-		name := file.Name()
-		if file.IsDir() {
-			subDir := path.Join(dir, name)
-			recursiveTestScanAndRun(subDir)
-		} else if strings.HasPrefix(name, "test_") && strings.HasSuffix(name, ".golem") {
-			absName := path.Join(dir, name)
-
-			if strings.HasPrefix(name, "test_error_") {
-				err := errortest(absName)
-				if err != nil {
-					fmt.Println(err)
-					testFails += 1
-				} else {
-					testPasses += 1
-				}
-				continue
-			}
-
-			binaryAbsFilename, err := compile(absName)
-
-			if err != nil {
-				fmt.Printf("test compilation fail: %s", name)
-				println(err)
-				testFails += 1
-				continue
-			}
-			err = exec.Command(binaryAbsFilename).Run()
-			if err != nil {
-				fmt.Printf("test execution fail: %s", name)
-				println(err)
-				testFails += 1
-				continue
-			}
+	for _, testFile := range testFiles {
+		err := runTestFile(testFile)
+		if err != nil {
+			testFails += 1
+			fmt.Printf("test Failed: %s\n", testFile)
+			fmt.Println(err)
+		} else {
 			testPasses += 1
-			fmt.Printf("test passed: %s\n", name)
+			fmt.Printf("test Passed: %s\n", testFile)
 		}
 	}
 
@@ -186,10 +114,6 @@ func recursiveTestScanAndRun(dir string) {
 }
 
 func compile(filename string) (string, error) {
-	if !filepath.IsAbs(filename) {
-		panic("filename must be absolute")
-	}
-
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
 		fmt.Printf("error: %s\n", err.Error())
