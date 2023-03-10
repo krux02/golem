@@ -71,6 +71,8 @@
          (not (nth 3 (syntax-ppss)))))
     res))
 
+(require 'projectile)
+
 ;;;###autoload
 (define-derived-mode golem-mode prog-mode "golem"
   "Major mode for editing golem language code."
@@ -79,8 +81,17 @@
   (setq-local comment-start "#")
   (setq-local comment-start-skip "#+ *")
   (setq-local font-lock-defaults '(golem-highlights))
-  (setq-local compile-command
-              (concat "go build && ./golem build " (file-relative-name buffer-file-name))))
+  (setq-local
+   compile-command
+   (let* ((project-root (projectile-project-root))
+          (project-relative-file-name (file-relative-name  buffer-file-name project-root))
+          (raw-file-name (file-name-nondirectory buffer-file-name))
+          (golem-command (if (string-prefix-p "test_" raw-file-name) "test" "build")))
+     (concat
+      "cd "
+      (file-relative-name  project-root)
+      " && go build && ./golem "
+      golem-command " " project-relative-file-name))))
 
 (provide 'golem-mode)
 ;;; golem-mode.el ends here
