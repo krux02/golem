@@ -15,6 +15,12 @@ proc myfun2(a,b:i64; c: i64): i64 = a * b + a * c
 #proc myfun2(a,b,c: i64): i64 = a * b + a * c
 
 ## an empty function with nothing in it
+## a: first argument
+## b: another argument
+## c: yet another argument
+## d: even more arugment that is very very importanti
+## e: yabadabaduditaaa
+## f:
 proc myfun3(a,b,c,d,e,f: string): void = {
 }
 

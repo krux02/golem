@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -73,11 +74,59 @@ func (varDef *VariableDefStmt) parseAndApplyDocComment(doc string) {
 	fmt.Printf("var def '%s' apply doc: %s", varDef.Name.Source(), doc)
 }
 
-func (procDef *ProcDef) parseAndApplyDocComment(doc string) {
-	if idx := strings.Index(doc, "##"); idx > 0 {
-		doc = doc[idx:]
+var docCommentSectionRegex *regexp.Regexp
+
+func init() {
+	//docCommentSectionRegex = regexp.MustCompile(`\s*\([[:alpha:]][[:alnum:]]\)*\s*:`)
+	docCommentSectionRegex = regexp.MustCompile(`^\s*([_[:alpha:]][_[:alnum:]]*)\s*:(.*)$`)
+	println("init1: ", docCommentSectionRegex.MatchString("  "))
+	println("init2: ", docCommentSectionRegex.MatchString("  abc:"))
+
+	matches := docCommentSectionRegex.FindStringSubmatch("   abc: uiaertuiaen rtuiaenetdr u")
+
+	fmt.Printf("init3: %v\n", matches)
+}
+
+func (procDef *ProcDef) parseAndApplyDocComment(rawMultilineDoc string) {
+	commentScanner := &DocCommentScanner{rawMultilineDoc}
+
+	//var docLines CommentLines
+	currentIdent := &procDef.Name
+	hasDocComment := false
+
+	for commentScanner.HasNext() {
+		hasDocComment = true
+		line := commentScanner.Next()
+
+		if matches := docCommentSectionRegex.FindStringSubmatch(line); len(matches) > 0 {
+			key := matches[1]
+			value := matches[2]
+
+			currentIdent = nil
+			for i := range procDef.Args {
+				if procDef.Args[i].Name.source == key {
+					currentIdent = &procDef.Args[i].Name
+					break
+				}
+			}
+			if currentIdent == nil {
+				panic(fmt.Errorf("invalid doc comment key: %s", key))
+			}
+
+			currentIdent.Comment = append(currentIdent.Comment, value)
+		} else {
+			currentIdent.Comment = append(currentIdent.Comment, line)
+		}
+
 	}
-	fmt.Printf("proc def '%s' apply doc: %s", procDef.Name.Source(), doc)
+	if hasDocComment {
+		fmt.Printf("proc def '%s' -- '%v'\n", procDef.Name.source, procDef.Name.Comment)
+		for _, arg := range procDef.Args {
+			fmt.Printf("   arg '%s' -- '%v'\n", arg.Name.source, arg.Name.Comment)
+		}
+	} else {
+		fmt.Printf("proc def '%s' --- no doc\n", procDef.Name.source)
+	}
 }
 
 func (structDef *StructDef) parseAndApplyDocComment(doc string) {
@@ -441,11 +490,11 @@ func (this *DocCommentScanner) HasNext() bool {
 	return strings.Contains(this.rawsource, "##")
 }
 
-func attachDocComment(expr Expr, target, value string) (result bool) {
+func attachDocComment(expr Expr, target string, value string) (result bool) {
 	switch ex := expr.(type) {
 	case Ident:
 		if ex.source == target {
-			ex.Comment = value
+			ex.Comment = append(ex.Comment, value)
 			fmt.Printf("attaching doc comment to %s\n", ex.source)
 			fmt.Printf("%s\n", value)
 			return true
