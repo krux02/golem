@@ -85,6 +85,7 @@ proc main():i64 = {
   printf("max(f1,f2) = %f\n", max(f1,f2))
   printf("max(i1,i2) = %d\n", max(i1,i2))
 
+  ## exprStr: a string containing an expression to count parenthesis depth
   let exprStr = "(1+(2*3)+((8)/4))+1"
   let depth = maxParenDepth(exprStr)
   printf("max paren depth: %d\n", i32(depth))

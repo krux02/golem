@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-func Unwrap[T any](arg T, err error) T {
+func Must[T any](arg T, err error) T {
 	if err != nil {
 		panic(err)
 	}
@@ -33,11 +33,11 @@ func main() {
 		if len(args) > 0 {
 			tests = args
 		} else {
-			execDir := filepath.Dir(Unwrap(os.Executable()))
+			execDir := filepath.Dir(Must(os.Executable()))
 			pattern := filepath.Join(execDir, "tests/test_*.golem")
-			currentDir := Unwrap(filepath.Abs("."))
-			pattern = Unwrap(filepath.Rel(currentDir, pattern))
-			tests = Unwrap(filepath.Glob(pattern))
+			currentDir := Must(filepath.Abs("."))
+			pattern = Must(filepath.Rel(currentDir, pattern))
+			tests = Must(filepath.Glob(pattern))
 		}
 		fmt.Printf("%+v\n", tests)
 		runTests(tests)

@@ -79,12 +79,6 @@ var docCommentSectionRegex *regexp.Regexp
 func init() {
 	//docCommentSectionRegex = regexp.MustCompile(`\s*\([[:alpha:]][[:alnum:]]\)*\s*:`)
 	docCommentSectionRegex = regexp.MustCompile(`^\s*([_[:alpha:]][_[:alnum:]]*)\s*:(.*)$`)
-	println("init1: ", docCommentSectionRegex.MatchString("  "))
-	println("init2: ", docCommentSectionRegex.MatchString("  abc:"))
-
-	matches := docCommentSectionRegex.FindStringSubmatch("   abc: uiaertuiaen rtuiaenetdr u")
-
-	fmt.Printf("init3: %v\n", matches)
 }
 
 func (procDef *ProcDef) parseAndApplyDocComment(rawMultilineDoc string) {
@@ -419,18 +413,41 @@ func parseArrayLit(tokenizer *Tokenizer) (result ArrayLit) {
 }
 
 func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
+	var rawDocComment string
+	if tokenizer.lookAheadToken.kind == TkPrefixDocComment {
+		rawDocComment = tokenizer.Next().value
+	}
 	switch tokenizer.lookAheadToken.kind {
 	case TkVar, TkLet, TkConst:
-		return (Expr)(parseVariableDefStmt(tokenizer))
+		stmt := parseVariableDefStmt(tokenizer)
+		if rawDocComment != "" {
+			stmt.parseAndApplyDocComment(rawDocComment)
+		}
+		return (Expr)(stmt)
 	case TkReturn:
+		if rawDocComment != "" {
+			panic("~return~ cannot have doc comment")
+		}
 		return (Expr)(parseReturnStmt(tokenizer))
 	case TkBreak:
+		if rawDocComment != "" {
+			panic("~break~ cannot have doc comment")
+		}
 		return (Expr)(parseBreakStmt(tokenizer))
 	case TkContinue:
+		if rawDocComment != "" {
+			panic("~continue~ cannot have doc comment")
+		}
 		return (Expr)(parseContinueStmt(tokenizer))
 	case TkFor:
+		if rawDocComment != "" {
+			panic("~for~ cannot have doc comment")
+		}
 		return (Expr)(parseForLoop(tokenizer))
 	case TkIf:
+		if rawDocComment != "" {
+			panic("~if~ cannot have doc comment")
+		}
 		return (Expr)(parseIfStmt(tokenizer))
 	}
 	result = parseExpr(tokenizer, false)
