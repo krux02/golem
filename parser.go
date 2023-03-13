@@ -66,12 +66,28 @@ func parseReturnStmt(tokenizer *Tokenizer) (result ReturnStmt) {
 	return
 }
 
-func (varDef *VariableDefStmt) parseAndApplyDocComment(doc string) {
-	fmt.Println("parse and apply doc comment not implemented for:")
-	if idx := strings.Index(doc, "##"); idx > 0 {
-		doc = doc[idx:]
+func (varDef *VariableDefStmt) ApplyDocComment(doc DocComment) {
+	varDef.Name.Comment = append(varDef.Name.Comment, doc.BaseDoc...)
+	hasDocComment := len(varDef.Name.Comment) != 0
+
+	for _, it := range doc.NamedDocSections {
+		key := it.Name
+		value := it.Lines
+
+		if varDef.Name.source != key {
+			panic(fmt.Errorf("invalid doc comment key: %s", key))
+		}
+
+		commentRef := &varDef.Name.Comment
+		*commentRef = append(*commentRef, value...)
+		hasDocComment = true
 	}
-	fmt.Printf("var def '%s' apply doc: %s", varDef.Name.Source(), doc)
+
+	if hasDocComment {
+		fmt.Printf("var def '%s' -- '%v'\n", varDef.Name.source, varDef.Name.Comment)
+	} else {
+		fmt.Printf("var def '%s' -- no doc\n", varDef.Name.source)
+	}
 }
 
 var docCommentSectionRegex *regexp.Regexp
@@ -81,7 +97,7 @@ func init() {
 	docCommentSectionRegex = regexp.MustCompile(`^\s*([_[:alpha:]][_[:alnum:]]*)\s*:(.*)$`)
 }
 
-func ParseDocComment(rawMultilineDoc string) (result DocComment) {
+func parseDocComment(rawMultilineDoc string) (result DocComment) {
 	commentScanner := &DocCommentScanner{rawMultilineDoc}
 	for commentScanner.HasNext() {
 		line := commentScanner.Next()
@@ -451,7 +467,7 @@ func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
 	case TkVar, TkLet, TkConst:
 		stmt := parseVariableDefStmt(tokenizer)
 		if rawDocComment != "" {
-			stmt.parseAndApplyDocComment(rawDocComment)
+			stmt.ApplyDocComment(parseDocComment(rawDocComment))
 		}
 		return (Expr)(stmt)
 	case TkReturn:
@@ -775,7 +791,7 @@ func parsePackage(code, filename string) (result PackageDef) {
 		case TkType:
 			typeDef := parseTypeDef(tokenizer)
 			if rawDocComment != "" {
-				typeDef.ApplyDocComment(ParseDocComment(rawDocComment))
+				typeDef.ApplyDocComment(parseDocComment(rawDocComment))
 				rawDocComment = ""
 			}
 			result.TypeDefs = append(result.TypeDefs, typeDef)
@@ -783,7 +799,7 @@ func parsePackage(code, filename string) (result PackageDef) {
 		case TkProc:
 			procDef := parseProcDef(tokenizer)
 			if rawDocComment != "" {
-				procDef.ApplyDocComment(ParseDocComment(rawDocComment))
+				procDef.ApplyDocComment(parseDocComment(rawDocComment))
 				rawDocComment = ""
 			}
 			result.ProcDefs = append(result.ProcDefs, procDef)
@@ -791,7 +807,7 @@ func parsePackage(code, filename string) (result PackageDef) {
 		case TkVar, TkLet, TkConst:
 			varDef := parseVariableDefStmt(tokenizer)
 			if rawDocComment != "" {
-				varDef.parseAndApplyDocComment(rawDocComment)
+				varDef.ApplyDocComment(parseDocComment(rawDocComment))
 				rawDocComment = ""
 			}
 			result.Globals = append(result.Globals, varDef)
