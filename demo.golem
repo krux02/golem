@@ -1,5 +1,8 @@
-# (progn (load (expand-file-name "golem-mode.el")) (golem-mode))
 
+## my test type
+## a: the first part in a 64 bit integer with no meaning
+## b: this part is also a number but floating and as meaningful as `a`
+## c: some nonsense string member
 type MyStruct = struct {
   a: i64
   b: f64
@@ -92,13 +95,12 @@ proc main():i64 = {
   testBooleanOpsWithBlockExpr()
   let myArray: array(7)[i64] = [123, -456, -789, -234, 567, 891, -123]
   let myOtherArray: array(2)[f64] = [12.34, 56.78]
-  var myStruct: MyStruct# = :MyStruct{, a:12, b:34.56, c:"def"}
-  printf("default Values\n")
-  printf("a: %d b: %f c: %s\n", myStruct.a, myStruct.b, myStruct.c)
-  myStruct.a = 12
-  myStruct.b = 34.56
-  myStruct.c = "def"
+  var myStruct: MyStruct = [a=12, b=34.56, c="def"]
   printf("initialized Values\n")
+  printf("a: %d b: %f c: %s\n", myStruct.a, myStruct.b, myStruct.c)
+  myStruct.a = 23
+  myStruct.b = 45.67
+  myStruct.c = "efg"
   foobar(myStruct)
   printf("a: %d b: %f c: %s\n", myStruct.a, myStruct.b, myStruct.c)
 
