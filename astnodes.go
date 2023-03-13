@@ -24,13 +24,23 @@ func (astNode AbstractAstNode) Source() string {
 }
 
 // all lines from a documentation comment
-type CommentLines []string
+type DocLines []string
+
+type NamedDocSection struct {
+	Name  string
+	Lines DocLines
+}
+
+type DocComment struct {
+	BaseDoc          DocLines
+	NamedDocSections []NamedDocSection
+}
 
 // most simple AST node
 type Ident struct {
 	// the abstract source field is the identifier value
 	AbstractAstNode
-	Comment CommentLines
+	Comment DocLines
 }
 
 type TypeExpr struct {

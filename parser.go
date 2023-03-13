@@ -81,38 +81,45 @@ func init() {
 	docCommentSectionRegex = regexp.MustCompile(`^\s*([_[:alpha:]][_[:alnum:]]*)\s*:(.*)$`)
 }
 
-func (procDef *ProcDef) parseAndApplyDocComment(rawMultilineDoc string) {
+func ParseDocComment(rawMultilineDoc string) (result DocComment) {
 	commentScanner := &DocCommentScanner{rawMultilineDoc}
-
-	//var docLines CommentLines
-	currentIdent := &procDef.Name
-	hasDocComment := false
-
 	for commentScanner.HasNext() {
-		hasDocComment = true
 		line := commentScanner.Next()
 
 		if matches := docCommentSectionRegex.FindStringSubmatch(line); len(matches) > 0 {
-			key := matches[1]
-			value := matches[2]
-
-			currentIdent = nil
-			for i := range procDef.Args {
-				if procDef.Args[i].Name.source == key {
-					currentIdent = &procDef.Args[i].Name
-					break
-				}
-			}
-			if currentIdent == nil {
-				panic(fmt.Errorf("invalid doc comment key: %s", key))
-			}
-
-			currentIdent.Comment = append(currentIdent.Comment, value)
+			section := NamedDocSection{Name: matches[1], Lines: DocLines{matches[2]}}
+			result.NamedDocSections = append(result.NamedDocSections, section)
+		} else if len(result.NamedDocSections) == 0 {
+			result.BaseDoc = append(result.BaseDoc, line)
 		} else {
-			currentIdent.Comment = append(currentIdent.Comment, line)
+			idx := len(result.NamedDocSections) - 1
+			result.NamedDocSections[idx].Lines = append(result.NamedDocSections[idx].Lines, line)
 		}
 
 	}
+	return result
+}
+
+func (procDef *ProcDef) ApplyDocComment(doc DocComment) {
+	procDef.Name.Comment = append(procDef.Name.Comment, doc.BaseDoc...)
+	hasDocComment := len(procDef.Name.Comment) != 0
+
+DOCSECTIONS:
+	for _, it := range doc.NamedDocSections {
+		key := it.Name
+		value := it.Lines
+
+		for i := range procDef.Args {
+			if procDef.Args[i].Name.source == key {
+				commentRef := &procDef.Args[i].Name.Comment
+				*commentRef = append(*commentRef, value...)
+				hasDocComment = true
+				continue DOCSECTIONS
+			}
+		}
+		panic(fmt.Errorf("invalid doc comment key: %s", key))
+	}
+
 	if hasDocComment {
 		fmt.Printf("proc def '%s' -- '%v'\n", procDef.Name.source, procDef.Name.Comment)
 		for _, arg := range procDef.Args {
@@ -123,11 +130,34 @@ func (procDef *ProcDef) parseAndApplyDocComment(rawMultilineDoc string) {
 	}
 }
 
-func (structDef *StructDef) parseAndApplyDocComment(doc string) {
-	if idx := strings.Index(doc, "##"); idx > 0 {
-		doc = doc[idx:]
+func (structDef *StructDef) ApplyDocComment(doc DocComment) {
+	structDef.Name.Comment = append(structDef.Name.Comment, doc.BaseDoc...)
+	hasDocComment := len(structDef.Name.Comment) != 0
+
+DOCSECTIONS:
+	for _, it := range doc.NamedDocSections {
+		key := it.Name
+		value := it.Lines
+
+		for i := range structDef.Fields {
+			if structDef.Fields[i].Name.source == key {
+				commentRef := &structDef.Fields[i].Name.Comment
+				*commentRef = append(*commentRef, value...)
+				hasDocComment = true
+				continue DOCSECTIONS
+			}
+		}
+		panic(fmt.Errorf("invalid doc comment key: %s", key))
 	}
-	fmt.Printf("struct def '%s' apply doc: %s", structDef.Name.Source(), doc)
+
+	if hasDocComment {
+		fmt.Printf("proc def '%s' -- '%v'\n", structDef.Name.source, structDef.Name.Comment)
+		for _, field := range structDef.Fields {
+			fmt.Printf("   arg '%s' -- '%v'\n", field.Name.source, field.Name.Comment)
+		}
+	} else {
+		fmt.Printf("proc def '%s' --- no doc\n", structDef.Name.source)
+	}
 }
 
 /* (name string, typ TypeExpr, expr Expr) */
@@ -745,7 +775,7 @@ func parsePackage(code, filename string) (result PackageDef) {
 		case TkType:
 			typeDef := parseTypeDef(tokenizer)
 			if rawDocComment != "" {
-				typeDef.parseAndApplyDocComment(rawDocComment)
+				typeDef.ApplyDocComment(ParseDocComment(rawDocComment))
 				rawDocComment = ""
 			}
 			result.TypeDefs = append(result.TypeDefs, typeDef)
@@ -753,7 +783,7 @@ func parsePackage(code, filename string) (result PackageDef) {
 		case TkProc:
 			procDef := parseProcDef(tokenizer)
 			if rawDocComment != "" {
-				procDef.parseAndApplyDocComment(rawDocComment)
+				procDef.ApplyDocComment(ParseDocComment(rawDocComment))
 				rawDocComment = ""
 			}
 			result.ProcDefs = append(result.ProcDefs, procDef)
