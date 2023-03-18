@@ -66,27 +66,19 @@ func parseReturnStmt(tokenizer *Tokenizer) (result ReturnStmt) {
 	return
 }
 
-func (varDef *VariableDefStmt) ApplyDocComment(doc DocComment) {
+func (varDef *VariableDefStmt) ApplyDocComment(tc *TypeChecker, doc DocComment) {
 	varDef.Name.Comment = append(varDef.Name.Comment, doc.BaseDoc...)
-	hasDocComment := len(varDef.Name.Comment) != 0
-
 	for _, it := range doc.NamedDocSections {
 		key := it.Name
 		value := it.Lines
 
 		if varDef.Name.source != key {
-			panic(fmt.Errorf("invalid doc comment key: %s", key))
+			tc.ReportInvalidDocCommentKey(it)
+			continue
 		}
 
 		commentRef := &varDef.Name.Comment
 		*commentRef = append(*commentRef, value...)
-		hasDocComment = true
-	}
-
-	if hasDocComment {
-		fmt.Printf("var def '%s' -- '%v'\n", varDef.Name.source, varDef.Name.Comment)
-	} else {
-		fmt.Printf("var def '%s' -- no doc\n", varDef.Name.source)
 	}
 }
 
@@ -97,28 +89,8 @@ func init() {
 	docCommentSectionRegex = regexp.MustCompile(`^\s*([_[:alpha:]][_[:alnum:]]*)\s*:(.*)$`)
 }
 
-func parseDocComment(rawMultilineDoc Token) (result DocComment) {
-	commentScanner := &DocCommentScanner{rawMultilineDoc.value}
-	for commentScanner.HasNext() {
-		line := commentScanner.Next()
-
-		if matches := docCommentSectionRegex.FindStringSubmatch(line); len(matches) > 0 {
-			section := NamedDocSection{Name: matches[1], Lines: DocLines{matches[2]}}
-			result.NamedDocSections = append(result.NamedDocSections, section)
-		} else if len(result.NamedDocSections) == 0 {
-			result.BaseDoc = append(result.BaseDoc, line)
-		} else {
-			idx := len(result.NamedDocSections) - 1
-			result.NamedDocSections[idx].Lines = append(result.NamedDocSections[idx].Lines, line)
-		}
-
-	}
-	return result
-}
-
-func (procDef *ProcDef) ApplyDocComment(doc DocComment) {
+func (procDef *ProcDef) ApplyDocComment(tc *TypeChecker, doc DocComment) {
 	procDef.Name.Comment = append(procDef.Name.Comment, doc.BaseDoc...)
-	hasDocComment := len(procDef.Name.Comment) != 0
 
 DOCSECTIONS:
 	for _, it := range doc.NamedDocSections {
@@ -129,24 +101,14 @@ DOCSECTIONS:
 			if procDef.Args[i].Name.source == key {
 				commentRef := &procDef.Args[i].Name.Comment
 				*commentRef = append(*commentRef, value...)
-				hasDocComment = true
 				continue DOCSECTIONS
 			}
 		}
-		panic(fmt.Errorf("invalid doc comment key: %s", key))
-	}
-
-	if hasDocComment {
-		fmt.Printf("proc def '%s' -- '%v'\n", procDef.Name.source, procDef.Name.Comment)
-		for _, arg := range procDef.Args {
-			fmt.Printf("   arg '%s' -- '%v'\n", arg.Name.source, arg.Name.Comment)
-		}
-	} else {
-		fmt.Printf("proc def '%s' --- no doc\n", procDef.Name.source)
+		tc.ReportInvalidDocCommentKey(it)
 	}
 }
 
-func (structDef *StructDef) ApplyDocComment(doc DocComment) {
+func (structDef *StructDef) ApplyDocComment(tc *TypeChecker, doc DocComment) {
 	structDef.Name.Comment = append(structDef.Name.Comment, doc.BaseDoc...)
 	hasDocComment := len(structDef.Name.Comment) != 0
 
@@ -163,7 +125,7 @@ DOCSECTIONS:
 				continue DOCSECTIONS
 			}
 		}
-		panic(fmt.Errorf("invalid doc comment key: %s", key))
+		tc.ReportInvalidDocCommentKey(it)
 	}
 
 	if hasDocComment {
@@ -175,6 +137,14 @@ DOCSECTIONS:
 		fmt.Printf("proc def '%s' --- no doc\n", structDef.Name.source)
 	}
 }
+
+func (_ FloatLit) ApplyDocComment(tc *TypeChecker, doc DocComment)   { tc.ReportIllegalDocComment(doc) }
+func (_ CharLit) ApplyDocComment(tc *TypeChecker, doc DocComment)    { tc.ReportIllegalDocComment(doc) }
+func (_ IntLit) ApplyDocComment(tc *TypeChecker, doc DocComment)     { tc.ReportIllegalDocComment(doc) }
+func (_ IfExpr) ApplyDocComment(tc *TypeChecker, doc DocComment)     { tc.ReportIllegalDocComment(doc) }
+func (_ IfElseExpr) ApplyDocComment(tc *TypeChecker, doc DocComment) { tc.ReportIllegalDocComment(doc) }
+func (_ Ident) ApplyDocComment(tc *TypeChecker, doc DocComment)      { tc.ReportIllegalDocComment(doc) }
+func (_ Call) ApplyDocComment(tc *TypeChecker, doc DocComment)       { tc.ReportIllegalDocComment(doc) }
 
 /* (name string, typ TypeExpr, expr Expr) */
 
@@ -188,7 +158,7 @@ func parseVariableDefStmt(tokenizer *Tokenizer) (result VariableDefStmt) {
 	case TkConst:
 		result.Kind = SkConst
 	default:
-		tokenizer.formatWrongIdent(firstToken)
+		panic(tokenizer.formatWrongKind(firstToken))
 	}
 
 	result.Name = parseIdent(tokenizer)
@@ -245,13 +215,13 @@ func parseIfStmt(tokenizer *Tokenizer) Expr {
 		tokenizer.Next()
 		elseExpr := parseExpr(tokenizer, false)
 
-		result := IfElseStmt{Condition: condition, Body: body, Else: elseExpr}
+		result := IfElseExpr{Condition: condition, Body: body, Else: elseExpr}
 		lastToken := tokenizer.token
 		result.source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
 		return result
 		// return IfElseStmt{Condition: condition, Body: body, Else: elseExpr}
 	}
-	result := IfStmt{Condition: condition, Body: body}
+	result := IfExpr{Condition: condition, Body: body}
 	lastToken := tokenizer.token
 	result.source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
 	return result
@@ -459,44 +429,25 @@ func parseArrayLit(tokenizer *Tokenizer) (result ArrayLit) {
 }
 
 func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
-	var rawDocComment Token
-	if tokenizer.lookAheadToken.kind == TkPrefixDocComment {
-		rawDocComment = tokenizer.Next()
-	}
 	switch tokenizer.lookAheadToken.kind {
+	case TkPrefixDocComment:
+		result = (Expr)(parseDocComment(tokenizer))
 	case TkVar, TkLet, TkConst:
-		stmt := parseVariableDefStmt(tokenizer)
-		if rawDocComment.kind == TkPrefixDocComment {
-			stmt.ApplyDocComment(parseDocComment(rawDocComment))
-		}
-		return (Expr)(stmt)
+		result = (Expr)(parseVariableDefStmt(tokenizer))
 	case TkReturn:
-		if rawDocComment.kind == TkPrefixDocComment {
-			panic(tokenizer.Errorf(rawDocComment, "~return~ cannot have doc comment"))
-		}
-		return (Expr)(parseReturnStmt(tokenizer))
+		result = (Expr)(parseReturnStmt(tokenizer))
 	case TkBreak:
-		if rawDocComment.kind == TkPrefixDocComment {
-			panic(tokenizer.Errorf(rawDocComment, "~break~ cannot have doc comment"))
-		}
-		return (Expr)(parseBreakStmt(tokenizer))
+		result = (Expr)(parseBreakStmt(tokenizer))
 	case TkContinue:
-		if rawDocComment.kind == TkPrefixDocComment {
-			panic(tokenizer.Errorf(rawDocComment, "~continue~ cannot have doc comment"))
-		}
-		return (Expr)(parseContinueStmt(tokenizer))
+		result = (Expr)(parseContinueStmt(tokenizer))
 	case TkFor:
-		if rawDocComment.kind == TkPrefixDocComment {
-			panic(tokenizer.Errorf(rawDocComment, "~for~ cannot have doc comment"))
-		}
-		return (Expr)(parseForLoop(tokenizer))
+		result = (Expr)(parseForLoop(tokenizer))
 	case TkIf:
-		if rawDocComment.kind == TkPrefixDocComment {
-			panic(tokenizer.Errorf(rawDocComment, "~if~ cannot have doc comment"))
-		}
-		return (Expr)(parseIfStmt(tokenizer))
+		result = (Expr)(parseIfStmt(tokenizer))
+	default:
+
+		result = parseExpr(tokenizer, false)
 	}
-	result = parseExpr(tokenizer, false)
 	return result
 }
 
@@ -553,6 +504,44 @@ func (this *DocCommentScanner) HasNext() bool {
 	return strings.Contains(this.rawsource, "##")
 }
 
+func parseDocComment(tokenizer *Tokenizer) (result DocComment) {
+	token := tokenizer.Next()
+	if token.kind != TkPrefixDocComment {
+		panic(tokenizer.formatWrongKind(token))
+	}
+	result.source = token.value
+	commentScanner := &DocCommentScanner{token.value}
+	for commentScanner.HasNext() {
+		line := commentScanner.Next()
+		if line != "" {
+			if matches := docCommentSectionRegex.FindStringSubmatch(line); len(matches) > 0 {
+				name := matches[1]
+				value := matches[2]
+				section := NamedDocSection{Name: name}
+				if value != "" {
+					section.Lines = append(section.Lines, value)
+				}
+				result.NamedDocSections = append(result.NamedDocSections, section)
+			} else if len(result.NamedDocSections) == 0 {
+				result.BaseDoc = append(result.BaseDoc, line)
+			} else {
+				idx := len(result.NamedDocSections) - 1
+				result.NamedDocSections[idx].Lines = append(result.NamedDocSections[idx].Lines, line)
+			}
+		}
+	}
+	for i := range result.NamedDocSections {
+		section := &result.NamedDocSections[i]
+		lastIdx := len(section.Lines) - 1
+		if lastIdx >= 0 {
+			section.source = joinSubstr(result.source, section.Name, section.Lines[lastIdx])
+		} else {
+			section.source = section.Name
+		}
+	}
+	return result
+}
+
 func attachDocComment(expr Expr, target string, value string) (result bool) {
 	switch ex := expr.(type) {
 	case Ident:
@@ -591,9 +580,9 @@ func attachDocComment(expr Expr, target string, value string) (result bool) {
 		result = attachDocComment(ex.Name, target, value)
 	case ForLoopStmt:
 		return false
-	case IfStmt:
+	case IfExpr:
 		return false
-	case IfElseStmt:
+	case IfElseExpr:
 		return false
 	case ReturnStmt:
 		return false
@@ -772,14 +761,6 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 func parsePackage(code, filename string) (result PackageDef) {
 	result.Name = path.Base(filename)
 	result.source = code
-
-	// raw doc comments are literal source code ranges that contain doc comments.
-	// They are completely unparsed, can span multiple lines and unlike normal
-	// comments, must always be attached to something.
-	//var rawDocComment Token
-	var hasDocComment bool = false
-	var docComment DocComment
-
 	var tokenizer = NewTokenizer(code, filename)
 	for true {
 		switch tokenizer.lookAheadToken.kind {
@@ -792,31 +773,19 @@ func parsePackage(code, filename string) (result PackageDef) {
 			return
 		case TkType:
 			typeDef := parseTypeDef(tokenizer)
-			if hasDocComment {
-				typeDef.ApplyDocComment(docComment)
-				hasDocComment = false
-			}
-			result.TypeDefs = append(result.TypeDefs, typeDef)
+			result.TopLevelStmts = append(result.TopLevelStmts, typeDef)
 			continue
 		case TkProc:
 			procDef := parseProcDef(tokenizer)
-			if hasDocComment {
-				procDef.ApplyDocComment(docComment)
-				hasDocComment = false
-			}
-			result.ProcDefs = append(result.ProcDefs, procDef)
+			result.TopLevelStmts = append(result.TopLevelStmts, procDef)
 			continue
 		case TkVar, TkLet, TkConst:
 			varDef := parseVariableDefStmt(tokenizer)
-			if hasDocComment {
-				varDef.ApplyDocComment(docComment)
-				hasDocComment = false
-			}
-			result.Globals = append(result.Globals, varDef)
+			result.TopLevelStmts = append(result.TopLevelStmts, varDef)
 			continue
 		case TkPrefixDocComment:
-			docComment = parseDocComment(tokenizer.Next())
-			hasDocComment = true
+			docComment := parseDocComment(tokenizer)
+			result.TopLevelStmts = append(result.TopLevelStmts, docComment)
 			continue
 		}
 		panic(tokenizer.formatWrongKind(tokenizer.lookAheadToken))

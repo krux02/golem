@@ -53,7 +53,7 @@ func (scope Scope) NewSymbol(tc *TypeChecker, name Ident, kind SymbolKind, typ T
 	result := TcSymbol{AbstractAstNode: AbstractAstNode{source: name.source}, Kind: kind, Typ: typ}
 	_, alreadyExists := scope.Variables[rawName]
 	if alreadyExists {
-		tc.Errorf(name, "redefinition of %s", rawName)
+		tc.ReportErrorf(name, "redefinition of %s", rawName)
 	}
 	scope.Variables[name.source] = result
 	return result
@@ -79,7 +79,7 @@ func (tc *TypeChecker) LookUpType(scope Scope, expr TypeExpr) Type {
 	if scope.Parent != nil {
 		return tc.LookUpType(scope.Parent, expr)
 	}
-	tc.Errorf(expr, "Type not found: %s", name)
+	tc.ReportErrorf(expr, "Type not found: %s", name)
 	return TypeError
 }
 
@@ -154,7 +154,7 @@ func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result 
 	return
 }
 
-func (tc *TypeChecker) Errorf(node AstNode, msg string, args ...interface{}) {
+func (tc *TypeChecker) ReportErrorf(node AstNode, msg string, args ...interface{}) {
 	newMsg := fmt.Sprintf(msg, args...)
 	tc.errors = append(tc.errors, CompileError{node: node, msg: newMsg})
 	if !tc.silentErrors {
@@ -165,6 +165,14 @@ func (tc *TypeChecker) Errorf(node AstNode, msg string, args ...interface{}) {
 			fmt.Printf("%s(%d, %d-%d) Error: %s\n", tc.filename, line, columnStart, columnEnd, newMsg)
 		}
 	}
+}
+
+func (tc *TypeChecker) ReportInvalidDocCommentKey(section NamedDocSection) {
+	tc.ReportErrorf(section, "invalid doc comment key: %s", section.Name)
+}
+
+func (tc *TypeChecker) ReportIllegalDocComment(doc DocComment) {
+	tc.ReportErrorf(doc, "doc comment is illegal here, use normal comment instead")
 }
 
 func (tc *TypeChecker) ExpectType(node AstNode, gotten, expected Type) Type {
@@ -179,22 +187,22 @@ func (tc *TypeChecker) ExpectType(node AstNode, gotten, expected Type) Type {
 
 	if expected == TypeUnspecified {
 		if gotten == TypeUnspecified {
-			tc.Errorf(node, "expression type is unspecified")
+			tc.ReportErrorf(node, "expression type is unspecified")
 			return TypeError
 		}
 		if gottenTg, ok := gotten.(*TypeGroup); ok {
-			tc.Errorf(node, "narrowing of type '%s' is required", AstFormat(gottenTg))
+			tc.ReportErrorf(node, "narrowing of type '%s' is required", AstFormat(gottenTg))
 			return TypeError
 		}
 		return gotten
 	}
 	if expectedTg, ok := expected.(*TypeGroup); ok {
 		if gotten == TypeUnspecified {
-			tc.Errorf(node, "narrowing of type '%s' is required", AstFormat(expectedTg))
+			tc.ReportErrorf(node, "narrowing of type '%s' is required", AstFormat(expectedTg))
 			return TypeError
 		}
 		if gottenTg, ok := gotten.(*TypeGroup); ok {
-			tc.Errorf(node, "internal error: narrowing of type group '%s' and '%s' is not implemented yet", AstFormat(gottenTg), AstFormat(expectedTg))
+			tc.ReportErrorf(node, "internal error: narrowing of type group '%s' and '%s' is not implemented yet", AstFormat(gottenTg), AstFormat(expectedTg))
 			return TypeError
 		}
 		for _, it := range expectedTg.items {
@@ -202,7 +210,7 @@ func (tc *TypeChecker) ExpectType(node AstNode, gotten, expected Type) Type {
 				return gotten
 			}
 		}
-		tc.Errorf(node, "expected type '%s' but got type '%s'", AstFormat(expected), AstFormat(gotten))
+		tc.ReportErrorf(node, "expected type '%s' but got type '%s'", AstFormat(expected), AstFormat(gotten))
 		return TypeError
 	}
 
@@ -221,14 +229,14 @@ func (tc *TypeChecker) ExpectType(node AstNode, gotten, expected Type) Type {
 		return expected
 	}
 
-	tc.Errorf(node, "expected type '%s' but got type '%s'",
+	tc.ReportErrorf(node, "expected type '%s' but got type '%s'",
 		AstFormat(expected), AstFormat(gotten))
 	return TypeError
 }
 
 func (tc *TypeChecker) ExpectArgsLen(node AstNode, gotten, expected int) bool {
 	if expected != gotten {
-		tc.Errorf(node, "expected %d arguments, but got %d", expected, gotten)
+		tc.ReportErrorf(node, "expected %d arguments, but got %d", expected, gotten)
 		return false
 	}
 	return true
@@ -236,7 +244,7 @@ func (tc *TypeChecker) ExpectArgsLen(node AstNode, gotten, expected int) bool {
 
 func (tc *TypeChecker) ExpectMinArgsLen(node AstNode, gotten, expected int) bool {
 	if gotten < expected {
-		tc.Errorf(node, "Expected at least %d arguments, but got %d.", expected, gotten)
+		tc.ReportErrorf(node, "Expected at least %d arguments, but got %d.", expected, gotten)
 		return false
 	}
 	return true
@@ -268,7 +276,7 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 		}
 		j++
 		if j == len(formatStr) {
-			tc.Errorf(formatExpr, "incomplete format expr at end of format string")
+			tc.ReportErrorf(formatExpr, "incomplete format expr at end of format string")
 			break
 		}
 		c2 := formatStr[j]
@@ -284,11 +292,11 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 		case 'f':
 			argType = TypeAnyFloat
 		default:
-			tc.Errorf(formatExpr, "invalid format expr %%%c in %s", c2, AstFormat(formatExpr))
+			tc.ReportErrorf(formatExpr, "invalid format expr %%%c in %s", c2, AstFormat(formatExpr))
 			argType = TypeError
 		}
 		if i == len(args) {
-			tc.Errorf(formatExpr, "not enough arguments for %s", AstFormat(formatExpr))
+			tc.ReportErrorf(formatExpr, "not enough arguments for %s", AstFormat(formatExpr))
 			break
 		}
 		tcArg := tc.TypeCheckExpr(scope, args[i], argType)
@@ -327,7 +335,7 @@ func (tc *TypeChecker) TypeCheckDotExpr(scope Scope, lhs, rhs Expr, expected Typ
 	case *TcStructDef:
 		tcRhs, idx := t.GetField(rhs.Source())
 		if idx < 0 {
-			tc.Errorf(rhs, "type %s has no field %s", t.Name, rhs.Source())
+			tc.ReportErrorf(rhs, "type %s has no field %s", t.Name, rhs.Source())
 		}
 		tc.ExpectType(rhs, tcRhs.Type, expected)
 		return TcDotExpr{Lhs: tcLhs, Rhs: tcRhs}
@@ -354,7 +362,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 	var result TcCall
 	switch len(procSyms) {
 	case 0:
-		tc.Errorf(ident, "proc not found: %s", ident.source)
+		tc.ReportErrorf(ident, "proc not found: %s", ident.source)
 		result.Sym = errorProcSym(ident)
 		var tcArgs []TcExpr
 		for _, arg := range call.Args {
@@ -419,13 +427,13 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 				arg.Type().prettyPrint(builder)
 			}
 			builder.WriteRune(')')
-			tc.Errorf(ident, "%s", builder.String())
+			tc.ReportErrorf(ident, "%s", builder.String())
 			result.Sym = errorProcSym(ident)
 			result.Args = checkedArgs
 			return result
 		}
 		if len(procSyms) > 1 {
-			tc.Errorf(ident, "too many overloads: %s", ident.source)
+			tc.ReportErrorf(ident, "too many overloads: %s", ident.source)
 			result.Sym = errorProcSym(ident)
 			result.Args = checkedArgs
 			return result
@@ -442,14 +450,28 @@ func (tc *TypeChecker) TypeCheckCodeBlock(scope Scope, arg CodeBlock, expected T
 	scope = scope.NewSubScope()
 	N := len(arg.Items)
 	if N > 0 {
-		result.Items = make([]TcExpr, N)
+		resultItems := make([]TcExpr, 0, N)
+		//var docComment DocComment
+		var applyDocComment bool = false
 		for i, item := range arg.Items {
-			if i == N-1 {
-				result.Items[i] = tc.TypeCheckExpr(scope, item, expected)
+			if _, ok := item.(DocComment); ok {
+				//docComment = comment
+				applyDocComment = true
+				continue
 			} else {
-				result.Items[i] = tc.TypeCheckExpr(scope, item, TypeVoid)
+				if applyDocComment {
+					// TODO item.ApplyDocComment(tc, docComment)
+					applyDocComment = false
+					continue
+				}
+				if i == N-1 {
+					resultItems = append(resultItems, tc.TypeCheckExpr(scope, item, expected))
+				} else {
+					resultItems = append(resultItems, tc.TypeCheckExpr(scope, item, TypeVoid))
+				}
 			}
 		}
+		result.Items = resultItems
 	} else {
 		// empty block is type void
 		tc.ExpectType(arg, TypeVoid, expected)
@@ -618,12 +640,12 @@ func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExp
 			if typ == TypeFloat32 {
 				lit.typ = TypeFloat32
 				if int64(float32(lit.Value)) != arg.Value {
-					tc.Errorf(arg, "can't represent %d as float32 precisely", arg.Value)
+					tc.ReportErrorf(arg, "can't represent %d as float32 precisely", arg.Value)
 				}
 			} else if typ == TypeFloat64 {
 				lit.typ = TypeFloat64
 				if int64(lit.Value) != arg.Value {
-					tc.Errorf(arg, "can't represent %d as float64 precisely", arg.Value)
+					tc.ReportErrorf(arg, "can't represent %d as float64 precisely", arg.Value)
 				}
 			}
 			return lit
@@ -644,10 +666,10 @@ func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExp
 	case ForLoopStmt:
 		tc.ExpectType(arg, TypeVoid, expected)
 		return (TcExpr)(tc.TypeCheckForLoopStmt(scope, arg))
-	case IfStmt:
+	case IfExpr:
 		tc.ExpectType(arg, TypeVoid, expected)
 		return (TcExpr)(tc.TypeCheckIfStmt(scope, arg))
-	case IfElseStmt:
+	case IfElseExpr:
 		return (TcExpr)(tc.TypeCheckIfElseStmt(scope, arg, expected))
 	case ArrayLit:
 		return (TcExpr)(tc.TypeCheckArrayLit(scope, arg, expected))
@@ -716,11 +738,11 @@ func (tc *TypeChecker) TypeCheckArrayLit(scope Scope, arg ArrayLit, expected Typ
 				lhsIdent := lhs.(Ident)
 				field, idx := exp.GetField(lhsIdent.source)
 				if idx < 0 {
-					tc.Errorf(lhsIdent, "type %s has no field %s", exp.Name, lhsIdent.source)
+					tc.ReportErrorf(lhsIdent, "type %s has no field %s", exp.Name, lhsIdent.source)
 				} else {
 					result.Items[idx] = tc.TypeCheckExpr(scope, rhs, field.Type)
 					if idx < lastIdx {
-						tc.Errorf(lhsIdent, "out of order initialization is not allowed (yet?)")
+						tc.ReportErrorf(lhsIdent, "out of order initialization is not allowed (yet?)")
 					}
 				}
 				lastIdx = idx
@@ -735,7 +757,7 @@ func (tc *TypeChecker) TypeCheckArrayLit(scope Scope, arg ArrayLit, expected Typ
 		} else {
 			// must have all fields of struct
 			if len(arg.Items) != len(exp.Fields) {
-				tc.Errorf(arg, "literal has %d values, but %s needs %d values", len(arg.Items), exp.Name, len(exp.Fields))
+				tc.ReportErrorf(arg, "literal has %d values, but %s needs %d values", len(arg.Items), exp.Name, len(exp.Fields))
 			}
 			for i := range result.Items {
 				result.Items[i] = tc.TypeCheckExpr(scope, arg.Items[i], exp.Fields[i].Type)
@@ -747,14 +769,14 @@ func (tc *TypeChecker) TypeCheckArrayLit(scope Scope, arg ArrayLit, expected Typ
 	}
 }
 
-func (tc *TypeChecker) TypeCheckIfStmt(scope Scope, stmt IfStmt) (result TcIfStmt) {
+func (tc *TypeChecker) TypeCheckIfStmt(scope Scope, stmt IfExpr) (result TcIfStmt) {
 	// currently only iteration on strings in possible (of course that is not final)
 	result.Condition = tc.TypeCheckExpr(scope, stmt.Condition, TypeBoolean)
 	result.Body = tc.TypeCheckExpr(scope, stmt.Body, TypeVoid)
 	return
 }
 
-func (tc *TypeChecker) TypeCheckIfElseStmt(scope Scope, stmt IfElseStmt, expected Type) (result TcIfElseStmt) {
+func (tc *TypeChecker) TypeCheckIfElseStmt(scope Scope, stmt IfElseExpr, expected Type) (result TcIfElseStmt) {
 	// currently only iteration on strings in possible (of course that is not final)
 	result.Condition = tc.TypeCheckExpr(scope, stmt.Condition, TypeBoolean)
 	result.Body = tc.TypeCheckExpr(scope, stmt.Body, expected)
@@ -772,7 +794,7 @@ func (tc *TypeChecker) ElementType(expr TcExpr) Type {
 			return TypeChar
 		}
 	}
-	tc.Errorf(expr, "expect type with elements to iterate over")
+	tc.ReportErrorf(expr, "expect type with elements to iterate over")
 	return TypeError
 }
 
@@ -789,14 +811,38 @@ func (tc *TypeChecker) TypeCheckForLoopStmt(scope Scope, loopArg ForLoopStmt) (r
 func (tc *TypeChecker) TypeCheckPackage(arg PackageDef) (result TcPackageDef) {
 	scope := builtinScope.NewSubScope()
 	result.Name = arg.Name
-	for _, typeDef := range arg.TypeDefs {
-		result.TypeDefs = append(result.TypeDefs, tc.TypeCheckStructDef(scope, typeDef))
-	}
-	for _, procDef := range arg.ProcDefs {
-		procDef := tc.TypeCheckProcDef(scope, procDef)
-		result.ProcDefs = append(result.ProcDefs, procDef)
-		if procDef.Name == "main" {
-			result.Main = procDef
+
+	hasDocComment := false
+	var docComment DocComment
+
+	for _, stmt := range arg.TopLevelStmts {
+		switch stmt := stmt.(type) {
+		case StructDef:
+			if hasDocComment {
+				stmt.ApplyDocComment(tc, docComment)
+				hasDocComment = false
+			}
+			result.TypeDefs = append(result.TypeDefs, tc.TypeCheckStructDef(scope, stmt))
+		case ProcDef:
+			if hasDocComment {
+				stmt.ApplyDocComment(tc, docComment)
+				hasDocComment = false
+			}
+			procDef := tc.TypeCheckProcDef(scope, stmt)
+			result.ProcDefs = append(result.ProcDefs, procDef)
+			if procDef.Name == "main" {
+				result.Main = procDef
+			}
+		case VariableDefStmt:
+			if hasDocComment {
+				stmt.ApplyDocComment(tc, docComment)
+				hasDocComment = false
+			}
+			varDef := tc.TypeCheckVariableDefStmt(scope, stmt)
+			result.VarDefs = append(result.VarDefs, varDef)
+		case DocComment:
+			docComment = stmt
+			hasDocComment = true
 		}
 	}
 	return

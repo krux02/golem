@@ -18,6 +18,7 @@ func joinSubstr(parent, str1, str2 string) (result string) {
 	}
 
 	if header2.Data <= header1.Data {
+		fmt.Printf("context: %#v\n", parent)
 		panic(fmt.Sprintf("illegal argument order of %#v and %#v", str1, str2))
 	}
 

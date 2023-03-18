@@ -331,7 +331,7 @@ func (loopStmt TcForLoopStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteAstNode(loopStmt.Body)
 }
 
-func (ifStmt IfStmt) prettyPrint(builder *AstPrettyPrinter) {
+func (ifStmt IfExpr) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("if ")
 	builder.WriteAstNode(ifStmt.Condition)
 	builder.WriteString(" do ")
@@ -345,7 +345,7 @@ func (ifStmt TcIfStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteAstNode(ifStmt.Body)
 }
 
-func (ifStmt IfElseStmt) prettyPrint(builder *AstPrettyPrinter) {
+func (ifStmt IfElseExpr) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("if ")
 	builder.WriteAstNode(ifStmt.Condition)
 	builder.WriteString(" do ")
@@ -366,17 +366,9 @@ func (ifStmt TcIfElseStmt) prettyPrint(builder *AstPrettyPrinter) {
 func (pak PackageDef) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("# file: ")
 	builder.WriteString(pak.Name)
-	for _, typ := range pak.TypeDefs {
+	for _, stmt := range pak.TopLevelStmts {
 		builder.NewlineAndIndent()
-		builder.WriteAstNode(typ)
-	}
-	for _, value := range pak.Globals {
-		builder.NewlineAndIndent()
-		builder.WriteAstNode(value)
-	}
-	for _, proc := range pak.ProcDefs {
-		builder.NewlineAndIndent()
-		builder.WriteAstNode(proc)
+		builder.WriteAstNode(stmt)
 	}
 }
 
@@ -529,4 +521,29 @@ func (pak TcPackageDef) prettyPrint(builder *AstPrettyPrinter) {
 		builder.NewlineAndIndent()
 		builder.WriteAstNode(proc)
 	}
+}
+
+func (section NamedDocSection) prettyPrint(builder *AstPrettyPrinter) {
+	builder.NewlineAndIndent()
+	builder.WriteString("## ")
+	builder.WriteString(section.Name)
+	builder.WriteString(":")
+	for _, line := range section.Lines {
+		builder.NewlineAndIndent()
+		builder.WriteString("##   ")
+		builder.WriteString(line)
+	}
+}
+
+func (doc DocComment) prettyPrint(builder *AstPrettyPrinter) {
+	for _, line := range doc.BaseDoc {
+		builder.NewlineAndIndent()
+		builder.WriteString("## ")
+		builder.WriteString(line)
+	}
+	for _, section := range doc.NamedDocSections {
+		section.prettyPrint(builder)
+	}
+	// ensure that the following expression won't be commentified
+	builder.NewlineAndIndent()
 }

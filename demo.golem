@@ -79,6 +79,7 @@ proc main():i64 = {
   printf("Hallo Welt!\n")
   printf("x: %d y: %d\n", x, y)
 
+  ## uiatruiaeuf1: some useless doc comment
   let f1 = 123:f64
   let f2: f64 = 567
   let i1: i64 = 123

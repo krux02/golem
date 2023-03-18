@@ -16,7 +16,6 @@ type Type interface {
 
 type TcExpr interface {
 	AstNode
-	Expr
 	Type() Type
 }
 
@@ -161,6 +160,7 @@ type TcPackageDef struct {
 	AbstractAstNode
 	Name     string
 	TypeDefs []*TcStructDef
+	VarDefs  []TcVariableDefStmt
 	ProcDefs []*TcProcDef
 	Main     *TcProcDef // main entry point
 }

@@ -108,9 +108,9 @@ var TypeAnyNumber = &TypeGroup{name: "AnyNumber", items: []Type{TypeFloat32, Typ
 
 func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	if typ == TypeUnspecified {
-		tc.Errorf(context, "variable definitions statements must have at least one, a type or a value expression")
+		tc.ReportErrorf(context, "variable definitions statements must have at least one, a type or a value expression")
 	} else if typ == TypeNoReturn {
-		tc.Errorf(context, "a default value of no retrun does not exist")
+		tc.ReportErrorf(context, "a default value of no retrun does not exist")
 	} else if typ == TypeFloat32 || typ == TypeFloat64 {
 		return FloatLit{typ: typ}
 	} else if typ == TypeChar {

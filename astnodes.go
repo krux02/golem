@@ -27,11 +27,13 @@ func (astNode AbstractAstNode) Source() string {
 type DocLines []string
 
 type NamedDocSection struct {
+	AbstractAstNode
 	Name  string
 	Lines DocLines
 }
 
 type DocComment struct {
+	AbstractAstNode
 	BaseDoc          DocLines
 	NamedDocSections []NamedDocSection
 }
@@ -72,13 +74,13 @@ type ForLoopStmt struct {
 	Body       Expr
 }
 
-type IfStmt struct {
+type IfExpr struct {
 	AbstractAstNode
 	Condition Expr
 	Body      Expr
 }
 
-type IfElseStmt struct {
+type IfElseExpr struct {
 	AbstractAstNode
 	Condition Expr
 	Body      Expr
@@ -167,25 +169,29 @@ type ProcDef struct {
 
 type PackageDef struct {
 	AbstractAstNode
-	Name     string
-	Globals  []VariableDefStmt
-	TypeDefs []StructDef
-	ProcDefs []ProcDef
+	Name          string
+	TopLevelStmts []Expr
+	// Globals  []VariableDefStmt
+	// TypeDefs []StructDef
+	// ProcDefs []ProcDef
 }
 
-func (ident Ident) expression()          {}
-func (block CodeBlock) expression()      {}
-func (lit StrLit) expression()           {}
-func (lit IntLit) expression()           {}
-func (lit FloatLit) expression()         {}
-func (lit ArrayLit) expression()         {}
-func (lit CharLit) expression()          {}
-func (call Call) expression()            {}
-func (call ColonExpr) expression()       {}
-func (stmt VariableDefStmt) expression() {}
-func (stmt ForLoopStmt) expression()     {}
-func (stmt IfStmt) expression()          {}
-func (stmt IfElseStmt) expression()      {}
-func (stmt ReturnStmt) expression()      {}
-func (stmt BreakStmt) expression()       {}
-func (stmt ContinueStmt) expression()    {}
+func (_ ProcDef) expression()         {}
+func (_ StructDef) expression()       {}
+func (_ DocComment) expression()      {}
+func (_ Ident) expression()           {}
+func (_ CodeBlock) expression()       {}
+func (_ StrLit) expression()          {}
+func (_ IntLit) expression()          {}
+func (_ FloatLit) expression()        {}
+func (_ ArrayLit) expression()        {}
+func (_ CharLit) expression()         {}
+func (_ Call) expression()            {}
+func (_ ColonExpr) expression()       {}
+func (_ VariableDefStmt) expression() {}
+func (_ ForLoopStmt) expression()     {}
+func (_ IfExpr) expression()          {}
+func (_ IfElseExpr) expression()      {}
+func (_ ReturnStmt) expression()      {}
+func (_ BreakStmt) expression()       {}
+func (_ ContinueStmt) expression()    {}
