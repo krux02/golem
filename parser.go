@@ -37,7 +37,7 @@ func parseOperator(tokenizer *Tokenizer) (result Ident) {
 
 	_, ok := OperatorPrecedence[result.source]
 	if !ok {
-		panic(tokenizer.formatError(token, "invalid operator '%s'", result.source))
+		panic(tokenizer.Errorf(token, "invalid operator '%s'", result.source))
 	}
 	return
 }
@@ -97,8 +97,8 @@ func init() {
 	docCommentSectionRegex = regexp.MustCompile(`^\s*([_[:alpha:]][_[:alnum:]]*)\s*:(.*)$`)
 }
 
-func parseDocComment(rawMultilineDoc string) (result DocComment) {
-	commentScanner := &DocCommentScanner{rawMultilineDoc}
+func parseDocComment(rawMultilineDoc Token) (result DocComment) {
+	commentScanner := &DocCommentScanner{rawMultilineDoc.value}
 	for commentScanner.HasNext() {
 		line := commentScanner.Next()
 
@@ -308,7 +308,7 @@ func parseCharLit(tokenizer *Tokenizer) (result CharLit) {
 		case '"':
 			result.Rune = '"'
 		default:
-			panic(tokenizer.formatError(token, "invalid escape \\%c in char literal", rune2))
+			panic(tokenizer.Errorf(token, "invalid escape \\%c in char literal", rune2))
 		}
 		return
 	}
@@ -347,7 +347,7 @@ func parseStrLit(tokenizer *Tokenizer) (result StrLit) {
 			case '"':
 				b.WriteRune('"')
 			default:
-				panic(tokenizer.formatError(token, "invalid escape \\%c in string literal", rune))
+				panic(tokenizer.Errorf(token, "invalid escape \\%c in string literal", rune))
 			}
 			processEscape = false
 			continue
@@ -459,40 +459,40 @@ func parseArrayLit(tokenizer *Tokenizer) (result ArrayLit) {
 }
 
 func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
-	var rawDocComment string
+	var rawDocComment Token
 	if tokenizer.lookAheadToken.kind == TkPrefixDocComment {
-		rawDocComment = tokenizer.Next().value
+		rawDocComment = tokenizer.Next()
 	}
 	switch tokenizer.lookAheadToken.kind {
 	case TkVar, TkLet, TkConst:
 		stmt := parseVariableDefStmt(tokenizer)
-		if rawDocComment != "" {
+		if rawDocComment.kind == TkPrefixDocComment {
 			stmt.ApplyDocComment(parseDocComment(rawDocComment))
 		}
 		return (Expr)(stmt)
 	case TkReturn:
-		if rawDocComment != "" {
-			panic("~return~ cannot have doc comment")
+		if rawDocComment.kind == TkPrefixDocComment {
+			panic(tokenizer.Errorf(rawDocComment, "~return~ cannot have doc comment"))
 		}
 		return (Expr)(parseReturnStmt(tokenizer))
 	case TkBreak:
-		if rawDocComment != "" {
-			panic("~break~ cannot have doc comment")
+		if rawDocComment.kind == TkPrefixDocComment {
+			panic(tokenizer.Errorf(rawDocComment, "~break~ cannot have doc comment"))
 		}
 		return (Expr)(parseBreakStmt(tokenizer))
 	case TkContinue:
-		if rawDocComment != "" {
-			panic("~continue~ cannot have doc comment")
+		if rawDocComment.kind == TkPrefixDocComment {
+			panic(tokenizer.Errorf(rawDocComment, "~continue~ cannot have doc comment"))
 		}
 		return (Expr)(parseContinueStmt(tokenizer))
 	case TkFor:
-		if rawDocComment != "" {
-			panic("~for~ cannot have doc comment")
+		if rawDocComment.kind == TkPrefixDocComment {
+			panic(tokenizer.Errorf(rawDocComment, "~for~ cannot have doc comment"))
 		}
 		return (Expr)(parseForLoop(tokenizer))
 	case TkIf:
-		if rawDocComment != "" {
-			panic("~if~ cannot have doc comment")
+		if rawDocComment.kind == TkPrefixDocComment {
+			panic(tokenizer.Errorf(rawDocComment, "~if~ cannot have doc comment"))
 		}
 		return (Expr)(parseIfStmt(tokenizer))
 	}
@@ -776,7 +776,9 @@ func parsePackage(code, filename string) (result PackageDef) {
 	// raw doc comments are literal source code ranges that contain doc comments.
 	// They are completely unparsed, can span multiple lines and unlike normal
 	// comments, must always be attached to something.
-	var rawDocComment string
+	//var rawDocComment Token
+	var hasDocComment bool = false
+	var docComment DocComment
 
 	var tokenizer = NewTokenizer(code, filename)
 	for true {
@@ -790,35 +792,31 @@ func parsePackage(code, filename string) (result PackageDef) {
 			return
 		case TkType:
 			typeDef := parseTypeDef(tokenizer)
-			if rawDocComment != "" {
-				typeDef.ApplyDocComment(parseDocComment(rawDocComment))
-				rawDocComment = ""
+			if hasDocComment {
+				typeDef.ApplyDocComment(docComment)
+				hasDocComment = false
 			}
 			result.TypeDefs = append(result.TypeDefs, typeDef)
 			continue
 		case TkProc:
 			procDef := parseProcDef(tokenizer)
-			if rawDocComment != "" {
-				procDef.ApplyDocComment(parseDocComment(rawDocComment))
-				rawDocComment = ""
+			if hasDocComment {
+				procDef.ApplyDocComment(docComment)
+				hasDocComment = false
 			}
 			result.ProcDefs = append(result.ProcDefs, procDef)
 			continue
 		case TkVar, TkLet, TkConst:
 			varDef := parseVariableDefStmt(tokenizer)
-			if rawDocComment != "" {
-				varDef.ApplyDocComment(parseDocComment(rawDocComment))
-				rawDocComment = ""
+			if hasDocComment {
+				varDef.ApplyDocComment(docComment)
+				hasDocComment = false
 			}
 			result.Globals = append(result.Globals, varDef)
 			continue
 		case TkPrefixDocComment:
-			// parsing of doc comments is postphoned until it is known to what type of
-			// ast the doc comment should be attached to. Because only then the
-			// structure of the doc comment, what parts need documentation is known
-			// and the doc comment can sanity checked.
-			token := tokenizer.Next()
-			rawDocComment = token.value
+			docComment = parseDocComment(tokenizer.Next())
+			hasDocComment = true
 			continue
 		}
 		panic(tokenizer.formatWrongKind(tokenizer.lookAheadToken))

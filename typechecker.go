@@ -513,7 +513,7 @@ func (lit IntLit) Type() Type {
 
 func (lit FloatLit) Type() Type {
 	if lit.typ == nil {
-		panic(fmt.Errorf("internal error: type of FloatLit not se"))
+		panic(fmt.Errorf("internal error: type of FloatLit not set"))
 	}
 	return lit.typ
 }
@@ -685,7 +685,7 @@ func matchAssign(arg Expr) (lhs, rhs Expr, ok bool) {
 
 func (tc *TypeChecker) TypeCheckArrayLit(scope Scope, arg ArrayLit, expected Type) TcExpr {
 	// TODO expect use expect length
-	//expectedLen := expected.(ArrayType).Len
+	// expectedLen := expected.(ArrayType).Len
 	//
 	switch exp := expected.(type) {
 	case *ArrayType:

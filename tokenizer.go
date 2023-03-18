@@ -310,7 +310,7 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			rune, _ := utf8.DecodeRuneInString(code[it:])
 
 			if !u.IsDigit(rune) {
-				panic(this.formatError(result, "incomplete floating point literal"))
+				panic(this.Errorf(result, "incomplete floating point literal"))
 			}
 
 			var idx2 = len(code)
@@ -406,7 +406,7 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			result.kind = TkAssign
 		}
 	default:
-		panic(this.formatError(result, "unexpected input: %c %d", c, c))
+		panic(this.Errorf(result, "unexpected input: %c %d", c, c))
 	}
 
 	newOffset += len(result.value)
@@ -417,7 +417,7 @@ func (this *Tokenizer) AtEnd() bool {
 	return this.offset == len(this.code)
 }
 
-func (tokenizer *Tokenizer) formatError(token Token, msg string, args ...interface{}) error {
+func (tokenizer *Tokenizer) Errorf(token Token, msg string, args ...interface{}) error {
 	line, columnStart, columnEnd := tokenizer.LineColumnToken(token)
 	return fmt.Errorf("%s(%d, %d-%d) Error: %s",
 		tokenizer.filename, line, columnStart, columnEnd,
@@ -425,11 +425,11 @@ func (tokenizer *Tokenizer) formatError(token Token, msg string, args ...interfa
 }
 
 func (tokenizer *Tokenizer) formatWrongKind(token Token) error {
-	return tokenizer.formatError(token, "unexpected token: %v", token)
+	return tokenizer.Errorf(token, "unexpected token: %v", token)
 }
 
 func (tokenizer *Tokenizer) formatWrongIdent(token Token) error {
-	return tokenizer.formatError(token, "unexpected identifier: %s", token.value)
+	return tokenizer.Errorf(token, "unexpected identifier: %s", token.value)
 }
 
 func (tokenizer *Tokenizer) expectKind(token Token, kind TokenKind) {
@@ -447,13 +447,13 @@ func (tokenizer *Tokenizer) expectKind2(token Token, kind1, kind2 TokenKind) {
 func (tokenizer *Tokenizer) expectIdent(token Token, arg string) {
 	tokenizer.expectKind(token, TkIdent)
 	if token.value != arg {
-		panic(tokenizer.formatError(token, "expected ident %v got %v", arg, token.value))
+		panic(tokenizer.Errorf(token, "expected ident %v got %v", arg, token.value))
 	}
 }
 
 func (tokenizer *Tokenizer) expectOperator(token Token, arg string) {
 	tokenizer.expectKind(token, TkOperator)
 	if token.value != arg {
-		panic(tokenizer.formatError(token, "expected %v got %v", arg, token.value))
+		panic(tokenizer.Errorf(token, "expected %v got %v", arg, token.value))
 	}
 }
