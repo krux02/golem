@@ -66,86 +66,6 @@ func parseReturnStmt(tokenizer *Tokenizer) (result ReturnStmt) {
 	return
 }
 
-func (varDef *VariableDefStmt) ApplyDocComment(tc *TypeChecker, doc DocComment) {
-	varDef.Name.Comment = append(varDef.Name.Comment, doc.BaseDoc...)
-	for _, it := range doc.NamedDocSections {
-		key := it.Name
-		value := it.Lines
-
-		if varDef.Name.source != key {
-			tc.ReportInvalidDocCommentKey(it)
-			continue
-		}
-
-		commentRef := &varDef.Name.Comment
-		*commentRef = append(*commentRef, value...)
-	}
-}
-
-var docCommentSectionRegex *regexp.Regexp
-
-func init() {
-	//docCommentSectionRegex = regexp.MustCompile(`\s*\([[:alpha:]][[:alnum:]]\)*\s*:`)
-	docCommentSectionRegex = regexp.MustCompile(`^\s*([_[:alpha:]][_[:alnum:]]*)\s*:(.*)$`)
-}
-
-func (procDef *ProcDef) ApplyDocComment(tc *TypeChecker, doc DocComment) {
-	procDef.Name.Comment = append(procDef.Name.Comment, doc.BaseDoc...)
-
-DOCSECTIONS:
-	for _, it := range doc.NamedDocSections {
-		key := it.Name
-		value := it.Lines
-
-		for i := range procDef.Args {
-			if procDef.Args[i].Name.source == key {
-				commentRef := &procDef.Args[i].Name.Comment
-				*commentRef = append(*commentRef, value...)
-				continue DOCSECTIONS
-			}
-		}
-		tc.ReportInvalidDocCommentKey(it)
-	}
-}
-
-func (structDef *StructDef) ApplyDocComment(tc *TypeChecker, doc DocComment) {
-	structDef.Name.Comment = append(structDef.Name.Comment, doc.BaseDoc...)
-	hasDocComment := len(structDef.Name.Comment) != 0
-
-DOCSECTIONS:
-	for _, it := range doc.NamedDocSections {
-		key := it.Name
-		value := it.Lines
-
-		for i := range structDef.Fields {
-			if structDef.Fields[i].Name.source == key {
-				commentRef := &structDef.Fields[i].Name.Comment
-				*commentRef = append(*commentRef, value...)
-				hasDocComment = true
-				continue DOCSECTIONS
-			}
-		}
-		tc.ReportInvalidDocCommentKey(it)
-	}
-
-	if hasDocComment {
-		fmt.Printf("proc def '%s' -- '%v'\n", structDef.Name.source, structDef.Name.Comment)
-		for _, field := range structDef.Fields {
-			fmt.Printf("   arg '%s' -- '%v'\n", field.Name.source, field.Name.Comment)
-		}
-	} else {
-		fmt.Printf("proc def '%s' --- no doc\n", structDef.Name.source)
-	}
-}
-
-func (_ FloatLit) ApplyDocComment(tc *TypeChecker, doc DocComment)   { tc.ReportIllegalDocComment(doc) }
-func (_ CharLit) ApplyDocComment(tc *TypeChecker, doc DocComment)    { tc.ReportIllegalDocComment(doc) }
-func (_ IntLit) ApplyDocComment(tc *TypeChecker, doc DocComment)     { tc.ReportIllegalDocComment(doc) }
-func (_ IfExpr) ApplyDocComment(tc *TypeChecker, doc DocComment)     { tc.ReportIllegalDocComment(doc) }
-func (_ IfElseExpr) ApplyDocComment(tc *TypeChecker, doc DocComment) { tc.ReportIllegalDocComment(doc) }
-func (_ Ident) ApplyDocComment(tc *TypeChecker, doc DocComment)      { tc.ReportIllegalDocComment(doc) }
-func (_ Call) ApplyDocComment(tc *TypeChecker, doc DocComment)       { tc.ReportIllegalDocComment(doc) }
-
 /* (name string, typ TypeExpr, expr Expr) */
 
 func parseVariableDefStmt(tokenizer *Tokenizer) (result VariableDefStmt) {
@@ -502,6 +422,13 @@ func (this *DocCommentScanner) Next() (result string) {
 
 func (this *DocCommentScanner) HasNext() bool {
 	return strings.Contains(this.rawsource, "##")
+}
+
+var docCommentSectionRegex *regexp.Regexp
+
+func init() {
+	//docCommentSectionRegex = regexp.MustCompile(`\s*\([[:alpha:]][[:alnum:]]\)*\s*:`)
+	docCommentSectionRegex = regexp.MustCompile(`^\s*([_[:alpha:]][_[:alnum:]]*)\s*:(.*)$`)
 }
 
 func parseDocComment(tokenizer *Tokenizer) (result DocComment) {

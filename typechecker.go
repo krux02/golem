@@ -446,23 +446,92 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 	return result
 }
 
+func (tc *TypeChecker) ApplyDocComment(expr Expr, doc DocComment) Expr {
+	switch expr2 := expr.(type) {
+	case VariableDefStmt:
+		expr2.Name.Comment = append(expr2.Name.Comment, doc.BaseDoc...)
+		for _, it := range doc.NamedDocSections {
+			key := it.Name
+			value := it.Lines
+
+			if expr2.Name.source != key {
+				tc.ReportInvalidDocCommentKey(it)
+				continue
+			}
+
+			commentRef := &expr2.Name.Comment
+			*commentRef = append(*commentRef, value...)
+		}
+		return expr2
+	case ProcDef:
+		expr2.Name.Comment = append(expr2.Name.Comment, doc.BaseDoc...)
+
+	DOCSECTIONS1:
+		for _, it := range doc.NamedDocSections {
+			key := it.Name
+			value := it.Lines
+
+			for i := range expr2.Args {
+				if expr2.Args[i].Name.source == key {
+					commentRef := &expr2.Args[i].Name.Comment
+					*commentRef = append(*commentRef, value...)
+					continue DOCSECTIONS1
+				}
+			}
+			tc.ReportInvalidDocCommentKey(it)
+		}
+		return expr2
+	case StructDef:
+		expr2.Name.Comment = append(expr2.Name.Comment, doc.BaseDoc...)
+		hasDocComment := len(expr2.Name.Comment) != 0
+
+	DOCSECTIONS2:
+		for _, it := range doc.NamedDocSections {
+			key := it.Name
+			value := it.Lines
+
+			for i := range expr2.Fields {
+				if expr2.Fields[i].Name.source == key {
+					commentRef := &expr2.Fields[i].Name.Comment
+					*commentRef = append(*commentRef, value...)
+					hasDocComment = true
+					continue DOCSECTIONS2
+				}
+			}
+			tc.ReportInvalidDocCommentKey(it)
+		}
+
+		if hasDocComment {
+			fmt.Printf("proc def '%s' -- '%v'\n", expr2.Name.source, expr2.Name.Comment)
+			for _, field := range expr2.Fields {
+				fmt.Printf("   arg '%s' -- '%v'\n", field.Name.source, field.Name.Comment)
+			}
+		} else {
+			fmt.Printf("proc def '%s' --- no doc\n", expr2.Name.source)
+		}
+		return expr2
+	default:
+		fmt.Printf("typ: %T\n", expr2)
+		tc.ReportIllegalDocComment(doc)
+		return expr2
+	}
+}
 func (tc *TypeChecker) TypeCheckCodeBlock(scope Scope, arg CodeBlock, expected Type) (result TcCodeBlock) {
 	scope = scope.NewSubScope()
 	N := len(arg.Items)
 	if N > 0 {
 		resultItems := make([]TcExpr, 0, N)
-		//var docComment DocComment
+		var docComment DocComment
 		var applyDocComment bool = false
 		for i, item := range arg.Items {
-			if _, ok := item.(DocComment); ok {
-				//docComment = comment
+			if comment, ok := item.(DocComment); ok {
+				docComment = comment
 				applyDocComment = true
 				continue
 			} else {
 				if applyDocComment {
-					// TODO item.ApplyDocComment(tc, docComment)
+					item = tc.ApplyDocComment(item, docComment)
 					applyDocComment = false
-					continue
 				}
 				if i == N-1 {
 					resultItems = append(resultItems, tc.TypeCheckExpr(scope, item, expected))
@@ -816,28 +885,20 @@ func (tc *TypeChecker) TypeCheckPackage(arg PackageDef) (result TcPackageDef) {
 	var docComment DocComment
 
 	for _, stmt := range arg.TopLevelStmts {
+		if hasDocComment {
+			stmt = tc.ApplyDocComment(stmt, docComment)
+			hasDocComment = false
+		}
 		switch stmt := stmt.(type) {
 		case StructDef:
-			if hasDocComment {
-				stmt.ApplyDocComment(tc, docComment)
-				hasDocComment = false
-			}
 			result.TypeDefs = append(result.TypeDefs, tc.TypeCheckStructDef(scope, stmt))
 		case ProcDef:
-			if hasDocComment {
-				stmt.ApplyDocComment(tc, docComment)
-				hasDocComment = false
-			}
 			procDef := tc.TypeCheckProcDef(scope, stmt)
 			result.ProcDefs = append(result.ProcDefs, procDef)
 			if procDef.Name == "main" {
 				result.Main = procDef
 			}
 		case VariableDefStmt:
-			if hasDocComment {
-				stmt.ApplyDocComment(tc, docComment)
-				hasDocComment = false
-			}
 			varDef := tc.TypeCheckVariableDefStmt(scope, stmt)
 			result.VarDefs = append(result.VarDefs, varDef)
 		case DocComment:
