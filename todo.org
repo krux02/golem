@@ -8,6 +8,8 @@
 * DONE test infrastructure compiler error reporting
 * DONE add field values to struct literals
 * DONE testing framework to test the compiler
+* TODO allow conversion between enum/int/string
+* TODO distinguish between the type and the expression that defines it
 * TODO display parsing errors es normal error messages
 * TODO mutable flag in type
 * TODO call by reference
