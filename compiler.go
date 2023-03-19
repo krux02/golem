@@ -20,7 +20,8 @@ type PackageGeneratorContext struct {
 	// functions marked for code generation
 	TodoListProc []*TcProcDef
 	// types marked for code generation
-	TodoListType []*TcStructDef
+	TodoListEnum   []*TcEnumDef
+	TodoListStruct []*TcStructDef
 }
 
 func (builder *CodeBuilder) newlineAndIndent() {
@@ -63,7 +64,13 @@ func (builder *CodeBuilder) compileSymWithType(context *PackageGeneratorContext,
 		WriteIntLit(&builder.Builder, typ.Len)
 		builder.WriteByte(']')
 	case *TcStructDef:
-		context.markTypeForGeneration(typ)
+		context.markStructTypeForGeneration(typ)
+		// TODO this should be the mangled name
+		builder.WriteString(typ.Name)
+		builder.WriteString(" ")
+		builder.WriteString(sym.source)
+	case *TcEnumDef:
+		context.markEnumTypeForGeneration(typ)
 		// TODO this should be the mangled name
 		builder.WriteString(typ.Name)
 		builder.WriteString(" ")
@@ -174,8 +181,13 @@ func (builder *CodeBuilder) compileSymbol(sym TcSymbol) {
 	case "false":
 		builder.WriteString("0")
 	default:
-		if sym.Kind == SkLoopIterator {
+		switch sym.Kind {
+		case SkLoopIterator:
 			builder.WriteString("*")
+		case SkEnum:
+			typ := sym.Typ.(*TcEnumDef)
+			builder.WriteString(typ.Name)
+			builder.WriteRune('_')
 		}
 		builder.WriteString(sym.source)
 	}
@@ -377,6 +389,24 @@ func (builder *CodeBuilder) compileCodeBlock(context *PackageGeneratorContext, b
 	}
 }
 
+func compileEnumDef(context *PackageGeneratorContext, enumDef *TcEnumDef) {
+	builder := &context.typeDecl
+	builder.WriteString("typedef enum ")
+	builder.WriteString(enumDef.Name)
+	builder.WriteString(" {")
+	builder.Indentation += 1
+	for _, sym := range enumDef.Values {
+		builder.newlineAndIndent()
+		builder.compileSymbol(sym)
+		builder.WriteString(",")
+	}
+	builder.Indentation -= 1
+	builder.newlineAndIndent()
+	builder.WriteString("} ")
+	builder.WriteString(enumDef.Name)
+	builder.WriteString(";\n")
+}
+
 func compileStructDef(context *PackageGeneratorContext, structDef *TcStructDef) {
 	builder := &context.typeDecl
 	builder.WriteString("typedef struct ")
@@ -455,11 +485,19 @@ func (context *PackageGeneratorContext) markProcForGeneration(procDef *TcProcDef
 	procDef.scheduledforgeneration = true
 }
 
-func (context *PackageGeneratorContext) markTypeForGeneration(typeDef *TcStructDef) {
+func (context *PackageGeneratorContext) markStructTypeForGeneration(typeDef *TcStructDef) {
 	if typeDef.scheduledforgeneration {
 		return // nothing to do when already scheduled
 	}
-	context.TodoListType = append(context.TodoListType, typeDef)
+	context.TodoListStruct = append(context.TodoListStruct, typeDef)
+	typeDef.scheduledforgeneration = true
+}
+
+func (context *PackageGeneratorContext) markEnumTypeForGeneration(typeDef *TcEnumDef) {
+	if typeDef.scheduledforgeneration {
+		return // nothing to do when already scheduled
+	}
+	context.TodoListEnum = append(context.TodoListEnum, typeDef)
 	typeDef.scheduledforgeneration = true
 }
 
@@ -473,11 +511,20 @@ func (context *PackageGeneratorContext) popMarkedForGenerationProcDef() (result 
 	return
 }
 
-func (context *PackageGeneratorContext) popMarkedForGenerationTypeDef() (result *TcStructDef) {
-	N := len(context.TodoListType)
+func (context *PackageGeneratorContext) popMarkedForGenerationEnumDef() (result *TcEnumDef) {
+	N := len(context.TodoListEnum)
 	if N > 0 {
-		result = context.TodoListType[N-1]
-		context.TodoListType = context.TodoListType[:N-1]
+		result = context.TodoListEnum[N-1]
+		context.TodoListEnum = context.TodoListEnum[:N-1]
+	}
+	return
+}
+
+func (context *PackageGeneratorContext) popMarkedForGenerationStructDef() (result *TcStructDef) {
+	N := len(context.TodoListStruct)
+	if N > 0 {
+		result = context.TodoListStruct[N-1]
+		context.TodoListStruct = context.TodoListStruct[:N-1]
 	}
 	return
 }
@@ -496,7 +543,10 @@ func compilePackageToC(pak TcPackageDef) string {
 	for procDef := context.popMarkedForGenerationProcDef(); procDef != nil; procDef = context.popMarkedForGenerationProcDef() {
 		compileProcDef(context, procDef)
 	}
-	for typeDef := context.popMarkedForGenerationTypeDef(); typeDef != nil; typeDef = context.popMarkedForGenerationTypeDef() {
+	for typeDef := context.popMarkedForGenerationEnumDef(); typeDef != nil; typeDef = context.popMarkedForGenerationEnumDef() {
+		compileEnumDef(context, typeDef)
+	}
+	for typeDef := context.popMarkedForGenerationStructDef(); typeDef != nil; typeDef = context.popMarkedForGenerationStructDef() {
 		compileStructDef(context, typeDef)
 	}
 	// TODO this creates a type declaration for every usage. Should be done only once

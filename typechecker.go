@@ -96,7 +96,7 @@ func (tc *TypeChecker) LookUpProc(scope Scope, ident Ident, procSyms []TcProcSym
 	return procSyms
 }
 
-func (tc *TypeChecker) LookUpLetSym(scope Scope, ident Ident) TcSymbol {
+func (tc *TypeChecker) LookUpLetSymRecursive(scope Scope, ident Ident) TcSymbol {
 	if scope == nil {
 		tc.ReportErrorf(ident, "let sym not found: %s", ident.source)
 		var result TcSymbol
@@ -110,7 +110,22 @@ func (tc *TypeChecker) LookUpLetSym(scope Scope, ident Ident) TcSymbol {
 		sym.source = ident.source
 		return sym
 	}
-	return tc.LookUpLetSym(scope.Parent, ident)
+	return tc.LookUpLetSymRecursive(scope.Parent, ident)
+}
+
+func (tc *TypeChecker) LookUpLetSym(scope Scope, ident Ident, expected Type) (result TcSymbol) {
+	if enumDef, ok := expected.(*TcEnumDef); ok {
+		for _, sym := range enumDef.Values {
+			if sym.source == ident.source {
+				// change line info
+				sym.source = ident.source
+				return sym
+			}
+		}
+	}
+	result = tc.LookUpLetSymRecursive(scope, ident)
+	result.Typ = tc.ExpectType(result, result.Typ, expected)
+	return
 }
 
 func (tc *TypeChecker) LineColumnNode(node AstNode) (line, columnStart, columnEnd int) {
@@ -147,7 +162,7 @@ func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def TypeDef) Type {
 			} else {
 				var sym TcSymbol
 				sym.source = ident.source
-				sym.Kind = SkConst
+				sym.Kind = SkEnum
 				sym.Typ = result
 				result.Values = append(result.Values, sym)
 			}
@@ -720,8 +735,7 @@ func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExp
 	case CodeBlock:
 		return (TcExpr)(tc.TypeCheckCodeBlock(scope, arg, expected))
 	case Ident:
-		sym := tc.LookUpLetSym(scope, arg)
-		tc.ExpectType(sym, sym.Typ, expected)
+		sym := tc.LookUpLetSym(scope, arg, expected)
 		return (TcExpr)(sym)
 	case StrLit:
 		tc.ExpectType(arg, TypeString, expected)

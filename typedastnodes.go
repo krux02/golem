@@ -29,6 +29,12 @@ type TcEnumDef struct {
 	AbstractAstNode
 	Name   string
 	Values []TcSymbol
+
+	// TODO: find a better solution for tagging other than mutuble setting a value
+	// this value is set to true in the code generator to mark this type as
+	// already scheduled for code generation. This flag is used to prevent
+	// generating the same type multiple times.
+	scheduledforgeneration bool
 }
 
 type TcStructDef struct {
@@ -67,14 +73,14 @@ type TcProcSymbol struct {
 
 type SymbolKind int
 
-// TODO are these symbol kinds even useful? Kind of just copied from Nim without
-// actually rethinking them
+// not the type or properties of a symbol, just where it has been declared
 const (
 	SkLet SymbolKind = iota
 	SkVar
 	SkConst
 	SkProcArg
 	SkLoopIterator
+	SkEnum
 )
 
 type TcSymbol struct {
