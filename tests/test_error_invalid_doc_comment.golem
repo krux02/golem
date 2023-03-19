@@ -1,0 +1,7 @@
+
+# NumErrors: 1
+
+
+## doc comment
+## argX: this argument doesn't exist # Error: invalid doc comment key: argX
+proc foo(argY: string): string = argY
