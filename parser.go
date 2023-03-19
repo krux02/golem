@@ -613,27 +613,16 @@ func parseStructField(tokenizer *Tokenizer) (result StructField) {
 	return
 }
 
-func parseTypeDef(tokenizer *Tokenizer) (result StructDef) {
+func parseTypeDef(tokenizer *Tokenizer) (result TypeDef) {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkType)
 	result.Name = parseIdent(tokenizer)
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkAssign)
-	token = tokenizer.Next()
-	tokenizer.expectIdent(token, "struct")
-	openBrace := tokenizer.Next()
-	tokenizer.expectKind(openBrace, TkOpenCurly)
-	tokenizer.eatSemicolon()
-	for tokenizer.lookAheadToken.kind != TkCloseCurly {
-		field := parseStructField(tokenizer)
-		result.Fields = append(result.Fields, field)
-		tokenizer.eatSemicolon()
-	}
-
-	lastToken := tokenizer.Next()
-	tokenizer.expectKind(lastToken, TkCloseCurly)
-	result.source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
-	return
+	result.Kind = parseIdent(tokenizer)
+	result.Body = parseCodeBlock(tokenizer)
+	result.source = joinSubstr(tokenizer.code, firstToken.value, result.Body.source)
+	return result
 }
 
 func parseProcArgumentGroup(tokenizer *Tokenizer) (result []ProcArgument) {

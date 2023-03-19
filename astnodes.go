@@ -100,10 +100,11 @@ type ReturnStmt struct {
 	Value Expr
 }
 
-type StructDef struct {
+type TypeDef struct {
 	AbstractAstNode
-	Name   Ident
-	Fields []StructField
+	Name Ident
+	Kind Ident
+	Body CodeBlock
 }
 
 type ProcArgument struct {
@@ -177,7 +178,7 @@ type PackageDef struct {
 }
 
 func (_ ProcDef) expression()         {}
-func (_ StructDef) expression()       {}
+func (_ TypeDef) expression()         {}
 func (_ DocComment) expression()      {}
 func (_ Ident) expression()           {}
 func (_ CodeBlock) expression()       {}

@@ -98,7 +98,12 @@ func (tc *TypeChecker) LookUpProc(scope Scope, ident Ident, procSyms []TcProcSym
 
 func (tc *TypeChecker) LookUpLetSym(scope Scope, ident Ident) TcSymbol {
 	if scope == nil {
-		panic(fmt.Sprintf("let sym not found: %s", ident.source))
+		tc.ReportErrorf(ident, "let sym not found: %s", ident.source)
+		var result TcSymbol
+		result.Kind = SkLet
+		result.source = ident.source
+		result.Typ = TypeError
+		return result
 	}
 
 	if sym, ok := scope.Variables[ident.source]; ok {
@@ -112,17 +117,49 @@ func (tc *TypeChecker) LineColumnNode(node AstNode) (line, columnStart, columnEn
 	return LineColumnStr(tc.code, node.Source())
 }
 
-func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def StructDef) (result *TcStructDef) {
-	result = &TcStructDef{}
-	result.Name = def.Name.source
-	for _, field := range def.Fields {
-		var tcField TcStructField
-		tcField.Name = field.Name.source
-		tcField.Type = tc.LookUpType(scope, field.TypeExpr)
-		result.Fields = append(result.Fields, tcField)
+func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def TypeDef) Type {
+	switch def.Kind.source {
+	case "struct":
+		result := &TcStructDef{}
+		result.Name = def.Name.source
+		for _, item := range def.Body.Items {
+			if colonExpr, ok := item.(ColonExpr); !ok {
+				tc.ReportErrorf(item, "expect ColonExpr, but got %T", item)
+			} else {
+				if nameIdent, ok := colonExpr.Lhs.(Ident); !ok {
+					tc.ReportErrorf(colonExpr.Lhs, "expect Ident, but got %T", colonExpr.Lhs)
+				} else {
+					var tcField TcStructField
+					tcField.Name = nameIdent.source
+					tcField.Type = tc.LookUpType(scope, colonExpr.Rhs)
+					result.Fields = append(result.Fields, tcField)
+				}
+			}
+		}
+		scope.Types[result.Name] = result
+		return result
+	case "enum":
+		result := &TcEnumDef{}
+		result.Name = def.Name.source
+		for _, item := range def.Body.Items {
+			if ident, ok := item.(Ident); !ok {
+				tc.ReportErrorf(item, "expect Ident, but got %T", item)
+			} else {
+				var sym TcSymbol
+				sym.source = ident.source
+				sym.Kind = SkConst
+				sym.Typ = result
+				result.Values = append(result.Values, sym)
+			}
+		}
+		scope.Types[result.Name] = result
+		return result
+	case "union":
+		panic("not implemented union")
+	default:
+		tc.ReportErrorf(def.Kind, "invalid type kind %s, expect one of struct, enum, union", def.Kind.source)
+		return nil
 	}
-	scope.Types[result.Name] = result
-	return result
 }
 
 func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result *TcProcDef) {
@@ -481,33 +518,25 @@ func (tc *TypeChecker) ApplyDocComment(expr Expr, doc DocComment) Expr {
 			tc.ReportInvalidDocCommentKey(it)
 		}
 		return expr2
-	case StructDef:
+	case TypeDef:
 		expr2.Name.Comment = append(expr2.Name.Comment, doc.BaseDoc...)
-		hasDocComment := len(expr2.Name.Comment) != 0
-
 	DOCSECTIONS2:
 		for _, it := range doc.NamedDocSections {
 			key := it.Name
 			value := it.Lines
-
-			for i := range expr2.Fields {
-				if expr2.Fields[i].Name.source == key {
-					commentRef := &expr2.Fields[i].Name.Comment
-					*commentRef = append(*commentRef, value...)
-					hasDocComment = true
-					continue DOCSECTIONS2
+			for i := range expr2.Body.Items {
+				if colonExpr, ok := expr2.Body.Items[i].(ColonExpr); ok {
+					if ident, ok := colonExpr.Lhs.(Ident); ok {
+						if ident.source == key {
+							ident.Comment = append(ident.Comment, value...)
+							colonExpr.Lhs = ident
+							expr2.Body.Items[i] = colonExpr
+							continue DOCSECTIONS2
+						}
+					}
 				}
 			}
 			tc.ReportInvalidDocCommentKey(it)
-		}
-
-		if hasDocComment {
-			fmt.Printf("proc def '%s' -- '%v'\n", expr2.Name.source, expr2.Name.Comment)
-			for _, field := range expr2.Fields {
-				fmt.Printf("   arg '%s' -- '%v'\n", field.Name.source, field.Name.Comment)
-			}
-		} else {
-			fmt.Printf("proc def '%s' --- no doc\n", expr2.Name.source)
 		}
 		return expr2
 	default:
@@ -890,8 +919,13 @@ func (tc *TypeChecker) TypeCheckPackage(arg PackageDef) (result TcPackageDef) {
 			hasDocComment = false
 		}
 		switch stmt := stmt.(type) {
-		case StructDef:
-			result.TypeDefs = append(result.TypeDefs, tc.TypeCheckStructDef(scope, stmt))
+		case TypeDef:
+			switch td := tc.TypeCheckStructDef(scope, stmt).(type) {
+			case *TcStructDef:
+				result.StructDefs = append(result.StructDefs, td)
+			case *TcEnumDef:
+				result.EnumDefs = append(result.EnumDefs, td)
+			}
 		case ProcDef:
 			procDef := tc.TypeCheckProcDef(scope, stmt)
 			result.ProcDefs = append(result.ProcDefs, procDef)

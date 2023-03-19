@@ -26,12 +26,11 @@
 * TODO introduce ~expectAndEatToken~
 * DONE static overloading
 * TODO C++ interop
-* TODO automatic narrowing of literals when type is known from outside.
+* DONE [#B] automatic narrowing of literals when type is known from outside.
 * TODO make `registerBuiltinX` a method of scope.
 * TODO compiler passes for some transformations (e.g. moving literals to constants)
 * TODO statistics about compiler bootstrapping time, lines of code, test time, test lines of code
 * TODO full set of types
-** DONE int float in all sizes
 ** TODO vector/matrix/simd types
 ** TODO string
 
@@ -49,10 +48,10 @@ const string strLit243 = {.len=15,.data="default Values\n"};
 #+end_src
 
 ** TODO enum
-** TODO array
 ** TODO set
-** TODO struct
-** TODO literals
-** TODO passing as function argument
-* TODO documentation structuere
+** DONE int float in all sizes
+** DONE array
+** DONE struct
+** DONE literals
+* DONE documentation structure
 * TODO dotExpr should be strictly limited to two elements

@@ -239,20 +239,12 @@ func (typeExpr TypeExpr) prettyPrint(builder *AstPrettyPrinter) {
 	}
 }
 
-func (structDef StructDef) prettyPrint(builder *AstPrettyPrinter) {
+func (typeDef TypeDef) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("type ")
-	builder.WriteAstNode(structDef.Name)
-	builder.WriteString(" = struct {")
-	builder.Indentation++
-	for _, field := range structDef.Fields {
-		builder.NewlineAndIndent()
-		builder.WriteAstNode(field.Name)
-		builder.WriteString(": ")
-		builder.WriteAstNode(field.TypeExpr)
-	}
-	builder.Indentation--
-	builder.NewlineAndIndent()
-	builder.WriteString("}")
+	builder.WriteAstNode(typeDef.Name)
+	builder.WriteString(" = ")
+	builder.WriteAstNode(typeDef.Kind)
+	builder.WriteAstNode(typeDef.Body)
 }
 
 func (procDef ProcDef) prettyPrint(builder *AstPrettyPrinter) {
@@ -405,7 +397,7 @@ func (call TcCall) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(")")
 }
 
-func (structDef TcStructDef) prettyPrint(builder *AstPrettyPrinter) {
+func (structDef *TcStructDef) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("type ")
 	builder.WriteString(structDef.Name)
 	builder.WriteString(" = struct {")
@@ -415,6 +407,20 @@ func (structDef TcStructDef) prettyPrint(builder *AstPrettyPrinter) {
 		builder.WriteString(field.Name)
 		builder.WriteString(": ")
 		builder.WriteAstNode(field.Type)
+	}
+	builder.Indentation--
+	builder.NewlineAndIndent()
+	builder.WriteString("}")
+}
+
+func (enumDef *TcEnumDef) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("type ")
+	builder.WriteString(enumDef.Name)
+	builder.WriteString(" = struct {")
+	builder.Indentation++
+	for _, field := range enumDef.Values {
+		builder.NewlineAndIndent()
+		builder.WriteString(field.source)
 	}
 	builder.Indentation--
 	builder.NewlineAndIndent()
@@ -513,7 +519,7 @@ func (procDef TcProcDef) prettyPrint(builder *AstPrettyPrinter) {
 func (pak TcPackageDef) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("# file: ")
 	builder.WriteString(pak.Name)
-	for _, typ := range pak.TypeDefs {
+	for _, typ := range pak.StructDefs {
 		builder.NewlineAndIndent()
 		builder.WriteAstNode(typ)
 	}

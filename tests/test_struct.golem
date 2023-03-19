@@ -7,6 +7,12 @@ type MyStruct = struct {
   c: string
 }
 
+type MyEnum = enum {
+  Option1
+  Option2
+  Option3
+}
+
 proc foo(arg: MyStruct): void = {
   printf("a: %d b: %f c: %s\n", arg.a, arg.b, arg.c)
 }
@@ -15,6 +21,8 @@ proc main():i64 = {
   var myStruct1: MyStruct = [a=12, b=34.56, c="def"] # type at variable def, all fields assigned
   var myStruct2 = [12, 34.56, "def"]:MyStruct        # in order initialization, postfix type assertion
   var myStruct3 = [a=78, c="ghi"]:MyStruct           # default value for b
+
+  var myEnum: MyEnum = Option2
 
   #printf("default Values\n")
   printf("a: %d b: %f c: %s\n", myStruct1.a, myStruct1.b, myStruct1.c)

@@ -41,8 +41,6 @@ func (typ TypeGroup) prettyPrint(builder *AstPrettyPrinter) {
 	}
 }
 
-func (typ TypeGroup) typenode() {}
-
 type ArrayType struct {
 	Len  int64
 	Elem Type
@@ -60,19 +58,21 @@ func (typ *TcStructDef) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune('_')
 }
 
+func (typ *TcEnumDef) ManglePrint(builder *strings.Builder) {
+	builder.WriteRune('E')
+	builder.WriteString(typ.Name)
+	builder.WriteRune('_')
+}
+
 func (typ *BuiltinType) Source() string {
 	// should this panic?
 	return ""
 }
 
-func (typ *BuiltinType) typenode() {}
-
 func (typ *ArrayType) Source() string {
 	// should this panic?
 	return ""
 }
-
-func (typ *ArrayType) typenode() {}
 
 // **** Constants ****
 
@@ -137,6 +137,10 @@ func (typ *ArrayType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 
 func (typ *TcStructDef) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	return TcStructLit{typ: typ}
+}
+
+func (typ *TcEnumDef) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+	return typ.Values[0]
 }
 
 // Printf is literally the only use case for real varargs that I

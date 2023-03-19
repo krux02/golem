@@ -25,7 +25,7 @@
            (list (rx bow (or "do" "else") eow) nil nil (list 0 font-lock-keyword-face)))
      (list (rx ":" (* " ") (group ident)) 1 font-lock-type-face)
      (list (rx (group ident) "(") 1 font-lock-function-name-face)
-     (list (rx (group-n 1 "struct") (* " ") "{") 1 font-lock-keyword-face)
+     (list (rx (group-n 1 (or "struct" "enum")) (* " ") "{") 1 font-lock-keyword-face)
      (list 'golem-string-escape-matcher 0 font-lock-preprocessor-face 'prepend)
      )))
 

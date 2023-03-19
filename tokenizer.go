@@ -444,10 +444,17 @@ func (tokenizer *Tokenizer) expectKind2(token Token, kind1, kind2 TokenKind) {
 	}
 }
 
-func (tokenizer *Tokenizer) expectIdent(token Token, arg string) {
+func (tokenizer *Tokenizer) expectIdent(token Token, ident string) {
 	tokenizer.expectKind(token, TkIdent)
-	if token.value != arg {
-		panic(tokenizer.Errorf(token, "expected ident %v got %v", arg, token.value))
+	if token.value != ident {
+		panic(tokenizer.Errorf(token, "expected ident %v got %v", ident, token.value))
+	}
+}
+
+func (tokenizer *Tokenizer) expectIdent2(token Token, ident1, ident2 string) {
+	tokenizer.expectKind(token, TkIdent)
+	if token.value != ident1 && token.value != ident2 {
+		panic(tokenizer.Errorf(token, "expected ident %v or %v got %v", ident1, ident2, token.value))
 	}
 }
 

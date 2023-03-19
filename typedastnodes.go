@@ -25,11 +25,18 @@ type TcStructField struct {
 	Type Type
 }
 
+type TcEnumDef struct {
+	AbstractAstNode
+	Name   string
+	Values []TcSymbol
+}
+
 type TcStructDef struct {
 	AbstractAstNode
 	Name   string
 	Fields []TcStructField
 
+	// TODO: find a better solution for tagging other than mutuble setting a value
 	// this value is set to true in the code generator to mark this type as
 	// already scheduled for code generation. This flag is used to prevent
 	// generating the same type multiple times.
@@ -60,6 +67,8 @@ type TcProcSymbol struct {
 
 type SymbolKind int
 
+// TODO are these symbol kinds even useful? Kind of just copied from Nim without
+// actually rethinking them
 const (
 	SkLet SymbolKind = iota
 	SkVar
@@ -158,11 +167,12 @@ type TcStructLit struct {
 
 type TcPackageDef struct {
 	AbstractAstNode
-	Name     string
-	TypeDefs []*TcStructDef
-	VarDefs  []TcVariableDefStmt
-	ProcDefs []*TcProcDef
-	Main     *TcProcDef // main entry point
+	Name       string
+	StructDefs []*TcStructDef
+	EnumDefs   []*TcEnumDef
+	VarDefs    []TcVariableDefStmt
+	ProcDefs   []*TcProcDef
+	Main       *TcProcDef // main entry point
 }
 
 func (sym TcDotExpr) expression()          {}
@@ -178,3 +188,7 @@ func (call TcArrayLit) expression()        {}
 func (expr TcStructLit) expression()       {}
 
 func (typ *TcStructDef) typenode() {}
+func (typ *TcEnumDef) typenode()   {}
+func (typ TypeGroup) typenode()    {}
+func (typ *BuiltinType) typenode() {}
+func (typ *ArrayType) typenode()   {}
