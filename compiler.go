@@ -24,7 +24,7 @@ type PackageGeneratorContext struct {
 	TodoListStruct []*TcStructDef
 }
 
-func (builder *CodeBuilder) newlineAndIndent() {
+func (builder *CodeBuilder) NewlineAndIndent() {
 	builder.WriteString("\n")
 	for i := 0; i < builder.Indentation; i++ {
 		builder.WriteString("  ")
@@ -135,9 +135,9 @@ func (builder *CodeBuilder) compileCharLit(lit CharLit) {
 	builder.WriteRune('\'')
 }
 
-func (builder *CodeBuilder) compileStrLit(lit StrLit) {
+func (builder *CodeBuilder) compileStrLit(value string) {
 	builder.WriteRune('"')
-	for _, rune := range lit.Value {
+	for _, rune := range value {
 		switch rune {
 		case '\a':
 			builder.WriteString("\\a")
@@ -334,7 +334,7 @@ func (builder *CodeBuilder) compileExprWithPrefix(context *PackageGeneratorConte
 	case TcDotExpr:
 		builder.compileDotExpr(context, ex)
 	case StrLit:
-		builder.compileStrLit(ex)
+		builder.compileStrLit(ex.Value)
 	case CharLit:
 		builder.compileCharLit(ex)
 	case IntLit:
@@ -375,7 +375,7 @@ func (builder *CodeBuilder) compileCodeBlock(context *PackageGeneratorContext, b
 	builder.WriteString("{")
 	builder.Indentation += 1
 	for i, expr := range block.Items {
-		builder.newlineAndIndent()
+		builder.NewlineAndIndent()
 		if i == N-1 {
 			builder.compileExprWithPrefix(context, expr)
 		} else {
@@ -384,7 +384,7 @@ func (builder *CodeBuilder) compileCodeBlock(context *PackageGeneratorContext, b
 		builder.WriteRune(';')
 	}
 	builder.Indentation -= 1
-	builder.newlineAndIndent()
+	builder.NewlineAndIndent()
 	builder.WriteString("}")
 	if isExpr {
 		builder.WriteString(")")
@@ -393,45 +393,59 @@ func (builder *CodeBuilder) compileCodeBlock(context *PackageGeneratorContext, b
 
 func compileEnumDef(context *PackageGeneratorContext, enumDef *TcEnumDef) {
 	builder := &context.typeDecl
+	builder.NewlineAndIndent()
 	builder.WriteString("typedef enum ")
 	builder.WriteString(enumDef.Name)
 	builder.WriteString(" {")
 	builder.Indentation += 1
 	for _, sym := range enumDef.Values {
-		builder.newlineAndIndent()
+		builder.NewlineAndIndent()
 		builder.compileSymbol(sym)
 		builder.WriteString(",")
 	}
 	builder.Indentation -= 1
-	builder.newlineAndIndent()
+	builder.NewlineAndIndent()
 	builder.WriteString("} ")
 	builder.WriteString(enumDef.Name)
-	builder.WriteString(";\n")
+	builder.WriteString(";")
+	builder.NewlineAndIndent()
+	builder.WriteString("const string ")
+	builder.WriteString(enumDef.Name)
+	builder.WriteString("_names[] = {")
+	for i, sym := range enumDef.Values {
+		if i != 0 {
+			builder.WriteString(", ")
+		}
+		builder.compileStrLit(sym.source)
+	}
+	builder.WriteString("};")
 }
 
 func compileStructDef(context *PackageGeneratorContext, structDef *TcStructDef) {
 	builder := &context.typeDecl
+	builder.NewlineAndIndent()
 	builder.WriteString("typedef struct ")
 	builder.WriteString(structDef.Name)
 	builder.WriteString(" {")
 	builder.Indentation += 1
 	for _, field := range structDef.Fields {
-		builder.newlineAndIndent()
+		builder.NewlineAndIndent()
 		builder.compileTypeExpr(field.Type)
 		builder.WriteString(" ")
 		builder.WriteString(field.Name)
 		builder.WriteString(";")
 	}
 	builder.Indentation -= 1
-	builder.newlineAndIndent()
+	builder.NewlineAndIndent()
 	builder.WriteString("} ")
 	builder.WriteString(structDef.Name)
-	builder.WriteString(";\n")
+	builder.WriteString(";")
 }
 
 func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 	// reuse string here
 	headBuilder := &CodeBuilder{}
+	headBuilder.NewlineAndIndent()
 	headBuilder.compileTypeExpr(procDef.ResultType)
 	// headBuilder.compileTypeExpr(procDef.ResultType)
 	headBuilder.WriteString(" ")
@@ -449,7 +463,7 @@ func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 	context.forwardDecl.WriteString(builderStr)
 	context.forwardDecl.WriteString(";\n")
 
-	context.functions.newlineAndIndent()
+	context.functions.NewlineAndIndent()
 	context.functions.WriteString(builderStr)
 
 	// NOTE: Body.Type() != ResultType

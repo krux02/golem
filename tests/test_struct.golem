@@ -20,7 +20,7 @@ proc foo(arg: MyStruct): void = {
 proc bar(arg1: i64; arg2: MyEnum): void = {
 }
 
-proc main():i64 = {
+proc main():i32 = {
   var myStruct1: MyStruct = [a=12, b=34.56, c="def"] # type at variable def, all fields assigned
   var myStruct2 = [12, 34.56, "def"]:MyStruct        # in order initialization, postfix type assertion
   var myStruct3 = [a=78, c="ghi"]:MyStruct           # default value for b
