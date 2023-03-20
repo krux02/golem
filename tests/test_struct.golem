@@ -18,6 +18,7 @@ proc foo(arg: MyStruct): void = {
 }
 
 proc bar(arg1: i64; arg2: MyEnum): void = {
+  printf("bar:\n  arg1: %d, arg2: %s\n", arg1, string(arg2))
 }
 
 proc main():i32 = {

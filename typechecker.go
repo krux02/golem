@@ -168,6 +168,7 @@ func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def TypeDef) Type {
 			}
 		}
 		scope.Types[result.Name] = result
+		registerBuiltin("string", fmt.Sprintf("%s_names", result.Name), false, []Type{result}, TypeString)
 		return result
 	case "union":
 		panic("not implemented union")

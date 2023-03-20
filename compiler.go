@@ -411,7 +411,7 @@ func compileEnumDef(context *PackageGeneratorContext, enumDef *TcEnumDef) {
 	builder.NewlineAndIndent()
 	builder.WriteString("const string ")
 	builder.WriteString(enumDef.Name)
-	builder.WriteString("_names[] = {")
+	builder.WriteString("_names_array[] = {")
 	for i, sym := range enumDef.Values {
 		if i != 0 {
 			builder.WriteString(", ")
@@ -419,6 +419,15 @@ func compileEnumDef(context *PackageGeneratorContext, enumDef *TcEnumDef) {
 		builder.compileStrLit(sym.source)
 	}
 	builder.WriteString("};")
+	// HACK: this hack it to make string conversion available as a builtin function
+	builder.NewlineAndIndent()
+	builder.WriteString("static inline const string ")
+	builder.WriteString(enumDef.Name)
+	builder.WriteString("_names(")
+	builder.WriteString(enumDef.Name)
+	builder.WriteString(" arg) { return ")
+	builder.WriteString(enumDef.Name)
+	builder.WriteString("_names_array[arg]; }")
 }
 
 func compileStructDef(context *PackageGeneratorContext, structDef *TcStructDef) {
@@ -461,7 +470,7 @@ func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 
 	builderStr := headBuilder.String()
 	context.forwardDecl.WriteString(builderStr)
-	context.forwardDecl.WriteString(";\n")
+	context.forwardDecl.WriteString(";")
 
 	context.functions.NewlineAndIndent()
 	context.functions.WriteString(builderStr)
@@ -545,14 +554,19 @@ func (context *PackageGeneratorContext) popMarkedForGenerationStructDef() (resul
 
 func compilePackageToC(pak TcPackageDef) string {
 	context := &PackageGeneratorContext{Pak: pak}
-	context.includes.WriteString("#include <stdint.h>\n")
+	context.includes.NewlineAndIndent()
+	context.includes.WriteString("#include <stdint.h>")
 	// TODO this should depend on the usage of `printf`
-	context.includes.WriteString("#include <stdio.h>\n")
+	context.includes.NewlineAndIndent()
+	context.includes.WriteString("#include <stdio.h>")
 	// TODO this should depend on the usage of `assert`
-	context.includes.WriteString("#include <assert.h>\n")
+	context.includes.NewlineAndIndent()
+	context.includes.WriteString("#include <assert.h>")
 	// TODO this sholud depend on the usage of `string` as a type
-	context.typeDecl.WriteString("typedef char* string;\n")
-	context.typeDecl.WriteString("typedef unsigned char bool;\n")
+	context.typeDecl.NewlineAndIndent()
+	context.typeDecl.WriteString("typedef char* string;")
+	context.typeDecl.NewlineAndIndent()
+	context.typeDecl.WriteString("typedef unsigned char bool;")
 	context.markProcForGeneration(pak.Main)
 	for procDef := context.popMarkedForGenerationProcDef(); procDef != nil; procDef = context.popMarkedForGenerationProcDef() {
 		compileProcDef(context, procDef)
@@ -566,13 +580,13 @@ func compilePackageToC(pak TcPackageDef) string {
 	// TODO this creates a type declaration for every usage. Should be done only once
 
 	final := &strings.Builder{}
-	final.WriteString("/* includes */\n")
+	final.WriteString("\n/* includes */")
 	final.WriteString(context.includes.String())
-	final.WriteString("/* typeDecl */\n")
+	final.WriteString("\n/* typeDecl */")
 	final.WriteString(context.typeDecl.String())
-	final.WriteString("/* forwardDecl */\n")
+	final.WriteString("\n/* forwardDecl */")
 	final.WriteString(context.forwardDecl.String())
-	final.WriteString("/* functions */\n")
+	final.WriteString("\n/* functions */")
 	final.WriteString(context.functions.String())
 	return final.String()
 }
