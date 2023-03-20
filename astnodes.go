@@ -172,9 +172,6 @@ type PackageDef struct {
 	AbstractAstNode
 	Name          string
 	TopLevelStmts []Expr
-	// Globals  []VariableDefStmt
-	// TypeDefs []StructDef
-	// ProcDefs []ProcDef
 }
 
 func (_ ProcDef) expression()         {}

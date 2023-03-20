@@ -43,6 +43,8 @@ func (builder *CodeBuilder) compileTypeExpr(typ Type) {
 		builder.WriteByte(']')
 	case *TcStructDef:
 		builder.WriteString(typ.Name)
+	case *TcEnumDef:
+		builder.WriteString(typ.Name)
 	default:
 		panic("not implemented")
 	}
@@ -439,9 +441,7 @@ func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 		if i != 0 {
 			headBuilder.WriteString(", ")
 		}
-		headBuilder.compileTypeExpr(arg.Typ)
-		headBuilder.WriteString(" ")
-		headBuilder.WriteString(arg.source)
+		headBuilder.compileSymWithType(context, arg)
 	}
 	headBuilder.WriteString(")")
 

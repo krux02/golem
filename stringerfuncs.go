@@ -519,6 +519,10 @@ func (procDef TcProcDef) prettyPrint(builder *AstPrettyPrinter) {
 func (pak TcPackageDef) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("# file: ")
 	builder.WriteString(pak.Name)
+	for _, typ := range pak.EnumDefs {
+		builder.NewlineAndIndent()
+		builder.WriteAstNode(typ)
+	}
 	for _, typ := range pak.StructDefs {
 		builder.NewlineAndIndent()
 		builder.WriteAstNode(typ)
