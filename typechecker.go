@@ -60,13 +60,36 @@ func (scope Scope) NewSymbol(tc *TypeChecker, name Ident, kind SymbolKind, typ T
 }
 
 func (tc *TypeChecker) LookUpType(scope Scope, expr TypeExpr) Type {
-	// TODO this is a temporary hack to get arrays somehow working
-
 	if expr.Ident.source == "array" {
-		var at ArrayType
-		at.Len = expr.ExprArgs[0].(IntLit).Value
-		at.Elem = tc.LookUpType(scope, expr.TypeArgs[0])
-		return &at
+		if !tc.ExpectArgsLen(expr, len(expr.TypeArgs), 1) {
+			return TypeError
+		}
+		if !tc.ExpectArgsLen(expr, len(expr.ExprArgs), 1) {
+			return TypeError
+		}
+		elem := tc.LookUpType(scope, expr.TypeArgs[0])
+		// tc.ExpectMinArgsLen(node AstNode, gotten int, expected int)
+		// tc.ExpectMinArgsLen(node AstNode, gotten int, expected int)
+		// len := expr.ExprArgs[0].(IntLit).Value
+		lenLit, ok := expr.ExprArgs[0].(IntLit)
+		if !ok {
+			tc.ReportErrorf(expr.ExprArgs[0], "Expect Int Lit")
+			return TypeError
+		}
+		return GetArrayType(elem, lenLit.Value)
+	}
+	if expr.Ident.source == "set" {
+		if !tc.ExpectArgsLen(expr, len(expr.TypeArgs), 1) {
+			return TypeError
+		}
+		if !tc.ExpectArgsLen(expr, len(expr.ExprArgs), 0) {
+			return TypeError
+		}
+		elem, ok := tc.LookUpType(scope, expr.TypeArgs[0]).(*TcEnumDef)
+		if !ok {
+			tc.ReportErrorf(expr.TypeArgs[0], "expect enum type")
+		}
+		return GetEnumSetType(elem)
 	}
 
 	// TODO really slow lookup, should really be faster
@@ -660,14 +683,12 @@ func (lit FloatLit) Type() Type {
 }
 
 func (lit TcArrayLit) Type() Type {
-	var result ArrayType
-	result.Len = int64(len(lit.Items))
-	if len(lit.Items) > 0 {
-		result.Elem = lit.Items[0].Type()
-	} else {
-		result.Elem = TypeNoReturn
-	}
-	return &result
+	return GetArrayType(lit.ElemType, int64(len(lit.Items)))
+}
+
+func (lit TcEnumSetLit) Type() Type {
+	return GetEnumSetType(lit.ElemType)
+
 }
 
 func (lit TcStructLit) Type() Type {
@@ -804,15 +825,32 @@ type ArrayTypeMapKey struct {
 }
 
 var arrayTypeMap map[ArrayTypeMapKey]*ArrayType
+var enumSetTypeMap map[*TcEnumDef]*EnumSetType
+
+func init() {
+
+	arrayTypeMap = make(map[ArrayTypeMapKey]*ArrayType)
+	enumSetTypeMap = make(map[*TcEnumDef]*EnumSetType)
+}
 
 func GetArrayType(elem Type, len int64) (result *ArrayType) {
 	// TODO all types in the `Type` interface must be pointer types
-	result = arrayTypeMap[ArrayTypeMapKey{elem, len}]
-	if result == nil {
+	result, ok := arrayTypeMap[ArrayTypeMapKey{elem, len}]
+	if !ok {
 		result = &ArrayType{Elem: elem, Len: len}
 		arrayTypeMap[ArrayTypeMapKey{elem, len}] = result
 	}
-	return
+	return result
+}
+
+func GetEnumSetType(elem *TcEnumDef) (result *EnumSetType) {
+	// TODO all types in the `Type` interface must be pointer types
+	result, ok := enumSetTypeMap[elem]
+	if !ok {
+		result = &EnumSetType{Elem: elem}
+		enumSetTypeMap[elem] = result
+	}
+	return result
 }
 
 func matchAssign(arg Expr) (lhs, rhs Expr, ok bool) {
@@ -831,6 +869,15 @@ func (tc *TypeChecker) TypeCheckArrayLit(scope Scope, arg ArrayLit, expected Typ
 	case *ArrayType:
 		var result TcArrayLit
 		result.Items = make([]TcExpr, len(arg.Items))
+		result.ElemType = exp.Elem
+		for i, item := range arg.Items {
+			result.Items[i] = tc.TypeCheckExpr(scope, item, exp.Elem)
+		}
+		return result
+	case *EnumSetType:
+		var result TcEnumSetLit
+		result.Items = make([]TcExpr, len(arg.Items))
+		result.ElemType = exp.Elem
 		for i, item := range arg.Items {
 			result.Items[i] = tc.TypeCheckExpr(scope, item, exp.Elem)
 		}
@@ -906,6 +953,8 @@ func (tc *TypeChecker) TypeCheckIfElseStmt(scope Scope, stmt IfElseExpr, expecte
 func (tc *TypeChecker) ElementType(expr TcExpr) Type {
 	switch typ := expr.Type().(type) {
 	case *ArrayType:
+		return typ.Elem
+	case *EnumSetType:
 		return typ.Elem
 	case *BuiltinType:
 		if typ.name == "string" {

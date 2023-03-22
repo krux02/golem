@@ -9,6 +9,7 @@
 * DONE add field values to struct literals
 * DONE testing framework to test the compiler
 * DONE allow conversion between enum/int/string
+* TODO enum set type
 * TODO distinguish between the type and the expression that defines it
 * TODO display parsing errors es normal error messages
 * TODO mutable flag in type

@@ -162,13 +162,20 @@ type TcProcDef struct {
 
 type TcArrayLit struct {
 	AbstractAstNode
-	Items []TcExpr
+	Items    []TcExpr
+	ElemType Type
 }
 
 type TcStructLit struct {
 	AbstractAstNode
 	Items []TcExpr
 	typ   *TcStructDef
+}
+
+type TcEnumSetLit struct {
+	AbstractAstNode
+	Items    []TcExpr
+	ElemType *TcEnumDef
 }
 
 type TcPackageDef struct {
@@ -191,10 +198,12 @@ func (stmt TcIfElseStmt) expression()      {}
 func (block TcCodeBlock) expression()      {}
 func (call TcCall) expression()            {}
 func (call TcArrayLit) expression()        {}
+func (call TcEnumSetLit) expression()      {}
 func (expr TcStructLit) expression()       {}
 
 func (typ *TcStructDef) typenode() {}
 func (typ *TcEnumDef) typenode()   {}
+func (typ *EnumSetType) typenode() {}
 func (typ TypeGroup) typenode()    {}
 func (typ *BuiltinType) typenode() {}
 func (typ *ArrayType) typenode()   {}

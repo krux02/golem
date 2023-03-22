@@ -77,6 +77,10 @@ func (builder *CodeBuilder) compileSymWithType(context *PackageGeneratorContext,
 		builder.WriteString(typ.Name)
 		builder.WriteString(" ")
 		builder.WriteString(sym.source)
+	case *EnumSetType:
+		context.markEnumTypeForGeneration(typ.Elem)
+		builder.WriteString("uint64_t ")
+		builder.WriteString(sym.source)
 	default:
 		panic(fmt.Errorf("not implemented %T", typ))
 	}
@@ -99,7 +103,7 @@ func (builder *CodeBuilder) compileCall(context *PackageGeneratorContext, call T
 	} else {
 		builder.WriteString(call.Sym.Impl.MangledName)
 		builder.WriteString("(")
-		builder.compileCommaSeparatedExprList(context, call.Args)
+		builder.compileSeparatedExprList(context, call.Args, ", ")
 		builder.WriteString(")")
 	}
 }
@@ -299,10 +303,10 @@ func (builder *CodeBuilder) compileForLoopStmt(context *PackageGeneratorContext,
 	builder.compileExpr(context, stmt.Body)
 }
 
-func (builder *CodeBuilder) compileCommaSeparatedExprList(context *PackageGeneratorContext, list []TcExpr) {
+func (builder *CodeBuilder) compileSeparatedExprList(context *PackageGeneratorContext, list []TcExpr, separator string) {
 	for i, it := range list {
 		if i != 0 {
-			builder.WriteString(", ")
+			builder.WriteString(separator)
 		}
 		builder.compileExpr(context, it)
 	}
@@ -310,7 +314,7 @@ func (builder *CodeBuilder) compileCommaSeparatedExprList(context *PackageGenera
 
 func (builder *CodeBuilder) compileArrayLit(context *PackageGeneratorContext, lit TcArrayLit) {
 	builder.WriteString("{")
-	builder.compileCommaSeparatedExprList(context, lit.Items)
+	builder.compileSeparatedExprList(context, lit.Items, ", ")
 	builder.WriteString("}")
 
 }
@@ -319,8 +323,14 @@ func (builder *CodeBuilder) compileStructLit(context *PackageGeneratorContext, l
 	builder.WriteString("(")
 	builder.compileTypeExpr(lit.typ)
 	builder.WriteString("){")
-	builder.compileCommaSeparatedExprList(context, lit.Items)
+	builder.compileSeparatedExprList(context, lit.Items, ", ")
 	builder.WriteString("}")
+}
+
+func (builder *CodeBuilder) compileEnumSetLit(context *PackageGeneratorContext, lit TcEnumSetLit) {
+	builder.WriteString("((1 << ")
+	builder.compileSeparatedExprList(context, lit.Items, ") | (1 << ")
+	builder.WriteString("))")
 }
 
 // lastExprPrefix is not used anymore, rename to not use prefix anymore
@@ -359,6 +369,8 @@ func (builder *CodeBuilder) compileExprWithPrefix(context *PackageGeneratorConte
 		builder.compileForLoopStmt(context, ex)
 	case TcStructLit:
 		builder.compileStructLit(context, ex)
+	case TcEnumSetLit:
+		builder.compileEnumSetLit(context, ex)
 	case nil:
 		panic(fmt.Sprintf("invalid Ast, expression is nil %T", expr))
 	default:

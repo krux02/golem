@@ -13,7 +13,9 @@ type MyEnum = enum {
   Option3
 }
 
-proc foo(arg: MyStruct): void = {
+type FooFlags = enum { Any; Words; Work; As; Enum; Values }
+
+proc foo(arg: MyStruct; flags: set[FooFlags]): void = {
   printf("a: %d b: %f c: %s\n", arg.a, arg.b, arg.c)
 }
 
@@ -28,7 +30,7 @@ proc main():i32 = {
   var myStruct2 = [12, 34.56, "def"]:MyStruct        # in order initialization, postfix type assertion
   var myStruct3 = [a=78, c="ghi"]:MyStruct           # default value for b
 
-  # var myEnumSet : set[MyEnum] = [Option1, Option3]
+  var myEnumSet : set[MyEnum] = [Option1, Option3]
 
   #var myEnum = Option2:MyEnum
   bar(123:i64, MyEnum(2:i64))
@@ -38,6 +40,6 @@ proc main():i32 = {
   printf("a: %d b: %f c: %s\n", myStruct1.a, myStruct1.b, myStruct1.c)
   printf("a: %d b: %f c: %s\n", myStruct2.a, myStruct2.b, myStruct2.c)
   printf("a: %d b: %f c: %s\n", myStruct3.a, myStruct3.b, myStruct3.c)
-  foo(myStruct1)
+  foo(myStruct1, [Any,Work,As])
   0
 }

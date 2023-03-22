@@ -46,6 +46,10 @@ type ArrayType struct {
 	Elem Type
 }
 
+type EnumSetType struct {
+	Elem *TcEnumDef
+}
+
 func (typ *ArrayType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune('A')
 	builder.WriteString(fmt.Sprintf("A%d", typ.Len))
@@ -64,12 +68,23 @@ func (typ *TcEnumDef) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune('_')
 }
 
+func (typ *EnumSetType) ManglePrint(builder *strings.Builder) {
+	builder.WriteRune('X')
+	typ.Elem.ManglePrint(builder)
+	builder.WriteRune('_')
+}
+
 func (typ *BuiltinType) Source() string {
 	// should this panic?
 	return ""
 }
 
 func (typ *ArrayType) Source() string {
+	// should this panic?
+	return ""
+}
+
+func (typ *EnumSetType) Source() string {
 	// should this panic?
 	return ""
 }
@@ -132,7 +147,7 @@ func (typ *TypeGroup) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 }
 
 func (typ *ArrayType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
-	return TcArrayLit{}
+	return TcArrayLit{ElemType: typ.Elem}
 }
 
 func (typ *TcStructDef) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
@@ -141,6 +156,10 @@ func (typ *TcStructDef) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 
 func (typ *TcEnumDef) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	return typ.Values[0]
+}
+
+func (typ *EnumSetType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+	return TcEnumSetLit{ElemType: typ.Elem}
 }
 
 // Printf is literally the only use case for real varargs that I
@@ -194,6 +213,7 @@ func registerConstant(name string, typ Type) {
 }
 
 func init() {
+
 	registerBuiltinType(TypeBoolean)
 	registerBuiltinType(TypeInt8)
 	registerBuiltinType(TypeInt16)

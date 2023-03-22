@@ -177,6 +177,20 @@ func (lit TcStructLit) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(lit.typ.Name)
 }
 
+func (lit TcEnumSetLit) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteRune('[')
+	for i, expr := range lit.Items {
+		if i != 0 {
+			builder.WriteString(", ")
+		}
+		builder.WriteAstNode(expr)
+	}
+	builder.WriteString("]: set[")
+	//builder.WriteAstNode(lit.typ)
+	builder.WriteString(lit.ElemType.Name)
+	builder.WriteRune(']')
+}
+
 func WriteIntLit(builder *strings.Builder, value int64) {
 	if value == 0 {
 		builder.WriteByte('0')
@@ -381,6 +395,12 @@ func (typ *ArrayType) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("array(")
 	WriteIntLit(&builder.Builder, typ.Len)
 	builder.WriteString(")[")
+	builder.WriteAstNode(typ.Elem)
+	builder.WriteString("]")
+}
+
+func (typ *EnumSetType) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("set[")
 	builder.WriteAstNode(typ.Elem)
 	builder.WriteString("]")
 }
