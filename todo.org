@@ -9,7 +9,7 @@
 * DONE add field values to struct literals
 * DONE testing framework to test the compiler
 * DONE allow conversion between enum/int/string
-* TODO enum set type
+* DONE enum set type
 * TODO distinguish between the type and the expression that defines it
 * TODO display parsing errors es normal error messages
 * TODO mutable flag in type
@@ -29,7 +29,7 @@
 * TODO introduce ~expectAndEatToken~
 * DONE static overloading
 * TODO C++ interop
-* DONE [#B] automatic narrowing of literals when type is known from outside.
+* DONE automatic narrowing of literals when type is known from outside.
 * TODO make `registerBuiltinX` a method of scope.
 * TODO compiler passes for some transformations (e.g. moving literals to constants)
 * TODO statistics about compiler bootstrapping time, lines of code, test time, test lines of code

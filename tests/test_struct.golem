@@ -17,6 +17,9 @@ type FooFlags = enum { Any; Words; Work; As; Enum; Values }
 
 proc foo(arg: MyStruct; flags: set[FooFlags]): void = {
   printf("a: %d b: %f c: %s\n", arg.a, arg.b, arg.c)
+  let b1 = contains(flags, Words)
+  let b2 = contains(flags, As)
+  let b3:bool = contains(flags, Enum)
 }
 
 proc bar(arg1: i64; arg2: MyEnum): void = {

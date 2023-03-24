@@ -167,8 +167,11 @@ func (typ *EnumSetType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 // tied to printf for now. A general concept for varargs will be
 // specified out as soon as it becomes necessary.
 var BuiltinPrintf *TcProcDef = &TcProcDef{
-	Name:        "printf",
-	MangledName: "printf",
+	Name: "printf",
+
+	Prefix:  "printf(",
+	Infix:   ", ",
+	Postfix: ")",
 	// Support for type checking arguments for printf is currently a language
 	// feature.
 	printfargs: true,
@@ -190,13 +193,14 @@ func registerTypeGroup(typ *TypeGroup) {
 	builtinScope.Types[typ.name] = typ
 }
 
-func registerBuiltin(name, builtinName string, isOperator bool, args []Type, result Type) {
+func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Type) {
 	procDef := &TcProcDef{
-		Name:               name,
-		Args:               make([]TcSymbol, len(args)),
-		ResultType:         result,
-		generateAsOperator: isOperator,
-		MangledName:        builtinName,
+		Name:       name,
+		Args:       make([]TcSymbol, len(args)),
+		ResultType: result,
+		Prefix:     prefix,
+		Infix:      infix,
+		Postfix:    postfix,
 	}
 	for i, arg := range args {
 		procDef.Args[i].Typ = arg
@@ -232,43 +236,43 @@ func init() {
 	builtinScope.Procedures["printf"] = append(builtinScope.Procedures["printf"], BuiltinPrintf)
 	// this has no structure, just made to make the example compile
 	for _, typ := range []Type{TypeInt8, TypeInt16, TypeInt32, TypeInt64, TypeFloat32, TypeFloat64} {
-		registerBuiltin("+", "+", true, []Type{typ, typ}, typ)
-		registerBuiltin("-", "-", true, []Type{typ, typ}, typ)
-		registerBuiltin("*", "*", true, []Type{typ, typ}, typ)
-		registerBuiltin("/", "/", true, []Type{typ, typ}, typ)
+		registerBuiltin("+", "(", "+", ")", []Type{typ, typ}, typ)
+		registerBuiltin("-", "(", "-", ")", []Type{typ, typ}, typ)
+		registerBuiltin("*", "(", "*", ")", []Type{typ, typ}, typ)
+		registerBuiltin("/", "(", "/", ")", []Type{typ, typ}, typ)
 
-		registerBuiltin("==", "==", true, []Type{typ, typ}, TypeBoolean)
-		registerBuiltin("<", "<", true, []Type{typ, typ}, TypeBoolean)
-		registerBuiltin("<=", "<=", true, []Type{typ, typ}, TypeBoolean)
-		registerBuiltin(">", ">", true, []Type{typ, typ}, TypeBoolean)
-		registerBuiltin(">=", ">=", true, []Type{typ, typ}, TypeBoolean)
-		registerBuiltin("!=", "!=", true, []Type{typ, typ}, TypeBoolean)
+		registerBuiltin("==", "(", "==", ")", []Type{typ, typ}, TypeBoolean)
+		registerBuiltin("<", "(", "<", ")", []Type{typ, typ}, TypeBoolean)
+		registerBuiltin("<=", "(", "<=", ")", []Type{typ, typ}, TypeBoolean)
+		registerBuiltin(">", "(", ">", ")", []Type{typ, typ}, TypeBoolean)
+		registerBuiltin(">=", "(", ">=", ")", []Type{typ, typ}, TypeBoolean)
+		registerBuiltin("!=", "(", "!=", ")", []Type{typ, typ}, TypeBoolean)
 
-		registerBuiltin("+=", "+=", true, []Type{typ, typ}, TypeVoid)
-		registerBuiltin("-=", "-=", true, []Type{typ, typ}, TypeVoid)
-		registerBuiltin("*=", "*=", true, []Type{typ, typ}, TypeVoid)
-		registerBuiltin("/=", "/=", true, []Type{typ, typ}, TypeVoid)
-		registerBuiltin("=", "=", true, []Type{typ, typ}, TypeVoid)
+		registerBuiltin("+=", "(", "+=", ")", []Type{typ, typ}, TypeVoid)
+		registerBuiltin("-=", "(", "-=", ")", []Type{typ, typ}, TypeVoid)
+		registerBuiltin("*=", "(", "*=", ")", []Type{typ, typ}, TypeVoid)
+		registerBuiltin("/=", "(", "/=", ")", []Type{typ, typ}, TypeVoid)
+		registerBuiltin("=", "(", "=", ")", []Type{typ, typ}, TypeVoid)
 
-		registerBuiltin("i8", "(int8_t)", false, []Type{typ}, TypeInt8)
-		registerBuiltin("i16", "(int16_t)", false, []Type{typ}, TypeInt16)
-		registerBuiltin("i32", "(int32_t)", false, []Type{typ}, TypeInt32)
-		registerBuiltin("i64", "(int64_t)", false, []Type{typ}, TypeInt64)
+		registerBuiltin("i8", "(int8_t)(", "", ")", []Type{typ}, TypeInt8)
+		registerBuiltin("i16", "(int16_t)(", "", ")", []Type{typ}, TypeInt16)
+		registerBuiltin("i32", "(int32_t)(", "", ")", []Type{typ}, TypeInt32)
+		registerBuiltin("i64", "(int64_t)(", "", ")", []Type{typ}, TypeInt64)
 
-		registerBuiltin("f32", "(float)", false, []Type{typ}, TypeFloat32)
-		registerBuiltin("f64", "(double)", false, []Type{typ}, TypeFloat64)
+		registerBuiltin("f32", "(float)(", "", ")", []Type{typ}, TypeFloat32)
+		registerBuiltin("f64", "(double)(", "", ")", []Type{typ}, TypeFloat64)
 	}
 
-	registerBuiltin("=", "=", true, []Type{TypeString, TypeString}, TypeVoid)
-	registerBuiltin("==", "==", true, []Type{TypeChar, TypeChar}, TypeBoolean)
-	registerBuiltin("!=", "!=", true, []Type{TypeChar, TypeChar}, TypeBoolean)
-	registerBuiltin("==", "==", true, []Type{TypeBoolean, TypeBoolean}, TypeBoolean)
-	registerBuiltin("!=", "!=", true, []Type{TypeBoolean, TypeBoolean}, TypeBoolean)
+	registerBuiltin("=", "(", "=", ")", []Type{TypeString, TypeString}, TypeVoid)
+	registerBuiltin("==", "(", "==", ")", []Type{TypeChar, TypeChar}, TypeBoolean)
+	registerBuiltin("!=", "(", "!=", ")", []Type{TypeChar, TypeChar}, TypeBoolean)
+	registerBuiltin("==", "(", "==", ")", []Type{TypeBoolean, TypeBoolean}, TypeBoolean)
+	registerBuiltin("!=", "(", "!=", ")", []Type{TypeBoolean, TypeBoolean}, TypeBoolean)
 
-	registerBuiltin("and", "&&", true, []Type{TypeBoolean, TypeBoolean}, TypeBoolean)
-	registerBuiltin("or", "||", true, []Type{TypeBoolean, TypeBoolean}, TypeBoolean)
+	registerBuiltin("and", "(", "&&", ")", []Type{TypeBoolean, TypeBoolean}, TypeBoolean)
+	registerBuiltin("or", "(", "||", ")", []Type{TypeBoolean, TypeBoolean}, TypeBoolean)
 
-	registerBuiltin("assert", "assert", false, []Type{TypeBoolean}, TypeVoid)
+	registerBuiltin("assert", "assert(", "", ")", []Type{TypeBoolean}, TypeVoid)
 
 	registerConstant("true", TypeBoolean)
 	registerConstant("false", TypeBoolean)

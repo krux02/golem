@@ -191,12 +191,13 @@ func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def TypeDef) Type {
 			}
 		}
 		scope.Types[result.Name] = result
-		registerBuiltin("string", fmt.Sprintf("%s_names", result.Name), false, []Type{result}, TypeString)
+		registerBuiltin("string", fmt.Sprintf("%s_names_array[", result.Name), "", "]", []Type{result}, TypeString)
 		for _, typ := range TypeAnyInt.items {
 			builtinType := typ.(*BuiltinType)
-			registerBuiltin(builtinType.name, fmt.Sprintf("(%s)", builtinType.internalName), false, []Type{result}, typ)
-			registerBuiltin(result.Name, fmt.Sprintf("(%s)", result.Name), false, []Type{typ}, result)
+			registerBuiltin(builtinType.name, fmt.Sprintf("(%s)", builtinType.internalName), "", "", []Type{result}, typ)
+			registerBuiltin(result.Name, fmt.Sprintf("(%s)", result.Name), "", "", []Type{typ}, result)
 		}
+		registerBuiltin("contains", "(((", ") & (1 << (", "))) != 0)", []Type{GetEnumSetType(result), result}, TypeBoolean)
 		return result
 	case "union":
 		panic("not implemented union")
@@ -227,12 +228,15 @@ func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result 
 
 	// TODO, don't special case it like this here
 	if def.Name.source == "main" {
-		result.MangledName = "main"
+		result.Prefix = "main("
 	} else {
-		result.MangledName = mangledNameBuilder.String()
+		mangledNameBuilder.WriteRune('(')
+		result.Prefix = mangledNameBuilder.String()
 	}
+	result.Infix = ", "
+	result.Postfix = ")"
 
-	return
+	return result
 }
 
 func (tc *TypeChecker) ReportErrorf(node AstNode, msg string, args ...interface{}) {
@@ -432,6 +436,28 @@ func errorProcSym(ident Ident) TcProcSymbol {
 	}
 }
 
+func (tc *TypeChecker) TypeCheckCall1(scope Scope, procSym TcProcSymbol, checkedArgs []TcExpr, uncheckedArgs []Expr, expected Type) (result TcCall) {
+	result.Sym = procSym
+	if procSym.Impl.printfargs {
+		if len(checkedArgs) > 0 {
+			panic("not implemented")
+		}
+		result.Args = tc.TypeCheckPrintfArgs(scope, procSym, uncheckedArgs)
+	} else {
+		result.Args = checkedArgs
+		expectedArgs := procSym.Impl.Args
+		tc.ExpectArgsLen(procSym, len(checkedArgs)+len(uncheckedArgs), len(expectedArgs))
+		for i, arg := range uncheckedArgs {
+			expectedType := expectedArgs[len(checkedArgs)+i].Typ
+			tcArg := tc.TypeCheckExpr(scope, arg, expectedType)
+			result.Args = append(result.Args, tcArg)
+		}
+	}
+	// discard the type, it can't be stored in TcCall. Error reporting is still happening though.
+	tc.ExpectType(procSym, procSym.Impl.ResultType, expected)
+	return result
+}
+
 func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcExpr {
 	ident := call.Callee.(Ident)
 	if ident.source == "." && len(call.Args) == 2 {
@@ -452,26 +478,9 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		result.Args = tcArgs
 		return result
 	case 1:
-		procSym := procSyms[0]
-		// procSym := procSyms[0]
-		result.Sym = procSym
-
-		if procSym.Impl.printfargs {
-			result.Args = tc.TypeCheckPrintfArgs(scope, procSym, call.Args)
-			return result
-		}
-
-		result.Args = make([]TcExpr, 0, len(call.Args))
-		expectedArgs := procSym.Impl.Args
-
-		tc.ExpectArgsLen(call, len(call.Args), len(expectedArgs))
-
-		for i, arg := range call.Args {
-			expectedType := expectedArgs[i].Typ
-			tcArg := tc.TypeCheckExpr(scope, arg, expectedType)
-			result.Args = append(result.Args, tcArg)
-		}
+		return tc.TypeCheckCall1(scope, procSyms[0], []TcExpr{}, call.Args, expected)
 	default:
+
 		// TODO: this is very quick and dirty. These three branches must be merged into one general algorithm
 		var checkedArgs []TcExpr
 
@@ -482,6 +491,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 				expectedArgType = procSym.Impl.Args[i].Typ
 			}
 			tcArg := tc.TypeCheckExpr(scope, arg, expectedArgType)
+			checkedArgs = append(checkedArgs, tcArg)
 
 			// filter procedures for right one
 			n := 0
@@ -494,7 +504,9 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 			}
 			procSyms = procSyms[:n]
 
-			checkedArgs = append(checkedArgs, tcArg)
+			if len(procSyms) == 1 {
+				return tc.TypeCheckCall1(scope, procSyms[0], checkedArgs, call.Args[i+1:], expected)
+			}
 		}
 		if len(procSyms) == 0 {
 			builder := &AstPrettyPrinter{}

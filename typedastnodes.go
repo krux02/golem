@@ -136,13 +136,19 @@ type TcReturnStmt struct {
 
 type TcProcDef struct {
 	AbstractAstNode
-	Name        string
-	MangledName string
-	Args        []TcSymbol
-	ResultType  Type
-	Body        TcExpr
+	Name string
 
-	// This code here is supposed to be temporary code. TcProcDef should
+	// TODO these are C backend specific fields and should not be bart of a general proc def node
+	// example1 "foo(", ", ", ")"        function call
+	// example2 "(", " + ", ")"          operator call
+	// example3 "somearray[", ", ", "]"  array access
+	Prefix, Infix, Postfix string
+
+	Args       []TcSymbol
+	ResultType Type
+	Body       TcExpr
+
+	// TODO This code here is supposed to be temporary code. TcProcDef should
 	// be a tidy clean minimal definition. This code must be optimized
 	// for reading. Do NOT bloat it with shit for lots of of exceptions
 	// in the language.

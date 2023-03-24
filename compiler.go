@@ -50,8 +50,7 @@ func (builder *CodeBuilder) compileTypeExpr(typ Type) {
 	}
 }
 
-func (builder *CodeBuilder) compileSymWithType(context *PackageGeneratorContext, sym TcSymbol) {
-	// TODO rename this, it is a declaration, not just a symbol that has a type
+func (builder *CodeBuilder) compileSymDeclaration(context *PackageGeneratorContext, sym TcSymbol) {
 	switch typ := sym.Type().(type) {
 	case *BuiltinType:
 		builder.WriteString(typ.internalName)
@@ -87,25 +86,11 @@ func (builder *CodeBuilder) compileSymWithType(context *PackageGeneratorContext,
 }
 
 func (builder *CodeBuilder) compileCall(context *PackageGeneratorContext, call TcCall) {
-	context.markProcForGeneration(call.Sym.Impl)
-
-	if call.Sym.Impl.generateAsOperator {
-		builder.WriteString("(")
-		for i, it := range call.Args {
-			if i != 0 {
-				builder.WriteString(" ")
-				builder.WriteString(call.Sym.Impl.MangledName)
-				builder.WriteString(" ")
-			}
-			builder.compileExpr(context, it)
-		}
-		builder.WriteString(")")
-	} else {
-		builder.WriteString(call.Sym.Impl.MangledName)
-		builder.WriteString("(")
-		builder.compileSeparatedExprList(context, call.Args, ", ")
-		builder.WriteString(")")
-	}
+	impl := call.Sym.Impl
+	context.markProcForGeneration(impl)
+	builder.WriteString(impl.Prefix)
+	builder.compileSeparatedExprList(context, call.Args, impl.Infix)
+	builder.WriteString(impl.Postfix)
 }
 
 func (builder *CodeBuilder) compileCharLit(lit CharLit) {
@@ -204,7 +189,7 @@ func (builder *CodeBuilder) compileExpr(context *PackageGeneratorContext, expr T
 }
 
 func (builder *CodeBuilder) compileVariableDefStmt(context *PackageGeneratorContext, stmt TcVariableDefStmt) {
-	builder.compileSymWithType(context, stmt.Sym)
+	builder.compileSymDeclaration(context, stmt.Sym)
 	builder.WriteString(" = ")
 	builder.compileExpr(context, stmt.Value)
 }
@@ -431,15 +416,6 @@ func compileEnumDef(context *PackageGeneratorContext, enumDef *TcEnumDef) {
 		builder.compileStrLit(sym.source)
 	}
 	builder.WriteString("};")
-	// HACK: this hack it to make string conversion available as a builtin function
-	builder.NewlineAndIndent()
-	builder.WriteString("static inline const string ")
-	builder.WriteString(enumDef.Name)
-	builder.WriteString("_names(")
-	builder.WriteString(enumDef.Name)
-	builder.WriteString(" arg) { return ")
-	builder.WriteString(enumDef.Name)
-	builder.WriteString("_names_array[arg]; }")
 }
 
 func compileStructDef(context *PackageGeneratorContext, structDef *TcStructDef) {
@@ -470,15 +446,14 @@ func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 	headBuilder.compileTypeExpr(procDef.ResultType)
 	// headBuilder.compileTypeExpr(procDef.ResultType)
 	headBuilder.WriteString(" ")
-	headBuilder.WriteString(procDef.MangledName)
-	headBuilder.WriteString("(")
+	headBuilder.WriteString(procDef.Prefix)
 	for i, arg := range procDef.Args {
 		if i != 0 {
-			headBuilder.WriteString(", ")
+			headBuilder.WriteString(procDef.Infix)
 		}
-		headBuilder.compileSymWithType(context, arg)
+		headBuilder.compileSymDeclaration(context, arg)
 	}
-	headBuilder.WriteString(")")
+	headBuilder.WriteString(procDef.Postfix)
 
 	builderStr := headBuilder.String()
 	context.forwardDecl.WriteString(builderStr)
