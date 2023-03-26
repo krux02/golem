@@ -730,7 +730,7 @@ func (stmt TcIfStmt) Type() Type {
 	return TypeVoid
 }
 
-func (stmt TcIfElseStmt) Type() Type {
+func (stmt TcIfElseExpr) Type() Type {
 	return UnifyType(stmt.Body.Type(), stmt.Else.Type())
 }
 
@@ -953,7 +953,7 @@ func (tc *TypeChecker) TypeCheckIfStmt(scope Scope, stmt IfExpr) (result TcIfStm
 	return
 }
 
-func (tc *TypeChecker) TypeCheckIfElseStmt(scope Scope, stmt IfElseExpr, expected Type) (result TcIfElseStmt) {
+func (tc *TypeChecker) TypeCheckIfElseStmt(scope Scope, stmt IfElseExpr, expected Type) (result TcIfElseExpr) {
 	// currently only iteration on strings in possible (of course that is not final)
 	result.Condition = tc.TypeCheckExpr(scope, stmt.Condition, TypeBoolean)
 	result.Body = tc.TypeCheckExpr(scope, stmt.Body, expected)

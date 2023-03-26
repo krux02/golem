@@ -102,7 +102,7 @@ type TcIfStmt struct {
 	Body      TcExpr
 }
 
-type TcIfElseStmt struct {
+type TcIfElseExpr struct {
 	AbstractAstNode
 	Condition TcExpr
 	Body      TcExpr
@@ -200,7 +200,7 @@ func (stmt TcVariableDefStmt) expression() {}
 func (stmt TcReturnStmt) expression()      {}
 func (stmt TcForLoopStmt) expression()     {}
 func (stmt TcIfStmt) expression()          {}
-func (stmt TcIfElseStmt) expression()      {}
+func (stmt TcIfElseExpr) expression()      {}
 func (block TcCodeBlock) expression()      {}
 func (call TcCall) expression()            {}
 func (call TcArrayLit) expression()        {}

@@ -360,7 +360,7 @@ func (ifStmt IfElseExpr) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteAstNode(ifStmt.Else)
 }
 
-func (ifStmt TcIfElseStmt) prettyPrint(builder *AstPrettyPrinter) {
+func (ifStmt TcIfElseExpr) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("if ")
 	builder.WriteAstNode(ifStmt.Condition)
 	builder.WriteString(" do ")

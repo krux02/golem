@@ -216,8 +216,7 @@ func ExprHasValue(expr TcExpr) bool {
 	return typ != TypeNoReturn && typ != TypeVoid
 }
 
-// TODO: rename, it is not a Stmt anymore
-func (builder *CodeBuilder) compileIfElseStmt(context *PackageGeneratorContext, stmt TcIfElseStmt) {
+func (builder *CodeBuilder) compileIfElseExpr(context *PackageGeneratorContext, stmt TcIfElseExpr) {
 	if ExprHasValue(stmt) {
 		builder.WriteString("(")
 		builder.compileExpr(context, stmt.Condition)
@@ -348,8 +347,8 @@ func (builder *CodeBuilder) compileExprWithPrefix(context *PackageGeneratorConte
 		builder.compileExpr(context, ex.Value)
 	case TcIfStmt:
 		builder.compileIfStmt(context, ex)
-	case TcIfElseStmt:
-		builder.compileIfElseStmt(context, ex)
+	case TcIfElseExpr:
+		builder.compileIfElseExpr(context, ex)
 	case TcForLoopStmt:
 		builder.compileForLoopStmt(context, ex)
 	case TcStructLit:
