@@ -4,7 +4,7 @@ package main
 
 type AstNode interface {
 	prettyPrint(*AstPrettyPrinter)
-	Source() string
+	GetSource() string
 }
 
 type Expr interface {
@@ -16,24 +16,20 @@ type Expr interface {
 }
 
 type AbstractAstNode struct {
-	source string
-}
-
-func (astNode AbstractAstNode) Source() string {
-	return astNode.source
+	Source string
 }
 
 // all lines from a documentation comment
 type DocLines []string
 
 type NamedDocSection struct {
-	AbstractAstNode
-	Name  string
-	Lines DocLines
+	Source string
+	Name   string
+	Lines  DocLines
 }
 
 type DocComment struct {
-	AbstractAstNode
+	Source           string
 	BaseDoc          DocLines
 	NamedDocSections []NamedDocSection
 }
@@ -41,12 +37,12 @@ type DocComment struct {
 // most simple AST node
 type Ident struct {
 	// the abstract source field is the identifier value
-	AbstractAstNode
+	Source  string
 	Comment DocLines
 }
 
 type TypeExpr struct {
-	AbstractAstNode
+	Source string
 	// this type is a placeholder, it is supposed to become more complex
 	Ident    Ident
 	ExprArgs []Expr
@@ -54,13 +50,13 @@ type TypeExpr struct {
 }
 
 type StructField struct {
-	AbstractAstNode
+	Source   string
 	Name     Ident
 	TypeExpr TypeExpr
 }
 
 type VariableDefStmt struct {
-	AbstractAstNode
+	Source   string
 	Kind     SymbolKind // only SkVar SkLet SkConst allowed
 	Name     Ident
 	TypeExpr TypeExpr
@@ -68,85 +64,85 @@ type VariableDefStmt struct {
 }
 
 type ForLoopStmt struct {
-	AbstractAstNode
+	Source     string
 	LoopIdent  Ident
 	Collection Expr
 	Body       Expr
 }
 
 type IfExpr struct {
-	AbstractAstNode
+	Source    string
 	Condition Expr
 	Body      Expr
 }
 
 type IfElseExpr struct {
-	AbstractAstNode
+	Source    string
 	Condition Expr
 	Body      Expr
 	Else      Expr
 }
 
 type BreakStmt struct {
-	AbstractAstNode
+	Source string
 }
 
 type ContinueStmt struct {
-	AbstractAstNode
+	Source string
 }
 
 type ReturnStmt struct {
-	AbstractAstNode
-	Value Expr
+	Source string
+	Value  Expr
 }
 
 type TypeDef struct {
-	AbstractAstNode
-	Name Ident
-	Kind Ident
-	Body CodeBlock
+	Source string
+	Name   Ident
+	Kind   Ident
+	Body   CodeBlock
 }
 
 type ProcArgument struct {
-	AbstractAstNode
-	Name Ident
-	Type TypeExpr
+	Source string
+	Name   Ident
+	Type   TypeExpr
 }
 
 type CodeBlock struct {
-	AbstractAstNode
-	Items []Expr
+	Source string
+	Items  []Expr
 }
 
 type StrLit struct {
-	AbstractAstNode
-	Value string
+	Source string
+	Value  string
 }
 
 type CharLit struct {
-	AbstractAstNode
-	Rune rune
+	Source string
+	Rune   rune
 }
 
 type IntLit struct {
-	AbstractAstNode
-	typ   *BuiltinType
-	Value int64
+	Source string
+	typ    *BuiltinType
+	Value  int64
 }
 
 type FloatLit struct {
-	AbstractAstNode
-	typ   *BuiltinType
-	Value float64
+	Source string
+	typ    *BuiltinType
+	Value  float64
 }
 
 type ArrayLit struct {
-	AbstractAstNode
-	Items []Expr
+	Source string
+	Items  []Expr
 }
 
 type Call struct {
-	AbstractAstNode
+	Source string
 	Callee Expr
 	Args   []Expr
 	// other properties (TODO can this be removed?)
@@ -155,13 +151,13 @@ type Call struct {
 }
 
 type ColonExpr struct {
-	AbstractAstNode
-	Lhs Expr
-	Rhs TypeExpr
+	Source string
+	Lhs    Expr
+	Rhs    TypeExpr
 }
 
 type ProcDef struct {
-	AbstractAstNode
+	Source     string
 	Name       Ident
 	Args       []ProcArgument
 	ResultType TypeExpr
@@ -169,7 +165,7 @@ type ProcDef struct {
 }
 
 type PackageDef struct {
-	AbstractAstNode
+	Source        string
 	Name          string
 	TopLevelStmts []Expr
 }
@@ -193,3 +189,27 @@ func (_ IfElseExpr) expression()      {}
 func (_ ReturnStmt) expression()      {}
 func (_ BreakStmt) expression()       {}
 func (_ ContinueStmt) expression()    {}
+
+func (arg ProcDef) GetSource() string         { return arg.Source }
+func (arg TypeDef) GetSource() string         { return arg.Source }
+func (arg DocComment) GetSource() string      { return arg.Source }
+func (arg NamedDocSection) GetSource() string { return arg.Source }
+func (arg Ident) GetSource() string           { return arg.Source }
+func (arg CodeBlock) GetSource() string       { return arg.Source }
+func (arg StrLit) GetSource() string          { return arg.Source }
+func (arg IntLit) GetSource() string          { return arg.Source }
+func (arg FloatLit) GetSource() string        { return arg.Source }
+func (arg ArrayLit) GetSource() string        { return arg.Source }
+func (arg CharLit) GetSource() string         { return arg.Source }
+func (arg Call) GetSource() string            { return arg.Source }
+func (arg ColonExpr) GetSource() string       { return arg.Source }
+func (arg VariableDefStmt) GetSource() string { return arg.Source }
+func (arg ForLoopStmt) GetSource() string     { return arg.Source }
+func (arg IfExpr) GetSource() string          { return arg.Source }
+func (arg IfElseExpr) GetSource() string      { return arg.Source }
+func (arg ReturnStmt) GetSource() string      { return arg.Source }
+func (arg BreakStmt) GetSource() string       { return arg.Source }
+func (arg ContinueStmt) GetSource() string    { return arg.Source }
+func (arg TypeExpr) GetSource() string        { return arg.Source }
+
+func (arg PackageDef) GetSource() string { return arg.Source }

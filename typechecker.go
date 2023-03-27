@@ -49,18 +49,18 @@ func (scope Scope) NewSubScope() Scope {
 
 func (scope Scope) NewSymbol(tc *TypeChecker, name Ident, kind SymbolKind, typ Type) TcSymbol {
 	//result := TcSymbol{Name: name.source, Kind: kind, Typ: typ}
-	rawName := name.source
-	result := TcSymbol{AbstractAstNode: AbstractAstNode{source: name.source}, Kind: kind, Typ: typ}
+	rawName := name.Source
+	result := TcSymbol{Source: name.Source, Kind: kind, Typ: typ}
 	_, alreadyExists := scope.Variables[rawName]
 	if alreadyExists {
 		tc.ReportErrorf(name, "redefinition of %s", rawName)
 	}
-	scope.Variables[name.source] = result
+	scope.Variables[name.Source] = result
 	return result
 }
 
 func (tc *TypeChecker) LookUpType(scope Scope, expr TypeExpr) Type {
-	if expr.Ident.source == "array" {
+	if expr.Ident.Source == "array" {
 		if !tc.ExpectArgsLen(expr, len(expr.TypeArgs), 1) {
 			return TypeError
 		}
@@ -78,7 +78,7 @@ func (tc *TypeChecker) LookUpType(scope Scope, expr TypeExpr) Type {
 		}
 		return GetArrayType(elem, lenLit.Value)
 	}
-	if expr.Ident.source == "set" {
+	if expr.Ident.Source == "set" {
 		if !tc.ExpectArgsLen(expr, len(expr.TypeArgs), 1) {
 			return TypeError
 		}
@@ -93,7 +93,7 @@ func (tc *TypeChecker) LookUpType(scope Scope, expr TypeExpr) Type {
 	}
 
 	// TODO really slow lookup, should really be faster
-	name := expr.Ident.source
+	name := expr.Ident.Source
 	for key, value := range scope.Types {
 		if key == name {
 			return value
@@ -108,9 +108,9 @@ func (tc *TypeChecker) LookUpType(scope Scope, expr TypeExpr) Type {
 
 func (tc *TypeChecker) LookUpProc(scope Scope, ident Ident, procSyms []TcProcSymbol) []TcProcSymbol {
 	for scope != nil {
-		if impls, ok := scope.Procedures[ident.source]; ok {
+		if impls, ok := scope.Procedures[ident.Source]; ok {
 			for _, impl := range impls {
-				procSym := TcProcSymbol{Name: ident.source, Impl: impl}
+				procSym := TcProcSymbol{Name: ident.Source, Impl: impl}
 				procSyms = append(procSyms, procSym)
 			}
 		}
@@ -121,16 +121,16 @@ func (tc *TypeChecker) LookUpProc(scope Scope, ident Ident, procSyms []TcProcSym
 
 func (tc *TypeChecker) LookUpLetSymRecursive(scope Scope, ident Ident) TcSymbol {
 	if scope == nil {
-		tc.ReportErrorf(ident, "let sym not found: %s", ident.source)
+		tc.ReportErrorf(ident, "let sym not found: %s", ident.Source)
 		var result TcSymbol
 		result.Kind = SkLet
-		result.source = ident.source
+		result.Source = ident.Source
 		result.Typ = TypeError
 		return result
 	}
 
-	if sym, ok := scope.Variables[ident.source]; ok {
-		sym.source = ident.source
+	if sym, ok := scope.Variables[ident.Source]; ok {
+		sym.Source = ident.Source
 		return sym
 	}
 	return tc.LookUpLetSymRecursive(scope.Parent, ident)
@@ -139,9 +139,9 @@ func (tc *TypeChecker) LookUpLetSymRecursive(scope Scope, ident Ident) TcSymbol 
 func (tc *TypeChecker) LookUpLetSym(scope Scope, ident Ident, expected Type) (result TcSymbol) {
 	if enumDef, ok := expected.(*TcEnumDef); ok {
 		for _, sym := range enumDef.Values {
-			if sym.source == ident.source {
+			if sym.Source == ident.Source {
 				// change line info
-				sym.source = ident.source
+				sym.Source = ident.Source
 				return sym
 			}
 		}
@@ -152,14 +152,14 @@ func (tc *TypeChecker) LookUpLetSym(scope Scope, ident Ident, expected Type) (re
 }
 
 func (tc *TypeChecker) LineColumnNode(node AstNode) (line, columnStart, columnEnd int) {
-	return LineColumnStr(tc.code, node.Source())
+	return LineColumnStr(tc.code, node.GetSource())
 }
 
 func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def TypeDef) Type {
-	switch def.Kind.source {
+	switch def.Kind.Source {
 	case "struct":
 		result := &TcStructDef{}
-		result.Name = def.Name.source
+		result.Name = def.Name.Source
 		for _, item := range def.Body.Items {
 			if colonExpr, ok := item.(ColonExpr); !ok {
 				tc.ReportErrorf(item, "expect ColonExpr, but got %T", item)
@@ -168,7 +168,7 @@ func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def TypeDef) Type {
 					tc.ReportErrorf(colonExpr.Lhs, "expect Ident, but got %T", colonExpr.Lhs)
 				} else {
 					var tcField TcStructField
-					tcField.Name = nameIdent.source
+					tcField.Name = nameIdent.Source
 					tcField.Type = tc.LookUpType(scope, colonExpr.Rhs)
 					result.Fields = append(result.Fields, tcField)
 				}
@@ -178,13 +178,13 @@ func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def TypeDef) Type {
 		return result
 	case "enum":
 		result := &TcEnumDef{}
-		result.Name = def.Name.source
+		result.Name = def.Name.Source
 		for _, item := range def.Body.Items {
 			if ident, ok := item.(Ident); !ok {
 				tc.ReportErrorf(item, "expect Ident, but got %T", item)
 			} else {
 				var sym TcSymbol
-				sym.source = ident.source
+				sym.Source = ident.Source
 				sym.Kind = SkEnum
 				sym.Typ = result
 				result.Values = append(result.Values, sym)
@@ -202,7 +202,7 @@ func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def TypeDef) Type {
 	case "union":
 		panic("not implemented union")
 	default:
-		tc.ReportErrorf(def.Kind, "invalid type kind %s, expect one of struct, enum, union", def.Kind.source)
+		tc.ReportErrorf(def.Kind, "invalid type kind %s, expect one of struct, enum, union", def.Kind.Source)
 		return nil
 	}
 }
@@ -211,9 +211,9 @@ func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result 
 	scope := parentScope.NewSubScope()
 	result = &TcProcDef{}
 	scope.CurrentProc = result
-	result.Name = def.Name.source
+	result.Name = def.Name.Source
 	mangledNameBuilder := &strings.Builder{}
-	mangledNameBuilder.WriteString(def.Name.source)
+	mangledNameBuilder.WriteString(def.Name.Source)
 	mangledNameBuilder.WriteRune('_')
 	for _, arg := range def.Args {
 		typ := tc.LookUpType(scope, arg.Type)
@@ -227,7 +227,7 @@ func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result 
 	parentScope.Procedures[result.Name] = append(parentScope.Procedures[result.Name], result)
 
 	// TODO, don't special case it like this here
-	if def.Name.source == "main" {
+	if def.Name.Source == "main" {
 		result.Prefix = "main("
 	} else {
 		mangledNameBuilder.WriteRune('(')
@@ -418,9 +418,9 @@ func (tc *TypeChecker) TypeCheckDotExpr(scope Scope, lhs, rhs Expr, expected Typ
 	tcLhs := tc.TypeCheckExpr(scope, lhs, TypeUnspecified)
 	switch t := tcLhs.Type().(type) {
 	case *TcStructDef:
-		tcRhs, idx := t.GetField(rhs.Source())
+		tcRhs, idx := t.GetField(rhs.GetSource())
 		if idx < 0 {
-			tc.ReportErrorf(rhs, "type %s has no field %s", t.Name, rhs.Source())
+			tc.ReportErrorf(rhs, "type %s has no field %s", t.Name, rhs.GetSource())
 		}
 		tc.ExpectType(rhs, tcRhs.Type, expected)
 		return TcDotExpr{Lhs: tcLhs, Rhs: tcRhs}
@@ -431,7 +431,7 @@ func (tc *TypeChecker) TypeCheckDotExpr(scope Scope, lhs, rhs Expr, expected Typ
 
 func errorProcSym(ident Ident) TcProcSymbol {
 	return TcProcSymbol{
-		Name: ident.Source(),
+		Name: ident.GetSource(),
 		Impl: nil,
 	}
 }
@@ -460,7 +460,7 @@ func (tc *TypeChecker) TypeCheckCall1(scope Scope, procSym TcProcSymbol, checked
 
 func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcExpr {
 	ident := call.Callee.(Ident)
-	if ident.source == "." && len(call.Args) == 2 {
+	if ident.Source == "." && len(call.Args) == 2 {
 		return tc.TypeCheckDotExpr(scope, call.Args[0], call.Args[1], expected)
 	}
 
@@ -469,7 +469,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 	var result TcCall
 	switch len(procSyms) {
 	case 0:
-		tc.ReportErrorf(ident, "proc not found: %s", ident.source)
+		tc.ReportErrorf(ident, "proc not found: %s", ident.Source)
 		result.Sym = errorProcSym(ident)
 		var tcArgs []TcExpr
 		for _, arg := range call.Args {
@@ -511,7 +511,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		if len(procSyms) == 0 {
 			builder := &AstPrettyPrinter{}
 			builder.WriteString("proc not found: ")
-			builder.WriteString(ident.source)
+			builder.WriteString(ident.Source)
 			builder.WriteRune('(')
 			for i, arg := range checkedArgs {
 				if i != 0 {
@@ -526,7 +526,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 			return result
 		}
 		if len(procSyms) > 1 {
-			tc.ReportErrorf(ident, "too many overloads: %s", ident.source)
+			tc.ReportErrorf(ident, "too many overloads: %s", ident.Source)
 			result.Sym = errorProcSym(ident)
 			result.Args = checkedArgs
 			return result
@@ -547,7 +547,7 @@ func (tc *TypeChecker) ApplyDocComment(expr Expr, doc DocComment) Expr {
 			key := it.Name
 			value := it.Lines
 
-			if expr2.Name.source != key {
+			if expr2.Name.Source != key {
 				tc.ReportInvalidDocCommentKey(it)
 				continue
 			}
@@ -565,7 +565,7 @@ func (tc *TypeChecker) ApplyDocComment(expr Expr, doc DocComment) Expr {
 			value := it.Lines
 
 			for i := range expr2.Args {
-				if expr2.Args[i].Name.source == key {
+				if expr2.Args[i].Name.Source == key {
 					commentRef := &expr2.Args[i].Name.Comment
 					*commentRef = append(*commentRef, value...)
 					continue DOCSECTIONS1
@@ -583,7 +583,7 @@ func (tc *TypeChecker) ApplyDocComment(expr Expr, doc DocComment) Expr {
 			for i := range expr2.Body.Items {
 				if colonExpr, ok := expr2.Body.Items[i].(ColonExpr); ok {
 					if ident, ok := colonExpr.Lhs.(Ident); ok {
-						if ident.source == key {
+						if ident.Source == key {
 							ident.Comment = append(ident.Comment, value...)
 							colonExpr.Lhs = ident
 							expr2.Body.Items[i] = colonExpr
@@ -634,11 +634,11 @@ func (tc *TypeChecker) TypeCheckCodeBlock(scope Scope, arg CodeBlock, expected T
 }
 
 func (expr TypeExpr) IsSet() bool {
-	return expr.source != ""
+	return expr.Source != ""
 }
 
 func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt) (result TcVariableDefStmt) {
-	result.source = arg.source
+	result.Source = arg.Source
 	var expected Type = TypeUnspecified
 	if arg.TypeExpr.IsSet() {
 		expected = tc.LookUpType(scope, arg.TypeExpr)
@@ -743,7 +743,7 @@ func (expr TcDotExpr) Type() Type {
 }
 
 func MatchNegativeNumber(arg Call) (number IntLit, ok bool) {
-	if ident, kk := arg.Callee.(Ident); kk && ident.source == "-" {
+	if ident, kk := arg.Callee.(Ident); kk && ident.Source == "-" {
 		if len(arg.Args) == 1 {
 			switch lit := arg.Args[0].(type) {
 			case IntLit:
@@ -767,7 +767,7 @@ func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExp
 		// HACK: support for negative literals
 		if number, ok := MatchNegativeNumber(arg); ok {
 			number.Value = -number.Value
-			number.source = arg.source
+			number.Source = arg.Source
 			return (TcExpr)(number)
 		}
 		return (TcExpr)(tc.TypeCheckCall(scope, arg, expected))
@@ -786,7 +786,7 @@ func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExp
 		typ := tc.ExpectType(arg, TypeAnyNumber, expected)
 		if typ == TypeFloat32 || typ == TypeFloat64 {
 			var lit FloatLit
-			lit.AbstractAstNode = arg.AbstractAstNode
+			lit.Source = arg.Source
 			lit.Value = float64(arg.Value)
 			if typ == TypeFloat32 {
 				lit.typ = TypeFloat32
@@ -867,7 +867,7 @@ func GetEnumSetType(elem *TcEnumDef) (result *EnumSetType) {
 
 func matchAssign(arg Expr) (lhs, rhs Expr, ok bool) {
 	call, isCall := arg.(Call)
-	if !isCall || len(call.Args) != 2 || call.Callee.Source() != "=" {
+	if !isCall || len(call.Args) != 2 || call.Callee.GetSource() != "=" {
 		return nil, nil, false
 	}
 	return call.Args[0], call.Args[1], true
@@ -897,7 +897,7 @@ func (tc *TypeChecker) TypeCheckArrayLit(scope Scope, arg ArrayLit, expected Typ
 	case *TcStructDef:
 		result := TcStructLit{}
 		result.Items = make([]TcExpr, len(exp.Fields))
-		result.source = arg.source
+		result.Source = arg.Source
 		result.typ = exp
 
 		if len(arg.Items) == 0 {
@@ -913,9 +913,9 @@ func (tc *TypeChecker) TypeCheckArrayLit(scope Scope, arg ArrayLit, expected Typ
 					panic(isAssign)
 				}
 				lhsIdent := lhs.(Ident)
-				field, idx := exp.GetField(lhsIdent.source)
+				field, idx := exp.GetField(lhsIdent.Source)
 				if idx < 0 {
-					tc.ReportErrorf(lhsIdent, "type %s has no field %s", exp.Name, lhsIdent.source)
+					tc.ReportErrorf(lhsIdent, "type %s has no field %s", exp.Name, lhsIdent.Source)
 				} else {
 					result.Items[idx] = tc.TypeCheckExpr(scope, rhs, field.Type)
 					if idx < lastIdx {

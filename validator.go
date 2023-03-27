@@ -65,7 +65,7 @@ func validateSourceSetInternal(code string, node reflect.Value) {
 	case reflect.Struct:
 		// direct ast node
 		// validateSourceSetInternal(code, fieldValue)
-		if typ.Field(0).Type.Field(0).Name != "source" {
+		if typ.Field(0).Name != "Source" {
 			panic("expected field `source` here")
 		}
 		N := node.NumField()

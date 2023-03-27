@@ -55,12 +55,12 @@ func (builder *CodeBuilder) compileSymDeclaration(context *PackageGeneratorConte
 	case *BuiltinType:
 		builder.WriteString(typ.internalName)
 		builder.WriteString(" ")
-		builder.WriteString(sym.source)
+		builder.WriteString(sym.Source)
 	case *ArrayType:
 		// TODO this is wrong for nested arrays
 		builder.compileTypeExpr(typ.Elem)
 		builder.WriteString(" ")
-		builder.WriteString(sym.source)
+		builder.WriteString(sym.Source)
 		builder.WriteByte('[')
 		WriteIntLit(&builder.Builder, typ.Len)
 		builder.WriteByte(']')
@@ -69,17 +69,17 @@ func (builder *CodeBuilder) compileSymDeclaration(context *PackageGeneratorConte
 		// TODO this should be the mangled name
 		builder.WriteString(typ.Name)
 		builder.WriteString(" ")
-		builder.WriteString(sym.source)
+		builder.WriteString(sym.Source)
 	case *TcEnumDef:
 		context.markEnumTypeForGeneration(typ)
 		// TODO this should be the mangled name
 		builder.WriteString(typ.Name)
 		builder.WriteString(" ")
-		builder.WriteString(sym.source)
+		builder.WriteString(sym.Source)
 	case *EnumSetType:
 		context.markEnumTypeForGeneration(typ.Elem)
 		builder.WriteString("uint64_t ")
-		builder.WriteString(sym.source)
+		builder.WriteString(sym.Source)
 	default:
 		panic(fmt.Errorf("not implemented %T", typ))
 	}
@@ -166,7 +166,7 @@ func (builder *CodeBuilder) compileFloatLit(lit FloatLit) {
 }
 
 func (builder *CodeBuilder) compileSymbol(sym TcSymbol) {
-	switch sym.source {
+	switch sym.Source {
 	case "true":
 		builder.WriteString("1")
 	case "false":
@@ -180,7 +180,7 @@ func (builder *CodeBuilder) compileSymbol(sym TcSymbol) {
 			builder.WriteString(typ.Name)
 			builder.WriteRune('_')
 		}
-		builder.WriteString(sym.source)
+		builder.WriteString(sym.Source)
 	}
 }
 
@@ -271,15 +271,15 @@ func (builder *CodeBuilder) compileForLoopStmt(context *PackageGeneratorContext,
 		builder.WriteString(", ")
 		builder.compileSymbol(stmt.LoopSym)
 		builder.WriteString("_END = ")
-		builder.WriteString(stmt.LoopSym.source)
+		builder.WriteString(stmt.LoopSym.Source)
 		builder.WriteString(" + ")
 		WriteIntLit(&builder.Builder, arrayType.Len)
 		builder.WriteString("; ")
-		builder.WriteString(stmt.LoopSym.source)
+		builder.WriteString(stmt.LoopSym.Source)
 		builder.WriteString(" != ")
-		builder.WriteString(stmt.LoopSym.source)
+		builder.WriteString(stmt.LoopSym.Source)
 		builder.WriteString("_END; ++")
-		builder.WriteString(stmt.LoopSym.source)
+		builder.WriteString(stmt.LoopSym.Source)
 		builder.WriteString(") ")
 	} else {
 		panic("not implemented")
@@ -412,7 +412,7 @@ func compileEnumDef(context *PackageGeneratorContext, enumDef *TcEnumDef) {
 		if i != 0 {
 			builder.WriteString(", ")
 		}
-		builder.compileStrLit(sym.source)
+		builder.compileStrLit(sym.Source)
 	}
 	builder.WriteString("};")
 }
@@ -467,7 +467,7 @@ func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 	injectReturn := ExprHasValue(procDef.Body)
 	// code generation needs to have a code block here, otherwise it is not valid C
 	var body TcCodeBlock
-	body.source = procDef.Body.Source()
+	body.Source = procDef.Body.GetSource()
 
 	if injectReturn {
 		body.Items = append(body.Items, TcReturnStmt{Value: procDef.Body})

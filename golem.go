@@ -69,14 +69,14 @@ func errorTest(filename string) error {
 		return fmt.Errorf("%d number of errors doesn't match the expected %d number of errors", numErrors, expectedNumErrors)
 	}
 	pak := parsePackage(source, filename)
-	validateSourceSet(pak.source, pak)
+	validateSourceSet(pak.Source, pak)
 
 	tc := NewTypeChecker(source, filename)
 	tc.silentErrors = true
 	_ = tc.TypeCheckPackage(pak)
 
 	for _, error := range tc.errors {
-		line, _, _ := LineColumnStr(source, error.node.Source())
+		line, _, _ := LineColumnStr(source, error.node.GetSource())
 		expectedError, ok := expectedErrors[line]
 		if !ok {
 			return fmt.Errorf("unexpected error at line %d, proper logging not implemented", line)
@@ -146,7 +146,7 @@ func compile(filename string) (string, error) {
 
 	source := string(bytes)
 	pak := parsePackage(source, filename)
-	validateSourceSet(pak.source, pak)
+	validateSourceSet(pak.Source, pak)
 	if debugPrintParesedCode {
 		fmt.Println("----------------------- parsed  code -----------------------")
 		fmt.Println(AstFormat(pak))

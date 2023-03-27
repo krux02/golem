@@ -28,10 +28,6 @@ func (typ *TypeGroup) ManglePrint(builder *strings.Builder) {
 	panic("not a resolved type")
 }
 
-func (typ *TypeGroup) Source() string {
-	panic("type group does not have source")
-}
-
 func (typ TypeGroup) prettyPrint(builder *AstPrettyPrinter) {
 	for i, typ := range typ.items {
 		if i != 0 {
@@ -74,18 +70,22 @@ func (typ *EnumSetType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune('_')
 }
 
-func (typ *BuiltinType) Source() string {
-	// should this panic?
+func (typ *TypeGroup) GetSource() string {
+	panic("type group does not have source")
+}
+
+func (typ *BuiltinType) GetSource() string {
+	// TODO should this panic?
 	return ""
 }
 
-func (typ *ArrayType) Source() string {
-	// should this panic?
+func (typ *ArrayType) GetSource() string {
+	// TODO should this panic?
 	return ""
 }
 
-func (typ *EnumSetType) Source() string {
-	// should this panic?
+func (typ *EnumSetType) GetSource() string {
+	// TODO should this panic?
 	return ""
 }
 
@@ -212,7 +212,7 @@ func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Ty
 func registerConstant(name string, typ Type) {
 	// TODO this is wrong, a constant isn't a variable
 	var ident Ident
-	ident.source = name
+	ident.Source = name
 	_ = builtinScope.NewSymbol(nil, ident, SkConst, typ)
 }
 

@@ -43,7 +43,7 @@ func AstFormat(node AstNode) string {
 func (ident Ident) prettyPrint(builder *AstPrettyPrinter) {
 	// the only exception where pretty Print may print the original
 	// source.
-	builder.WriteString(ident.source)
+	builder.WriteString(ident.Source)
 }
 
 func (call Call) prettyPrint(builder *AstPrettyPrinter) {
@@ -230,7 +230,7 @@ func (lit FloatLit) prettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (typeExpr TypeExpr) prettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString(typeExpr.Ident.source)
+	builder.WriteString(typeExpr.Ident.Source)
 	if len(typeExpr.ExprArgs) > 0 {
 		builder.WriteString("(")
 		for i, arg := range typeExpr.ExprArgs {
@@ -330,7 +330,7 @@ func (loopStmt ForLoopStmt) prettyPrint(builder *AstPrettyPrinter) {
 
 func (loopStmt TcForLoopStmt) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("for ")
-	builder.WriteString(loopStmt.LoopSym.source)
+	builder.WriteString(loopStmt.LoopSym.Source)
 	builder.WriteString(" in ")
 	builder.WriteAstNode(loopStmt.Collection)
 	builder.WriteString(" do ")
@@ -440,7 +440,7 @@ func (enumDef *TcEnumDef) prettyPrint(builder *AstPrettyPrinter) {
 	builder.Indentation++
 	for _, field := range enumDef.Values {
 		builder.NewlineAndIndent()
-		builder.WriteString(field.source)
+		builder.WriteString(field.Source)
 	}
 	builder.Indentation--
 	builder.NewlineAndIndent()
@@ -463,7 +463,7 @@ func (codeBlock TcCodeBlock) prettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (sym TcSymbol) prettyPrint(printer *AstPrettyPrinter) {
-	printer.WriteString(sym.source)
+	printer.WriteString(sym.Source)
 }
 
 func (sym TcProcSymbol) prettyPrint(printer *AstPrettyPrinter) {
@@ -511,7 +511,7 @@ func (procDef TcProcDef) prettyPrint(builder *AstPrettyPrinter) {
 		builder.NewlineAndIndent()
 		iLast := len(procDef.Args) - 1
 		for i, arg := range procDef.Args {
-			builder.WriteString(arg.source)
+			builder.WriteString(arg.Source)
 			builder.WriteString(": ")
 			builder.WriteAstNode(arg.Type())
 			if i == iLast {
@@ -525,7 +525,7 @@ func (procDef TcProcDef) prettyPrint(builder *AstPrettyPrinter) {
 			if i != 0 {
 				builder.WriteString("; ")
 			}
-			builder.WriteString(arg.source)
+			builder.WriteString(arg.Source)
 			builder.WriteString(": ")
 			builder.WriteAstNode(arg.Type())
 		}

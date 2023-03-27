@@ -10,6 +10,8 @@
 * DONE testing framework to test the compiler
 * DONE allow conversion between enum/int/string
 * DONE enum set type
+* TODO not all ast nodes have correct ~source~ values, for example ~[]~, code needs to deal with it
+* TODO array access
 * TODO distinguish between the type and the expression that defines it
 * TODO display parsing errors es normal error messages
 * TODO mutable flag in type

@@ -20,13 +20,13 @@ type TcExpr interface {
 }
 
 type TcStructField struct {
-	AbstractAstNode
-	Name string
-	Type Type
+	Source string
+	Name   string
+	Type   Type
 }
 
 type TcEnumDef struct {
-	AbstractAstNode
+	Source string
 	Name   string
 	Values []TcSymbol
 
@@ -38,7 +38,7 @@ type TcEnumDef struct {
 }
 
 type TcStructDef struct {
-	AbstractAstNode
+	Source string
 	Name   string
 	Fields []TcStructField
 
@@ -59,16 +59,16 @@ func (structDef *TcStructDef) GetField(name string) (resField TcStructField, idx
 }
 
 type TcCodeBlock struct {
-	AbstractAstNode
-	Items []TcExpr
+	Source string
+	Items  []TcExpr
 }
 
 // TODO unify TcProcSym with the othe symbol types
 
 type TcProcSymbol struct {
-	AbstractAstNode
-	Name string
-	Impl *TcProcDef
+	Source string
+	Name   string
+	Impl   *TcProcDef
 }
 
 type SymbolKind int
@@ -84,59 +84,59 @@ const (
 )
 
 type TcSymbol struct {
-	AbstractAstNode
-	Kind SymbolKind
-	Typ  Type
+	Source string
+	Kind   SymbolKind
+	Typ    Type
 }
 
 type TcForLoopStmt struct {
-	AbstractAstNode
+	Source     string
 	LoopSym    TcSymbol
 	Collection TcExpr
 	Body       TcExpr
 }
 
 type TcIfStmt struct {
-	AbstractAstNode
+	Source    string
 	Condition TcExpr
 	Body      TcExpr
 }
 
 type TcIfElseExpr struct {
-	AbstractAstNode
+	Source    string
 	Condition TcExpr
 	Body      TcExpr
 	Else      TcExpr
 }
 
 type TcDotExpr struct {
-	AbstractAstNode
-	Lhs TcExpr
-	Rhs TcStructField
+	Source string
+	Lhs    TcExpr
+	Rhs    TcStructField
 }
 
 type TcCall struct {
-	AbstractAstNode
-	Sym  TcProcSymbol
-	Args []TcExpr
+	Source string
+	Sym    TcProcSymbol
+	Args   []TcExpr
 	// other properties
 	Braced bool // true for (a+b) +(a,b), false for a+b
 }
 
 type TcVariableDefStmt struct {
-	AbstractAstNode
-	Sym   TcSymbol
-	Value TcExpr
+	Source string
+	Sym    TcSymbol
+	Value  TcExpr
 }
 
 type TcReturnStmt struct {
-	AbstractAstNode
-	Value TcExpr
+	Source string
+	Value  TcExpr
 }
 
 type TcProcDef struct {
-	AbstractAstNode
-	Name string
+	Source string
+	Name   string
 
 	// TODO these are C backend specific fields and should not be bart of a general proc def node
 	// example1 "foo(", ", ", ")"        function call
@@ -167,25 +167,25 @@ type TcProcDef struct {
 }
 
 type TcArrayLit struct {
-	AbstractAstNode
+	Source   string
 	Items    []TcExpr
 	ElemType Type
 }
 
 type TcStructLit struct {
-	AbstractAstNode
-	Items []TcExpr
-	typ   *TcStructDef
+	Source string
+	Items  []TcExpr
+	typ    *TcStructDef
 }
 
 type TcEnumSetLit struct {
-	AbstractAstNode
+	Source   string
 	Items    []TcExpr
 	ElemType *TcEnumDef
 }
 
 type TcPackageDef struct {
-	AbstractAstNode
+	Source     string
 	Name       string
 	StructDefs []*TcStructDef
 	EnumDefs   []*TcEnumDef
@@ -213,3 +213,28 @@ func (typ *EnumSetType) typenode() {}
 func (typ TypeGroup) typenode()    {}
 func (typ *BuiltinType) typenode() {}
 func (typ *ArrayType) typenode()   {}
+
+func (arg TcDotExpr) GetSource() string         { return arg.Source }
+func (arg TcSymbol) GetSource() string          { return arg.Source }
+func (arg TcProcSymbol) GetSource() string      { return arg.Source }
+func (arg TcVariableDefStmt) GetSource() string { return arg.Source }
+func (arg TcReturnStmt) GetSource() string      { return arg.Source }
+func (arg TcForLoopStmt) GetSource() string     { return arg.Source }
+func (arg TcIfStmt) GetSource() string          { return arg.Source }
+func (arg TcIfElseExpr) GetSource() string      { return arg.Source }
+func (arg TcCodeBlock) GetSource() string       { return arg.Source }
+func (arg TcCall) GetSource() string            { return arg.Source }
+func (arg TcArrayLit) GetSource() string        { return arg.Source }
+func (arg TcEnumSetLit) GetSource() string      { return arg.Source }
+func (arg TcProcDef) GetSource() string         { return arg.Source }
+func (arg TcStructLit) GetSource() string       { return arg.Source }
+
+func (arg TcPackageDef) GetSource() string { return arg.Source }
+
+func (arg *TcStructDef) GetSource() string { return arg.Source }
+func (arg *TcEnumDef) GetSource() string   { return arg.Source }
+
+// func (arg *EnumSetType) GetSource() string { return arg.Source }
+// func (arg TypeGroup) GetSource() string    { return arg.Source }
+// func (arg *BuiltinType) GetSource() string { return arg.Source }
+// func (arg *ArrayType) GetSource() string   { return arg.Source }
