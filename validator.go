@@ -66,7 +66,7 @@ func validateSourceSetInternal(code string, node reflect.Value) {
 		// direct ast node
 		// validateSourceSetInternal(code, fieldValue)
 		if typ.Field(0).Name != "Source" {
-			panic("expected field `source` here")
+			panic("expected field `Source` here")
 		}
 		N := node.NumField()
 		for i := 1; i < N; i++ {
