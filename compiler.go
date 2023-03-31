@@ -45,6 +45,8 @@ func (builder *CodeBuilder) compileTypeExpr(typ Type) {
 		builder.WriteString(typ.Name)
 	case *TcEnumDef:
 		builder.WriteString(typ.Name)
+	case *EnumSetType:
+		builder.WriteString("uint64_t")
 	default:
 		panic("not implemented")
 	}

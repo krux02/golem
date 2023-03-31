@@ -210,7 +210,7 @@ func (expr TcStructLit) expression()       {}
 func (typ *TcStructDef) typenode() {}
 func (typ *TcEnumDef) typenode()   {}
 func (typ *EnumSetType) typenode() {}
-func (typ TypeGroup) typenode()    {}
+func (typ *TypeGroup) typenode()   {}
 func (typ *BuiltinType) typenode() {}
 func (typ *ArrayType) typenode()   {}
 

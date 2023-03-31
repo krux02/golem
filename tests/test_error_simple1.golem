@@ -16,5 +16,5 @@ proc foo(arg: i64): i64 = {
 
 proc main():i64 = {
   let tmp: i8 = 123
-  foo(tmp) # Error: proc not found: foo(i8)
+  foo(tmp) # Error: expected type 'i32 | i64' but got type 'i8'
 }

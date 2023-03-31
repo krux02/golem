@@ -28,7 +28,7 @@ func (typ *TypeGroup) ManglePrint(builder *strings.Builder) {
 	panic("not a resolved type")
 }
 
-func (typ TypeGroup) prettyPrint(builder *AstPrettyPrinter) {
+func (typ *TypeGroup) prettyPrint(builder *AstPrettyPrinter) {
 	for i, typ := range typ.items {
 		if i != 0 {
 			builder.WriteString(" | ")

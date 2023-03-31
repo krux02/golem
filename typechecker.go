@@ -458,6 +458,35 @@ func (tc *TypeChecker) TypeCheckCall1(scope Scope, procSym TcProcSymbol, checked
 	return result
 }
 
+func argTypeGroupAtIndex(symChoice []TcProcSymbol, idx int) Type {
+	switch len(symChoice) {
+	case 0:
+		return TypeUnspecified
+	case 1:
+		return symChoice[0].Impl.Args[idx].Typ
+	case 2:
+		typ1 := symChoice[0].Impl.Args[idx].Typ
+		typ2 := symChoice[1].Impl.Args[idx].Typ
+		if typ1 == typ2 {
+			return typ1
+		}
+		return &TypeGroup{items: []Type{typ1, typ2}}
+	default:
+		types := []Type{}
+	outer:
+		for _, sym := range symChoice {
+			argType := sym.Impl.Args[idx].Typ
+			for _, typ := range types {
+				if argType == typ {
+					continue outer
+				}
+			}
+			types = append(types, argType)
+		}
+		return &TypeGroup{items: types}
+	}
+}
+
 func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcExpr {
 	ident := call.Callee.(Ident)
 	if ident.Source == "." && len(call.Args) == 2 {
@@ -477,19 +506,16 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		}
 		result.Args = tcArgs
 		return result
-	case 1:
-		return tc.TypeCheckCall1(scope, procSyms[0], []TcExpr{}, call.Args, expected)
 	default:
 
 		// TODO: this is very quick and dirty. These three branches must be merged into one general algorithm
 		var checkedArgs []TcExpr
-
 		for i, arg := range call.Args {
-			var expectedArgType Type = TypeUnspecified
 			if len(procSyms) == 1 {
-				procSym := procSyms[0]
-				expectedArgType = procSym.Impl.Args[i].Typ
+				return tc.TypeCheckCall1(scope, procSyms[0], checkedArgs, call.Args[i:], expected)
 			}
+
+			expectedArgType := argTypeGroupAtIndex(procSyms, i)
 			tcArg := tc.TypeCheckExpr(scope, arg, expectedArgType)
 			checkedArgs = append(checkedArgs, tcArg)
 
@@ -504,9 +530,6 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 			}
 			procSyms = procSyms[:n]
 
-			if len(procSyms) == 1 {
-				return tc.TypeCheckCall1(scope, procSyms[0], checkedArgs, call.Args[i+1:], expected)
-			}
 		}
 		if len(procSyms) == 0 {
 			builder := &AstPrettyPrinter{}
