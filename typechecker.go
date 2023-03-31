@@ -483,6 +483,9 @@ func argTypeGroupAtIndex(symChoice []TcProcSymbol, idx int) Type {
 			}
 			types = append(types, argType)
 		}
+		if len(types) == 1 {
+			return types[0]
+		}
 		return &TypeGroup{items: types}
 	}
 }
