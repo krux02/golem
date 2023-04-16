@@ -10,6 +10,7 @@
 * DONE testing framework to test the compiler
 * DONE allow conversion between enum/int/string
 * DONE enum set type
+* TODO generic arguments (important for builtin array access)
 * TODO not all ast nodes have correct ~source~ values, for example ~[]~, code needs to deal with it
 * TODO array access
 * TODO distinguish between the type and the expression that defines it
@@ -25,7 +26,6 @@
 * TODO maybe return TypeFloat like in Nim for integer division?
 * TODO pointer
 * TODO better distinguish go type information vs golem type information better
-* TODO generic arguments
 * TODO vm for compile time code execution
 * TODO restrict operator precedence to common knowledge cases (+-*/) require explicit braces everywhere else.
 * TODO introduce ~expectAndEatToken~
