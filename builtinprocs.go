@@ -217,6 +217,8 @@ func registerConstant(name string, typ Type) {
 }
 
 func init() {
+	arrayTypeMap = make(map[ArrayTypeMapKey]*ArrayType)
+	enumSetTypeMap = make(map[*TcEnumDef]*EnumSetType)
 
 	registerBuiltinType(TypeBoolean)
 	registerBuiltinType(TypeInt8)
@@ -273,6 +275,9 @@ func init() {
 	registerBuiltin("or", "(", "||", ")", []Type{TypeBoolean, TypeBoolean}, TypeBoolean)
 
 	registerBuiltin("assert", "assert(", "", ")", []Type{TypeBoolean}, TypeVoid)
+
+	// TODO this one needs a generic solution
+	registerBuiltin("[", "", "[", "]", []Type{GetArrayType(TypeInt64, 7), TypeInt64}, TypeInt64)
 
 	registerConstant("true", TypeBoolean)
 	registerConstant("false", TypeBoolean)

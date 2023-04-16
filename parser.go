@@ -341,16 +341,13 @@ func parseCall(tokenizer *Tokenizer, callee Expr) (result Call) {
 }
 
 func parseBracketCall(tokenizer *Tokenizer, callee Expr) (result Call) {
-	println("parseBracketCall")
 	// parse call expr
 	var ident Ident
 	ident.Source = tokenizer.lookAheadToken.value
-	println("source: ", ident.Source)
 	result.Callee = ident
 	result.Args = append(result.Args, callee)
 	result.Args = append(result.Args, parseExprList(tokenizer, TkOpenBracket, TkCloseBracket)...)
 	result.Braced = true
-	fmt.Printf("%#v\n", result.Args)
 	lastToken := tokenizer.token
 	result.Source = joinSubstr(tokenizer.code, callee.GetSource(), lastToken.value)
 	return

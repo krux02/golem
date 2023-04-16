@@ -111,7 +111,7 @@ proc main():i64 = {
   let ff2 = 654.321:f64
   printf("ff1: %f ff2: %f\n", ff1, ff2);
   printf("max test: max(fx,f2): %f\n", max(ff1, ff2))
-  printf("printftest %d %d %s", 1:i32, 2:i32, "mystring")
+  printf("printftest %d %d %s\n", 1:i32, 2:i32, "mystring")
   printf("myArray[3]: %d\n", myArray[3])
 
   0

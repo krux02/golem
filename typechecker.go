@@ -865,12 +865,6 @@ type ArrayTypeMapKey struct {
 var arrayTypeMap map[ArrayTypeMapKey]*ArrayType
 var enumSetTypeMap map[*TcEnumDef]*EnumSetType
 
-func init() {
-
-	arrayTypeMap = make(map[ArrayTypeMapKey]*ArrayType)
-	enumSetTypeMap = make(map[*TcEnumDef]*EnumSetType)
-}
-
 func GetArrayType(elem Type, len int64) (result *ArrayType) {
 	// TODO all types in the `Type` interface must be pointer types
 	result, ok := arrayTypeMap[ArrayTypeMapKey{elem, len}]
