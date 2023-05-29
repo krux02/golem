@@ -64,10 +64,8 @@ type TcCodeBlock struct {
 }
 
 // TODO unify TcProcSym with the othe symbol types
-
 type TcProcSymbol struct {
 	Source string
-	Name   string
 	Impl   *TcProcDef
 }
 

@@ -427,7 +427,7 @@ func (typ *EnumSetType) prettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (call TcCall) prettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString(call.Sym.Name)
+	builder.WriteString(call.Sym.Source)
 	builder.WriteString("(")
 	for i, arg := range call.Args {
 		if i != 0 {
@@ -488,7 +488,7 @@ func (sym TcSymbol) prettyPrint(printer *AstPrettyPrinter) {
 }
 
 func (sym TcProcSymbol) prettyPrint(printer *AstPrettyPrinter) {
-	printer.WriteString(sym.Name)
+	printer.WriteString(sym.Source)
 }
 
 func (stmt TcVariableDefStmt) prettyPrint(builder *AstPrettyPrinter) {

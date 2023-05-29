@@ -110,7 +110,7 @@ func (tc *TypeChecker) LookUpProc(scope Scope, ident Ident, procSyms []TcProcSym
 	for scope != nil {
 		if impls, ok := scope.Procedures[ident.Source]; ok {
 			for _, impl := range impls {
-				procSym := TcProcSymbol{Name: ident.Source, Impl: impl}
+				procSym := TcProcSymbol{Source: ident.Source, Impl: impl}
 				procSyms = append(procSyms, procSym)
 			}
 		}
@@ -422,12 +422,13 @@ func (tc *TypeChecker) TypeCheckDotExpr(scope Scope, parentSource string, lhs, r
 
 func errorProcSym(ident Ident) TcProcSymbol {
 	return TcProcSymbol{
-		Name: ident.GetSource(),
-		Impl: nil,
+		Source: ident.GetSource(),
+		Impl:   nil,
 	}
 }
 
-func (tc *TypeChecker) TypeCheckCall1(scope Scope, procSym TcProcSymbol, checkedArgs []TcExpr, uncheckedArgs []Expr, expected Type) (result TcCall) {
+func (tc *TypeChecker) TypeCheckCall1(scope Scope, parentSource string, procSym TcProcSymbol, checkedArgs []TcExpr, uncheckedArgs []Expr, expected Type) (result TcCall) {
+	result.Source = parentSource
 	result.Sym = procSym
 	if procSym.Impl.printfargs {
 		if len(checkedArgs) > 0 {
@@ -518,13 +519,17 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 
 		// TODO: this is very quick and dirty. These three branches must be merged into one general algorithm
 		var checkedArgs []TcExpr
+		hasArgTypeError := false
 		for i, arg := range call.Args {
 			if len(procSyms) == 1 {
-				return tc.TypeCheckCall1(scope, procSyms[0], checkedArgs, call.Args[i:], expected)
+				return tc.TypeCheckCall1(scope, call.Source, procSyms[0], checkedArgs, call.Args[i:], expected)
 			}
 
 			expectedArgType := argTypeGroupAtIndex(procSyms, i)
 			tcArg := tc.TypeCheckExpr(scope, arg, expectedArgType)
+			if tcArg.Type() == TypeError {
+				hasArgTypeError = true
+			}
 			checkedArgs = append(checkedArgs, tcArg)
 
 			// filter procedures for right one
@@ -540,18 +545,20 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 
 		}
 		if len(procSyms) == 0 {
-			builder := &AstPrettyPrinter{}
-			builder.WriteString("proc not found: ")
-			builder.WriteString(ident.Source)
-			builder.WriteRune('(')
-			for i, arg := range checkedArgs {
-				if i != 0 {
-					builder.WriteString(", ")
+			if !hasArgTypeError { // don't report that proc `foo(TypeError)` can't be resolved.
+				builder := &AstPrettyPrinter{}
+				builder.WriteString("proc not found: ")
+				builder.WriteString(ident.Source)
+				builder.WriteRune('(')
+				for i, arg := range checkedArgs {
+					if i != 0 {
+						builder.WriteString(", ")
+					}
+					arg.Type().prettyPrint(builder)
 				}
-				arg.Type().prettyPrint(builder)
+				builder.WriteRune(')')
+				tc.ReportErrorf(ident, "%s", builder.String())
 			}
-			builder.WriteRune(')')
-			tc.ReportErrorf(ident, "%s", builder.String())
 			result.Sym = errorProcSym(ident)
 			result.Args = checkedArgs
 			return result

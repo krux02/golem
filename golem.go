@@ -92,9 +92,9 @@ func errorTest(filename string) error {
 	return nil
 }
 
-const debugPrintParesedCode = true
-const debugPrintTypecheckedCode = true
-const debugPrintGeneratedCode = true
+const debugPrintParesedCode = false
+const debugPrintTypecheckedCode = false
+const debugPrintGeneratedCode = false
 
 func normalTest(filename string) error {
 	binaryAbsFilename, err := compile(filename)
