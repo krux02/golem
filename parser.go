@@ -12,6 +12,7 @@ import (
 // TODO this is not a function sybol table, it is just an Operator Precedence table
 var OperatorPrecedence map[string]int = map[string]int{
 	".": 10,
+	":": 9,
 	"*": 7, "/": 7,
 	"+": 6, "-": 6,
 	">": 5, "<": 5, ">=": 5, "<=": 5,
@@ -80,19 +81,18 @@ func parseVariableDefStmt(tokenizer *Tokenizer) (result VariableDefStmt) {
 	default:
 		panic(tokenizer.formatWrongKind(firstToken))
 	}
-
-	result.Name = parseIdent(tokenizer)
-	if tokenizer.lookAheadToken.kind == TkColon {
-		_ = tokenizer.Next()
-		result.TypeExpr = parseTypeExpr(tokenizer)
+	expr := parseExpr(tokenizer, false)
+	if Lhs, Rhs, ok := MatchAssign(expr); ok {
+		result.Value = Rhs
+		expr = Lhs
 	}
-	if tokenizer.lookAheadToken.kind == TkAssign {
-		tokenizer.Next()
-		result.Value = parseExpr(tokenizer, false)
+	if colonExpr, ok := MatchColonExpr(expr); ok {
+		result.TypeExpr = colonExpr.Rhs
+		expr = colonExpr.Lhs
 	}
-	lastToken := tokenizer.token
-	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
-	return
+	result.Name = expr.(Ident)
+	result.Source = joinSubstr(tokenizer.code, firstToken.value, expr.GetSource())
+	return result
 }
 
 func parseBreakStmt(tokenizer *Tokenizer) (result BreakStmt) {
@@ -402,19 +402,6 @@ func parsePrefixCall(tokenizer *Tokenizer) (result Call) {
 	return
 }
 
-func parseColonExpr(tokenizer *Tokenizer, lhs Expr) Expr {
-	token := tokenizer.Next()
-	tokenizer.expectKind(token, TkColon)
-	rhs := parseTypeExpr(tokenizer)
-
-	result := ColonExpr{
-		Lhs: lhs,
-		Rhs: rhs,
-	}
-	result.Source = joinSubstr(tokenizer.code, lhs.GetSource(), rhs.GetSource())
-	return result
-}
-
 type DocCommentScanner struct {
 	rawsource string
 }
@@ -573,15 +560,13 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 	for true {
 		lookAhead := tokenizer.lookAheadToken
 		switch lookAhead.kind {
-		// and and or is an operator token?
+		// TkAnd, TkOr, TkAssign is an operator token?
 		case TkOperator, TkAnd, TkOr, TkAssign:
 			result = (Expr)(parseInfixCall(tokenizer, result))
 		case TkOpenBrace:
 			result = (Expr)(parseCall(tokenizer, result))
 		case TkOpenBracket:
 			result = (Expr)(parseBracketCall(tokenizer, result))
-		case TkColon:
-			result = (Expr)(parseColonExpr(tokenizer, result))
 		case TkPostfixDocComment:
 			comment := tokenizer.Next().value
 			commentScanner := &DocCommentScanner{comment}
@@ -617,75 +602,175 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 	return
 }
 
-func parseStructField(tokenizer *Tokenizer) (result StructField) {
-	firstToken := tokenizer.lookAheadToken
-	result.Name = parseIdent(tokenizer)
-	colon := tokenizer.Next()
-	tokenizer.expectKind(colon, TkColon)
-	result.TypeExpr = parseTypeExpr(tokenizer)
-	lastToken := tokenizer.token
-	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
-	return
-}
-
-func parseTypeDef(tokenizer *Tokenizer) (result TypeDef) {
+func parseTypeDef(tokenizer *Tokenizer) Expr {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkType)
-	result.Name = parseIdent(tokenizer)
+
+	name := parseIdent(tokenizer)
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkAssign)
-	result.Kind = parseIdent(tokenizer)
-	result.Body = parseCodeBlock(tokenizer)
-	result.Source = joinSubstr(tokenizer.code, firstToken.value, result.Body.Source)
+	kind := parseIdent(tokenizer)
+	body := parseCodeBlock(tokenizer)
+	source := joinSubstr(tokenizer.code, firstToken.value, body.Source)
+
+	switch kind.Source {
+	case "struct":
+		result := StructDef{Name: name, Source: source}
+		result.Name = name
+		for _, it := range body.Items {
+			colonExpr, ok := MatchColonExpr(it)
+			if !ok {
+				panic("parser error handling not implemented")
+			}
+			result.Fields = append(result.Fields, colonExpr)
+		}
+		return result
+	case "enum":
+		result := EnumDef{Name: name, Source: source}
+		for _, it := range body.Items {
+			ident, ok := it.(Ident)
+			if !ok {
+				panic("parser error handling not implemented")
+			}
+			result.Values = append(result.Values, ident)
+		}
+		return result
+	default:
+		panic("parser error handling not implemented")
+	}
+}
+
+//	func parseProcArgumentGroup(tokenizer *Tokenizer) (result []ProcArgument) {
+//		name := parseIdent(tokenizer)
+//		result = append(result, ProcArgument{Name: name})
+//		for tokenizer.lookAheadToken.kind == TkComma {
+//			_ = tokenizer.Next() // throw away the comma
+//			name := parseIdent(tokenizer)
+//			result = append(result, ProcArgument{Name: name})
+//		}
+//		token := tokenizer.Next()
+//		tokenizer.expectKind(token, TkOperator)
+//		typ := parseTypeExpr(tokenizer)
+//		lastToken := tokenizer.token
+//		for i := range result {
+//			result[i].Type = typ
+//			// the code is not continuous, doing best effort here
+//			result[i].Source = joinSubstr(tokenizer.code, result[i].Name.Source, lastToken.value)
+//		}
+//		return
+//	}
+func ToTypeExpr(expr Expr) (result TypeExpr) {
+	result.Source = expr.GetSource()
+	if lhs, args, ok := MatchBracketCall(expr); ok {
+		for _, bracketArg := range args {
+			result.TypeArgs = append(result.TypeArgs, ToTypeExpr(bracketArg))
+		}
+		expr = lhs
+	}
+
+	if call, ok := expr.(Call); ok && call.Braced {
+		result.ExprArgs = call.Args
+		expr = call.Callee
+	}
+
+	ident := expr.(Ident)
+	result.Ident = ident
 	return result
 }
 
-func parseProcArgumentGroup(tokenizer *Tokenizer) (result []ProcArgument) {
-	name := parseIdent(tokenizer)
-	result = append(result, ProcArgument{Name: name})
-	for tokenizer.lookAheadToken.kind == TkComma {
-		_ = tokenizer.Next() // throw away the comma
-		name := parseIdent(tokenizer)
-		result = append(result, ProcArgument{Name: name})
+func MatchColonExpr(expr Expr) (colonExpr ColonExpr, ok bool) {
+	call, ok := expr.(Call)
+	if !ok {
+		return colonExpr, false
 	}
-	token := tokenizer.Next()
-	tokenizer.expectKind(token, TkColon)
-	typ := parseTypeExpr(tokenizer)
-	lastToken := tokenizer.token
-	for i := range result {
-		result[i].Type = typ
-		// the code is not continuous, doing best effort here
-		result[i].Source = joinSubstr(tokenizer.code, result[i].Name.Source, lastToken.value)
+	op, ok := call.Callee.(Ident)
+	if !ok || op.Source != ":" || len(call.Args) != 2 {
+		return colonExpr, false
 	}
-	return
+	colonExpr.Lhs = call.Args[0]
+	colonExpr.Rhs = ToTypeExpr(call.Args[1])
+	colonExpr.Source = call.Source
+	return colonExpr, true
+}
+
+func MatchAssign(expr Expr) (lhs, rhs Expr, ok bool) {
+	call, ok := expr.(Call)
+	if !ok {
+		return lhs, rhs, false
+	}
+	op, ok := call.Callee.(Ident)
+	if !ok || op.Source != "=" || len(call.Args) != 2 {
+		return lhs, rhs, false
+	}
+	lhs = call.Args[0]
+	rhs = call.Args[1]
+	return lhs, rhs, true
+}
+
+func MatchBracketCall(expr Expr) (lhs Expr, args []Expr, ok bool) {
+	call, ok := expr.(Call)
+	if !ok {
+		return lhs, args, false
+	}
+	op, ok := call.Callee.(Ident)
+	if !ok || op.Source != "[" {
+		return lhs, args, false
+	}
+	lhs = call.Args[0]
+	args = call.Args[1:]
+	return lhs, args, true
 }
 
 func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkProc)
-	result.Name = parseIdent(tokenizer)
-	token := tokenizer.Next()
-	tokenizer.expectKind(token, TkOpenBrace)
 
-	tokenizer.eatSemicolon()
-	for tokenizer.lookAheadToken.kind != TkCloseBrace {
-		result.Args = append(result.Args, parseProcArgumentGroup(tokenizer)...)
-		tokenizer.eatSemicolon()
+	expr := parseExpr(tokenizer, false)
+
+	lhs, rhs, isAssign := MatchAssign(expr)
+	if !isAssign {
+		panic("expect assignment")
+	}
+	result.Body = rhs
+
+	colonExpr, isColonExpr := MatchColonExpr(lhs)
+	if !isColonExpr {
+		panic("expect colon expr")
+	}
+	result.ResultType = colonExpr.Rhs
+	lhs = colonExpr.Lhs
+
+	call, isCall := lhs.(Call)
+	if !isCall {
+		panic("expect call")
+	}
+	name, isIdent := call.Callee.(Ident)
+	if !isIdent {
+		panic("expect ident")
 	}
 
-	token = tokenizer.Next()
-	tokenizer.expectKind(token, TkCloseBrace)
+	result.Name = name
+	argsRaw := call.Args
 
-	token = tokenizer.Next()
-	tokenizer.expectKind(token, TkColon)
-	result.ResultType = parseTypeExpr(tokenizer)
-	token = tokenizer.Next()
-	tokenizer.expectKind(token, TkAssign)
+	var newArgs []Ident
+	for _, arg := range argsRaw {
+		if colonExpr, ok := MatchColonExpr(arg); ok {
+			for _, newArg := range newArgs {
+				result.Args = append(result.Args, ProcArgument{Source: newArg.Source, Name: newArg, Type: colonExpr.Rhs})
+			}
+			result.Args = append(result.Args, ProcArgument{Source: colonExpr.Source, Name: colonExpr.Lhs.(Ident), Type: colonExpr.Rhs})
+			newArgs = newArgs[:0]
+		} else if ident, ok := arg.(Ident); ok {
+			newArgs = append(newArgs, ident)
+		} else {
+			panic(fmt.Errorf("expected identifier but got %T", arg))
+		}
+	}
+	if len(newArgs) > 0 {
+		panic(fmt.Errorf("arguments have no type: %+v", newArgs))
+	}
 
-	result.Body = parseExpr(tokenizer, false)
-
-	lastToken := tokenizer.token
-	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
+	result.Source = joinSubstr(tokenizer.code, firstToken.value, lhs.GetSource())
 	return
 }
 

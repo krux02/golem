@@ -155,57 +155,45 @@ func (tc *TypeChecker) LineColumnNode(node AstNode) (line, columnStart, columnEn
 	return LineColumnStr(tc.code, node.GetSource())
 }
 
-func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def TypeDef) Type {
-	switch def.Kind.Source {
-	case "struct":
-		result := &TcStructDef{}
-		result.Name = def.Name.Source
-		for _, item := range def.Body.Items {
-			if colonExpr, ok := item.(ColonExpr); !ok {
-				tc.ReportErrorf(item, "expect ColonExpr, but got %T", item)
-			} else {
-				if nameIdent, ok := colonExpr.Lhs.(Ident); !ok {
-					tc.ReportErrorf(colonExpr.Lhs, "expect Ident, but got %T", colonExpr.Lhs)
-				} else {
-					var tcField TcStructField
-					tcField.Name = nameIdent.Source
-					tcField.Type = tc.LookUpType(scope, colonExpr.Rhs)
-					result.Fields = append(result.Fields, tcField)
-				}
-			}
+func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def StructDef) *TcStructDef {
+	result := &TcStructDef{}
+	result.Name = def.Name.Source
+	for _, colonExpr := range def.Fields {
+		if nameIdent, ok := colonExpr.Lhs.(Ident); !ok {
+			tc.ReportErrorf(colonExpr.Lhs, "expect Ident, but got %T", colonExpr.Lhs)
+		} else {
+			var tcField TcStructField
+			tcField.Name = nameIdent.Source
+			tcField.Type = tc.LookUpType(scope, colonExpr.Rhs)
+			result.Fields = append(result.Fields, tcField)
 		}
-		scope.Types[result.Name] = result
-		return result
-	case "enum":
-		result := &TcEnumDef{}
-		result.Name = def.Name.Source
-		for _, item := range def.Body.Items {
-			if ident, ok := item.(Ident); !ok {
-				tc.ReportErrorf(item, "expect Ident, but got %T", item)
-			} else {
-				var sym TcSymbol
-				sym.Source = ident.Source
-				sym.Kind = SkEnum
-				sym.Typ = result
-				result.Values = append(result.Values, sym)
-			}
-		}
-		scope.Types[result.Name] = result
-		registerBuiltin("string", fmt.Sprintf("%s_names_array[", result.Name), "", "]", []Type{result}, TypeString)
-		for _, typ := range TypeAnyInt.items {
-			builtinType := typ.(*BuiltinType)
-			registerBuiltin(builtinType.name, fmt.Sprintf("(%s)", builtinType.internalName), "", "", []Type{result}, typ)
-			registerBuiltin(result.Name, fmt.Sprintf("(%s)", result.Name), "", "", []Type{typ}, result)
-		}
-		registerBuiltin("contains", "(((", ") & (1 << (", "))) != 0)", []Type{GetEnumSetType(result), result}, TypeBoolean)
-		return result
-	case "union":
-		panic("not implemented union")
-	default:
-		tc.ReportErrorf(def.Kind, "invalid type kind %s, expect one of struct, enum, union", def.Kind.Source)
-		return nil
 	}
+	scope.Types[result.Name] = result
+	return result
 }
+
+func (tc *TypeChecker) TypeCheckEnumDef(scope Scope, def EnumDef) *TcEnumDef {
+	result := &TcEnumDef{}
+	result.Name = def.Name.Source
+	for _, ident := range def.Values {
+		var sym TcSymbol
+		sym.Source = ident.Source
+		sym.Kind = SkEnum
+		sym.Typ = result
+		result.Values = append(result.Values, sym)
+	}
+	scope.Types[result.Name] = result
+	registerBuiltin("string", fmt.Sprintf("%s_names_array[", result.Name), "", "]", []Type{result}, TypeString)
+	for _, typ := range TypeAnyInt.items {
+		builtinType := typ.(*BuiltinType)
+		registerBuiltin(builtinType.name, fmt.Sprintf("(%s)", builtinType.internalName), "", "", []Type{result}, typ)
+		registerBuiltin(result.Name, fmt.Sprintf("(%s)", result.Name), "", "", []Type{typ}, result)
+	}
+	registerBuiltin("contains", "(((", ") & (1 << (", "))) != 0)", []Type{GetEnumSetType(result), result}, TypeBoolean)
+	return result
+}
+
+//tc.ReportErrorf(def.Kind, "invalid type kind %s, expect one of struct, enum, union", def.Kind.Source)
 
 func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result *TcProcDef) {
 	scope := parentScope.NewSubScope()
@@ -413,17 +401,20 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 	return result
 }
 
-func (tc *TypeChecker) TypeCheckDotExpr(scope Scope, lhs, rhs Expr, expected Type) (result TcExpr) {
-
-	tcLhs := tc.TypeCheckExpr(scope, lhs, TypeUnspecified)
-	switch t := tcLhs.Type().(type) {
+func (tc *TypeChecker) TypeCheckDotExpr(scope Scope, parentSource string, lhs, rhs Expr, expected Type) (result TcDotExpr) {
+	result.Lhs = tc.TypeCheckExpr(scope, lhs, TypeUnspecified)
+	result.Source = parentSource
+	switch t := result.Lhs.Type().(type) {
 	case *TcStructDef:
-		tcRhs, idx := t.GetField(rhs.GetSource())
+		rhsSrc := rhs.GetSource()
+		var idx int
+		result.Rhs, idx = t.GetField(rhsSrc)
 		if idx < 0 {
 			tc.ReportErrorf(rhs, "type %s has no field %s", t.Name, rhs.GetSource())
+			return result
 		}
-		tc.ExpectType(rhs, tcRhs.Type, expected)
-		return TcDotExpr{Lhs: tcLhs, Rhs: tcRhs}
+		tc.ExpectType(rhs, result.Rhs.Type, expected)
+		return result
 	default:
 		panic("dot call is only supported on struct field")
 	}
@@ -492,8 +483,22 @@ func argTypeGroupAtIndex(symChoice []TcProcSymbol, idx int) Type {
 
 func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcExpr {
 	ident := call.Callee.(Ident)
-	if ident.Source == "." && len(call.Args) == 2 {
-		return tc.TypeCheckDotExpr(scope, call.Args[0], call.Args[1], expected)
+	if ident.Source == "." {
+		if tc.ExpectArgsLen(call, len(call.Args), 2) {
+			return tc.TypeCheckDotExpr(scope, call.Source, call.Args[0], call.Args[1], expected)
+		}
+		panic("continue after error not implemented")
+	}
+	if ident.Source == ":" {
+		if tc.ExpectArgsLen(call, len(call.Args), 2) {
+			typ := tc.LookUpType(scope, ToTypeExpr(call.Args[1]))
+			// this is a bit weird here. The result of `ExpectType` is not forwarded here.
+			// TODO this needs a test that verifies that this is actually the correct behavior
+			tc.ExpectType(call, typ, expected)
+			result := tc.TypeCheckExpr(scope, call.Args[0], typ)
+			return result
+		}
+		panic("continue after error not implemented")
 	}
 
 	procSyms := tc.LookUpProc(scope, ident, nil)
@@ -600,22 +605,36 @@ func (tc *TypeChecker) ApplyDocComment(expr Expr, doc DocComment) Expr {
 			tc.ReportInvalidDocCommentKey(it)
 		}
 		return expr2
-	case TypeDef:
+	case StructDef:
 		expr2.Name.Comment = append(expr2.Name.Comment, doc.BaseDoc...)
 	DOCSECTIONS2:
 		for _, it := range doc.NamedDocSections {
 			key := it.Name
 			value := it.Lines
-			for i := range expr2.Body.Items {
-				if colonExpr, ok := expr2.Body.Items[i].(ColonExpr); ok {
-					if ident, ok := colonExpr.Lhs.(Ident); ok {
-						if ident.Source == key {
-							ident.Comment = append(ident.Comment, value...)
-							colonExpr.Lhs = ident
-							expr2.Body.Items[i] = colonExpr
-							continue DOCSECTIONS2
-						}
+			for i, colonExpr := range expr2.Fields {
+				if ident, ok := colonExpr.Lhs.(Ident); ok {
+					if ident.Source == key {
+						ident.Comment = append(ident.Comment, value...)
+						colonExpr.Lhs = ident
+						expr2.Fields[i] = colonExpr
+						continue DOCSECTIONS2
 					}
+				}
+			}
+			tc.ReportInvalidDocCommentKey(it)
+		}
+		return expr2
+	case EnumDef:
+		expr2.Name.Comment = append(expr2.Name.Comment, doc.BaseDoc...)
+	DOCSECTIONS3:
+		for _, it := range doc.NamedDocSections {
+			key := it.Name
+			value := it.Lines
+			for i, ident := range expr2.Values {
+				if ident.Source == key {
+					ident.Comment = append(ident.Comment, value...)
+					expr2.Values[i] = ident
+					continue DOCSECTIONS3
 				}
 			}
 			tc.ReportInvalidDocCommentKey(it)
@@ -670,11 +689,13 @@ func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt
 		expected = tc.LookUpType(scope, arg.TypeExpr)
 	}
 	if arg.Value == nil {
-		result.Value = expected.DefaultValue(tc, arg.TypeExpr)
+		result.Value = expected.DefaultValue(tc, arg.Name)
+		result.Sym = scope.NewSymbol(tc, arg.Name, arg.Kind, expected)
 	} else {
 		result.Value = tc.TypeCheckExpr(scope, arg.Value, expected)
+		result.Sym = scope.NewSymbol(tc, arg.Name, arg.Kind, result.Value.Type())
 	}
-	result.Sym = scope.NewSymbol(tc, arg.Name, arg.Kind, result.Value.Type())
+
 	return result
 }
 
@@ -885,14 +906,6 @@ func GetEnumSetType(elem *TcEnumDef) (result *EnumSetType) {
 	return result
 }
 
-func matchAssign(arg Expr) (lhs, rhs Expr, ok bool) {
-	call, isCall := arg.(Call)
-	if !isCall || len(call.Args) != 2 || call.Callee.GetSource() != "=" {
-		return nil, nil, false
-	}
-	return call.Args[0], call.Args[1], true
-}
-
 func (tc *TypeChecker) TypeCheckArrayLit(scope Scope, arg ArrayLit, expected Type) TcExpr {
 	// TODO expect use expect length
 	// expectedLen := expected.(ArrayType).Len
@@ -925,10 +938,10 @@ func (tc *TypeChecker) TypeCheckArrayLit(scope Scope, arg ArrayLit, expected Typ
 				result.Items[i] = exp.Fields[i].Type.DefaultValue(tc, arg)
 			}
 			return result
-		} else if _, _, isAssign0 := matchAssign(arg.Items[0]); isAssign0 {
+		} else if _, _, isAssign0 := MatchAssign(arg.Items[0]); isAssign0 {
 			lastIdx := -1
 			for _, it := range arg.Items {
-				lhs, rhs, isAssign := matchAssign(it)
+				lhs, rhs, isAssign := MatchAssign(it)
 				if !isAssign {
 					panic(isAssign)
 				}
@@ -1020,13 +1033,13 @@ func (tc *TypeChecker) TypeCheckPackage(arg PackageDef) (result TcPackageDef) {
 			hasDocComment = false
 		}
 		switch stmt := stmt.(type) {
-		case TypeDef:
-			switch td := tc.TypeCheckStructDef(scope, stmt).(type) {
-			case *TcStructDef:
-				result.StructDefs = append(result.StructDefs, td)
-			case *TcEnumDef:
-				result.EnumDefs = append(result.EnumDefs, td)
-			}
+
+		case EnumDef:
+			td := tc.TypeCheckEnumDef(scope, stmt)
+			result.EnumDefs = append(result.EnumDefs, td)
+		case StructDef:
+			td := tc.TypeCheckStructDef(scope, stmt)
+			result.StructDefs = append(result.StructDefs, td)
 		case ProcDef:
 			procDef := tc.TypeCheckProcDef(scope, stmt)
 			result.ProcDefs = append(result.ProcDefs, procDef)

@@ -14,7 +14,7 @@ proc myfun1(a, b, c: i64): i64 = {
   # a + b * c
 }
 
-proc myfun2(a,b:i64; c: i64): i64 = a * b + a * c
+proc myfun2(a,b:i64, c: i64): i64 = a * b + a * c
 #proc myfun2(a,b,c: i64): i64 = a * b + a * c
 
 ## an empty function with nothing in it

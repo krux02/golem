@@ -55,7 +55,7 @@ func (structDef *TcStructDef) GetField(name string) (resField TcStructField, idx
 			return field, i
 		}
 	}
-	return TcStructField{}, -1
+	return TcStructField{Source: name, Name: name, Type: TypeError}, -1
 }
 
 type TcCodeBlock struct {
@@ -75,7 +75,8 @@ type SymbolKind int
 
 // not the type or properties of a symbol, just where it has been declared
 const (
-	SkLet SymbolKind = iota
+	SkInvalid SymbolKind = iota
+	SkLet
 	SkVar
 	SkConst
 	SkProcArg

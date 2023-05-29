@@ -92,9 +92,9 @@ func errorTest(filename string) error {
 	return nil
 }
 
-const debugPrintParesedCode = false
-const debugPrintTypecheckedCode = false
-const debugPrintGeneratedCode = false
+const debugPrintParesedCode = true
+const debugPrintTypecheckedCode = true
+const debugPrintGeneratedCode = true
 
 func normalTest(filename string) error {
 	binaryAbsFilename, err := compile(filename)
@@ -195,6 +195,10 @@ func compile(filename string) (string, error) {
 
 func compileAndRunFile(filename string, useExec bool) {
 	binaryAbsFilename, err := compile(filename)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
 	fmt.Println("=========================== exec ===========================")
 	var argv []string = nil

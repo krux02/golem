@@ -253,12 +253,32 @@ func (typeExpr TypeExpr) prettyPrint(builder *AstPrettyPrinter) {
 	}
 }
 
-func (typeDef TypeDef) prettyPrint(builder *AstPrettyPrinter) {
+func (typeDef StructDef) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("type ")
 	builder.WriteAstNode(typeDef.Name)
-	builder.WriteString(" = ")
-	builder.WriteAstNode(typeDef.Kind)
-	builder.WriteAstNode(typeDef.Body)
+	builder.WriteString(" = struct {")
+	builder.Indentation += 1
+	for _, field := range typeDef.Fields {
+		builder.NewlineAndIndent()
+		builder.WriteAstNode(field)
+	}
+	builder.Indentation -= 1
+	builder.NewlineAndIndent()
+	builder.WriteString("}")
+}
+
+func (typeDef EnumDef) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("type ")
+	builder.WriteAstNode(typeDef.Name)
+	builder.WriteString(" = struct {")
+	builder.Indentation += 1
+	for _, field := range typeDef.Values {
+		builder.NewlineAndIndent()
+		builder.WriteAstNode(field)
+	}
+	builder.Indentation -= 1
+	builder.NewlineAndIndent()
+	builder.WriteString("}")
 }
 
 func (procDef ProcDef) prettyPrint(builder *AstPrettyPrinter) {
@@ -266,14 +286,15 @@ func (procDef ProcDef) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteAstNode(procDef.Name)
 	builder.WriteString("(")
 	if len(procDef.Args) > 3 {
-		builder.Indentation += 2
-		for _, arg := range procDef.Args {
+		for i, arg := range procDef.Args {
+			if i != 0 {
+				builder.WriteString(", ")
+			}
 			builder.NewlineAndIndent()
 			builder.WriteAstNode(arg.Name)
 			builder.WriteString(": ")
 			builder.WriteAstNode(arg.Type)
 		}
-		builder.Indentation -= 2
 		builder.NewlineAndIndent()
 
 	} else {

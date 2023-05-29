@@ -14,7 +14,6 @@ type TokenKind int16
 const (
 	TkInvalid TokenKind = iota
 	TkIdent
-	TkColon
 	TkSemicolon
 	TkComma
 	TkAssign
@@ -59,7 +58,6 @@ const (
 var TokenKindNames = [...]string{
 	TkInvalid:           "Invalid",
 	TkIdent:             "Ident",
-	TkColon:             "Colon",
 	TkSemicolon:         "Semicolon",
 	TkComma:             "Comma",
 	TkAssign:            "Assign",
@@ -387,8 +385,6 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 		result = Token{TkCloseCurly, code[:cLen]}
 	case c == ',':
 		result = Token{TkComma, code[:cLen]}
-	case c == ':':
-		result = Token{TkColon, code[:cLen]}
 	case c == ';':
 		result = Token{TkSemicolon, code[:cLen]}
 	case u.IsSymbol(c) || u.IsPunct(c):

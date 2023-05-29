@@ -96,11 +96,23 @@ type ReturnStmt struct {
 	Value  Expr
 }
 
-type TypeDef struct {
+// type TypeDef struct {
+// 	Source string
+// 	Name   Ident
+// 	Kind   Ident
+// 	Body   CodeBlock
+// }
+
+type EnumDef struct {
 	Source string
 	Name   Ident
-	Kind   Ident
-	Body   CodeBlock
+	Values []Ident
+}
+
+type StructDef struct {
+	Source string
+	Name   Ident
+	Fields []ColonExpr
 }
 
 type ProcArgument struct {
@@ -171,7 +183,8 @@ type PackageDef struct {
 }
 
 func (_ ProcDef) expression()         {}
-func (_ TypeDef) expression()         {}
+func (_ StructDef) expression()       {}
+func (_ EnumDef) expression()         {}
 func (_ DocComment) expression()      {}
 func (_ Ident) expression()           {}
 func (_ CodeBlock) expression()       {}
@@ -191,7 +204,8 @@ func (_ BreakStmt) expression()       {}
 func (_ ContinueStmt) expression()    {}
 
 func (arg ProcDef) GetSource() string         { return arg.Source }
-func (arg TypeDef) GetSource() string         { return arg.Source }
+func (arg StructDef) GetSource() string       { return arg.Source }
+func (arg EnumDef) GetSource() string         { return arg.Source }
 func (arg DocComment) GetSource() string      { return arg.Source }
 func (arg NamedDocSection) GetSource() string { return arg.Source }
 func (arg Ident) GetSource() string           { return arg.Source }
