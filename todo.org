@@ -10,7 +10,7 @@
 * DONE testing framework to test the compiler
 * DONE allow conversion between enum/int/string
 * DONE enum set type
-* TODO consistent Typ/Type member name
+* DONE consistent Typ/Type member name
 * TODO generic arguments (important for builtin array access)
 * TODO not all ast nodes have correct ~source~ values, for example ~[]~, code needs to deal with it
 * TODO array access

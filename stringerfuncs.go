@@ -174,7 +174,7 @@ func (lit TcStructLit) prettyPrint(builder *AstPrettyPrinter) {
 	}
 	builder.WriteString("]:")
 	//builder.WriteAstNode(lit.typ)
-	builder.WriteString(lit.typ.Name)
+	builder.WriteString(lit.Type.Name)
 }
 
 func (lit TcEnumSetLit) prettyPrint(builder *AstPrettyPrinter) {
@@ -214,18 +214,18 @@ func WriteIntLit(builder *strings.Builder, value int64) {
 
 func (lit IntLit) prettyPrint(builder *AstPrettyPrinter) {
 	WriteIntLit(&builder.Builder, lit.Value)
-	if lit.typ != nil {
+	if lit.Type != nil {
 		builder.WriteString(":")
-		lit.typ.prettyPrint(builder)
+		lit.Type.prettyPrint(builder)
 	}
 }
 
 func (lit FloatLit) prettyPrint(builder *AstPrettyPrinter) {
 	str := fmt.Sprintf("%f", lit.Value)
 	builder.WriteString(str)
-	if lit.typ != nil {
+	if lit.Type != nil {
 		builder.WriteString(":")
-		lit.typ.prettyPrint(builder)
+		lit.Type.prettyPrint(builder)
 	}
 }
 
@@ -504,7 +504,7 @@ func (stmt TcVariableDefStmt) prettyPrint(builder *AstPrettyPrinter) {
 	}
 	builder.WriteAstNode(stmt.Sym)
 	builder.WriteString(": ")
-	builder.WriteAstNode(stmt.Sym.Typ)
+	builder.WriteAstNode(stmt.Sym.Type)
 	// builder.WriteString(stmt.Sym.Typ.Name())
 	if stmt.Value != nil {
 		builder.WriteString(" = ")
@@ -534,7 +534,7 @@ func (procDef TcProcDef) prettyPrint(builder *AstPrettyPrinter) {
 		for i, arg := range procDef.Args {
 			builder.WriteString(arg.Source)
 			builder.WriteString(": ")
-			builder.WriteAstNode(arg.Type())
+			builder.WriteAstNode(arg.GetType())
 			if i == iLast {
 				builder.Indentation -= 2
 			}
@@ -548,7 +548,7 @@ func (procDef TcProcDef) prettyPrint(builder *AstPrettyPrinter) {
 			}
 			builder.WriteString(arg.Source)
 			builder.WriteString(": ")
-			builder.WriteAstNode(arg.Type())
+			builder.WriteAstNode(arg.GetType())
 		}
 	}
 	builder.WriteString("): ")

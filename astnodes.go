@@ -138,13 +138,13 @@ type CharLit struct {
 
 type IntLit struct {
 	Source string
-	typ    *BuiltinType
+	Type   *BuiltinType
 	Value  int64
 }
 
 type FloatLit struct {
 	Source string
-	typ    *BuiltinType
+	Type   *BuiltinType
 	Value  float64
 }
 

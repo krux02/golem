@@ -53,7 +53,7 @@ func (builder *CodeBuilder) compileTypeExpr(typ Type) {
 }
 
 func (builder *CodeBuilder) compileSymDeclaration(context *PackageGeneratorContext, sym TcSymbol) {
-	switch typ := sym.Type().(type) {
+	switch typ := sym.GetType().(type) {
 	case *BuiltinType:
 		builder.WriteString(typ.internalName)
 		builder.WriteString(" ")
@@ -178,7 +178,7 @@ func (builder *CodeBuilder) compileSymbol(sym TcSymbol) {
 		case SkLoopIterator:
 			builder.WriteString("*")
 		case SkEnum:
-			typ := sym.Typ.(*TcEnumDef)
+			typ := sym.Type.(*TcEnumDef)
 			builder.WriteString(typ.Name)
 			builder.WriteRune('_')
 		}
@@ -214,7 +214,7 @@ func (builder *CodeBuilder) compileIfStmt(context *PackageGeneratorContext, stmt
 // }
 
 func ExprHasValue(expr TcExpr) bool {
-	typ := expr.Type()
+	typ := expr.GetType()
 	return typ != TypeNoReturn && typ != TypeVoid
 }
 
@@ -253,7 +253,7 @@ func (builder *CodeBuilder) compileForLoopStmt(context *PackageGeneratorContext,
 		}
 	*/
 
-	if stmt.Collection.Type() == TypeString {
+	if stmt.Collection.GetType() == TypeString {
 		builder.WriteString("for(const char ")
 		builder.compileSymbol(stmt.LoopSym)
 		builder.WriteString(" = ")
@@ -263,7 +263,7 @@ func (builder *CodeBuilder) compileForLoopStmt(context *PackageGeneratorContext,
 		builder.WriteString(" != '\\0'; ")
 		builder.compileSymbol(stmt.LoopSym)
 		builder.WriteString("++) ")
-	} else if arrayType, ok := stmt.Collection.Type().(*ArrayType); ok {
+	} else if arrayType, ok := stmt.Collection.GetType().(*ArrayType); ok {
 		builder.WriteString("for(")
 		builder.compileTypeExpr(arrayType.Elem)
 		builder.WriteString(" const ")
@@ -307,7 +307,7 @@ func (builder *CodeBuilder) compileArrayLit(context *PackageGeneratorContext, li
 
 func (builder *CodeBuilder) compileStructLit(context *PackageGeneratorContext, lit TcStructLit) {
 	builder.WriteString("(")
-	builder.compileTypeExpr(lit.typ)
+	builder.compileTypeExpr(lit.Type)
 	builder.WriteString("){")
 	builder.compileSeparatedExprList(context, lit.Items, ", ")
 	builder.WriteString("}")

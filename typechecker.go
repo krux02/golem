@@ -50,7 +50,7 @@ func (scope Scope) NewSubScope() Scope {
 func (scope Scope) NewSymbol(tc *TypeChecker, name Ident, kind SymbolKind, typ Type) TcSymbol {
 	//result := TcSymbol{Name: name.source, Kind: kind, Typ: typ}
 	rawName := name.Source
-	result := TcSymbol{Source: name.Source, Kind: kind, Typ: typ}
+	result := TcSymbol{Source: name.Source, Kind: kind, Type: typ}
 	_, alreadyExists := scope.Variables[rawName]
 	if alreadyExists {
 		tc.ReportErrorf(name, "redefinition of %s", rawName)
@@ -125,7 +125,7 @@ func (tc *TypeChecker) LookUpLetSymRecursive(scope Scope, ident Ident) TcSymbol 
 		var result TcSymbol
 		result.Kind = SkLet
 		result.Source = ident.Source
-		result.Typ = TypeError
+		result.Type = TypeError
 		return result
 	}
 
@@ -147,7 +147,7 @@ func (tc *TypeChecker) LookUpLetSym(scope Scope, ident Ident, expected Type) (re
 		}
 	}
 	result = tc.LookUpLetSymRecursive(scope, ident)
-	result.Typ = tc.ExpectType(result, result.Typ, expected)
+	result.Type = tc.ExpectType(result, result.Type, expected)
 	return
 }
 
@@ -179,7 +179,7 @@ func (tc *TypeChecker) TypeCheckEnumDef(scope Scope, def EnumDef) *TcEnumDef {
 		var sym TcSymbol
 		sym.Source = ident.Source
 		sym.Kind = SkEnum
-		sym.Typ = result
+		sym.Type = result
 		result.Values = append(result.Values, sym)
 	}
 	scope.Types[result.Name] = result
@@ -330,7 +330,7 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 	tc.ExpectMinArgsLen(printfSym, len(args), len(prefixArgs))
 
 	for i := 0; i < len(prefixArgs); i++ {
-		expectedType := prefixArgs[i].Typ
+		expectedType := prefixArgs[i].Type
 		tcArg := tc.TypeCheckExpr(scope, args[i], expectedType)
 		result = append(result, tcArg)
 	}
@@ -373,7 +373,7 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 			break
 		}
 		tcArg := tc.TypeCheckExpr(scope, args[i], argType)
-		switch tcArg.Type() {
+		switch tcArg.GetType() {
 		case TypeInt8:
 			formatStrC.WriteString("hhd")
 		case TypeInt16:
@@ -404,7 +404,7 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 func (tc *TypeChecker) TypeCheckDotExpr(scope Scope, parentSource string, lhs, rhs Expr, expected Type) (result TcDotExpr) {
 	result.Lhs = tc.TypeCheckExpr(scope, lhs, TypeUnspecified)
 	result.Source = parentSource
-	switch t := result.Lhs.Type().(type) {
+	switch t := result.Lhs.GetType().(type) {
 	case *TcStructDef:
 		rhsSrc := rhs.GetSource()
 		var idx int
@@ -440,7 +440,7 @@ func (tc *TypeChecker) TypeCheckCall1(scope Scope, parentSource string, procSym 
 		expectedArgs := procSym.Impl.Args
 		tc.ExpectArgsLen(procSym, len(checkedArgs)+len(uncheckedArgs), len(expectedArgs))
 		for i, arg := range uncheckedArgs {
-			expectedType := expectedArgs[len(checkedArgs)+i].Typ
+			expectedType := expectedArgs[len(checkedArgs)+i].Type
 			tcArg := tc.TypeCheckExpr(scope, arg, expectedType)
 			result.Args = append(result.Args, tcArg)
 		}
@@ -455,10 +455,10 @@ func argTypeGroupAtIndex(symChoice []TcProcSymbol, idx int) Type {
 	case 0:
 		return TypeUnspecified
 	case 1:
-		return symChoice[0].Impl.Args[idx].Typ
+		return symChoice[0].Impl.Args[idx].Type
 	case 2:
-		typ1 := symChoice[0].Impl.Args[idx].Typ
-		typ2 := symChoice[1].Impl.Args[idx].Typ
+		typ1 := symChoice[0].Impl.Args[idx].Type
+		typ2 := symChoice[1].Impl.Args[idx].Type
 		if typ1 == typ2 {
 			return typ1
 		}
@@ -467,7 +467,7 @@ func argTypeGroupAtIndex(symChoice []TcProcSymbol, idx int) Type {
 		types := []Type{}
 	outer:
 		for _, sym := range symChoice {
-			argType := sym.Impl.Args[idx].Typ
+			argType := sym.Impl.Args[idx].Type
 			for _, typ := range types {
 				if argType == typ {
 					continue outer
@@ -527,7 +527,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 
 			expectedArgType := argTypeGroupAtIndex(procSyms, i)
 			tcArg := tc.TypeCheckExpr(scope, arg, expectedArgType)
-			if tcArg.Type() == TypeError {
+			if tcArg.GetType() == TypeError {
 				hasArgTypeError = true
 			}
 			checkedArgs = append(checkedArgs, tcArg)
@@ -536,7 +536,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 			n := 0
 			for _, procSym := range procSyms {
 				expectedArg := procSym.Impl.Args[i]
-				if tcArg.Type() == expectedArg.Typ {
+				if tcArg.GetType() == expectedArg.Type {
 					procSyms[n] = procSym
 					n++
 				}
@@ -554,7 +554,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 					if i != 0 {
 						builder.WriteString(", ")
 					}
-					arg.Type().prettyPrint(builder)
+					arg.GetType().prettyPrint(builder)
 				}
 				builder.WriteRune(')')
 				tc.ReportErrorf(ident, "%s", builder.String())
@@ -700,7 +700,7 @@ func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt
 		result.Sym = scope.NewSymbol(tc, arg.Name, arg.Kind, expected)
 	} else {
 		result.Value = tc.TypeCheckExpr(scope, arg.Value, expected)
-		result.Sym = scope.NewSymbol(tc, arg.Name, arg.Kind, result.Value.Type())
+		result.Sym = scope.NewSymbol(tc, arg.Name, arg.Kind, result.Value.GetType())
 	}
 
 	return result
@@ -711,14 +711,14 @@ func (tc *TypeChecker) TypeCheckReturnStmt(scope Scope, arg ReturnStmt) (result 
 	return
 }
 
-func (block TcCodeBlock) Type() Type {
+func (block TcCodeBlock) GetType() Type {
 	if len(block.Items) == 0 {
 		return TypeVoid
 	}
-	return block.Items[len(block.Items)-1].Type()
+	return block.Items[len(block.Items)-1].GetType()
 }
 
-func (call TcCall) Type() Type {
+func (call TcCall) GetType() Type {
 	impl := call.Sym.Impl
 	if impl == nil {
 		return TypeError
@@ -726,50 +726,50 @@ func (call TcCall) Type() Type {
 	return impl.ResultType
 }
 
-func (lit StrLit) Type() Type {
+func (lit StrLit) GetType() Type {
 	return TypeString
 }
 
-func (lit CharLit) Type() Type {
+func (lit CharLit) GetType() Type {
 	return TypeChar
 }
 
-func (lit IntLit) Type() Type {
-	if lit.typ == nil {
+func (lit IntLit) GetType() Type {
+	if lit.Type == nil {
 		panic(fmt.Errorf("internal error: type of IntLit not set"))
 	}
-	return lit.typ
+	return lit.Type
 }
 
-func (lit FloatLit) Type() Type {
-	if lit.typ == nil {
+func (lit FloatLit) GetType() Type {
+	if lit.Type == nil {
 		panic(fmt.Errorf("internal error: type of FloatLit not set"))
 	}
-	return lit.typ
+	return lit.Type
 }
 
-func (lit TcArrayLit) Type() Type {
+func (lit TcArrayLit) GetType() Type {
 	return GetArrayType(lit.ElemType, int64(len(lit.Items)))
 }
 
-func (lit TcEnumSetLit) Type() Type {
+func (lit TcEnumSetLit) GetType() Type {
 	return GetEnumSetType(lit.ElemType)
 
 }
 
-func (lit TcStructLit) Type() Type {
-	return lit.typ
+func (lit TcStructLit) GetType() Type {
+	return lit.Type
 }
 
-func (sym TcSymbol) Type() Type {
-	return sym.Typ
+func (sym TcSymbol) GetType() Type {
+	return sym.Type
 }
 
-func (stmt TcVariableDefStmt) Type() Type {
+func (stmt TcVariableDefStmt) GetType() Type {
 	return TypeVoid
 }
 
-func (stmt TcForLoopStmt) Type() Type {
+func (stmt TcForLoopStmt) GetType() Type {
 	return TypeVoid
 }
 
@@ -780,19 +780,19 @@ func UnifyType(a, b Type) Type {
 	return a
 }
 
-func (stmt TcIfStmt) Type() Type {
+func (stmt TcIfStmt) GetType() Type {
 	return TypeVoid
 }
 
-func (stmt TcIfElseExpr) Type() Type {
-	return UnifyType(stmt.Body.Type(), stmt.Else.Type())
+func (stmt TcIfElseExpr) GetType() Type {
+	return UnifyType(stmt.Body.GetType(), stmt.Else.GetType())
 }
 
-func (returnStmt TcReturnStmt) Type() Type {
+func (returnStmt TcReturnStmt) GetType() Type {
 	return TypeNoReturn
 }
 
-func (expr TcDotExpr) Type() Type {
+func (expr TcDotExpr) GetType() Type {
 	return expr.Rhs.Type
 }
 
@@ -843,23 +843,23 @@ func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExp
 			lit.Source = arg.Source
 			lit.Value = float64(arg.Value)
 			if typ == TypeFloat32 {
-				lit.typ = TypeFloat32
+				lit.Type = TypeFloat32
 				if int64(float32(lit.Value)) != arg.Value {
 					tc.ReportErrorf(arg, "can't represent %d as float32 precisely", arg.Value)
 				}
 			} else if typ == TypeFloat64 {
-				lit.typ = TypeFloat64
+				lit.Type = TypeFloat64
 				if int64(lit.Value) != arg.Value {
 					tc.ReportErrorf(arg, "can't represent %d as float64 precisely", arg.Value)
 				}
 			}
 			return lit
 		}
-		arg.typ = typ.(*BuiltinType)
+		arg.Type = typ.(*BuiltinType)
 		return (TcExpr)(arg)
 	case FloatLit:
 		typ := tc.ExpectType(arg, TypeAnyFloat, expected)
-		arg.typ = typ.(*BuiltinType)
+		arg.Type = typ.(*BuiltinType)
 		return (TcExpr)(arg)
 	case ReturnStmt:
 		// ignoring expected type here, because the return as expression
@@ -938,7 +938,7 @@ func (tc *TypeChecker) TypeCheckArrayLit(scope Scope, arg ArrayLit, expected Typ
 		result := TcStructLit{}
 		result.Items = make([]TcExpr, len(exp.Fields))
 		result.Source = arg.Source
-		result.typ = exp
+		result.Type = exp
 
 		if len(arg.Items) == 0 {
 			for i := range result.Items {
@@ -1003,7 +1003,7 @@ func (tc *TypeChecker) TypeCheckIfElseStmt(scope Scope, stmt IfElseExpr, expecte
 
 // TODO ElementType should be some form of language feature
 func (tc *TypeChecker) ElementType(expr TcExpr) Type {
-	switch typ := expr.Type().(type) {
+	switch typ := expr.GetType().(type) {
 	case *ArrayType:
 		return typ.Elem
 	case *EnumSetType:

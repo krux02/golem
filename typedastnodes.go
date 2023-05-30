@@ -16,7 +16,7 @@ type Type interface {
 
 type TcExpr interface {
 	AstNode
-	Type() Type
+	GetType() Type
 }
 
 type TcStructField struct {
@@ -85,7 +85,7 @@ const (
 type TcSymbol struct {
 	Source string
 	Kind   SymbolKind
-	Typ    Type
+	Type   Type
 }
 
 type TcForLoopStmt struct {
@@ -174,7 +174,7 @@ type TcArrayLit struct {
 type TcStructLit struct {
 	Source string
 	Items  []TcExpr
-	typ    *TcStructDef
+	Type   *TcStructDef
 }
 
 type TcEnumSetLit struct {

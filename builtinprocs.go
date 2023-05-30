@@ -127,11 +127,11 @@ func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	} else if typ == TypeNoReturn {
 		tc.ReportErrorf(context, "a default value of no retrun does not exist")
 	} else if typ == TypeFloat32 || typ == TypeFloat64 {
-		return FloatLit{typ: typ}
+		return FloatLit{Type: typ}
 	} else if typ == TypeChar {
 		return CharLit{}
 	} else if typ == TypeInt8 || typ == TypeInt16 || typ == TypeInt32 || typ == TypeInt64 {
-		return IntLit{typ: typ}
+		return IntLit{Type: typ}
 	} else if typ == TypeBoolean {
 		panic("not implemented bool default value")
 	} else if typ == TypeVoid {
@@ -151,7 +151,7 @@ func (typ *ArrayType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 }
 
 func (typ *TcStructDef) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
-	return TcStructLit{typ: typ}
+	return TcStructLit{Type: typ}
 }
 
 func (typ *TcEnumDef) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
@@ -203,7 +203,7 @@ func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Ty
 		Postfix:    postfix,
 	}
 	for i, arg := range args {
-		procDef.Args[i].Typ = arg
+		procDef.Args[i].Type = arg
 		procDef.Args[i].Kind = SkProcArg
 	}
 	builtinScope.Procedures[name] = append(builtinScope.Procedures[name], procDef)
