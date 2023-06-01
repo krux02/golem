@@ -73,7 +73,7 @@ func errorTest(filename string) error {
 
 	tc := NewTypeChecker(source, filename)
 	tc.silentErrors = true
-	_ = tc.TypeCheckPackage(pak)
+	_ = tc.TypeCheckPackage(pak, true)
 
 	for _, error := range tc.errors {
 		line, _, _ := LineColumnStr(source, error.node.GetSource())
@@ -152,7 +152,7 @@ func compile(filename string) (string, error) {
 		fmt.Println(AstFormat(pak))
 	}
 	tc := NewTypeChecker(source, filename)
-	typedPak := tc.TypeCheckPackage(pak)
+	typedPak := tc.TypeCheckPackage(pak, true)
 	if debugPrintTypecheckedCode {
 		fmt.Println("--------------------- typechecked code ---------------------")
 		fmt.Println(AstFormat(typedPak))

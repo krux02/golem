@@ -16,8 +16,8 @@
 * TODO array access
 * TODO distinguish between the type and the expression that defines it
 * TODO display parsing errors es normal error messages
-* TODO mutable flag in type
 * TODO call by reference
+* TODO mutable flag in type
 * TODO multiple return values??
 * TODO full coverage of all error messages
 * TODO test operator precedence when many `:` are in use`
@@ -29,7 +29,6 @@
 * TODO better distinguish go type information vs golem type information better
 * TODO vm for compile time code execution
 * TODO restrict operator precedence to common knowledge cases (+-*/) require explicit braces everywhere else.
-* TODO introduce ~expectAndEatToken~
 * DONE static overloading
 * TODO C++ interop
 * DONE automatic narrowing of literals when type is known from outside.

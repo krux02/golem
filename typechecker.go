@@ -1027,7 +1027,7 @@ func (tc *TypeChecker) TypeCheckForLoopStmt(scope Scope, loopArg ForLoopStmt) (r
 	return
 }
 
-func (tc *TypeChecker) TypeCheckPackage(arg PackageDef) (result TcPackageDef) {
+func (tc *TypeChecker) TypeCheckPackage(arg PackageDef, requiresMain bool) (result TcPackageDef) {
 	scope := builtinScope.NewSubScope()
 	result.Name = arg.Name
 
@@ -1060,6 +1060,9 @@ func (tc *TypeChecker) TypeCheckPackage(arg PackageDef) (result TcPackageDef) {
 			docComment = stmt
 			hasDocComment = true
 		}
+	}
+	if requiresMain && result.Main == nil {
+		tc.ReportErrorf(arg, "package %s misses main proc", result.Name)
 	}
 	return
 }

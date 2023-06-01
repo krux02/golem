@@ -775,7 +775,7 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 }
 
 func parsePackage(code, filename string) (result PackageDef) {
-	result.Name = path.Base(filename)
+	result.Name = strings.TrimSuffix(path.Base(filename), ".golem")
 	result.Source = code
 	var tokenizer = NewTokenizer(code, filename)
 	for true {
