@@ -1,0 +1,15 @@
+
+proc foo(arg: i32): void = {
+  printf("foo1: %d\n", i32(arg))
+}
+
+
+proc foo(arg: i64): void = {
+  printf("foo2: %d\n", i32(arg))
+}
+
+## this should be a doc comment.
+proc main():i64 = {
+  let tmp: i8 = 123
+  foo(tmp)
+}
