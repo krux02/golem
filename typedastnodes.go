@@ -49,13 +49,9 @@ type TcStructDef struct {
 	scheduledforgeneration bool
 }
 
-func (structDef *TcStructDef) GetField(name string) (resField TcStructField, idx int) {
-	for i, field := range structDef.Fields {
-		if field.Name == name {
-			return field, i
-		}
-	}
-	return TcStructField{Source: name, Name: name, Type: TypeError}, -1
+// TODO: rename to GenericParamType
+type TcGenericTypeParam struct {
+	Source string
 }
 
 type TcCodeBlock struct {
@@ -143,7 +139,11 @@ type TcProcDef struct {
 	// example3 "somearray[", ", ", "]"  array access
 	Prefix, Infix, Postfix string
 
-	Args       []TcSymbol
+	// type placeholders within this procedure that need to be substituted with
+	// real types in generic instantiations.
+	GenericParams []Type
+
+	Params     []TcSymbol
 	ResultType Type
 	Body       TcExpr
 
@@ -206,12 +206,13 @@ func (call TcArrayLit) expression()        {}
 func (call TcEnumSetLit) expression()      {}
 func (expr TcStructLit) expression()       {}
 
-func (typ *TcStructDef) typenode() {}
-func (typ *TcEnumDef) typenode()   {}
-func (typ *EnumSetType) typenode() {}
-func (typ *TypeGroup) typenode()   {}
-func (typ *BuiltinType) typenode() {}
-func (typ *ArrayType) typenode()   {}
+func (typ *TcStructDef) typenode()        {}
+func (typ *TcEnumDef) typenode()          {}
+func (typ *EnumSetType) typenode()        {}
+func (typ *TypeGroup) typenode()          {}
+func (typ *BuiltinType) typenode()        {}
+func (typ *ArrayType) typenode()          {}
+func (typ *TcGenericTypeParam) typenode() {}
 
 func (arg TcDotExpr) GetSource() string         { return arg.Source }
 func (arg TcSymbol) GetSource() string          { return arg.Source }
@@ -230,8 +231,9 @@ func (arg TcStructLit) GetSource() string       { return arg.Source }
 
 func (arg TcPackageDef) GetSource() string { return arg.Source }
 
-func (arg *TcStructDef) GetSource() string { return arg.Source }
-func (arg *TcEnumDef) GetSource() string   { return arg.Source }
+func (arg *TcStructDef) GetSource() string        { return arg.Source }
+func (arg *TcEnumDef) GetSource() string          { return arg.Source }
+func (arg *TcGenericTypeParam) GetSource() string { return arg.Source }
 
 // func (arg *EnumSetType) GetSource() string { return arg.Source }
 // func (arg TypeGroup) GetSource() string    { return arg.Source }

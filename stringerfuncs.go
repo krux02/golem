@@ -426,6 +426,10 @@ func (typ *EnumSetType) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("]")
 }
 
+func (typ *TcGenericTypeParam) prettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString(typ.Source)
+}
+
 func (call TcCall) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(call.Sym.Source)
 	builder.WriteString("(")
@@ -527,11 +531,11 @@ func (procDef TcProcDef) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("proc ")
 	builder.WriteString(procDef.Name)
 	builder.WriteString("(")
-	if len(procDef.Args) > 3 {
+	if len(procDef.Params) > 3 {
 		builder.Indentation += 2
 		builder.NewlineAndIndent()
-		iLast := len(procDef.Args) - 1
-		for i, arg := range procDef.Args {
+		iLast := len(procDef.Params) - 1
+		for i, arg := range procDef.Params {
 			builder.WriteString(arg.Source)
 			builder.WriteString(": ")
 			builder.WriteAstNode(arg.GetType())
@@ -542,7 +546,7 @@ func (procDef TcProcDef) prettyPrint(builder *AstPrettyPrinter) {
 		}
 
 	} else {
-		for i, arg := range procDef.Args {
+		for i, arg := range procDef.Params {
 			if i != 0 {
 				builder.WriteString("; ")
 			}

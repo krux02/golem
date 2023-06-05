@@ -70,6 +70,10 @@ func (typ *EnumSetType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune('_')
 }
 
+func (typ *TcGenericTypeParam) ManglePrint(builder *strings.Builder) {
+	panic("not implemented")
+}
+
 func (typ *TypeGroup) GetSource() string {
 	panic("type group does not have source")
 }
@@ -162,6 +166,10 @@ func (typ *EnumSetType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	return TcEnumSetLit{ElemType: typ.Elem}
 }
 
+func (typ *TcGenericTypeParam) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+	panic("not implemented")
+}
+
 // Printf is literally the only use case for real varargs that I
 // know. Therefore the implementation for varargs will be strictly
 // tied to printf for now. A general concept for varargs will be
@@ -196,15 +204,15 @@ func registerTypeGroup(typ *TypeGroup) {
 func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Type) {
 	procDef := &TcProcDef{
 		Name:       name,
-		Args:       make([]TcSymbol, len(args)),
+		Params:     make([]TcSymbol, len(args)),
 		ResultType: result,
 		Prefix:     prefix,
 		Infix:      infix,
 		Postfix:    postfix,
 	}
 	for i, arg := range args {
-		procDef.Args[i].Type = arg
-		procDef.Args[i].Kind = SkProcArg
+		procDef.Params[i].Type = arg
+		procDef.Params[i].Kind = SkProcArg
 	}
 	builtinScope.Procedures[name] = append(builtinScope.Procedures[name], procDef)
 }

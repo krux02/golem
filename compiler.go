@@ -441,6 +441,9 @@ func compileStructDef(context *PackageGeneratorContext, structDef *TcStructDef) 
 }
 
 func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
+	if len(procDef.GenericParams) != 0 {
+		panic("generic instances cannot be used here")
+	}
 	// reuse string here
 	headBuilder := &CodeBuilder{}
 	headBuilder.NewlineAndIndent()
@@ -448,7 +451,7 @@ func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 	// headBuilder.compileTypeExpr(procDef.ResultType)
 	headBuilder.WriteString(" ")
 	headBuilder.WriteString(procDef.Prefix)
-	for i, arg := range procDef.Args {
+	for i, arg := range procDef.Params {
 		if i != 0 {
 			headBuilder.WriteString(procDef.Infix)
 		}

@@ -193,7 +193,13 @@ func (tc *TypeChecker) TypeCheckEnumDef(scope Scope, def EnumDef) *TcEnumDef {
 	return result
 }
 
-//tc.ReportErrorf(def.Kind, "invalid type kind %s, expect one of struct, enum, union", def.Kind.Source)
+// tc.ReportErrorf(def.Kind, "invalid type kind %s, expect one of struct, enum, union", def.Kind.Source)
+func (tc *TypeChecker) NewGenericParam(scope Scope, name Ident) Type {
+	result := &TcGenericTypeParam{Source: name.Source}
+	scope.Types[name.Source] = result
+	return result
+
+}
 
 func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result *TcProcDef) {
 	scope := parentScope.NewSubScope()
@@ -206,7 +212,7 @@ func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result 
 	for _, arg := range def.Args {
 		typ := tc.LookUpType(scope, arg.Type)
 		tcArg := scope.NewSymbol(tc, arg.Name, SkProcArg, typ)
-		result.Args = append(result.Args, tcArg)
+		result.Params = append(result.Params, tcArg)
 		typ.ManglePrint(mangledNameBuilder)
 	}
 	resultType := tc.LookUpType(scope, def.ResultType)
@@ -326,7 +332,7 @@ func (tc *TypeChecker) ExpectMinArgsLen(node AstNode, gotten, expected int) bool
 func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, args []Expr) (result []TcExpr) {
 	result = make([]TcExpr, 0, len(args))
 
-	prefixArgs := printfSym.Impl.Args
+	prefixArgs := printfSym.Impl.Params
 	tc.ExpectMinArgsLen(printfSym, len(args), len(prefixArgs))
 
 	for i := 0; i < len(prefixArgs); i++ {
@@ -401,6 +407,15 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 	return result
 }
 
+func (structDef *TcStructDef) GetField(name string) (resField TcStructField, idx int) {
+	for i, field := range structDef.Fields {
+		if field.Name == name {
+			return field, i
+		}
+	}
+	return TcStructField{Source: name, Name: name, Type: TypeError}, -1
+}
+
 func (tc *TypeChecker) TypeCheckDotExpr(scope Scope, parentSource string, lhs, rhs Expr, expected Type) (result TcDotExpr) {
 	result.Lhs = tc.TypeCheckExpr(scope, lhs, TypeUnspecified)
 	result.Source = parentSource
@@ -437,7 +452,7 @@ func (tc *TypeChecker) TypeCheckCall1(scope Scope, parentSource string, procSym 
 		result.Args = tc.TypeCheckPrintfArgs(scope, procSym, uncheckedArgs)
 	} else {
 		result.Args = checkedArgs
-		expectedArgs := procSym.Impl.Args
+		expectedArgs := procSym.Impl.Params
 		tc.ExpectArgsLen(procSym, len(checkedArgs)+len(uncheckedArgs), len(expectedArgs))
 		for i, arg := range uncheckedArgs {
 			expectedType := expectedArgs[len(checkedArgs)+i].Type
@@ -455,10 +470,10 @@ func argTypeGroupAtIndex(symChoice []TcProcSymbol, idx int) Type {
 	case 0:
 		return TypeUnspecified
 	case 1:
-		return symChoice[0].Impl.Args[idx].Type
+		return symChoice[0].Impl.Params[idx].Type
 	case 2:
-		typ1 := symChoice[0].Impl.Args[idx].Type
-		typ2 := symChoice[1].Impl.Args[idx].Type
+		typ1 := symChoice[0].Impl.Params[idx].Type
+		typ2 := symChoice[1].Impl.Params[idx].Type
 		if typ1 == typ2 {
 			return typ1
 		}
@@ -467,7 +482,7 @@ func argTypeGroupAtIndex(symChoice []TcProcSymbol, idx int) Type {
 		types := []Type{}
 	outer:
 		for _, sym := range symChoice {
-			argType := sym.Impl.Args[idx].Type
+			argType := sym.Impl.Params[idx].Type
 			for _, typ := range types {
 				if argType == typ {
 					continue outer
@@ -535,7 +550,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 			// filter procedures for right one
 			n := 0
 			for _, procSym := range procSyms {
-				expectedArg := procSym.Impl.Args[i]
+				expectedArg := procSym.Impl.Params[i]
 				if tcArg.GetType() == expectedArg.Type {
 					procSyms[n] = procSym
 					n++
