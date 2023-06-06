@@ -20,6 +20,7 @@ type PackageGeneratorContext struct {
 	// functions marked for code generation
 	TodoListProc []*TcProcDef
 	// types marked for code generation
+	TodoListArray  []*ArrayType
 	TodoListEnum   []*TcEnumDef
 	TodoListStruct []*TcStructDef
 }
@@ -36,11 +37,7 @@ func (builder *CodeBuilder) compileTypeExpr(typ Type) {
 	case *BuiltinType:
 		builder.WriteString(typ.internalName)
 	case *ArrayType:
-		// TODO this is wrong.
-		builder.compileTypeExpr(typ.Elem)
-		builder.WriteByte('[')
-		WriteIntLit(&builder.Builder, typ.Len)
-		builder.WriteByte(']')
+		typ.ManglePrint(&builder.Builder)
 	case *TcStructDef:
 		builder.WriteString(typ.Name)
 	case *TcEnumDef:
@@ -59,13 +56,10 @@ func (builder *CodeBuilder) compileSymDeclaration(context *PackageGeneratorConte
 		builder.WriteString(" ")
 		builder.WriteString(sym.Source)
 	case *ArrayType:
-		// TODO this is wrong for nested arrays
-		builder.compileTypeExpr(typ.Elem)
+		context.markArrayTypeForGeneration(typ)
+		typ.ManglePrint(&builder.Builder)
 		builder.WriteString(" ")
 		builder.WriteString(sym.Source)
-		builder.WriteByte('[')
-		WriteIntLit(&builder.Builder, typ.Len)
-		builder.WriteByte(']')
 	case *TcStructDef:
 		context.markStructTypeForGeneration(typ)
 		// TODO this should be the mangled name
@@ -270,7 +264,7 @@ func (builder *CodeBuilder) compileForLoopStmt(context *PackageGeneratorContext,
 		builder.compileSymbol(stmt.LoopSym)
 		builder.WriteString(" = ")
 		builder.compileExpr(context, stmt.Collection)
-		builder.WriteString(", ")
+		builder.WriteString(".arr, ")
 		builder.compileSymbol(stmt.LoopSym)
 		builder.WriteString("_END = ")
 		builder.WriteString(stmt.LoopSym.Source)
@@ -389,6 +383,16 @@ func (builder *CodeBuilder) compileCodeBlock(context *PackageGeneratorContext, b
 	}
 }
 
+func compileArrayDef(context *PackageGeneratorContext, arrayType *ArrayType) {
+	builder := &context.typeDecl
+	builder.NewlineAndIndent()
+	builder.WriteString("typedef struct {")
+	builder.compileTypeExpr(arrayType.Elem)
+	fmt.Fprintf(builder, " arr[%d];} ", arrayType.Len)
+	arrayType.ManglePrint(&builder.Builder)
+	builder.WriteString(";")
+}
+
 func compileEnumDef(context *PackageGeneratorContext, enumDef *TcEnumDef) {
 	builder := &context.typeDecl
 	builder.NewlineAndIndent()
@@ -499,6 +503,14 @@ func (context *PackageGeneratorContext) markProcForGeneration(procDef *TcProcDef
 	procDef.scheduledforgeneration = true
 }
 
+func (context *PackageGeneratorContext) markArrayTypeForGeneration(typeDef *ArrayType) {
+	if typeDef.scheduledforgeneration {
+		return // nothing to do when already scheduled
+	}
+	context.TodoListArray = append(context.TodoListArray, typeDef)
+	typeDef.scheduledforgeneration = true
+}
+
 func (context *PackageGeneratorContext) markStructTypeForGeneration(typeDef *TcStructDef) {
 	if typeDef.scheduledforgeneration {
 		return // nothing to do when already scheduled
@@ -543,6 +555,15 @@ func (context *PackageGeneratorContext) popMarkedForGenerationStructDef() (resul
 	return
 }
 
+func (context *PackageGeneratorContext) popMarkedForGenerationArrayDef() (result *ArrayType) {
+	N := len(context.TodoListArray)
+	if N > 0 {
+		result = context.TodoListArray[N-1]
+		context.TodoListArray = context.TodoListArray[:N-1]
+	}
+	return
+}
+
 func compilePackageToC(pak TcPackageDef) string {
 	context := &PackageGeneratorContext{Pak: pak}
 	context.includes.NewlineAndIndent()
@@ -567,6 +588,16 @@ func compilePackageToC(pak TcPackageDef) string {
 	}
 	for typeDef := context.popMarkedForGenerationStructDef(); typeDef != nil; typeDef = context.popMarkedForGenerationStructDef() {
 		compileStructDef(context, typeDef)
+	}
+
+	// TODO, this invertion of order is total bullshit. It's just made because it makes one example compile better
+	for i, N := 0, len(context.TodoListArray); i < (N / 2); i++ {
+		j := N - 1 - i
+		context.TodoListArray[i], context.TodoListArray[j] = context.TodoListArray[j], context.TodoListArray[i]
+	}
+
+	for typeDef := context.popMarkedForGenerationArrayDef(); typeDef != nil; typeDef = context.popMarkedForGenerationArrayDef() {
+		compileArrayDef(context, typeDef)
 	}
 	// TODO this creates a type declaration for every usage. Should be done only once
 

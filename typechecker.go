@@ -519,9 +519,8 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 
 	procSyms := tc.LookUpProc(scope, ident, nil)
 
-	var result TcCall
-	switch len(procSyms) {
-	case 0:
+	result := TcCall{Source: call.Source}
+	if len(procSyms) == 0 {
 		tc.ReportErrorf(ident, "proc not found: %s", ident.Source)
 		result.Sym = errorProcSym(ident)
 		var tcArgs []TcExpr
@@ -530,64 +529,62 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		}
 		result.Args = tcArgs
 		return result
-	default:
-
-		// TODO: this is very quick and dirty. These three branches must be merged into one general algorithm
-		var checkedArgs []TcExpr
-		hasArgTypeError := false
-		for i, arg := range call.Args {
-			if len(procSyms) == 1 {
-				return tc.TypeCheckCall1(scope, call.Source, procSyms[0], checkedArgs, call.Args[i:], expected)
-			}
-
-			expectedArgType := argTypeGroupAtIndex(procSyms, i)
-			tcArg := tc.TypeCheckExpr(scope, arg, expectedArgType)
-			if tcArg.GetType() == TypeError {
-				hasArgTypeError = true
-			}
-			checkedArgs = append(checkedArgs, tcArg)
-
-			// filter procedures for right one
-			n := 0
-			for _, procSym := range procSyms {
-				expectedArg := procSym.Impl.Params[i]
-				if tcArg.GetType() == expectedArg.Type {
-					procSyms[n] = procSym
-					n++
-				}
-			}
-			procSyms = procSyms[:n]
-
-		}
-		if len(procSyms) == 0 {
-			if !hasArgTypeError { // don't report that proc `foo(TypeError)` can't be resolved.
-				builder := &AstPrettyPrinter{}
-				builder.WriteString("proc not found: ")
-				builder.WriteString(ident.Source)
-				builder.WriteRune('(')
-				for i, arg := range checkedArgs {
-					if i != 0 {
-						builder.WriteString(", ")
-					}
-					arg.GetType().prettyPrint(builder)
-				}
-				builder.WriteRune(')')
-				tc.ReportErrorf(ident, "%s", builder.String())
-			}
-			result.Sym = errorProcSym(ident)
-			result.Args = checkedArgs
-			return result
-		}
-		if len(procSyms) > 1 {
-			tc.ReportErrorf(ident, "too many overloads: %s", ident.Source)
-			result.Sym = errorProcSym(ident)
-			result.Args = checkedArgs
-			return result
-		}
-
-		result.Sym = procSyms[0]
-		result.Args = checkedArgs
 	}
+
+	// TODO: this is very quick and dirty. These three branches must be merged into one general algorithm
+	var checkedArgs []TcExpr
+	hasArgTypeError := false
+	for i, arg := range call.Args {
+		if len(procSyms) == 1 {
+			return tc.TypeCheckCall1(scope, call.Source, procSyms[0], checkedArgs, call.Args[i:], expected)
+		}
+		expectedArgType := argTypeGroupAtIndex(procSyms, i)
+		tcArg := tc.TypeCheckExpr(scope, arg, expectedArgType)
+		if tcArg.GetType() == TypeError {
+			hasArgTypeError = true
+		}
+		checkedArgs = append(checkedArgs, tcArg)
+		// filter procedures for right one
+		n := 0
+		for _, procSym := range procSyms {
+			expectedArg := procSym.Impl.Params[i]
+			if tcArg.GetType() == expectedArg.Type {
+				procSyms[n] = procSym
+				n++
+			}
+		}
+		procSyms = procSyms[:n]
+	}
+
+	if len(procSyms) == 0 {
+		if !hasArgTypeError { // don't report that proc `foo(TypeError)` can't be resolved.
+			builder := &AstPrettyPrinter{}
+			builder.WriteString("proc not found: ")
+			builder.WriteString(ident.Source)
+			builder.WriteRune('(')
+			for i, arg := range checkedArgs {
+				if i != 0 {
+					builder.WriteString(", ")
+				}
+				arg.GetType().prettyPrint(builder)
+			}
+			builder.WriteRune(')')
+			tc.ReportErrorf(ident, "%s", builder.String())
+		}
+		result.Sym = errorProcSym(ident)
+		result.Args = checkedArgs
+		return result
+	}
+
+	if len(procSyms) > 1 {
+		tc.ReportErrorf(ident, "too many overloads: %s", ident.Source)
+		result.Sym = errorProcSym(ident)
+		result.Args = checkedArgs
+		return result
+	}
+
+	result.Sym = procSyms[0]
+	result.Args = checkedArgs
 	tc.ExpectType(call, result.Sym.Impl.ResultType, expected)
 	return result
 }
