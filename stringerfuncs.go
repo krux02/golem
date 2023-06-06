@@ -153,6 +153,10 @@ func (lit ArrayLit) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteRune(']')
 }
 
+func (node TcErrorNode) prettyPrint(builder *AstPrettyPrinter) {
+	node.SourceNode.prettyPrint(builder)
+}
+
 func (lit TcArrayLit) prettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteRune('[')
 	for i, expr := range lit.Items {

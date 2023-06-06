@@ -19,6 +19,11 @@ type TcExpr interface {
 	GetType() Type
 }
 
+// node to wrap code that can't be typechecked
+type TcErrorNode struct {
+	SourceNode Expr
+}
+
 type TcStructField struct {
 	Source string
 	Name   string
@@ -214,6 +219,7 @@ func (typ *BuiltinType) typenode()        {}
 func (typ *ArrayType) typenode()          {}
 func (typ *TcGenericTypeParam) typenode() {}
 
+func (arg TcErrorNode) GetSource() string       { return arg.SourceNode.GetSource() }
 func (arg TcDotExpr) GetSource() string         { return arg.Source }
 func (arg TcSymbol) GetSource() string          { return arg.Source }
 func (arg TcProcSymbol) GetSource() string      { return arg.Source }

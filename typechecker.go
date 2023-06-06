@@ -503,18 +503,16 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		if tc.ExpectArgsLen(call, len(call.Args), 2) {
 			return tc.TypeCheckDotExpr(scope, call.Source, call.Args[0], call.Args[1], expected)
 		}
-		panic("continue after error not implemented")
+		return TcErrorNode{SourceNode: call}
 	}
 	if ident.Source == ":" {
 		if tc.ExpectArgsLen(call, len(call.Args), 2) {
 			typ := tc.LookUpType(scope, ToTypeExpr(call.Args[1]))
-			// this is a bit weird here. The result of `ExpectType` is not forwarded here.
-			// TODO this needs a test that verifies that this is actually the correct behavior
 			tc.ExpectType(call, typ, expected)
 			result := tc.TypeCheckExpr(scope, call.Args[0], typ)
 			return result
 		}
-		panic("continue after error not implemented")
+		return TcErrorNode{SourceNode: call}
 	}
 
 	procSyms := tc.LookUpProc(scope, ident, nil)
@@ -721,6 +719,10 @@ func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt
 func (tc *TypeChecker) TypeCheckReturnStmt(scope Scope, arg ReturnStmt) (result TcReturnStmt) {
 	result.Value = tc.TypeCheckExpr(scope, arg.Value, scope.CurrentProc.ResultType)
 	return
+}
+
+func (_ TcErrorNode) GetType() Type {
+	return TypeError
 }
 
 func (block TcCodeBlock) GetType() Type {
