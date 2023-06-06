@@ -79,7 +79,7 @@ func errorTest(filename string) error {
 		line, _, _ := LineColumnStr(source, error.node.GetSource())
 		expectedError, ok := expectedErrors[line]
 		if !ok {
-			return fmt.Errorf("unexpected error at line %d\n, %s", line, error.msg)
+			return fmt.Errorf("unexpected error at line %d:\n  %s", line, error.msg)
 		}
 		if expectedError != error.msg {
 			return fmt.Errorf("errormessage does not match, got '%s' but expected '%s'\n", error.msg, expectedError)

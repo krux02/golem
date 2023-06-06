@@ -329,22 +329,24 @@ func (tc *TypeChecker) ExpectMinArgsLen(node AstNode, gotten, expected int) bool
 	return true
 }
 
-func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, args []Expr) (result []TcExpr) {
-	result = make([]TcExpr, 0, len(args))
+func (tc *TypeChecker) TypeCheckPrintfCall(scope Scope, sym TcProcSymbol, call Call) (result TcCall) {
+	result.Source = call.Source
+	result.Sym = sym
+	result.Args = make([]TcExpr, 0, len(call.Args))
+	prefixArgs := sym.Impl.Params
 
-	prefixArgs := printfSym.Impl.Params
-	tc.ExpectMinArgsLen(printfSym, len(args), len(prefixArgs))
+	tc.ExpectMinArgsLen(sym, len(call.Args), len(prefixArgs))
 
 	for i := 0; i < len(prefixArgs); i++ {
 		expectedType := prefixArgs[i].Type
-		tcArg := tc.TypeCheckExpr(scope, args[i], expectedType)
-		result = append(result, tcArg)
+		tcArg := tc.TypeCheckExpr(scope, call.Args[i], expectedType)
+		result.Args = append(result.Args, tcArg)
 	}
 
-	formatExpr := tc.TypeCheckExpr(scope, args[len(prefixArgs)], TypeString)
-	result = append(result, formatExpr)
+	formatExpr := tc.TypeCheckExpr(scope, call.Args[len(prefixArgs)], TypeString)
+	result.Args = append(result.Args, formatExpr)
 	i := len(prefixArgs) + 1
-	// format string must me a string literal
+	// format string must be a string literal
 	formatStr := formatExpr.(StrLit).Value
 	formatStrC := &strings.Builder{}
 	for j := 0; j < len(formatStr); j++ {
@@ -374,11 +376,11 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 			tc.ReportErrorf(formatExpr, "invalid format expr %%%c in %s", c2, AstFormat(formatExpr))
 			argType = TypeError
 		}
-		if i == len(args) {
+		if i == len(call.Args) {
 			tc.ReportErrorf(formatExpr, "not enough arguments for %s", AstFormat(formatExpr))
 			break
 		}
-		tcArg := tc.TypeCheckExpr(scope, args[i], argType)
+		tcArg := tc.TypeCheckExpr(scope, call.Args[i], argType)
 		switch tcArg.GetType() {
 		case TypeInt8:
 			formatStrC.WriteString("hhd")
@@ -397,11 +399,11 @@ func (tc *TypeChecker) TypeCheckPrintfArgs(scope Scope, printfSym TcProcSymbol, 
 		case TypeError:
 			formatStrC.WriteString("<error>")
 		}
-		result = append(result, tcArg)
+		result.Args = append(result.Args, tcArg)
 		i++
 	}
 
-	result[len(prefixArgs)] = StrLit{Value: formatStrC.String()}
+	result.Args[len(prefixArgs)] = StrLit{Value: formatStrC.String()}
 
 	//formatExpr.(StrLit).Value = formatStrC.String()
 	return result
@@ -440,29 +442,6 @@ func errorProcSym(ident Ident) TcProcSymbol {
 		Source: ident.GetSource(),
 		Impl:   nil,
 	}
-}
-
-func (tc *TypeChecker) TypeCheckCall1(scope Scope, parentSource string, procSym TcProcSymbol, checkedArgs []TcExpr, uncheckedArgs []Expr, expected Type) (result TcCall) {
-	result.Source = parentSource
-	result.Sym = procSym
-	if procSym.Impl.printfargs {
-		if len(checkedArgs) > 0 {
-			panic("not implemented")
-		}
-		result.Args = tc.TypeCheckPrintfArgs(scope, procSym, uncheckedArgs)
-	} else {
-		result.Args = checkedArgs
-		expectedArgs := procSym.Impl.Params
-		tc.ExpectArgsLen(procSym, len(checkedArgs)+len(uncheckedArgs), len(expectedArgs))
-		for i, arg := range uncheckedArgs {
-			expectedType := expectedArgs[len(checkedArgs)+i].Type
-			tcArg := tc.TypeCheckExpr(scope, arg, expectedType)
-			result.Args = append(result.Args, tcArg)
-		}
-	}
-	// discard the type, it can't be stored in TcCall. Error reporting is still happening though.
-	tc.ExpectType(procSym, procSym.Impl.ResultType, expected)
-	return result
 }
 
 func argTypeGroupAtIndex(symChoice []TcProcSymbol, idx int) Type {
@@ -514,33 +493,23 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		}
 		return TcErrorNode{SourceNode: call}
 	}
-
 	procSyms := tc.LookUpProc(scope, ident, nil)
-
-	result := TcCall{Source: call.Source}
-	if len(procSyms) == 0 {
-		tc.ReportErrorf(ident, "proc not found: %s", ident.Source)
-		result.Sym = errorProcSym(ident)
-		var tcArgs []TcExpr
-		for _, arg := range call.Args {
-			tcArgs = append(tcArgs, tc.TypeCheckExpr(scope, arg, TypeUnspecified))
+	if ident.Source == "printf" {
+		if len(procSyms) != 1 {
+			tc.ReportErrorf(ident, "printf may not be overloaded")
+			procSyms = procSyms[:0]
+		} else {
+			return tc.TypeCheckPrintfCall(scope, procSyms[0], call)
 		}
-		result.Args = tcArgs
-		return result
 	}
-
+	result := TcCall{Source: call.Source}
 	// TODO: this is very quick and dirty. These three branches must be merged into one general algorithm
 	var checkedArgs []TcExpr
 	hasArgTypeError := false
 	for i, arg := range call.Args {
-		if len(procSyms) == 1 {
-			return tc.TypeCheckCall1(scope, call.Source, procSyms[0], checkedArgs, call.Args[i:], expected)
-		}
 		expectedArgType := argTypeGroupAtIndex(procSyms, i)
 		tcArg := tc.TypeCheckExpr(scope, arg, expectedArgType)
-		if tcArg.GetType() == TypeError {
-			hasArgTypeError = true
-		}
+		hasArgTypeError = hasArgTypeError || tcArg.GetType() == TypeError
 		checkedArgs = append(checkedArgs, tcArg)
 		// filter procedures for right one
 		n := 0
@@ -554,8 +523,10 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		procSyms = procSyms[:n]
 	}
 
-	if len(procSyms) == 0 {
-		if !hasArgTypeError { // don't report that proc `foo(TypeError)` can't be resolved.
+	switch len(procSyms) {
+	case 0:
+		// don't report that proc `foo(TypeError)` can't be resolved.
+		if !hasArgTypeError {
 			builder := &AstPrettyPrinter{}
 			builder.WriteString("proc not found: ")
 			builder.WriteString(ident.Source)
@@ -571,19 +542,18 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		}
 		result.Sym = errorProcSym(ident)
 		result.Args = checkedArgs
-		return result
-	}
 
-	if len(procSyms) > 1 {
+	case 1:
+		result.Sym = procSyms[0]
+		result.Args = checkedArgs
+		tc.ExpectType(call, result.Sym.Impl.ResultType, expected)
+
+	default:
 		tc.ReportErrorf(ident, "too many overloads: %s", ident.Source)
 		result.Sym = errorProcSym(ident)
 		result.Args = checkedArgs
-		return result
 	}
 
-	result.Sym = procSyms[0]
-	result.Args = checkedArgs
-	tc.ExpectType(call, result.Sym.Impl.ResultType, expected)
 	return result
 }
 
