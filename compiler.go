@@ -35,7 +35,7 @@ func (builder *CodeBuilder) NewlineAndIndent() {
 func (builder *CodeBuilder) compileTypeExpr(typ Type) {
 	switch typ := typ.(type) {
 	case *BuiltinType:
-		builder.WriteString(typ.internalName)
+		builder.WriteString(typ.InternalName)
 	case *ArrayType:
 		typ.ManglePrint(&builder.Builder)
 	case *TcStructDef:
@@ -52,7 +52,7 @@ func (builder *CodeBuilder) compileTypeExpr(typ Type) {
 func (builder *CodeBuilder) compileSymDeclaration(context *PackageGeneratorContext, sym TcSymbol) {
 	switch typ := sym.GetType().(type) {
 	case *BuiltinType:
-		builder.WriteString(typ.internalName)
+		builder.WriteString(typ.InternalName)
 		builder.WriteString(" ")
 		builder.WriteString(sym.Source)
 	case *ArrayType:

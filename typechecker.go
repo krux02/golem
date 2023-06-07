@@ -186,7 +186,7 @@ func (tc *TypeChecker) TypeCheckEnumDef(scope Scope, def EnumDef) *TcEnumDef {
 	registerBuiltin("string", fmt.Sprintf("%s_names_array[", result.Name), "", "]", []Type{result}, TypeString)
 	for _, typ := range TypeAnyInt.items {
 		builtinType := typ.(*BuiltinType)
-		registerBuiltin(builtinType.name, fmt.Sprintf("(%s)", builtinType.internalName), "", "", []Type{result}, typ)
+		registerBuiltin(builtinType.Name, fmt.Sprintf("(%s)", builtinType.InternalName), "", "", []Type{result}, typ)
 		registerBuiltin(result.Name, fmt.Sprintf("(%s)", result.Name), "", "", []Type{typ}, result)
 	}
 	registerBuiltin("contains", "(((", ") & (1 << (", "))) != 0)", []Type{GetEnumSetType(result), result}, TypeBoolean)
@@ -535,7 +535,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 				if i != 0 {
 					builder.WriteString(", ")
 				}
-				arg.GetType().prettyPrint(builder)
+				arg.GetType().PrettyPrint(builder)
 			}
 			builder.WriteRune(')')
 			tc.ReportErrorf(ident, "%s", builder.String())
@@ -878,7 +878,6 @@ var arrayTypeMap map[ArrayTypeMapKey]*ArrayType
 var enumSetTypeMap map[*TcEnumDef]*EnumSetType
 
 func GetArrayType(elem Type, len int64) (result *ArrayType) {
-	// TODO all types in the `Type` interface must be pointer types
 	result, ok := arrayTypeMap[ArrayTypeMapKey{elem, len}]
 	if !ok {
 		result = &ArrayType{Elem: elem, Len: len}
@@ -888,7 +887,6 @@ func GetArrayType(elem Type, len int64) (result *ArrayType) {
 }
 
 func GetEnumSetType(elem *TcEnumDef) (result *EnumSetType) {
-	// TODO all types in the `Type` interface must be pointer types
 	result, ok := enumSetTypeMap[elem]
 	if !ok {
 		result = &EnumSetType{Elem: elem}
@@ -993,7 +991,7 @@ func (tc *TypeChecker) ElementType(expr TcExpr) Type {
 	case *EnumSetType:
 		return typ.Elem
 	case *BuiltinType:
-		if typ.name == "string" {
+		if typ.Name == "string" {
 			return TypeChar
 		}
 	}

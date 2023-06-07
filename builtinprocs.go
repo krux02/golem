@@ -6,9 +6,9 @@ import (
 )
 
 type BuiltinType struct {
-	name         string
-	internalName string // name for C code generation
-	mangleChar   rune
+	Name         string
+	InternalName string // name for C code generation
+	MangleChar   rune
 }
 
 var _ Type = &BuiltinType{}
@@ -21,19 +21,19 @@ type TypeGroup struct {
 var _ Type = &TypeGroup{}
 
 func (typ *BuiltinType) ManglePrint(builder *strings.Builder) {
-	builder.WriteRune(typ.mangleChar)
+	builder.WriteRune(typ.MangleChar)
 }
 
 func (typ *TypeGroup) ManglePrint(builder *strings.Builder) {
 	panic("not a resolved type")
 }
 
-func (typ *TypeGroup) prettyPrint(builder *AstPrettyPrinter) {
+func (typ *TypeGroup) PrettyPrint(builder *AstPrettyPrinter) {
 	for i, typ := range typ.items {
 		if i != 0 {
 			builder.WriteString(" | ")
 		}
-		typ.prettyPrint(builder)
+		typ.PrettyPrint(builder)
 	}
 }
 
@@ -200,7 +200,7 @@ var builtinScope Scope = &ScopeImpl{
 }
 
 func registerBuiltinType(typ *BuiltinType) {
-	builtinScope.Types[typ.name] = typ
+	builtinScope.Types[typ.Name] = typ
 }
 
 func registerTypeGroup(typ *TypeGroup) {

@@ -8,7 +8,7 @@ import (
 // type checked.
 
 type Type interface {
-	AstNode
+	PrettyPrint(*AstPrettyPrinter)
 	ManglePrint(*strings.Builder) // print for name magling
 	DefaultValue(tc *TypeChecker, context AstNode) TcExpr
 	typenode()
