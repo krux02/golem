@@ -11,7 +11,6 @@ type Type interface {
 	PrettyPrint(*AstPrettyPrinter)
 	ManglePrint(*strings.Builder) // print for name magling
 	DefaultValue(tc *TypeChecker, context AstNode) TcExpr
-	typenode()
 }
 
 type TcExpr interface {
@@ -34,12 +33,6 @@ type TcEnumDef struct {
 	Source string
 	Name   string
 	Values []TcSymbol
-
-	// TODO: find a better solution for tagging other than mutuble setting a value
-	// this value is set to true in the code generator to mark this type as
-	// already scheduled for code generation. This flag is used to prevent
-	// generating the same type multiple times.
-	scheduledforgeneration bool
 }
 
 type TcStructDef struct {
@@ -185,7 +178,7 @@ type TcStructLit struct {
 type TcEnumSetLit struct {
 	Source   string
 	Items    []TcExpr
-	ElemType *TcEnumDef
+	ElemType *EnumType
 }
 
 type TcPackageDef struct {

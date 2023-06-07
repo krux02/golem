@@ -21,7 +21,7 @@ type PackageGeneratorContext struct {
 	TodoListProc []*TcProcDef
 	// types marked for code generation
 	TodoListArray  []*ArrayType
-	TodoListEnum   []*TcEnumDef
+	TodoListEnum   []*EnumType
 	TodoListStruct []*TcStructDef
 }
 
@@ -40,8 +40,8 @@ func (builder *CodeBuilder) compileTypeExpr(typ Type) {
 		typ.ManglePrint(&builder.Builder)
 	case *TcStructDef:
 		builder.WriteString(typ.Name)
-	case *TcEnumDef:
-		builder.WriteString(typ.Name)
+	case *EnumType:
+		builder.WriteString(typ.Impl.Name)
 	case *EnumSetType:
 		builder.WriteString("uint64_t")
 	default:
@@ -66,10 +66,10 @@ func (builder *CodeBuilder) compileSymDeclaration(context *PackageGeneratorConte
 		builder.WriteString(typ.Name)
 		builder.WriteString(" ")
 		builder.WriteString(sym.Source)
-	case *TcEnumDef:
+	case *EnumType:
 		context.markEnumTypeForGeneration(typ)
 		// TODO this should be the mangled name
-		builder.WriteString(typ.Name)
+		builder.WriteString(typ.Impl.Name)
 		builder.WriteString(" ")
 		builder.WriteString(sym.Source)
 	case *EnumSetType:
@@ -172,8 +172,8 @@ func (builder *CodeBuilder) compileSymbol(sym TcSymbol) {
 		case SkLoopIterator:
 			builder.WriteString("*")
 		case SkEnum:
-			typ := sym.Type.(*TcEnumDef)
-			builder.WriteString(typ.Name)
+			typ := sym.Type.(*EnumType)
+			builder.WriteString(typ.Impl.Name)
 			builder.WriteRune('_')
 		}
 		builder.WriteString(sym.Source)
@@ -519,12 +519,12 @@ func (context *PackageGeneratorContext) markStructTypeForGeneration(typeDef *TcS
 	typeDef.scheduledforgeneration = true
 }
 
-func (context *PackageGeneratorContext) markEnumTypeForGeneration(typeDef *TcEnumDef) {
-	if typeDef.scheduledforgeneration {
+func (context *PackageGeneratorContext) markEnumTypeForGeneration(typ *EnumType) {
+	if typ.scheduledforgeneration {
 		return // nothing to do when already scheduled
 	}
-	context.TodoListEnum = append(context.TodoListEnum, typeDef)
-	typeDef.scheduledforgeneration = true
+	context.TodoListEnum = append(context.TodoListEnum, typ)
+	typ.scheduledforgeneration = true
 }
 
 // might return nil when nothing to do
@@ -537,7 +537,7 @@ func (context *PackageGeneratorContext) popMarkedForGenerationProcDef() (result 
 	return
 }
 
-func (context *PackageGeneratorContext) popMarkedForGenerationEnumDef() (result *TcEnumDef) {
+func (context *PackageGeneratorContext) popMarkedForGenerationEnumType() (result *EnumType) {
 	N := len(context.TodoListEnum)
 	if N > 0 {
 		result = context.TodoListEnum[N-1]
@@ -583,8 +583,8 @@ func compilePackageToC(pak TcPackageDef) string {
 	for procDef := context.popMarkedForGenerationProcDef(); procDef != nil; procDef = context.popMarkedForGenerationProcDef() {
 		compileProcDef(context, procDef)
 	}
-	for typeDef := context.popMarkedForGenerationEnumDef(); typeDef != nil; typeDef = context.popMarkedForGenerationEnumDef() {
-		compileEnumDef(context, typeDef)
+	for typ := context.popMarkedForGenerationEnumType(); typ != nil; typ = context.popMarkedForGenerationEnumType() {
+		compileEnumDef(context, typ.Impl)
 	}
 	for typeDef := context.popMarkedForGenerationStructDef(); typeDef != nil; typeDef = context.popMarkedForGenerationStructDef() {
 		compileStructDef(context, typeDef)

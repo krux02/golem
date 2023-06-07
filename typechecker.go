@@ -85,7 +85,7 @@ func (tc *TypeChecker) LookUpType(scope Scope, expr TypeExpr) Type {
 		if !tc.ExpectArgsLen(expr, len(expr.ExprArgs), 0) {
 			return TypeError
 		}
-		elem, ok := tc.LookUpType(scope, expr.TypeArgs[0]).(*TcEnumDef)
+		elem, ok := tc.LookUpType(scope, expr.TypeArgs[0]).(*EnumType)
 		if !ok {
 			tc.ReportErrorf(expr.TypeArgs[0], "expect enum type")
 		}
@@ -137,8 +137,8 @@ func (tc *TypeChecker) LookUpLetSymRecursive(scope Scope, ident Ident) TcSymbol 
 }
 
 func (tc *TypeChecker) LookUpLetSym(scope Scope, ident Ident, expected Type) (result TcSymbol) {
-	if enumDef, ok := expected.(*TcEnumDef); ok {
-		for _, sym := range enumDef.Values {
+	if enumDef, ok := expected.(*EnumType); ok {
+		for _, sym := range enumDef.Impl.Values {
 			if sym.Source == ident.Source {
 				// change line info
 				sym.Source = ident.Source
@@ -174,22 +174,23 @@ func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def StructDef) *TcStructD
 
 func (tc *TypeChecker) TypeCheckEnumDef(scope Scope, def EnumDef) *TcEnumDef {
 	result := &TcEnumDef{}
+	enumType := &EnumType{Impl: result}
 	result.Name = def.Name.Source
 	for _, ident := range def.Values {
 		var sym TcSymbol
 		sym.Source = ident.Source
 		sym.Kind = SkEnum
-		sym.Type = result
+		sym.Type = enumType
 		result.Values = append(result.Values, sym)
 	}
-	scope.Types[result.Name] = result
-	registerBuiltin("string", fmt.Sprintf("%s_names_array[", result.Name), "", "]", []Type{result}, TypeString)
-	for _, typ := range TypeAnyInt.items {
-		builtinType := typ.(*BuiltinType)
-		registerBuiltin(builtinType.Name, fmt.Sprintf("(%s)", builtinType.InternalName), "", "", []Type{result}, typ)
-		registerBuiltin(result.Name, fmt.Sprintf("(%s)", result.Name), "", "", []Type{typ}, result)
+	scope.Types[result.Name] = enumType
+	registerBuiltin("string", fmt.Sprintf("%s_names_array[", result.Name), "", "]", []Type{enumType}, TypeString)
+	for _, intType := range TypeAnyInt.items {
+		builtinType := intType.(*BuiltinType)
+		registerBuiltin(builtinType.Name, fmt.Sprintf("(%s)", builtinType.InternalName), "", "", []Type{enumType}, intType)
+		registerBuiltin(result.Name, fmt.Sprintf("(%s)", result.Name), "", "", []Type{intType}, enumType)
 	}
-	registerBuiltin("contains", "(((", ") & (1 << (", "))) != 0)", []Type{GetEnumSetType(result), result}, TypeBoolean)
+	registerBuiltin("contains", "(((", ") & (1 << (", "))) != 0)", []Type{GetEnumSetType(enumType), enumType}, TypeBoolean)
 	return result
 }
 
@@ -875,7 +876,9 @@ type ArrayTypeMapKey struct {
 }
 
 var arrayTypeMap map[ArrayTypeMapKey]*ArrayType
-var enumSetTypeMap map[*TcEnumDef]*EnumSetType
+
+// is this safe, will this always look up a value? It is a pointer in a map
+var enumSetTypeMap map[*EnumType]*EnumSetType
 
 func GetArrayType(elem Type, len int64) (result *ArrayType) {
 	result, ok := arrayTypeMap[ArrayTypeMapKey{elem, len}]
@@ -886,7 +889,7 @@ func GetArrayType(elem Type, len int64) (result *ArrayType) {
 	return result
 }
 
-func GetEnumSetType(elem *TcEnumDef) (result *EnumSetType) {
+func GetEnumSetType(elem *EnumType) (result *EnumSetType) {
 	result, ok := enumSetTypeMap[elem]
 	if !ok {
 		result = &EnumSetType{Elem: elem}

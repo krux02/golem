@@ -195,7 +195,7 @@ func (lit TcEnumSetLit) PrettyPrint(builder *AstPrettyPrinter) {
 	}
 	builder.WriteString("]: set[")
 	//builder.WriteNode(lit.typ)
-	builder.WriteString(lit.ElemType.Name)
+	builder.WriteNode(lit.ElemType)
 	builder.WriteRune(']')
 }
 
@@ -463,6 +463,10 @@ func (structDef *TcStructDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.Indentation--
 	builder.NewlineAndIndent()
 	builder.WriteString("}")
+}
+
+func (typ *EnumType) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString(typ.Impl.Name)
 }
 
 func (enumDef *TcEnumDef) PrettyPrint(builder *AstPrettyPrinter) {

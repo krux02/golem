@@ -20,6 +20,16 @@ type TypeGroup struct {
 
 var _ Type = &TypeGroup{}
 
+type EnumType struct {
+	Impl *TcEnumDef
+
+	// TODO: find a better solution for tagging other than mutuble setting a value
+	// this value is set to true in the code generator to mark this type as
+	// already scheduled for code generation. This flag is used to prevent
+	// generating the same type multiple times.
+	scheduledforgeneration bool
+}
+
 func (typ *BuiltinType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune(typ.MangleChar)
 }
@@ -49,7 +59,7 @@ type ArrayType struct {
 }
 
 type EnumSetType struct {
-	Elem *TcEnumDef
+	Elem *EnumType
 }
 
 func (typ *ArrayType) ManglePrint(builder *strings.Builder) {
@@ -64,9 +74,9 @@ func (typ *TcStructDef) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune('_')
 }
 
-func (typ *TcEnumDef) ManglePrint(builder *strings.Builder) {
+func (typ *EnumType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune('E')
-	builder.WriteString(typ.Name)
+	builder.WriteString(typ.Impl.Name)
 	builder.WriteRune('_')
 }
 
@@ -164,8 +174,8 @@ func (typ *TcStructDef) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	return TcStructLit{Type: typ}
 }
 
-func (typ *TcEnumDef) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
-	return typ.Values[0]
+func (typ *EnumType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+	return typ.Impl.Values[0]
 }
 
 func (typ *EnumSetType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
@@ -237,7 +247,7 @@ func registerConstant(name string, typ Type) {
 
 func init() {
 	arrayTypeMap = make(map[ArrayTypeMapKey]*ArrayType)
-	enumSetTypeMap = make(map[*TcEnumDef]*EnumSetType)
+	enumSetTypeMap = make(map[*EnumType]*EnumSetType)
 
 	registerBuiltinType(TypeBoolean)
 	registerBuiltinType(TypeInt8)
