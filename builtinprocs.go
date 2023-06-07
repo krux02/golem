@@ -28,6 +28,18 @@ type EnumType struct {
 
 type StructType struct {
 	Impl *TcStructDef
+
+	// TODO: find a better solution for tagging other than mutuble setting a value
+	// this value is set to true in the code generator to mark this type as
+	// already scheduled for code generation. This flag is used to prevent
+	// generating the same type multiple times.
+	scheduledforgeneration bool
+}
+
+type ArrayType struct {
+	Len  int64
+	Elem Type
+
 	// TODO: find a better solution for tagging other than mutuble setting a value
 	// this value is set to true in the code generator to mark this type as
 	// already scheduled for code generation. This flag is used to prevent
@@ -39,6 +51,7 @@ var _ Type = &BuiltinType{}
 var _ Type = &TypeGroup{}
 var _ Type = &EnumType{}
 var _ Type = &StructType{}
+var _ Type = &ArrayType{}
 
 func (typ *BuiltinType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune(typ.MangleChar)
@@ -55,17 +68,6 @@ func (typ *TypeGroup) PrettyPrint(builder *AstPrettyPrinter) {
 		}
 		typ.PrettyPrint(builder)
 	}
-}
-
-type ArrayType struct {
-	Len  int64
-	Elem Type
-
-	// TODO: find a better solution for tagging other than mutuble setting a value
-	// this value is set to true in the code generator to mark this type as
-	// already scheduled for code generation. This flag is used to prevent
-	// generating the same type multiple times.
-	scheduledforgeneration bool
 }
 
 type EnumSetType struct {

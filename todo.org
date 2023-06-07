@@ -62,4 +62,8 @@ const string strLit243 = {.len=15,.data="default Values\n"};
 ** DONE struct
 ** DONE literals
 * DONE documentation structure
+* TODO code navigation
+ [ ] jump to catch from throw
+ [ ] jump to throw from catch
+ [ ] jump to definition
 * TODO dotExpr should be strictly limited to two elements
