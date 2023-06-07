@@ -11,6 +11,7 @@ type Type interface {
 	PrettyPrint(*AstPrettyPrinter)
 	ManglePrint(*strings.Builder) // print for name magling
 	DefaultValue(tc *TypeChecker, context AstNode) TcExpr
+	typenode()
 }
 
 type TcExpr interface {
@@ -39,12 +40,6 @@ type TcStructDef struct {
 	Source string
 	Name   string
 	Fields []TcStructField
-
-	// TODO: find a better solution for tagging other than mutuble setting a value
-	// this value is set to true in the code generator to mark this type as
-	// already scheduled for code generation. This flag is used to prevent
-	// generating the same type multiple times.
-	scheduledforgeneration bool
 }
 
 // TODO: rename to GenericParamType
@@ -172,7 +167,7 @@ type TcArrayLit struct {
 type TcStructLit struct {
 	Source string
 	Items  []TcExpr
-	Type   *TcStructDef
+	Type   *StructType
 }
 
 type TcEnumSetLit struct {
@@ -204,8 +199,8 @@ func (call TcArrayLit) expression()        {}
 func (call TcEnumSetLit) expression()      {}
 func (expr TcStructLit) expression()       {}
 
-func (typ *TcStructDef) typenode()        {}
-func (typ *TcEnumDef) typenode()          {}
+func (typ *StructType) typenode()         {}
+func (typ *EnumType) typenode()           {}
 func (typ *EnumSetType) typenode()        {}
 func (typ *TypeGroup) typenode()          {}
 func (typ *BuiltinType) typenode()        {}

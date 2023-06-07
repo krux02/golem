@@ -157,6 +157,7 @@ func (tc *TypeChecker) LineColumnNode(node AstNode) (line, columnStart, columnEn
 
 func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def StructDef) *TcStructDef {
 	result := &TcStructDef{}
+	structType := &StructType{Impl: result}
 	result.Name = def.Name.Source
 	for _, colonExpr := range def.Fields {
 		if nameIdent, ok := colonExpr.Lhs.(Ident); !ok {
@@ -168,7 +169,7 @@ func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def StructDef) *TcStructD
 			result.Fields = append(result.Fields, tcField)
 		}
 	}
-	scope.Types[result.Name] = result
+	scope.Types[result.Name] = structType
 	return result
 }
 
@@ -423,12 +424,12 @@ func (tc *TypeChecker) TypeCheckDotExpr(scope Scope, parentSource string, lhs, r
 	result.Lhs = tc.TypeCheckExpr(scope, lhs, TypeUnspecified)
 	result.Source = parentSource
 	switch t := result.Lhs.GetType().(type) {
-	case *TcStructDef:
+	case *StructType:
 		rhsSrc := rhs.GetSource()
 		var idx int
-		result.Rhs, idx = t.GetField(rhsSrc)
+		result.Rhs, idx = t.Impl.GetField(rhsSrc)
 		if idx < 0 {
-			tc.ReportErrorf(rhs, "type %s has no field %s", t.Name, rhs.GetSource())
+			tc.ReportErrorf(rhs, "type %s has no field %s", t.Impl.Name, rhs.GetSource())
 			return result
 		}
 		tc.ExpectType(rhs, result.Rhs.Type, expected)
@@ -919,15 +920,15 @@ func (tc *TypeChecker) TypeCheckArrayLit(scope Scope, arg ArrayLit, expected Typ
 			result.Items[i] = tc.TypeCheckExpr(scope, item, exp.Elem)
 		}
 		return result
-	case *TcStructDef:
+	case *StructType:
 		result := TcStructLit{}
-		result.Items = make([]TcExpr, len(exp.Fields))
+		result.Items = make([]TcExpr, len(exp.Impl.Fields))
 		result.Source = arg.Source
 		result.Type = exp
 
 		if len(arg.Items) == 0 {
 			for i := range result.Items {
-				result.Items[i] = exp.Fields[i].Type.DefaultValue(tc, arg)
+				result.Items[i] = exp.Impl.Fields[i].Type.DefaultValue(tc, arg)
 			}
 			return result
 		} else if _, _, isAssign0 := MatchAssign(arg.Items[0]); isAssign0 {
@@ -938,9 +939,9 @@ func (tc *TypeChecker) TypeCheckArrayLit(scope Scope, arg ArrayLit, expected Typ
 					panic(isAssign)
 				}
 				lhsIdent := lhs.(Ident)
-				field, idx := exp.GetField(lhsIdent.Source)
+				field, idx := exp.Impl.GetField(lhsIdent.Source)
 				if idx < 0 {
-					tc.ReportErrorf(lhsIdent, "type %s has no field %s", exp.Name, lhsIdent.Source)
+					tc.ReportErrorf(lhsIdent, "type %s has no field %s", exp.Impl.Name, lhsIdent.Source)
 				} else {
 					result.Items[idx] = tc.TypeCheckExpr(scope, rhs, field.Type)
 					if idx < lastIdx {
@@ -952,17 +953,17 @@ func (tc *TypeChecker) TypeCheckArrayLit(scope Scope, arg ArrayLit, expected Typ
 			// fill up all unset fields with default values
 			for i := range result.Items {
 				if result.Items[i] == nil {
-					result.Items[i] = exp.Fields[i].Type.DefaultValue(tc, arg)
+					result.Items[i] = exp.Impl.Fields[i].Type.DefaultValue(tc, arg)
 				}
 			}
 			return result
 		} else {
 			// must have all fields of struct
-			if len(arg.Items) != len(exp.Fields) {
-				tc.ReportErrorf(arg, "literal has %d values, but %s needs %d values", len(arg.Items), exp.Name, len(exp.Fields))
+			if len(arg.Items) != len(exp.Impl.Fields) {
+				tc.ReportErrorf(arg, "literal has %d values, but %s needs %d values", len(arg.Items), exp.Impl.Name, len(exp.Impl.Fields))
 			}
 			for i := range result.Items {
-				result.Items[i] = tc.TypeCheckExpr(scope, arg.Items[i], exp.Fields[i].Type)
+				result.Items[i] = tc.TypeCheckExpr(scope, arg.Items[i], exp.Impl.Fields[i].Type)
 			}
 			return result
 		}

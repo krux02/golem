@@ -34,6 +34,7 @@
 * DONE static overloading
 * TODO C++ interop
 * DONE automatic narrowing of literals when type is known from outside.
+* TODO test default value
 * TODO make `registerBuiltinX` a method of scope.
 * TODO compiler passes for some transformations (e.g. moving literals to constants)
 * TODO statistics about compiler bootstrapping time, lines of code, test time, test lines of code

@@ -22,7 +22,7 @@ type PackageGeneratorContext struct {
 	// types marked for code generation
 	TodoListArray  []*ArrayType
 	TodoListEnum   []*EnumType
-	TodoListStruct []*TcStructDef
+	TodoListStruct []*StructType
 }
 
 func (builder *CodeBuilder) NewlineAndIndent() {
@@ -38,8 +38,8 @@ func (builder *CodeBuilder) compileTypeExpr(typ Type) {
 		builder.WriteString(typ.InternalName)
 	case *ArrayType:
 		typ.ManglePrint(&builder.Builder)
-	case *TcStructDef:
-		builder.WriteString(typ.Name)
+	case *StructType:
+		builder.WriteString(typ.Impl.Name)
 	case *EnumType:
 		builder.WriteString(typ.Impl.Name)
 	case *EnumSetType:
@@ -60,10 +60,10 @@ func (builder *CodeBuilder) compileSymDeclaration(context *PackageGeneratorConte
 		typ.ManglePrint(&builder.Builder)
 		builder.WriteString(" ")
 		builder.WriteString(sym.Source)
-	case *TcStructDef:
+	case *StructType:
 		context.markStructTypeForGeneration(typ)
 		// TODO this should be the mangled name
-		builder.WriteString(typ.Name)
+		builder.WriteString(typ.Impl.Name)
 		builder.WriteString(" ")
 		builder.WriteString(sym.Source)
 	case *EnumType:
@@ -511,12 +511,12 @@ func (context *PackageGeneratorContext) markArrayTypeForGeneration(typeDef *Arra
 	typeDef.scheduledforgeneration = true
 }
 
-func (context *PackageGeneratorContext) markStructTypeForGeneration(typeDef *TcStructDef) {
-	if typeDef.scheduledforgeneration {
+func (context *PackageGeneratorContext) markStructTypeForGeneration(typ *StructType) {
+	if typ.scheduledforgeneration {
 		return // nothing to do when already scheduled
 	}
-	context.TodoListStruct = append(context.TodoListStruct, typeDef)
-	typeDef.scheduledforgeneration = true
+	context.TodoListStruct = append(context.TodoListStruct, typ)
+	typ.scheduledforgeneration = true
 }
 
 func (context *PackageGeneratorContext) markEnumTypeForGeneration(typ *EnumType) {
@@ -534,7 +534,7 @@ func (context *PackageGeneratorContext) popMarkedForGenerationProcDef() (result 
 		result = context.TodoListProc[N-1]
 		context.TodoListProc = context.TodoListProc[:N-1]
 	}
-	return
+	return result
 }
 
 func (context *PackageGeneratorContext) popMarkedForGenerationEnumType() (result *EnumType) {
@@ -543,16 +543,16 @@ func (context *PackageGeneratorContext) popMarkedForGenerationEnumType() (result
 		result = context.TodoListEnum[N-1]
 		context.TodoListEnum = context.TodoListEnum[:N-1]
 	}
-	return
+	return result
 }
 
-func (context *PackageGeneratorContext) popMarkedForGenerationStructDef() (result *TcStructDef) {
+func (context *PackageGeneratorContext) popMarkedForGenerationStructDef() (result *StructType) {
 	N := len(context.TodoListStruct)
 	if N > 0 {
 		result = context.TodoListStruct[N-1]
 		context.TodoListStruct = context.TodoListStruct[:N-1]
 	}
-	return
+	return result
 }
 
 func (context *PackageGeneratorContext) popMarkedForGenerationArrayDef() (result *ArrayType) {
@@ -561,7 +561,7 @@ func (context *PackageGeneratorContext) popMarkedForGenerationArrayDef() (result
 		result = context.TodoListArray[N-1]
 		context.TodoListArray = context.TodoListArray[:N-1]
 	}
-	return
+	return result
 }
 
 func compilePackageToC(pak TcPackageDef) string {
@@ -586,8 +586,8 @@ func compilePackageToC(pak TcPackageDef) string {
 	for typ := context.popMarkedForGenerationEnumType(); typ != nil; typ = context.popMarkedForGenerationEnumType() {
 		compileEnumDef(context, typ.Impl)
 	}
-	for typeDef := context.popMarkedForGenerationStructDef(); typeDef != nil; typeDef = context.popMarkedForGenerationStructDef() {
-		compileStructDef(context, typeDef)
+	for typ := context.popMarkedForGenerationStructDef(); typ != nil; typ = context.popMarkedForGenerationStructDef() {
+		compileStructDef(context, typ.Impl)
 	}
 
 	// TODO, this invertion of order is total bullshit. It's just made because it makes one example compile better

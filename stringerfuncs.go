@@ -182,7 +182,7 @@ func (lit TcStructLit) PrettyPrint(builder *AstPrettyPrinter) {
 	}
 	builder.WriteString("]:")
 	//builder.WriteNode(lit.typ)
-	builder.WriteString(lit.Type.Name)
+	builder.WriteString(lit.Type.Impl.Name)
 }
 
 func (lit TcEnumSetLit) PrettyPrint(builder *AstPrettyPrinter) {
@@ -447,6 +447,10 @@ func (call TcCall) PrettyPrint(builder *AstPrettyPrinter) {
 		builder.WriteNode(arg)
 	}
 	builder.WriteString(")")
+}
+
+func (structDef *StructType) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString(structDef.Impl.Name)
 }
 
 func (structDef *TcStructDef) PrettyPrint(builder *AstPrettyPrinter) {

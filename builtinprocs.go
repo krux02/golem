@@ -11,14 +11,10 @@ type BuiltinType struct {
 	MangleChar   rune
 }
 
-var _ Type = &BuiltinType{}
-
 type TypeGroup struct {
 	name  string
 	items []Type
 }
-
-var _ Type = &TypeGroup{}
 
 type EnumType struct {
 	Impl *TcEnumDef
@@ -29,6 +25,20 @@ type EnumType struct {
 	// generating the same type multiple times.
 	scheduledforgeneration bool
 }
+
+type StructType struct {
+	Impl *TcStructDef
+	// TODO: find a better solution for tagging other than mutuble setting a value
+	// this value is set to true in the code generator to mark this type as
+	// already scheduled for code generation. This flag is used to prevent
+	// generating the same type multiple times.
+	scheduledforgeneration bool
+}
+
+var _ Type = &BuiltinType{}
+var _ Type = &TypeGroup{}
+var _ Type = &EnumType{}
+var _ Type = &StructType{}
 
 func (typ *BuiltinType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune(typ.MangleChar)
@@ -68,9 +78,9 @@ func (typ *ArrayType) ManglePrint(builder *strings.Builder) {
 	typ.Elem.ManglePrint(builder)
 }
 
-func (typ *TcStructDef) ManglePrint(builder *strings.Builder) {
+func (typ *StructType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune('S')
-	builder.WriteString(typ.Name)
+	builder.WriteString(typ.Impl.Name)
 	builder.WriteRune('_')
 }
 
@@ -170,7 +180,7 @@ func (typ *ArrayType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	return TcArrayLit{ElemType: typ.Elem}
 }
 
-func (typ *TcStructDef) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+func (typ *StructType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	return TcStructLit{Type: typ}
 }
 
