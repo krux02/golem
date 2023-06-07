@@ -37,7 +37,7 @@
 * TODO test default value
 * TODO make `registerBuiltinX` a method of scope.
 * TODO compiler passes for some transformations (e.g. moving literals to constants)
-* TODO statistics about compiler bootstrapping time, lines of code, test time, test lines of code
+* TODO persistent statistic logging about compiler bootstrapping time, lines of code, test time, test lines of code
 * TODO full set of types
 ** TODO vector/matrix/simd types
 ** TODO string
@@ -55,8 +55,8 @@ const string strLit243 = {.len=15,.data="default Values\n"};
 
 #+end_src
 
-** TODO enum
-** TODO set
+** DONE enum
+** DONE enum set
 ** DONE int float in all sizes
 ** DONE array
 ** DONE struct
