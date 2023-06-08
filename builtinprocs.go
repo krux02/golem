@@ -198,19 +198,15 @@ func (typ *TcGenericTypeParam) DefaultValue(tc *TypeChecker, context AstNode) Tc
 	panic("not implemented")
 }
 
-// Printf is literally the only use case for real varargs that I
-// know. Therefore the implementation for varargs will be strictly
-// tied to printf for now. A general concept for varargs will be
-// specified out as soon as it becomes necessary.
+// Printf is literally the only use case for real varargs that I actually see as
+// practical. Therefore the implementation for varargs will be strictly tied to
+// printf for now. A general concept for varargs will be specified out as soon
+// as it becomes necessary, but right now it is not planned.
 var BuiltinPrintf *TcProcDef = &TcProcDef{
-	Name: "printf",
-
-	Prefix:  "printf(",
-	Infix:   ", ",
-	Postfix: ")",
-	// Support for type checking arguments for printf is currently a language
-	// feature.
-	printfargs: true,
+	Name:       "printf",
+	Prefix:     "printf(",
+	Infix:      ", ",
+	Postfix:    ")",
 	ResultType: TypeVoid,
 }
 

@@ -140,21 +140,10 @@ type TcProcDef struct {
 	ResultType Type
 	Body       TcExpr
 
-	// TODO This code here is supposed to be temporary code. TcProcDef should
-	// be a tidy clean minimal definition. This code must be optimized
-	// for reading. Do NOT bloat it with shit for lots of of exceptions
-	// in the language.
-	// Exception for printf. It has varargs that are at this point in
-	// time no language feature yet.
-	printfargs         bool
-	generateAsOperator bool
-
-	// This code here is still supposed to be temporary. But from here on is used
-	// for the code generator
-
-	// this value is set to true in the code generator to mark this function as
+	// TODO: find a better solution for tagging other than mutuble setting a value
+	// this value is set to true in the code generator to mark this proc as
 	// already scheduled for code generation. This flag is used to prevent
-	// generating the same function multiple times.
+	// generating the same type multiple times.
 	scheduledforgeneration bool
 }
 
