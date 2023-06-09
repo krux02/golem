@@ -153,6 +153,9 @@ var TypeAnyInt = &TypeGroup{name: "AnyInt", items: []Type{TypeInt8, TypeInt16, T
 var TypeAnyFloat = &TypeGroup{name: "AnyFloat", items: []Type{TypeFloat32, TypeFloat64}}
 var TypeAnyNumber = &TypeGroup{name: "AnyNumber", items: []Type{TypeFloat32, TypeFloat64, TypeInt8, TypeInt16, TypeInt32, TypeInt64}}
 
+// types for C wrappers
+var TypeCString = &BuiltinType{"cstring", "char const*", 'x'}
+
 func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	if typ == TypeUnspecified {
 		tc.ReportErrorf(context, "variable definitions statements must have at least one, a type or a value expression")

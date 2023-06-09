@@ -334,23 +334,18 @@ func (tc *TypeChecker) ExpectMinArgsLen(node AstNode, gotten, expected int) bool
 func (tc *TypeChecker) TypeCheckPrintfCall(scope Scope, ident Ident, call Call) (result TcCall) {
 	result.Source = call.Source
 	result.Sym = TcProcSymbol{Source: call.Callee.GetSource(), Impl: BuiltinPrintf}
-	result.Args = make([]TcExpr, 0, len(call.Args))
-	prefixArgs := BuiltinPrintf.Params
+	result.Args = make([]TcExpr, 1, len(call.Args))
 
-	tc.ExpectMinArgsLen(call.Callee, len(call.Args), len(prefixArgs))
-
-	for i := 0; i < len(prefixArgs); i++ {
-		expectedType := prefixArgs[i].Type
-		tcArg := tc.TypeCheckExpr(scope, call.Args[i], expectedType)
-		result.Args = append(result.Args, tcArg)
-	}
-
-	formatExpr := tc.TypeCheckExpr(scope, call.Args[len(prefixArgs)], TypeString)
-	result.Args = append(result.Args, formatExpr)
-	i := len(prefixArgs) + 1
+	formatExpr := tc.TypeCheckExpr(scope, call.Args[0], TypeString)
 	// format string must be a string literal
-	formatStr := formatExpr.(StrLit).Value
+	formatStrLit, ok := formatExpr.(StrLit)
+	if !ok {
+		// TODO this needs a func Test
+		panic("not implemented")
+	}
+	formatStr := formatStrLit.Value
 	formatStrC := &strings.Builder{}
+	i := 1
 	for j := 0; j < len(formatStr); j++ {
 		c1 := formatStr[j]
 		formatStrC.WriteByte(c1)
@@ -405,7 +400,7 @@ func (tc *TypeChecker) TypeCheckPrintfCall(scope Scope, ident Ident, call Call) 
 		i++
 	}
 
-	result.Args[len(prefixArgs)] = StrLit{Value: formatStrC.String()}
+	result.Args[0] = CStrLit{Source: formatStrLit.Source, Value: formatStrC.String()}
 
 	//formatExpr.(StrLit).Value = formatStrC.String()
 	return result
@@ -709,6 +704,10 @@ func (call TcCall) GetType() Type {
 
 func (lit StrLit) GetType() Type {
 	return TypeString
+}
+
+func (lit CStrLit) GetType() Type {
+	return TypeCString
 }
 
 func (lit CharLit) GetType() Type {

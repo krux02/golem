@@ -120,8 +120,12 @@ func (builder *CodeBuilder) compileCharLit(lit CharLit) {
 	builder.WriteRune('\'')
 }
 
-func (builder *CodeBuilder) compileStrLit(value string) {
-	builder.WriteRune('"')
+func (builder *CodeBuilder) compileStrLit(value string, boxed bool) {
+	if boxed {
+		builder.WriteString(`(string){.data="`)
+	} else {
+		builder.WriteString(`"`)
+	}
 	for _, rune := range value {
 		switch rune {
 		case '\a':
@@ -149,7 +153,13 @@ func (builder *CodeBuilder) compileStrLit(value string) {
 		}
 	}
 	//builder.WriteString(lit.Val)
-	builder.WriteRune('"')
+	if boxed {
+		builder.WriteString(`", .len =`)
+		WriteIntLit(&builder.Builder, int64(len(value)))
+		builder.WriteString(`}`)
+	} else {
+		builder.WriteString(`"`)
+	}
 }
 
 func (builder *CodeBuilder) compileIntLit(lit IntLit) {
@@ -248,15 +258,23 @@ func (builder *CodeBuilder) compileForLoopStmt(context *PackageGeneratorContext,
 	*/
 
 	if stmt.Collection.GetType() == TypeString {
-		builder.WriteString("for(const char ")
+		builder.WriteString("for(char const")
 		builder.compileSymbol(stmt.LoopSym)
 		builder.WriteString(" = ")
 		builder.compileExpr(context, stmt.Collection)
-		builder.WriteString("; ")
+		builder.WriteString(".data, ")
 		builder.compileSymbol(stmt.LoopSym)
-		builder.WriteString(" != '\\0'; ")
-		builder.compileSymbol(stmt.LoopSym)
-		builder.WriteString("++) ")
+		builder.WriteString("_END = ")
+		builder.WriteString(stmt.LoopSym.Source)
+		builder.WriteString(" + ")
+		builder.compileExpr(context, stmt.Collection)
+		builder.WriteString(".len; ")
+		builder.WriteString(stmt.LoopSym.Source)
+		builder.WriteString(" != ")
+		builder.WriteString(stmt.LoopSym.Source)
+		builder.WriteString("_END; ++")
+		builder.WriteString(stmt.LoopSym.Source)
+		builder.WriteString(") ")
 	} else if arrayType, ok := stmt.Collection.GetType().(*ArrayType); ok {
 		builder.WriteString("for(")
 		builder.compileTypeExpr(arrayType.Elem)
@@ -324,7 +342,9 @@ func (builder *CodeBuilder) compileExprWithPrefix(context *PackageGeneratorConte
 	case TcDotExpr:
 		builder.compileDotExpr(context, ex)
 	case StrLit:
-		builder.compileStrLit(ex.Value)
+		builder.compileStrLit(ex.Value, true)
+	case CStrLit:
+		builder.compileStrLit(ex.Value, false)
 	case CharLit:
 		builder.compileCharLit(ex)
 	case IntLit:
@@ -418,7 +438,7 @@ func compileEnumDef(context *PackageGeneratorContext, enumDef *TcEnumDef) {
 		if i != 0 {
 			builder.WriteString(", ")
 		}
-		builder.compileStrLit(sym.Source)
+		builder.compileStrLit(sym.Source, true)
 	}
 	builder.WriteString("};")
 }
@@ -576,7 +596,7 @@ func compilePackageToC(pak TcPackageDef) string {
 	context.includes.WriteString("#include <assert.h>")
 	// TODO this sholud depend on the usage of `string` as a type
 	context.typeDecl.NewlineAndIndent()
-	context.typeDecl.WriteString("typedef char* string;")
+	context.typeDecl.WriteString("typedef struct string {char const* data; long len;} string;")
 	context.typeDecl.NewlineAndIndent()
 	context.typeDecl.WriteString("typedef unsigned char bool;")
 	context.markProcForGeneration(pak.Main)

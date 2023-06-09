@@ -146,6 +146,11 @@ func (lit StrLit) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteRune('"')
 }
 
+func (lit CStrLit) PrettyPrint(builder *AstPrettyPrinter) {
+	// TODO, this isn't correct, it is indestinguishable from StrLit
+	StrLit{Value: lit.Value}.PrettyPrint(builder)
+}
+
 func (lit ArrayLit) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteRune('[')
 	for i, expr := range lit.Items {
