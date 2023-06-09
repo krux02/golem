@@ -272,7 +272,6 @@ func init() {
 	registerTypeGroup(TypeAnyInt)
 	registerTypeGroup(TypeAnyNumber)
 
-	builtinScope.Procedures["printf"] = append(builtinScope.Procedures["printf"], BuiltinPrintf)
 	// this has no structure, just made to make the example compile
 	for _, typ := range []Type{TypeInt8, TypeInt16, TypeInt32, TypeInt64, TypeFloat32, TypeFloat64} {
 		registerBuiltin("+", "(", "+", ")", []Type{typ, typ}, typ)

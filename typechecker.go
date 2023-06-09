@@ -331,13 +331,13 @@ func (tc *TypeChecker) ExpectMinArgsLen(node AstNode, gotten, expected int) bool
 	return true
 }
 
-func (tc *TypeChecker) TypeCheckPrintfCall(scope Scope, sym TcProcSymbol, call Call) (result TcCall) {
+func (tc *TypeChecker) TypeCheckPrintfCall(scope Scope, ident Ident, call Call) (result TcCall) {
 	result.Source = call.Source
-	result.Sym = sym
+	result.Sym = TcProcSymbol{Source: call.Callee.GetSource(), Impl: BuiltinPrintf}
 	result.Args = make([]TcExpr, 0, len(call.Args))
-	prefixArgs := sym.Impl.Params
+	prefixArgs := BuiltinPrintf.Params
 
-	tc.ExpectMinArgsLen(sym, len(call.Args), len(prefixArgs))
+	tc.ExpectMinArgsLen(call.Callee, len(call.Args), len(prefixArgs))
 
 	for i := 0; i < len(prefixArgs); i++ {
 		expectedType := prefixArgs[i].Type
@@ -480,30 +480,25 @@ func argTypeGroupAtIndex(symChoice []TcProcSymbol, idx int) Type {
 
 func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcExpr {
 	ident := call.Callee.(Ident)
-	if ident.Source == "." {
-		if tc.ExpectArgsLen(call, len(call.Args), 2) {
-			return tc.TypeCheckDotExpr(scope, call.Source, call.Args[0], call.Args[1], expected)
+	// language level reserved calls
+	switch ident.Source {
+	case ".":
+		if !tc.ExpectArgsLen(call, len(call.Args), 2) {
+			return TcErrorNode{SourceNode: call}
 		}
-		return TcErrorNode{SourceNode: call}
-	}
-	if ident.Source == ":" {
-		if tc.ExpectArgsLen(call, len(call.Args), 2) {
-			typ := tc.LookUpType(scope, ToTypeExpr(call.Args[1]))
-			tc.ExpectType(call, typ, expected)
-			result := tc.TypeCheckExpr(scope, call.Args[0], typ)
-			return result
+		return tc.TypeCheckDotExpr(scope, call.Source, call.Args[0], call.Args[1], expected)
+	case ":":
+		if !tc.ExpectArgsLen(call, len(call.Args), 2) {
+			return TcErrorNode{SourceNode: call}
 		}
-		return TcErrorNode{SourceNode: call}
+		typ := tc.LookUpType(scope, ToTypeExpr(call.Args[1]))
+		tc.ExpectType(call, typ, expected)
+		result := tc.TypeCheckExpr(scope, call.Args[0], typ)
+		return result
+	case "printf": // TODO printf should probably be registered in some scope again.
+		return tc.TypeCheckPrintfCall(scope, ident, call)
 	}
 	procSyms := tc.LookUpProc(scope, ident, nil)
-	if ident.Source == "printf" {
-		if len(procSyms) != 1 {
-			tc.ReportErrorf(ident, "printf may not be overloaded")
-			procSyms = procSyms[:0]
-		} else {
-			return tc.TypeCheckPrintfCall(scope, procSyms[0], call)
-		}
-	}
 	result := TcCall{Source: call.Source}
 	// TODO: this is very quick and dirty. These three branches must be merged into one general algorithm
 	var checkedArgs []TcExpr
