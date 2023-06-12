@@ -92,12 +92,9 @@ func (tc *TypeChecker) LookUpType(scope Scope, expr TypeExpr) Type {
 		return GetEnumSetType(elem)
 	}
 
-	// TODO really slow lookup, should really be faster
 	name := expr.Ident.Source
-	for key, value := range scope.Types {
-		if key == name {
-			return value
-		}
+	if typ, ok := scope.Types[name]; ok {
+		return typ
 	}
 	if scope.Parent != nil {
 		return tc.LookUpType(scope.Parent, expr)

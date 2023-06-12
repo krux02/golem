@@ -17,12 +17,12 @@
 * TODO not all ast nodes have correct ~source~ values, for example ~[]~, code needs to deal with it
 * TODO array access
 * TODO distinguish between the type and the expression that defines it
-* TODO display parsing errors es normal error messages
+* TODO display parsing errors as normal error messages
 * TODO call by reference
 * TODO mutable flag in type
 * TODO multiple return values??
 * TODO full coverage of all error messages
-* TODO test operator precedence when many `:` are in use`
+* TODO test operator precedence when many ~:~ are in use
 * TODO default int, default float
 * DONE add ability for type assertions
 * TODO performance tracking over time to know when the compiler gets slower and which commits cause compilation slowdowns.
@@ -35,26 +35,12 @@
 * TODO C++ interop
 * DONE automatic narrowing of literals when type is known from outside.
 * TODO test default value
-* TODO make `registerBuiltinX` a method of scope.
+* TODO make ~registerBuiltinX~ a method of scope.
 * TODO compiler passes for some transformations (e.g. moving literals to constants)
 * TODO persistent statistic logging about compiler bootstrapping time, lines of code, test time, test lines of code
 * TODO full set of types
 ** TODO vector/matrix/simd types
-** TODO string
-
-#+begin_src c
-
-
-typedef struct {uint32_t len; char data[];} string;
-
-const string strLit0 = {.len=12,.data="Hallo Welt!\n"};
-const string strLit56 = {.len=12,.data="x: %d y: %d\n"};
-const string strLit113 = {.len=19,.data="(1+(2*3)+((8)/4))+1"};
-const string strLit177 = {.len=20,.data="max paren depth: %d\n"};
-const string strLit243 = {.len=15,.data="default Values\n"};
-
-#+end_src
-
+** DONE string
 ** DONE enum
 ** DONE enum set
 ** DONE int float in all sizes
