@@ -15,10 +15,6 @@ type Expr interface {
 	expression()
 }
 
-type AbstractAstNode struct {
-	Source string
-}
-
 // all lines from a documentation comment
 type DocLines []string
 
@@ -95,13 +91,6 @@ type ReturnStmt struct {
 	Source string
 	Value  Expr
 }
-
-// type TypeDef struct {
-// 	Source string
-// 	Name   Ident
-// 	Kind   Ident
-// 	Body   CodeBlock
-// }
 
 type EnumDef struct {
 	Source string

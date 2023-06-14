@@ -36,12 +36,12 @@ func (builder *CodeBuilder) compileTypeExpr(typ Type) {
 	switch typ := typ.(type) {
 	case *BuiltinType:
 		builder.WriteString(typ.InternalName)
-	case *ArrayType:
-		typ.ManglePrint(&builder.Builder)
 	case *StructType:
 		builder.WriteString(typ.Impl.Name)
 	case *EnumType:
 		builder.WriteString(typ.Impl.Name)
+	case *ArrayType:
+		typ.ManglePrint(&builder.Builder)
 	case *EnumSetType:
 		builder.WriteString("uint64_t")
 	default:

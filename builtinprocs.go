@@ -106,23 +106,7 @@ func (typ *TypeGroup) GetSource() string {
 	panic("type group does not have source")
 }
 
-func (typ *BuiltinType) GetSource() string {
-	// TODO should this panic?
-	return ""
-}
-
-func (typ *ArrayType) GetSource() string {
-	// TODO should this panic?
-	return ""
-}
-
-func (typ *EnumSetType) GetSource() string {
-	// TODO should this panic?
-	return ""
-}
-
 // **** Constants ****
-
 // These type names are by no means final, there are just to get
 // something working.
 
@@ -221,6 +205,10 @@ var builtinScope Scope = &ScopeImpl{
 }
 
 func registerBuiltinType(typ *BuiltinType) {
+	_, ok := builtinScope.Types[typ.Name]
+	if ok {
+		panic("internal error double definition of builtin type")
+	}
 	builtinScope.Types[typ.Name] = typ
 }
 

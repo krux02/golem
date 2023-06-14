@@ -11,7 +11,7 @@ type Type interface {
 	PrettyPrint(*AstPrettyPrinter)
 	ManglePrint(*strings.Builder) // print for name magling
 	DefaultValue(tc *TypeChecker, context AstNode) TcExpr
-	typenode()
+	TypeName() string // no generic arguments here
 }
 
 type TcExpr interface {
@@ -188,13 +188,13 @@ func (call TcArrayLit) expression()        {}
 func (call TcEnumSetLit) expression()      {}
 func (expr TcStructLit) expression()       {}
 
-func (typ *StructType) typenode()         {}
-func (typ *EnumType) typenode()           {}
-func (typ *EnumSetType) typenode()        {}
-func (typ *TypeGroup) typenode()          {}
-func (typ *BuiltinType) typenode()        {}
-func (typ *ArrayType) typenode()          {}
-func (typ *TcGenericTypeParam) typenode() {}
+func (typ *StructType) TypeName() string         { return typ.Impl.Name }
+func (typ *EnumType) TypeName() string           { return typ.Impl.Name }
+func (typ *EnumSetType) TypeName() string        { return "EnumSet" }
+func (typ *TypeGroup) TypeName() string          { return "TypeGroup" }
+func (typ *BuiltinType) TypeName() string        { return typ.Name }
+func (typ *ArrayType) TypeName() string          { return "Array" }
+func (typ *TcGenericTypeParam) TypeName() string { return typ.Source }
 
 func (arg TcErrorNode) GetSource() string       { return arg.SourceNode.GetSource() }
 func (arg TcDotExpr) GetSource() string         { return arg.Source }

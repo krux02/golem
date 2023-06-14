@@ -47,6 +47,16 @@ func (scope Scope) NewSubScope() Scope {
 	}
 }
 
+func (tc *TypeChecker) RegisterType(scope Scope, typ Type, context AstNode) {
+	name := typ.TypeName()
+	if _, ok := scope.Types[name]; ok {
+		tc.ReportErrorf(context, "double definition of type '%s'", name)
+		// TODO previously defined at ...
+		return
+	}
+	scope.Types[name] = typ
+}
+
 func (scope Scope) NewSymbol(tc *TypeChecker, name Ident, kind SymbolKind, typ Type) TcSymbol {
 	//result := TcSymbol{Name: name.source, Kind: kind, Typ: typ}
 	rawName := name.Source
@@ -78,6 +88,7 @@ func (tc *TypeChecker) LookUpType(scope Scope, expr TypeExpr) Type {
 		}
 		return GetArrayType(elem, lenLit.Value)
 	}
+
 	if expr.Ident.Source == "set" {
 		if !tc.ExpectArgsLen(expr, len(expr.TypeArgs), 1) {
 			return TypeError
@@ -166,7 +177,7 @@ func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def StructDef) *TcStructD
 			result.Fields = append(result.Fields, tcField)
 		}
 	}
-	scope.Types[result.Name] = structType
+	tc.RegisterType(scope, structType, def.Name)
 	return result
 }
 
@@ -181,7 +192,7 @@ func (tc *TypeChecker) TypeCheckEnumDef(scope Scope, def EnumDef) *TcEnumDef {
 		sym.Type = enumType
 		result.Values = append(result.Values, sym)
 	}
-	scope.Types[result.Name] = enumType
+	tc.RegisterType(scope, enumType, def.Name)
 	registerBuiltin("string", fmt.Sprintf("%s_names_array[", result.Name), "", "]", []Type{enumType}, TypeString)
 	for _, intType := range TypeAnyInt.items {
 		builtinType := intType.(*BuiltinType)
@@ -195,9 +206,8 @@ func (tc *TypeChecker) TypeCheckEnumDef(scope Scope, def EnumDef) *TcEnumDef {
 // tc.ReportErrorf(def.Kind, "invalid type kind %s, expect one of struct, enum, union", def.Kind.Source)
 func (tc *TypeChecker) NewGenericParam(scope Scope, name Ident) Type {
 	result := &TcGenericTypeParam{Source: name.Source}
-	scope.Types[name.Source] = result
+	tc.RegisterType(scope, result, name)
 	return result
-
 }
 
 func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result *TcProcDef) {
