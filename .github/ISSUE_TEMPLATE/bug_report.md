@@ -13,23 +13,17 @@ printing prints the wrong message
 
 **Example**
 
-```
-  proc main() : i32 {
-    printf("Hello World\n");
-  } 
-```
+    proc main() : i32 {
+      printf("Hello World\n");
+    } 
 
 **Expected Output**
 
-```
-Hello World
-```
+    Hello World
 
 **Current Output**
 
-```
-hELLO wORLD
-```
+    hELLO wORLD
 
 **Additional Information**
 
