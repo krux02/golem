@@ -1,5 +1,5 @@
 ---
-name: 'Bug report'
+name: '🐛 Bug Report 🐛'
 about: 'the non opinion based for of feedback'
 title: 'printing does not work properly'
 labels: ''

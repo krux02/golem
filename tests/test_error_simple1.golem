@@ -1,5 +1,5 @@
 
-# NumErrors:      2
+# NumErrors:      3
 
 proc foo(arg: i32): i64 = {
   printf("foo1: %d\n", i32(arg))
@@ -20,4 +20,9 @@ proc main():i64 = {
 
   let str = "abcdef"
   baz(str, tmp) # Error: proc not found: baz(string, i8)
+
+
+  let x : i32 = "somestring" # Error: expected type 'i32' but got type 'string'
+
+  return 0
 }
