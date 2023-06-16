@@ -435,7 +435,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		n := 0
 		for _, sig := range signatures {
 			expectedArgType := ParamTypeAt(&sig, i)
-			if tcArg.GetType() == expectedArgType {
+			if tcArg.GetType() == expectedArgType || expectedArgType == TypeUnspecified {
 				signatures[n] = sig
 				n++
 			}
