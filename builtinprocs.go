@@ -185,22 +185,10 @@ func (typ *TcGenericTypeParam) DefaultValue(tc *TypeChecker, context AstNode) Tc
 	panic("not implemented")
 }
 
-// Printf is literally the only use case for real varargs that I actually see as
-// practical. Therefore the implementation for varargs will be strictly tied to
-// printf for now. A general concept for varargs will be specified out as soon
-// as it becomes necessary, but right now it is not planned.
-var BuiltinPrintf *TcProcDef = &TcProcDef{
-	Name:       "printf",
-	Prefix:     "printf(",
-	Infix:      ", ",
-	Postfix:    ")",
-	ResultType: TypeVoid,
-}
-
 var builtinScope Scope = &ScopeImpl{
 	Parent:     nil,
 	Types:      make(map[string]Type),
-	Procedures: make(map[string]([]*TcProcDef)),
+	Procedures: make(map[string][]ProcSignature),
 	Variables:  make(map[string]TcSymbol),
 }
 
@@ -216,25 +204,36 @@ func registerTypeGroup(typ *TypeGroup) {
 	builtinScope.Types[typ.name] = typ
 }
 
-func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []Type, args []Type, result Type) {
-	procDef := &TcProcDef{
-		Name:          name,
+func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []Type, args []Type, result Type, varargs bool) {
+	signature := ProcSignature{
 		GenericParams: genericParams,
 		Params:        make([]TcSymbol, len(args)),
 		ResultType:    result,
-		Prefix:        prefix,
-		Infix:         infix,
-		Postfix:       postfix,
+		Varargs:       varargs,
+	}
+	procDef := &TcProcDef{
+		Name:    name,
+		Prefix:  prefix,
+		Infix:   infix,
+		Postfix: postfix,
 	}
 	for i, arg := range args {
-		procDef.Params[i].Type = arg
-		procDef.Params[i].Kind = SkProcArg
+		signature.Params[i].Type = arg
+		signature.Params[i].Kind = SkProcArg
 	}
-	builtinScope.Procedures[name] = append(builtinScope.Procedures[name], procDef)
+	signature.Impl = procDef
+	procDef.Signature = signature
+	builtinScope.Procedures[name] = append(builtinScope.Procedures[name], signature)
 }
 
 func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Type) {
-	registerGenericBuiltin(name, prefix, infix, postfix, []Type{}, args, result)
+	registerGenericBuiltin(name, prefix, infix, postfix, []Type{}, args, result, false)
+}
+
+type PostResolveValidator func(tc *TypeChecker, scope Scope, sym TcProcSymbol, call Call) TcCall
+
+func registerBuiltinVararg(name, prefix, infix, postfix string, args []Type, result Type, checker PostResolveValidator) {
+	registerGenericBuiltin(name, prefix, infix, postfix, []Type{}, args, result, true)
 }
 
 func registerConstant(name string, typ Type) {
@@ -244,9 +243,90 @@ func registerConstant(name string, typ Type) {
 	_ = builtinScope.NewSymbol(nil, ident, SkConst, typ)
 }
 
+func TypeCheckPrintfCall(tc *TypeChecker, scope Scope, sym TcProcSymbol, call Call) (result TcCall) {
+	result.Source = call.Source // TODO set this source properly?
+	result.Sym = sym
+	result.Args = make([]TcExpr, 1, len(call.Args))
+
+	formatExpr := tc.TypeCheckExpr(scope, call.Args[0], TypeString)
+	// format string must be a string literal
+	formatStrLit, ok := formatExpr.(StrLit)
+	if !ok {
+		// TODO this needs a func Test
+		panic("not implemented")
+	}
+	formatStr := formatStrLit.Value
+	formatStrC := &strings.Builder{}
+	i := 1
+	for j := 0; j < len(formatStr); j++ {
+		c1 := formatStr[j]
+		formatStrC.WriteByte(c1)
+		if c1 != '%' {
+			continue
+		}
+		j++
+		if j == len(formatStr) {
+			tc.ReportErrorf(formatExpr, "incomplete format expr at end of format string")
+			break
+		}
+		c2 := formatStr[j]
+		var argType Type
+		switch c2 {
+		case '%':
+			formatStrC.WriteRune('%')
+			continue
+		case 's':
+			argType = TypeString
+		case 'd':
+			argType = TypeAnyInt
+		case 'f':
+			argType = TypeAnyFloat
+		default:
+			tc.ReportErrorf(formatExpr, "invalid format expr %%%c in %s", c2, AstFormat(formatExpr))
+			argType = TypeError
+		}
+		if i == len(call.Args) {
+			tc.ReportErrorf(formatExpr, "not enough arguments for %s", AstFormat(formatExpr))
+			break
+		}
+		tcArg := tc.TypeCheckExpr(scope, call.Args[i], argType)
+		switch tcArg.GetType() {
+		case TypeInt8:
+			formatStrC.WriteString("hhd")
+		case TypeInt16:
+			formatStrC.WriteString("hd")
+		case TypeInt32:
+			formatStrC.WriteString("d")
+		case TypeInt64:
+			formatStrC.WriteString("ld")
+		case TypeString:
+			formatStrC.WriteString("s")
+		case TypeFloat32:
+			formatStrC.WriteString("f")
+		case TypeFloat64:
+			formatStrC.WriteString("f")
+		case TypeError:
+			formatStrC.WriteString("<error>")
+		}
+		result.Args = append(result.Args, tcArg)
+		i++
+	}
+
+	result.Args[0] = CStrLit{Source: formatStrLit.Source, Value: formatStrC.String()}
+
+	//formatExpr.(StrLit).Value = formatStrC.String()
+	return result
+}
+
 func init() {
 	arrayTypeMap = make(map[ArrayTypeMapKey]*ArrayType)
 	enumSetTypeMap = make(map[*EnumType]*EnumSetType)
+
+	// Printf is literally the only use case for real varargs that I actually see as
+	// practical. Therefore the implementation for varargs will be strictly tied to
+	// printf for now. A general concept for varargs will be specified out as soon
+	// as it becomes necessary, but right now it is not planned.
+	registerBuiltinVararg("printf", "printf(", ", ", ")", []Type{TypeString}, TypeVoid)
 
 	registerBuiltinType(TypeBoolean)
 	registerBuiltinType(TypeInt8)

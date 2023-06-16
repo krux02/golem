@@ -53,6 +53,7 @@ type TcCodeBlock struct {
 }
 
 // TODO unify TcProcSym with the othe symbol types
+// TODO maybe Store Signature instead of Impl
 type TcProcSymbol struct {
 	Source string
 	Impl   *TcProcDef
@@ -122,23 +123,31 @@ type TcReturnStmt struct {
 	Value  TcExpr
 }
 
+// Not an Ast node, but part of the ast as a normal member, therefore not the Tc prefix
+type ProcSignature struct {
+
+	// type placeholders within this procedure that need to be substituted with
+	// real types in generic instantiations.
+	GenericParams []Type
+	Params        []TcSymbol
+	ResultType    Type
+	Varargs       bool
+	// TODO signature will be the identical data structure for ProcDef, TemplateDef and MacroDef,
+	// Impl pointing to TcProcDef is temporaray
+	Impl *TcProcDef
+}
+
 type TcProcDef struct {
-	Source string
-	Name   string
+	Source    string
+	Name      string
+	Signature ProcSignature
+	Body      TcExpr
 
 	// TODO these are C backend specific fields and should not be bart of a general proc def node
 	// example1 "foo(", ", ", ")"        function call
 	// example2 "(", " + ", ")"          operator call
 	// example3 "somearray[", ", ", "]"  array access
 	Prefix, Infix, Postfix string
-
-	// type placeholders within this procedure that need to be substituted with
-	// real types in generic instantiations.
-	GenericParams []Type
-
-	Params     []TcSymbol
-	ResultType Type
-	Body       TcExpr
 
 	// TODO: find a better solution for tagging other than mutuble setting a value
 	// this value is set to true in the code generator to mark this proc as

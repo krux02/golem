@@ -31,7 +31,7 @@ type ScopeImpl struct {
 	// probably be redued to be just the proc signature.
 	CurrentProc *TcProcDef
 	Variables   map[string]TcSymbol
-	Procedures  map[string][]*TcProcDef
+	Procedures  map[string][]ProcSignature
 	Types       map[string]Type
 }
 
@@ -42,7 +42,7 @@ func (scope Scope) NewSubScope() Scope {
 		Parent:      scope,
 		CurrentProc: scope.CurrentProc,
 		Variables:   make(map[string]TcSymbol),
-		Procedures:  make(map[string][]*TcProcDef),
+		Procedures:  make(map[string][]ProcSignature),
 		Types:       make(map[string]Type),
 	}
 }
@@ -114,17 +114,14 @@ func (tc *TypeChecker) LookUpType(scope Scope, expr TypeExpr) Type {
 	return TypeError
 }
 
-func (tc *TypeChecker) LookUpProc(scope Scope, ident Ident, procSyms []TcProcSymbol) []TcProcSymbol {
+func (tc *TypeChecker) LookUpProc(scope Scope, ident Ident, signatures []ProcSignature) []ProcSignature {
 	for scope != nil {
-		if impls, ok := scope.Procedures[ident.Source]; ok {
-			for _, impl := range impls {
-				procSym := TcProcSymbol{Source: ident.Source, Impl: impl}
-				procSyms = append(procSyms, procSym)
-			}
+		if localSignatures, ok := scope.Procedures[ident.Source]; ok {
+			signatures = append(signatures, localSignatures...)
 		}
 		scope = scope.Parent
 	}
-	return procSyms
+	return signatures
 }
 
 func (tc *TypeChecker) LookUpLetSymRecursive(scope Scope, ident Ident) TcSymbol {
@@ -213,6 +210,7 @@ func (tc *TypeChecker) NewGenericParam(scope Scope, name Ident) Type {
 func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result *TcProcDef) {
 	scope := parentScope.NewSubScope()
 	result = &TcProcDef{}
+	result.Signature.Impl = result
 	scope.CurrentProc = result
 	result.Name = def.Name.Source
 	mangledNameBuilder := &strings.Builder{}
@@ -221,13 +219,13 @@ func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result 
 	for _, arg := range def.Args {
 		typ := tc.LookUpType(scope, arg.Type)
 		tcArg := scope.NewSymbol(tc, arg.Name, SkProcArg, typ)
-		result.Params = append(result.Params, tcArg)
+		result.Signature.Params = append(result.Signature.Params, tcArg)
 		typ.ManglePrint(mangledNameBuilder)
 	}
 	resultType := tc.LookUpType(scope, def.ResultType)
-	result.ResultType = resultType
+	result.Signature.ResultType = resultType
 	result.Body = tc.TypeCheckExpr(scope, def.Body, resultType)
-	parentScope.Procedures[result.Name] = append(parentScope.Procedures[result.Name], result)
+	parentScope.Procedures[result.Name] = append(parentScope.Procedures[result.Name], result.Signature)
 
 	// TODO, don't special case it like this here
 	if def.Name.Source == "main" {
@@ -338,81 +336,6 @@ func (tc *TypeChecker) ExpectMinArgsLen(node AstNode, gotten, expected int) bool
 	return true
 }
 
-func (tc *TypeChecker) TypeCheckPrintfCall(scope Scope, ident Ident, call Call) (result TcCall) {
-	result.Source = call.Source
-	result.Sym = TcProcSymbol{Source: call.Callee.GetSource(), Impl: BuiltinPrintf}
-	result.Args = make([]TcExpr, 1, len(call.Args))
-
-	formatExpr := tc.TypeCheckExpr(scope, call.Args[0], TypeString)
-	// format string must be a string literal
-	formatStrLit, ok := formatExpr.(StrLit)
-	if !ok {
-		// TODO this needs a func Test
-		panic("not implemented")
-	}
-	formatStr := formatStrLit.Value
-	formatStrC := &strings.Builder{}
-	i := 1
-	for j := 0; j < len(formatStr); j++ {
-		c1 := formatStr[j]
-		formatStrC.WriteByte(c1)
-		if c1 != '%' {
-			continue
-		}
-		j++
-		if j == len(formatStr) {
-			tc.ReportErrorf(formatExpr, "incomplete format expr at end of format string")
-			break
-		}
-		c2 := formatStr[j]
-		var argType Type
-		switch c2 {
-		case '%':
-			formatStrC.WriteRune('%')
-			continue
-		case 's':
-			argType = TypeString
-		case 'd':
-			argType = TypeAnyInt
-		case 'f':
-			argType = TypeAnyFloat
-		default:
-			tc.ReportErrorf(formatExpr, "invalid format expr %%%c in %s", c2, AstFormat(formatExpr))
-			argType = TypeError
-		}
-		if i == len(call.Args) {
-			tc.ReportErrorf(formatExpr, "not enough arguments for %s", AstFormat(formatExpr))
-			break
-		}
-		tcArg := tc.TypeCheckExpr(scope, call.Args[i], argType)
-		switch tcArg.GetType() {
-		case TypeInt8:
-			formatStrC.WriteString("hhd")
-		case TypeInt16:
-			formatStrC.WriteString("hd")
-		case TypeInt32:
-			formatStrC.WriteString("d")
-		case TypeInt64:
-			formatStrC.WriteString("ld")
-		case TypeString:
-			formatStrC.WriteString("s")
-		case TypeFloat32:
-			formatStrC.WriteString("f")
-		case TypeFloat64:
-			formatStrC.WriteString("f")
-		case TypeError:
-			formatStrC.WriteString("<error>")
-		}
-		result.Args = append(result.Args, tcArg)
-		i++
-	}
-
-	result.Args[0] = CStrLit{Source: formatStrLit.Source, Value: formatStrC.String()}
-
-	//formatExpr.(StrLit).Value = formatStrC.String()
-	return result
-}
-
 func (structDef *TcStructDef) GetField(name string) (resField TcStructField, idx int) {
 	for i, field := range structDef.Fields {
 		if field.Name == name {
@@ -448,15 +371,15 @@ func errorProcSym(ident Ident) TcProcSymbol {
 	}
 }
 
-func argTypeGroupAtIndex(symChoice []TcProcSymbol, idx int) Type {
+func argTypeGroupAtIndex(symChoice []ProcSignature, idx int) Type {
 	switch len(symChoice) {
 	case 0:
 		return TypeUnspecified
 	case 1:
-		return symChoice[0].Impl.Params[idx].Type
+		return symChoice[0].Params[idx].Type
 	case 2:
-		typ1 := symChoice[0].Impl.Params[idx].Type
-		typ2 := symChoice[1].Impl.Params[idx].Type
+		typ1 := symChoice[0].Params[idx].Type
+		typ2 := symChoice[1].Params[idx].Type
 		if typ1 == typ2 {
 			return typ1
 		}
@@ -465,7 +388,7 @@ func argTypeGroupAtIndex(symChoice []TcProcSymbol, idx int) Type {
 		types := []Type{}
 	outer:
 		for _, sym := range symChoice {
-			argType := sym.Impl.Params[idx].Type
+			argType := sym.Params[idx].Type
 			for _, typ := range types {
 				if argType == typ {
 					continue outer
@@ -500,29 +423,29 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 	case "printf": // TODO printf should probably be registered in some scope again.
 		return tc.TypeCheckPrintfCall(scope, ident, call)
 	}
-	procSyms := tc.LookUpProc(scope, ident, nil)
+	signatures := tc.LookUpProc(scope, ident, nil)
 	result := TcCall{Source: call.Source}
 	// TODO: this is very quick and dirty. These three branches must be merged into one general algorithm
 	var checkedArgs []TcExpr
 	hasArgTypeError := false
 	for i, arg := range call.Args {
-		expectedArgType := argTypeGroupAtIndex(procSyms, i)
+		expectedArgType := argTypeGroupAtIndex(signatures, i)
 		tcArg := tc.TypeCheckExpr(scope, arg, expectedArgType)
 		hasArgTypeError = hasArgTypeError || tcArg.GetType() == TypeError
 		checkedArgs = append(checkedArgs, tcArg)
 		// filter procedures for right one
 		n := 0
-		for _, procSym := range procSyms {
-			expectedArg := procSym.Impl.Params[i]
+		for _, signature := range signatures {
+			expectedArg := signature.Params[i]
 			if tcArg.GetType() == expectedArg.Type {
-				procSyms[n] = procSym
+				signatures[n] = signature
 				n++
 			}
 		}
-		procSyms = procSyms[:n]
+		signatures = signatures[:n]
 	}
 
-	switch len(procSyms) {
+	switch len(signatures) {
 	case 0:
 		// don't report that proc `foo(TypeError)` can't be resolved.
 		if !hasArgTypeError {
@@ -543,9 +466,9 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		result.Args = checkedArgs
 
 	case 1:
-		result.Sym = procSyms[0]
+		result.Sym = TcProcSymbol{Source: ident.Source, Impl: signatures[0].Impl}
 		result.Args = checkedArgs
-		tc.ExpectType(call, result.Sym.Impl.ResultType, expected)
+		tc.ExpectType(call, signatures[0].ResultType, expected)
 
 	default:
 		tc.ReportErrorf(ident, "too many overloads: %s", ident.Source)
@@ -686,7 +609,7 @@ func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt
 }
 
 func (tc *TypeChecker) TypeCheckReturnStmt(scope Scope, arg ReturnStmt) (result TcReturnStmt) {
-	result.Value = tc.TypeCheckExpr(scope, arg.Value, scope.CurrentProc.ResultType)
+	result.Value = tc.TypeCheckExpr(scope, arg.Value, scope.CurrentProc.Signature.ResultType)
 	return
 }
 
@@ -706,7 +629,7 @@ func (call TcCall) GetType() Type {
 	if impl == nil {
 		return TypeError
 	}
-	return impl.ResultType
+	return impl.Signature.ResultType
 }
 
 func (lit StrLit) GetType() Type {

@@ -551,11 +551,11 @@ func (procDef TcProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("proc ")
 	builder.WriteString(procDef.Name)
 	builder.WriteString("(")
-	if len(procDef.Params) > 3 {
+	if len(procDef.Signature.Params) > 3 {
 		builder.Indentation += 2
 		builder.NewlineAndIndent()
-		iLast := len(procDef.Params) - 1
-		for i, arg := range procDef.Params {
+		iLast := len(procDef.Signature.Params) - 1
+		for i, arg := range procDef.Signature.Params {
 			builder.WriteString(arg.Source)
 			builder.WriteString(": ")
 			builder.WriteNode(arg.GetType())
@@ -566,7 +566,7 @@ func (procDef TcProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 		}
 
 	} else {
-		for i, arg := range procDef.Params {
+		for i, arg := range procDef.Signature.Params {
 			if i != 0 {
 				builder.WriteString("; ")
 			}
@@ -576,7 +576,7 @@ func (procDef TcProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 		}
 	}
 	builder.WriteString("): ")
-	builder.WriteNode(procDef.ResultType)
+	builder.WriteNode(procDef.Signature.ResultType)
 	builder.WriteString(" = ")
 	builder.WriteNode(procDef.Body)
 }

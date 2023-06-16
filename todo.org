@@ -11,6 +11,7 @@
 * DONE allow conversion between enum/int/string
 * DONE enum set type
 * DONE consistent Typ/Type member name
+* DONE distinguish between the type and the expression that defines it
 * TODO have macros (stubs at least)
 * TODO have varargs for macros (only)
 * TODO make printf a macro
@@ -18,7 +19,6 @@
 * TODO generic arguments (important for builtin array access)
 * TODO not all ast nodes have correct ~source~ values, for example ~[]~, code needs to deal with it
 * TODO array access
-* TODO distinguish between the type and the expression that defines it
 * TODO display parsing errors as normal error messages
 * TODO call by reference
 * TODO mutable flag in type
