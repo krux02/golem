@@ -137,6 +137,13 @@ type ProcSignature struct {
 	Impl *TcProcDef
 }
 
+func ParamTypeAt(sig *ProcSignature, idx int) Type {
+	if sig.Varargs && idx >= len(sig.Params) {
+		return TypeUnspecified
+	}
+	return sig.Params[idx].Type
+}
+
 type TcProcDef struct {
 	Source    string
 	Name      string

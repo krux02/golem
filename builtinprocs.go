@@ -230,9 +230,10 @@ func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Ty
 	registerGenericBuiltin(name, prefix, infix, postfix, []Type{}, args, result, false)
 }
 
-type PostResolveValidator func(tc *TypeChecker, scope Scope, sym TcProcSymbol, call Call) TcCall
+type PostResolveValidator func(tc *TypeChecker, scope Scope, call Call) []TcExpr
 
 func registerBuiltinVararg(name, prefix, infix, postfix string, args []Type, result Type, checker PostResolveValidator) {
+	// TODO actually do something with PostResolveValidator
 	registerGenericBuiltin(name, prefix, infix, postfix, []Type{}, args, result, true)
 }
 
@@ -243,10 +244,8 @@ func registerConstant(name string, typ Type) {
 	_ = builtinScope.NewSymbol(nil, ident, SkConst, typ)
 }
 
-func TypeCheckPrintfCall(tc *TypeChecker, scope Scope, sym TcProcSymbol, call Call) (result TcCall) {
-	result.Source = call.Source // TODO set this source properly?
-	result.Sym = sym
-	result.Args = make([]TcExpr, 1, len(call.Args))
+func TypeCheckPrintfCall(tc *TypeChecker, scope Scope, call Call) (result []TcExpr) {
+	result = make([]TcExpr, 1, len(call.Args))
 
 	formatExpr := tc.TypeCheckExpr(scope, call.Args[0], TypeString)
 	// format string must be a string literal
@@ -308,11 +307,11 @@ func TypeCheckPrintfCall(tc *TypeChecker, scope Scope, sym TcProcSymbol, call Ca
 		case TypeError:
 			formatStrC.WriteString("<error>")
 		}
-		result.Args = append(result.Args, tcArg)
+		result = append(result, tcArg)
 		i++
 	}
 
-	result.Args[0] = CStrLit{Source: formatStrLit.Source, Value: formatStrC.String()}
+	result[0] = CStrLit{Source: formatStrLit.Source, Value: formatStrC.String()}
 
 	//formatExpr.(StrLit).Value = formatStrC.String()
 	return result
@@ -326,7 +325,7 @@ func init() {
 	// practical. Therefore the implementation for varargs will be strictly tied to
 	// printf for now. A general concept for varargs will be specified out as soon
 	// as it becomes necessary, but right now it is not planned.
-	registerBuiltinVararg("printf", "printf(", ", ", ")", []Type{TypeString}, TypeVoid)
+	registerBuiltinVararg("printf", "printf(", ", ", ")", []Type{TypeString}, TypeVoid, TypeCheckPrintfCall)
 
 	registerBuiltinType(TypeBoolean)
 	registerBuiltinType(TypeInt8)

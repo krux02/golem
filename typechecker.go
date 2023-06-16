@@ -25,7 +25,7 @@ func NewTypeChecker(code, filename string) *TypeChecker {
 // index to refere to a (currently only builtin) type
 // somehow unify this mess
 type ScopeImpl struct {
-	Parent Scope
+	Parent *ScopeImpl
 	// A return stmt needs to know which procedure it belongs to. This
 	// pointer points to the corresponding procedure. This should
 	// probably be redued to be just the proc signature.
@@ -371,15 +371,15 @@ func errorProcSym(ident Ident) TcProcSymbol {
 	}
 }
 
-func argTypeGroupAtIndex(symChoice []ProcSignature, idx int) Type {
-	switch len(symChoice) {
+func argTypeGroupAtIndex(signatures []ProcSignature, idx int) Type {
+	switch len(signatures) {
 	case 0:
 		return TypeUnspecified
 	case 1:
-		return symChoice[0].Params[idx].Type
+		return ParamTypeAt(&signatures[0], idx)
 	case 2:
-		typ1 := symChoice[0].Params[idx].Type
-		typ2 := symChoice[1].Params[idx].Type
+		typ1 := ParamTypeAt(&signatures[0], idx)
+		typ2 := ParamTypeAt(&signatures[1], idx)
 		if typ1 == typ2 {
 			return typ1
 		}
@@ -387,8 +387,8 @@ func argTypeGroupAtIndex(symChoice []ProcSignature, idx int) Type {
 	default:
 		types := []Type{}
 	outer:
-		for _, sym := range symChoice {
-			argType := sym.Params[idx].Type
+		for _, sig := range signatures {
+			argType := ParamTypeAt(&sig, idx)
 			for _, typ := range types {
 				if argType == typ {
 					continue outer
@@ -420,8 +420,6 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		tc.ExpectType(call, typ, expected)
 		result := tc.TypeCheckExpr(scope, call.Args[0], typ)
 		return result
-	case "printf": // TODO printf should probably be registered in some scope again.
-		return tc.TypeCheckPrintfCall(scope, ident, call)
 	}
 	signatures := tc.LookUpProc(scope, ident, nil)
 	result := TcCall{Source: call.Source}
@@ -435,10 +433,10 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		checkedArgs = append(checkedArgs, tcArg)
 		// filter procedures for right one
 		n := 0
-		for _, signature := range signatures {
-			expectedArg := signature.Params[i]
-			if tcArg.GetType() == expectedArg.Type {
-				signatures[n] = signature
+		for _, sig := range signatures {
+			expectedArgType := ParamTypeAt(&sig, i)
+			if tcArg.GetType() == expectedArgType {
+				signatures[n] = sig
 				n++
 			}
 		}
@@ -466,8 +464,16 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		result.Args = checkedArgs
 
 	case 1:
-		result.Sym = TcProcSymbol{Source: ident.Source, Impl: signatures[0].Impl}
-		result.Args = checkedArgs
+		sig := signatures[0]
+		result.Sym = TcProcSymbol{Source: ident.Source, Impl: sig.Impl}
+
+		if sig.Varargs {
+			// TODO this needs a better way to register printf
+			result.Args = TypeCheckPrintfCall(tc, scope, call)
+		} else {
+			result.Args = checkedArgs
+		}
+
 		tc.ExpectType(call, signatures[0].ResultType, expected)
 
 	default:
