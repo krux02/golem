@@ -1,6 +1,6 @@
 
 proc foo(arg: i32): void = {
-  printf("foo1: %d\n", i32(arg))
+  printf("foo1: %d\n", arg)
 }
 
 

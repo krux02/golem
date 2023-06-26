@@ -131,7 +131,10 @@ type ProcSignature struct {
 	GenericParams []Type
 	Params        []TcSymbol
 	ResultType    Type
-	Varargs       bool
+
+	// NOTE: Varargs and Validator is currently only used for printf.
+	Varargs   bool
+	Validator PostResolveValidator
 	// TODO signature will be the identical data structure for ProcDef, TemplateDef and MacroDef,
 	// Impl pointing to TcProcDef is temporaray
 	Impl *TcProcDef

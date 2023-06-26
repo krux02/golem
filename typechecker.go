@@ -466,12 +466,10 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 	case 1:
 		sig := signatures[0]
 		result.Sym = TcProcSymbol{Source: ident.Source, Impl: sig.Impl}
+		result.Args = checkedArgs
 
-		if sig.Varargs {
-			// TODO this needs a better way to register printf
-			result.Args = TypeCheckPrintfCall(tc, scope, call)
-		} else {
-			result.Args = checkedArgs
+		if sig.Validator != nil {
+			result = sig.Validator(tc, scope, result)
 		}
 
 		tc.ExpectType(call, signatures[0].ResultType, expected)

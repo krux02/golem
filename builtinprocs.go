@@ -204,12 +204,13 @@ func registerTypeGroup(typ *TypeGroup) {
 	builtinScope.Types[typ.name] = typ
 }
 
-func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []Type, args []Type, result Type, varargs bool) {
+func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []Type, args []Type, result Type, checker PostResolveValidator) {
 	signature := ProcSignature{
 		GenericParams: genericParams,
 		Params:        make([]TcSymbol, len(args)),
 		ResultType:    result,
-		Varargs:       varargs,
+		Varargs:       checker != nil,
+		Validator:     checker,
 	}
 	procDef := &TcProcDef{
 		Name:    name,
@@ -227,14 +228,14 @@ func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams [
 }
 
 func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Type) {
-	registerGenericBuiltin(name, prefix, infix, postfix, []Type{}, args, result, false)
+	registerGenericBuiltin(name, prefix, infix, postfix, []Type{}, args, result, nil)
 }
 
-type PostResolveValidator func(tc *TypeChecker, scope Scope, call Call) []TcExpr
+type PostResolveValidator func(tc *TypeChecker, scope Scope, call TcCall) TcCall
 
 func registerBuiltinVararg(name, prefix, infix, postfix string, args []Type, result Type, checker PostResolveValidator) {
 	// TODO actually do something with PostResolveValidator
-	registerGenericBuiltin(name, prefix, infix, postfix, []Type{}, args, result, true)
+	registerGenericBuiltin(name, prefix, infix, postfix, []Type{}, args, result, checker)
 }
 
 func registerConstant(name string, typ Type) {
@@ -244,20 +245,19 @@ func registerConstant(name string, typ Type) {
 	_ = builtinScope.NewSymbol(nil, ident, SkConst, typ)
 }
 
-func TypeCheckPrintfCall(tc *TypeChecker, scope Scope, call Call) (result []TcExpr) {
-	result = make([]TcExpr, 1, len(call.Args))
+func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) (result TcCall) {
 
-	formatExpr := tc.TypeCheckExpr(scope, call.Args[0], TypeString)
+	formatExpr := call.Args[0]
 	// format string must be a string literal
 	formatStrLit, ok := formatExpr.(StrLit)
 	if !ok {
 		// TODO this needs a func Test
-		panic("not implemented")
+		tc.ReportErrorf(formatExpr, "format string must be a string literal")
+		return
 	}
 	formatStr := formatStrLit.Value
 	formatStrC := &strings.Builder{}
-	i := 1
-	for j := 0; j < len(formatStr); j++ {
+	for j, i := 0, 1; j < len(formatStr); j++ {
 		c1 := formatStr[j]
 		formatStrC.WriteByte(c1)
 		if c1 != '%' {
@@ -269,27 +269,31 @@ func TypeCheckPrintfCall(tc *TypeChecker, scope Scope, call Call) (result []TcEx
 			break
 		}
 		c2 := formatStr[j]
-		var argType Type
+		var typeExpectation Type = TypeUnspecified
 		switch c2 {
 		case '%':
 			formatStrC.WriteRune('%')
 			continue
 		case 's':
-			argType = TypeString
+			typeExpectation = TypeString
 		case 'd':
-			argType = TypeAnyInt
+			typeExpectation = TypeAnyInt
 		case 'f':
-			argType = TypeAnyFloat
+			typeExpectation = TypeAnyFloat
+		case 'v':
+			typeExpectation = TypeUnspecified
 		default:
 			tc.ReportErrorf(formatExpr, "invalid format expr %%%c in %s", c2, AstFormat(formatExpr))
-			argType = TypeError
+			return
 		}
 		if i == len(call.Args) {
 			tc.ReportErrorf(formatExpr, "not enough arguments for %s", AstFormat(formatExpr))
-			break
+			return
 		}
-		tcArg := tc.TypeCheckExpr(scope, call.Args[i], argType)
-		switch tcArg.GetType() {
+
+		argType := call.Args[i].GetType()
+		tc.ExpectType(call.Args[i], argType, typeExpectation)
+		switch argType {
 		case TypeInt8:
 			formatStrC.WriteString("hhd")
 		case TypeInt16:
@@ -298,8 +302,10 @@ func TypeCheckPrintfCall(tc *TypeChecker, scope Scope, call Call) (result []TcEx
 			formatStrC.WriteString("d")
 		case TypeInt64:
 			formatStrC.WriteString("ld")
-		case TypeString:
+		case TypeCString:
 			formatStrC.WriteString("s")
+		case TypeString:
+			formatStrC.WriteString("*s")
 		case TypeFloat32:
 			formatStrC.WriteString("f")
 		case TypeFloat64:
@@ -307,13 +313,11 @@ func TypeCheckPrintfCall(tc *TypeChecker, scope Scope, call Call) (result []TcEx
 		case TypeError:
 			formatStrC.WriteString("<error>")
 		}
-		result = append(result, tcArg)
 		i++
 	}
 
-	result[0] = CStrLit{Source: formatStrLit.Source, Value: formatStrC.String()}
-
-	//formatExpr.(StrLit).Value = formatStrC.String()
+	result = call
+	result.Args[0] = CStrLit{Source: formatStrLit.Source, Value: formatStrC.String()}
 	return result
 }
 
@@ -325,7 +329,7 @@ func init() {
 	// practical. Therefore the implementation for varargs will be strictly tied to
 	// printf for now. A general concept for varargs will be specified out as soon
 	// as it becomes necessary, but right now it is not planned.
-	registerBuiltinVararg("printf", "printf(", ", ", ")", []Type{TypeString}, TypeVoid, TypeCheckPrintfCall)
+	registerBuiltinVararg("printf", "printf(", ", ", ")", []Type{TypeString}, TypeVoid, ValidatePrintfCall)
 
 	registerBuiltinType(TypeBoolean)
 	registerBuiltinType(TypeInt8)

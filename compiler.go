@@ -122,7 +122,9 @@ func (builder *CodeBuilder) compileCharLit(lit CharLit) {
 
 func (builder *CodeBuilder) compileStrLit(value string, boxed bool) {
 	if boxed {
-		builder.WriteString(`(string){.data="`)
+		builder.WriteString(`(string){.len=`)
+		WriteIntLit(&builder.Builder, int64(len(value)))
+		builder.WriteString(`, .data="`)
 	} else {
 		builder.WriteString(`"`)
 	}
@@ -154,9 +156,7 @@ func (builder *CodeBuilder) compileStrLit(value string, boxed bool) {
 	}
 	//builder.WriteString(lit.Val)
 	if boxed {
-		builder.WriteString(`", .len =`)
-		WriteIntLit(&builder.Builder, int64(len(value)))
-		builder.WriteString(`}`)
+		builder.WriteString(`"}`)
 	} else {
 		builder.WriteString(`"`)
 	}
@@ -596,7 +596,7 @@ func compilePackageToC(pak TcPackageDef) string {
 	context.includes.WriteString("#include <assert.h>")
 	// TODO this sholud depend on the usage of `string` as a type
 	context.typeDecl.NewlineAndIndent()
-	context.typeDecl.WriteString("typedef struct string {char const* data; long len;} string;")
+	context.typeDecl.WriteString("typedef struct string {size_t len; char const* data;} string;")
 	context.typeDecl.NewlineAndIndent()
 	context.typeDecl.WriteString("typedef unsigned char bool;")
 	context.markProcForGeneration(pak.Main)
