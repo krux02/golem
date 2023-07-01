@@ -11,7 +11,8 @@ type Type interface {
 	PrettyPrint(*AstPrettyPrinter)
 	ManglePrint(*strings.Builder) // print for name magling
 	DefaultValue(tc *TypeChecker, context AstNode) TcExpr
-	TypeName() string // no generic arguments here
+	AppendToGroup(*TypeGroupBuilder) bool // return true if the type group became `TypeUnspecified`
+	TypeName() string                     // no generic arguments here
 }
 
 type TcExpr interface {
@@ -44,7 +45,9 @@ type TcStructDef struct {
 
 // TODO: rename to GenericParamType
 type TcGenericTypeParam struct {
-	Source string
+	Source     string
+	Name       string
+	Constraint Type // TypeGroup or TypeUnspecified
 }
 
 type TcCodeBlock struct {
@@ -144,7 +147,12 @@ func ParamTypeAt(sig *ProcSignature, idx int) Type {
 	if sig.Varargs && idx >= len(sig.Params) {
 		return TypeUnspecified
 	}
-	return sig.Params[idx].Type
+	result := sig.Params[idx].Type
+	// TODO generic type instantiation must be handled
+	if genTypParam, ok := result.(*TcGenericTypeParam); ok {
+		return genTypParam.Constraint
+	}
+	return result
 }
 
 type TcProcDef struct {

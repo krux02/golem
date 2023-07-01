@@ -12,8 +12,8 @@ type BuiltinType struct {
 }
 
 type TypeGroup struct {
-	name  string
-	items []Type
+	Name  string
+	Items []Type
 }
 
 type EnumType struct {
@@ -62,7 +62,11 @@ func (typ *TypeGroup) ManglePrint(builder *strings.Builder) {
 }
 
 func (typ *TypeGroup) PrettyPrint(builder *AstPrettyPrinter) {
-	for i, typ := range typ.items {
+	if typ.Name != "" {
+		builder.WriteString(typ.Name)
+		return
+	}
+	for i, typ := range typ.Items {
 		if i != 0 {
 			builder.WriteString(" | ")
 		}
@@ -99,7 +103,7 @@ func (typ *EnumSetType) ManglePrint(builder *strings.Builder) {
 }
 
 func (typ *TcGenericTypeParam) ManglePrint(builder *strings.Builder) {
-	panic("not implemented")
+	panic("illegal not a concrete type")
 }
 
 func (typ *TypeGroup) GetSource() string {
@@ -124,8 +128,12 @@ var TypeVoid = &BuiltinType{"void", "void", 'v'}
 // This type is used to tag that a function never returns.
 var TypeNoReturn = &BuiltinType{"noreturn", "void", '-'}
 
-// this type is the internal representation when no type has been
-// specified. It is not a type by its own.
+// this type is the internal representation when no type has been specified. It
+// is not a type by its own.
+//
+// TODO, maybe this should be a different Type that isn't ~BuiltinType~,
+// ~BuiltinType~ is used only for concrete types that actually can be
+// instantiated. It behaves very differently is is always the exception to be checked for.
 var TypeUnspecified = &BuiltinType{"???", "<unspecified>", ','}
 
 // this type is the internal representation when the type checker fails to
@@ -133,9 +141,9 @@ var TypeUnspecified = &BuiltinType{"???", "<unspecified>", ','}
 // code generation.
 var TypeError = &BuiltinType{"???", "<error>", ','}
 
-var TypeAnyInt = &TypeGroup{name: "AnyInt", items: []Type{TypeInt8, TypeInt16, TypeInt32, TypeInt64}}
-var TypeAnyFloat = &TypeGroup{name: "AnyFloat", items: []Type{TypeFloat32, TypeFloat64}}
-var TypeAnyNumber = &TypeGroup{name: "AnyNumber", items: []Type{TypeFloat32, TypeFloat64, TypeInt8, TypeInt16, TypeInt32, TypeInt64}}
+var TypeAnyInt = &TypeGroup{Name: "AnyInt", Items: []Type{TypeInt8, TypeInt16, TypeInt32, TypeInt64}}
+var TypeAnyFloat = &TypeGroup{Name: "AnyFloat", Items: []Type{TypeFloat32, TypeFloat64}}
+var TypeAnyNumber = &TypeGroup{Name: "AnyNumber", Items: []Type{TypeFloat32, TypeFloat64, TypeInt8, TypeInt16, TypeInt32, TypeInt64}}
 
 // types for C wrappers
 var TypeCString = &BuiltinType{"cstring", "char const*", 'x'}
@@ -162,7 +170,7 @@ func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 }
 
 func (typ *TypeGroup) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
-	panic(fmt.Errorf("no default value for abstract type group: %s", typ.name))
+	panic(fmt.Errorf("no default value for abstract type group: %s", typ.Name))
 }
 
 func (typ *ArrayType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
@@ -201,7 +209,7 @@ func registerBuiltinType(typ *BuiltinType) {
 }
 
 func registerTypeGroup(typ *TypeGroup) {
-	builtinScope.Types[typ.name] = typ
+	builtinScope.Types[typ.Name] = typ
 }
 
 func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []Type, args []Type, result Type, checker PostResolveValidator) {
@@ -375,7 +383,13 @@ func init() {
 		registerBuiltin("f64", "(double)(", "", ")", []Type{typ}, TypeFloat64)
 	}
 
+	// {
+	// 	// TODO: has no line information
+	// 	T := &TcGenericTypeParam{Name: "T", Constraint: TypeUnspecified}
+	// 	registerGenericBuiltin("=", "(", "=", ")", []Type{T}, []Type{T, T}, TypeVoid, nil)
+	// }
 	registerBuiltin("=", "(", "=", ")", []Type{TypeString, TypeString}, TypeVoid)
+
 	registerBuiltin("==", "(", "==", ")", []Type{TypeChar, TypeChar}, TypeBoolean)
 	registerBuiltin("!=", "(", "!=", ")", []Type{TypeChar, TypeChar}, TypeBoolean)
 	registerBuiltin("==", "(", "==", ")", []Type{TypeBoolean, TypeBoolean}, TypeBoolean)

@@ -439,7 +439,9 @@ func (typ *EnumSetType) PrettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (typ *TcGenericTypeParam) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString(typ.Source)
+	builder.WriteString(typ.Name)
+	builder.WriteString(" : ")
+	typ.Constraint.PrettyPrint(builder)
 }
 
 func (call TcCall) PrettyPrint(builder *AstPrettyPrinter) {

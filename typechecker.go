@@ -191,7 +191,7 @@ func (tc *TypeChecker) TypeCheckEnumDef(scope Scope, def EnumDef) *TcEnumDef {
 	}
 	tc.RegisterType(scope, enumType, def.Name)
 	registerBuiltin("string", fmt.Sprintf("%s_names_array[", result.Name), "", "]", []Type{enumType}, TypeString)
-	for _, intType := range TypeAnyInt.items {
+	for _, intType := range TypeAnyInt.Items {
 		builtinType := intType.(*BuiltinType)
 		registerBuiltin(builtinType.Name, fmt.Sprintf("(%s)", builtinType.InternalName), "", "", []Type{enumType}, intType)
 		registerBuiltin(result.Name, fmt.Sprintf("(%s)", result.Name), "", "", []Type{intType}, enumType)
@@ -291,7 +291,7 @@ func (tc *TypeChecker) ExpectType(node AstNode, gotten, expected Type) Type {
 			tc.ReportErrorf(node, "internal error: narrowing of type group '%s' and '%s' is not implemented yet", AstFormat(gottenTg), AstFormat(expectedTg))
 			return TypeError
 		}
-		for _, it := range expectedTg.items {
+		for _, it := range expectedTg.Items {
 			if gotten == it {
 				return gotten
 			}
@@ -304,7 +304,7 @@ func (tc *TypeChecker) ExpectType(node AstNode, gotten, expected Type) Type {
 		return expected
 	}
 	if gottenTg, ok := gotten.(*TypeGroup); ok {
-		for _, it := range gottenTg.items {
+		for _, it := range gottenTg.Items {
 			if it == expected {
 				return expected
 			}
@@ -371,36 +371,79 @@ func errorProcSym(ident Ident) TcProcSymbol {
 	}
 }
 
-func argTypeGroupAtIndex(signatures []ProcSignature, idx int) Type {
-	switch len(signatures) {
-	case 0:
-		return TypeUnspecified
-	case 1:
-		return ParamTypeAt(&signatures[0], idx)
-	case 2:
-		typ1 := ParamTypeAt(&signatures[0], idx)
-		typ2 := ParamTypeAt(&signatures[1], idx)
-		if typ1 == typ2 {
-			return typ1
+type TypeGroupBuilder TypeGroup
+
+func AppendNoDuplicats(types []Type, typ Type) (result []Type) {
+	for _, it := range types {
+		if it == typ {
+			return types
 		}
-		return &TypeGroup{items: []Type{typ1, typ2}}
-	default:
-		types := []Type{}
-	outer:
-		for _, sig := range signatures {
-			argType := ParamTypeAt(&sig, idx)
-			for _, typ := range types {
-				if argType == typ {
-					continue outer
-				}
-			}
-			types = append(types, argType)
-		}
-		if len(types) == 1 {
-			return types[0]
-		}
-		return &TypeGroup{items: types}
 	}
+	return append(types, typ)
+}
+
+// inversion of arguments, because go only has polymorphism on the self argument
+func (typ *BuiltinType) AppendToGroup(builder *TypeGroupBuilder) bool {
+	if typ == TypeUnspecified {
+		builder.Items = nil
+		return true
+	}
+	builder.Items = AppendNoDuplicats(builder.Items, typ)
+	return false
+}
+
+func (typ *TypeGroup) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
+	for _, it := range typ.Items {
+		result = it.AppendToGroup(builder)
+		// early return in case of TypeUnspecified
+		if result {
+			return result
+		}
+	}
+	return result
+}
+
+func (typ *EnumType) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
+	builder.Items = AppendNoDuplicats(builder.Items, typ)
+	return false
+}
+
+func (typ *StructType) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
+	builder.Items = AppendNoDuplicats(builder.Items, typ)
+	return false
+}
+
+func (typ *ArrayType) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
+	builder.Items = AppendNoDuplicats(builder.Items, typ)
+	return false
+}
+
+func (typ *EnumSetType) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
+	builder.Items = AppendNoDuplicats(builder.Items, typ)
+	return false
+}
+
+func (typ *TcGenericTypeParam) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
+	return typ.Constraint.AppendToGroup(builder)
+}
+
+func argTypeGroupAtIndex(signatures []ProcSignature, idx int) (result Type) {
+	builder := &TypeGroupBuilder{}
+	for _, sig := range signatures {
+		typ := ParamTypeAt(&sig, idx)
+		typ.AppendToGroup(builder)
+	}
+	var newResult Type
+	switch len(builder.Items) {
+	case 0:
+		newResult = TypeUnspecified
+	case 1:
+		newResult = builder.Items[0]
+	default:
+		newResult = (*TypeGroup)(builder)
+	}
+
+	return newResult
 }
 
 func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcExpr {
@@ -423,7 +466,6 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 	}
 	signatures := tc.LookUpProc(scope, ident, nil)
 	result := TcCall{Source: call.Source}
-	// TODO: this is very quick and dirty. These three branches must be merged into one general algorithm
 	var checkedArgs []TcExpr
 	hasArgTypeError := false
 	for i, arg := range call.Args {
@@ -770,6 +812,24 @@ func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExp
 			return lit
 		}
 		arg.Type = typ.(*BuiltinType)
+		// var upper int64 = 0
+		// var lower int64 = 0
+		// switch arg.Type {
+		// case TypeInt8:
+		// 	lower = -128
+		// 	uppert = 127
+		// case TypeInt16:
+		// 	lower = -32768
+		// 	upper = 32767
+		// case TypeInt32:
+		// 	lower = -2147483648
+		// 	upper = 2147483647
+		// case TypeInt64:
+		// 	lower = -9223372036854775808
+		// 	upper = 9223372036854775807
+		// default:
+		// 	panic("not implemented")
+		// }
 		return (TcExpr)(arg)
 	case FloatLit:
 		typ := tc.ExpectType(arg, TypeAnyFloat, expected)
