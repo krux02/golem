@@ -430,7 +430,13 @@ func (typ *TcGenericTypeParam) AppendToGroup(builder *TypeGroupBuilder) (result 
 func argTypeGroupAtIndex(signatures []ProcSignature, idx int) (result Type) {
 	builder := &TypeGroupBuilder{}
 	for _, sig := range signatures {
-		typ := ParamTypeAt(&sig, idx)
+		if sig.Varargs && idx >= len(sig.Params) {
+			return TypeUnspecified
+		}
+		typ := sig.Params[idx].Type
+		if genTypParam, ok := typ.(*TcGenericTypeParam); ok {
+			typ = genTypParam.Constraint
+		}
 		typ.AppendToGroup(builder)
 	}
 	var newResult Type
@@ -469,17 +475,38 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 	var checkedArgs []TcExpr
 	hasArgTypeError := false
 	for i, arg := range call.Args {
+		// TODO reuse TypeGroupBuilder here
 		expectedArgType := argTypeGroupAtIndex(signatures, i)
 		tcArg := tc.TypeCheckExpr(scope, arg, expectedArgType)
-		hasArgTypeError = hasArgTypeError || tcArg.GetType() == TypeError
+		argType := tcArg.GetType()
+		hasArgTypeError = hasArgTypeError || argType == TypeError
 		checkedArgs = append(checkedArgs, tcArg)
-		// filter procedures for right one
+		// in place filter procedures for compatilbes
 		n := 0
 		for _, sig := range signatures {
-			expectedArgType := ParamTypeAt(&sig, i)
-			if tcArg.GetType() == expectedArgType || expectedArgType == TypeUnspecified {
+			if sig.Varargs && i >= len(sig.Params) {
 				signatures[n] = sig
 				n++
+				continue
+			}
+			typ := sig.Params[i].Type
+			if genTypParam, ok := typ.(*TcGenericTypeParam); ok {
+				// TODO check genTypParam.Constraint
+				// instantiate generic
+				typ = argType
+				newParams := make([]TcSymbol, len(sig.Params))
+				for i, param := range sig.Params {
+					if param.Type == genTypParam {
+						param.Type = argType
+					}
+					newParams[i] = param
+				}
+				sig.Params = newParams
+			}
+			if typ == argType {
+				signatures[n] = sig
+				n++
+				continue
 			}
 		}
 		signatures = signatures[:n]

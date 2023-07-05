@@ -361,18 +361,15 @@ func init() {
 		registerBuiltin("*", "(", "*", ")", []Type{typ, typ}, typ)
 		registerBuiltin("/", "(", "/", ")", []Type{typ, typ}, typ)
 
-		registerBuiltin("==", "(", "==", ")", []Type{typ, typ}, TypeBoolean)
 		registerBuiltin("<", "(", "<", ")", []Type{typ, typ}, TypeBoolean)
 		registerBuiltin("<=", "(", "<=", ")", []Type{typ, typ}, TypeBoolean)
 		registerBuiltin(">", "(", ">", ")", []Type{typ, typ}, TypeBoolean)
 		registerBuiltin(">=", "(", ">=", ")", []Type{typ, typ}, TypeBoolean)
-		registerBuiltin("!=", "(", "!=", ")", []Type{typ, typ}, TypeBoolean)
 
 		registerBuiltin("+=", "(", "+=", ")", []Type{typ, typ}, TypeVoid)
 		registerBuiltin("-=", "(", "-=", ")", []Type{typ, typ}, TypeVoid)
 		registerBuiltin("*=", "(", "*=", ")", []Type{typ, typ}, TypeVoid)
 		registerBuiltin("/=", "(", "/=", ")", []Type{typ, typ}, TypeVoid)
-		registerBuiltin("=", "(", "=", ")", []Type{typ, typ}, TypeVoid)
 
 		registerBuiltin("i8", "(int8_t)(", "", ")", []Type{typ}, TypeInt8)
 		registerBuiltin("i16", "(int16_t)(", "", ")", []Type{typ}, TypeInt16)
@@ -383,17 +380,23 @@ func init() {
 		registerBuiltin("f64", "(double)(", "", ")", []Type{typ}, TypeFloat64)
 	}
 
-	// {
-	// 	// TODO: has no line information
-	// 	T := &TcGenericTypeParam{Name: "T", Constraint: TypeUnspecified}
-	// 	registerGenericBuiltin("=", "(", "=", ")", []Type{T}, []Type{T, T}, TypeVoid, nil)
-	// }
-	registerBuiltin("=", "(", "=", ")", []Type{TypeString, TypeString}, TypeVoid)
+	{
+		// TODO: has no line information
+		T := &TcGenericTypeParam{Name: "T", Constraint: TypeUnspecified}
+		registerGenericBuiltin("=", "(", "=", ")", []Type{T}, []Type{T, T}, TypeVoid, nil)
+	}
 
-	registerBuiltin("==", "(", "==", ")", []Type{TypeChar, TypeChar}, TypeBoolean)
-	registerBuiltin("!=", "(", "!=", ")", []Type{TypeChar, TypeChar}, TypeBoolean)
-	registerBuiltin("==", "(", "==", ")", []Type{TypeBoolean, TypeBoolean}, TypeBoolean)
-	registerBuiltin("!=", "(", "!=", ")", []Type{TypeBoolean, TypeBoolean}, TypeBoolean)
+	{
+		// TODO: has no line information
+		T := &TcGenericTypeParam{Name: "T", Constraint: TypeUnspecified}
+		registerGenericBuiltin("==", "(", "==", ")", []Type{T}, []Type{T, T}, TypeBoolean, nil)
+	}
+
+	{
+		// TODO: has no line information
+		T := &TcGenericTypeParam{Name: "T", Constraint: TypeUnspecified}
+		registerGenericBuiltin("!=", "(", "!=", ")", []Type{T}, []Type{T, T}, TypeBoolean, nil)
+	}
 
 	registerBuiltin("and", "(", "&&", ")", []Type{TypeBoolean, TypeBoolean}, TypeBoolean)
 	registerBuiltin("or", "(", "||", ")", []Type{TypeBoolean, TypeBoolean}, TypeBoolean)

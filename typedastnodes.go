@@ -143,18 +143,6 @@ type ProcSignature struct {
 	Impl *TcProcDef
 }
 
-func ParamTypeAt(sig *ProcSignature, idx int) Type {
-	if sig.Varargs && idx >= len(sig.Params) {
-		return TypeUnspecified
-	}
-	result := sig.Params[idx].Type
-	// TODO generic type instantiation must be handled
-	if genTypParam, ok := result.(*TcGenericTypeParam); ok {
-		return genTypParam.Constraint
-	}
-	return result
-}
-
 type TcProcDef struct {
 	Source    string
 	Name      string
