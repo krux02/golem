@@ -421,14 +421,6 @@ func init() {
 
 	registerBuiltin("assert", "assert(", "", ")", []Type{TypeBoolean}, TypeVoid)
 
-	// TODO this one needs a generic solution
-	// T := &TcGenericTypeParam{Source: "T"}
-	// registerBuiltin("=", "(", "=", ")", []Type{T, T}, TypeVoid)
-
-	registerBuiltin("[", "", ".arr[", "]", []Type{GetArrayType(TypeInt64, 7), TypeInt64}, TypeInt64)
-	registerBuiltin("[", "", ".arr[", "]", []Type{GetArrayType(TypeInt32, 20), TypeInt64}, TypeInt32)
-	registerBuiltin("[", "", ".arr[", "]", []Type{GetArrayType(GetArrayType(TypeInt32, 20), 3), TypeInt64}, GetArrayType(TypeInt32, 20))
-
 	registerConstant("true", TypeBoolean)
 	registerConstant("false", TypeBoolean)
 }
