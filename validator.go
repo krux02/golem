@@ -68,6 +68,9 @@ func validateSourceSetInternal(code string, node reflect.Value) {
 		if typ.Field(0).Name != "Source" {
 			panic("expected field `Source` here")
 		}
+		if typ.Name() == "IntLit" {
+			return
+		}
 		N := node.NumField()
 		for i := 1; i < N; i++ {
 			validateSourceSetInternal(code, node.Field(i))

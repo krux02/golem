@@ -242,29 +242,29 @@ func (lit FloatLit) PrettyPrint(builder *AstPrettyPrinter) {
 	}
 }
 
-func (typeExpr TypeExpr) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString(typeExpr.Ident.Source)
-	if len(typeExpr.ExprArgs) > 0 {
-		builder.WriteString("(")
-		for i, arg := range typeExpr.ExprArgs {
-			if i != 0 {
-				builder.WriteString(", ")
-			}
-			builder.WriteNode(arg)
-		}
-		builder.WriteString(")")
-	}
-	if len(typeExpr.TypeArgs) > 0 {
-		builder.WriteString("[")
-		for i, arg := range typeExpr.TypeArgs {
-			if i != 0 {
-				builder.WriteString(", ")
-			}
-			builder.WriteNode(arg)
-		}
-		builder.WriteString("]")
-	}
-}
+// func (typeExpr TypeExpr) PrettyPrint(builder *AstPrettyPrinter) {
+// 	builder.WriteString(typeExpr.Ident.Source)
+// 	if len(typeExpr.ExprArgs) > 0 {
+// 		builder.WriteString("(")
+// 		for i, arg := range typeExpr.ExprArgs {
+// 			if i != 0 {
+// 				builder.WriteString(", ")
+// 			}
+// 			builder.WriteNode(arg)
+// 		}
+// 		builder.WriteString(")")
+// 	}
+// 	if len(typeExpr.TypeArgs) > 0 {
+// 		builder.WriteString("[")
+// 		for i, arg := range typeExpr.TypeArgs {
+// 			if i != 0 {
+// 				builder.WriteString(", ")
+// 			}
+// 			builder.WriteNode(arg)
+// 		}
+// 		builder.WriteString("]")
+// 	}
+// }
 
 func (typeDef StructDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("type ")
@@ -343,7 +343,7 @@ func (stmt VariableDefStmt) PrettyPrint(builder *AstPrettyPrinter) {
 		panic("illegal or not implemented")
 	}
 	builder.WriteNode(stmt.Name)
-	if stmt.TypeExpr.IsSet() {
+	if stmt.TypeExpr != nil {
 		builder.WriteString(": ")
 		builder.WriteNode(stmt.TypeExpr)
 	}

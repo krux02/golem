@@ -44,18 +44,7 @@ func parseOperator(tokenizer *Tokenizer) (result Ident) {
 }
 
 func parseTypeExpr(tokenizer *Tokenizer) (result TypeExpr) {
-	firstToken := tokenizer.lookAheadToken
-	result.Ident = parseIdent(tokenizer)
-	// TODO this must be used
-	if tokenizer.lookAheadToken.kind == TkOpenBrace {
-		result.ExprArgs = parseExprList(tokenizer, TkOpenBrace, TkCloseBrace)
-	}
-	if tokenizer.lookAheadToken.kind == TkOpenBracket {
-		result.TypeArgs = parseTypeExprList(tokenizer, TkOpenBracket, TkCloseBracket)
-	}
-	lastToken := tokenizer.token
-	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
-	return
+	return parseExpr(tokenizer, false)
 }
 
 func parseReturnStmt(tokenizer *Tokenizer) (result ReturnStmt) {
@@ -264,6 +253,8 @@ func parseIntLit(tokenizer *Tokenizer) (result IntLit) {
 		panic("internal error invalid int token")
 	}
 	result.Value = int64(intValue)
+	// the type of an IntLit is the the intlit itself. So every integer literal is also a type
+	result.Type = &result
 	return
 }
 
@@ -296,21 +287,6 @@ func parseInfixCall(tokenizer *Tokenizer, lhs Expr) (result Call) {
 		}
 	}
 	result.Source = joinSubstr(tokenizer.code, lhs.GetSource(), rhs.GetSource())
-	return
-}
-
-func parseTypeExprList(tokenizer *Tokenizer, tkOpen, tkClose TokenKind) (result []TypeExpr) {
-	next := tokenizer.Next()
-	tokenizer.expectKind(next, tkOpen)
-	if tokenizer.lookAheadToken.kind != tkClose {
-		result = append(result, parseTypeExpr(tokenizer))
-		for tokenizer.lookAheadToken.kind == TkComma {
-			tokenizer.Next()
-			result = append(result, parseTypeExpr(tokenizer))
-		}
-	}
-	next = tokenizer.Next()
-	tokenizer.expectKind(next, tkClose)
 	return
 }
 
@@ -660,22 +636,27 @@ func parseTypeDef(tokenizer *Tokenizer) Expr {
 //		return
 //	}
 func ToTypeExpr(expr Expr) (result TypeExpr) {
-	result.Source = expr.GetSource()
-	if lhs, args, ok := MatchBracketCall(expr); ok {
-		for _, bracketArg := range args {
-			result.TypeArgs = append(result.TypeArgs, ToTypeExpr(bracketArg))
-		}
-		expr = lhs
-	}
+	return expr
+	// result.Source = expr.GetSource()
+	// if lhs, args, ok := MatchBracketCall(expr); ok {
+	// 	for _, bracketArg := range args {
+	// 		result.TypeArgs = append(result.TypeArgs, ToTypeExpr(bracketArg))
+	// 	}
+	// 	expr = lhs
+	// }
 
-	if call, ok := expr.(Call); ok && call.Braced {
-		result.ExprArgs = call.Args
-		expr = call.Callee
-	}
+	// if call, ok := expr.(Call); ok && call.Braced {
+	// 	result.ExprArgs = call.Args
+	// 	expr = call.Callee
+	// }
 
-	ident := expr.(Ident)
-	result.Ident = ident
-	return result
+	// if ident, ok := expr.(Ident); ok {
+	// 	result.Ident = ident
+	// 	return result
+	// }
+
+	// intLit := expr.(IntLit)
+	// return intLit
 }
 
 func MatchColonExpr(expr Expr) (colonExpr ColonExpr, ok bool) {

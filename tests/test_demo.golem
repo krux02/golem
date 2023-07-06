@@ -46,7 +46,7 @@ proc max(a,b: f64): f64 = {
 
 ## Tests side effects behavior of `and` and `or` operators.
 proc testBooleanOpsWithBlockExpr(): void = {
-  var arr: array(2)[bool] = [true, false]
+  var arr: array(2, bool) = [true, false]
   for c4 in arr do {
     for c3 in arr do {
       for c2 in arr do {
@@ -96,8 +96,8 @@ proc main():i64 = {
   let depth = maxParenDepth(exprStr)
   printf("max paren depth: %d\n", i32(depth))
   testBooleanOpsWithBlockExpr()
-  let myArray: array(7)[i64] = [123, -456, -789, -234, 567, 891, -123]
-  let myOtherArray: array(2)[f64] = [12.34, 56.78]
+  let myArray: array(7, i64) = [123, -456, -789, -234, 567, 891, -123]
+  let myOtherArray: array(2, f64) = [12.34, 56.78]
   var myStruct: MyStruct = [a=12, b=34.56, c="def"]
   printf("initialized Values\n")
   printf("a: %d b: %f c: %s\n", myStruct.a, myStruct.b, myStruct.c)

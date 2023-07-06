@@ -37,13 +37,7 @@ type Ident struct {
 	Comment DocLines
 }
 
-type TypeExpr struct {
-	Source string
-	// this type is a placeholder, it is supposed to become more complex
-	Ident    Ident
-	ExprArgs []Expr
-	TypeArgs []TypeExpr
-}
+type TypeExpr Expr
 
 type StructField struct {
 	Source   string
@@ -55,7 +49,7 @@ type VariableDefStmt struct {
 	Source   string
 	Kind     SymbolKind // only SkVar SkLet SkConst allowed
 	Name     Ident
-	TypeExpr TypeExpr
+	TypeExpr TypeExpr // optional
 	Value    Expr
 }
 
@@ -132,13 +126,13 @@ type CharLit struct {
 
 type IntLit struct {
 	Source string
-	Type   *BuiltinType
+	Type   Type
 	Value  int64
 }
 
 type FloatLit struct {
 	Source string
-	Type   *BuiltinType
+	Type   Type
 	Value  float64
 }
 
@@ -219,6 +213,7 @@ func (arg IfElseExpr) GetSource() string      { return arg.Source }
 func (arg ReturnStmt) GetSource() string      { return arg.Source }
 func (arg BreakStmt) GetSource() string       { return arg.Source }
 func (arg ContinueStmt) GetSource() string    { return arg.Source }
-func (arg TypeExpr) GetSource() string        { return arg.Source }
+
+//func (arg TypeExpr) GetSource() string        { return arg.Source }
 
 func (arg PackageDef) GetSource() string { return arg.Source }

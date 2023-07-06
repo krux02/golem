@@ -15,7 +15,7 @@ type MyEnum = enum {
 
 type FooFlags = enum { Any; Words; Work; As; Enum; Values }
 
-proc foo(arg: MyStruct, flags: set[FooFlags]): void = {
+proc foo(arg: MyStruct, flags: set(FooFlags)): void = {
   printf("a: %d b: %f c: %s\n", arg.a, arg.b, arg.c)
   let b1 = contains(flags, Words)
   let b2 = contains(flags, As)
@@ -33,7 +33,7 @@ proc main():i32 = {
   var myStruct2 = [12, 34.56, "def"]:MyStruct        # in order initialization, postfix type assertion
   var myStruct3 = [a=78, c="ghi"]:MyStruct           # default value for b
 
-  var myEnumSet : set[MyEnum] = [Option1, Option3]
+  var myEnumSet : set(MyEnum) = [Option1, Option3]
 
   #var myEnum = Option2:MyEnum
   bar(123:i64, MyEnum(2:i64))

@@ -52,6 +52,7 @@ var _ Type = &TypeGroup{}
 var _ Type = &EnumType{}
 var _ Type = &StructType{}
 var _ Type = &ArrayType{}
+var _ Type = &IntLit{}
 
 func (typ *BuiltinType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune(typ.MangleChar)
@@ -102,6 +103,10 @@ func (typ *EnumSetType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune('_')
 }
 
+func (typ *IntLit) ManglePrint(builder *strings.Builder) {
+	fmt.Fprintf(builder, "%d_", typ.Value)
+}
+
 func (typ *TcGenericTypeParam) ManglePrint(builder *strings.Builder) {
 	panic("illegal not a concrete type")
 }
@@ -134,12 +139,12 @@ var TypeNoReturn = &BuiltinType{"noreturn", "void", '-'}
 // TODO, maybe this should be a different Type that isn't ~BuiltinType~,
 // ~BuiltinType~ is used only for concrete types that actually can be
 // instantiated. It behaves very differently is is always the exception to be checked for.
-var TypeUnspecified = &BuiltinType{"???", "<unspecified>", ','}
+var TypeUnspecified = &BuiltinType{"?unspecified?", "<unspecified>", ','}
 
 // this type is the internal representation when the type checker fails to
 // resolve the type. Expressions with this type cannot be further processed in
-// code generation.
-var TypeError = &BuiltinType{"???", "<error>", ','}
+// code generation. This should probably be a different type, not BuiltinType
+var TypeError = &BuiltinType{"?error?", "<error>", ','}
 
 var TypeAnyInt = &TypeGroup{Name: "AnyInt", Items: []Type{TypeInt8, TypeInt16, TypeInt32, TypeInt64}}
 var TypeAnyFloat = &TypeGroup{Name: "AnyFloat", Items: []Type{TypeFloat32, TypeFloat64}}
@@ -187,6 +192,10 @@ func (typ *EnumType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 
 func (typ *EnumSetType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	return TcEnumSetLit{ElemType: typ.Elem}
+}
+
+func (typ *IntLit) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+	return typ // and int lit is its own default value
 }
 
 func (typ *TcGenericTypeParam) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {

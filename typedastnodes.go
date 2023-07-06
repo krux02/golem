@@ -12,7 +12,6 @@ type Type interface {
 	ManglePrint(*strings.Builder) // print for name magling
 	DefaultValue(tc *TypeChecker, context AstNode) TcExpr
 	AppendToGroup(*TypeGroupBuilder) bool // return true if the type group became `TypeUnspecified`
-	TypeName() string                     // no generic arguments here
 }
 
 type TcExpr interface {
@@ -202,14 +201,6 @@ func (call TcCall) expression()            {}
 func (call TcArrayLit) expression()        {}
 func (call TcEnumSetLit) expression()      {}
 func (expr TcStructLit) expression()       {}
-
-func (typ *StructType) TypeName() string         { return typ.Impl.Name }
-func (typ *EnumType) TypeName() string           { return typ.Impl.Name }
-func (typ *EnumSetType) TypeName() string        { return "EnumSet" }
-func (typ *TypeGroup) TypeName() string          { return "TypeGroup" }
-func (typ *BuiltinType) TypeName() string        { return typ.Name }
-func (typ *ArrayType) TypeName() string          { return "Array" }
-func (typ *TcGenericTypeParam) TypeName() string { return typ.Source }
 
 func (arg TcErrorNode) GetSource() string       { return arg.SourceNode.GetSource() }
 func (arg TcDotExpr) GetSource() string         { return arg.Source }

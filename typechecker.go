@@ -47,8 +47,7 @@ func (scope Scope) NewSubScope() Scope {
 	}
 }
 
-func (tc *TypeChecker) RegisterType(scope Scope, typ Type, context AstNode) {
-	name := typ.TypeName()
+func (tc *TypeChecker) RegisterType(scope Scope, name string, typ Type, context AstNode) {
 	if _, ok := scope.Types[name]; ok {
 		tc.ReportErrorf(context, "double definition of type '%s'", name)
 		// TODO previously defined at ...
@@ -70,47 +69,61 @@ func (scope Scope) NewSymbol(tc *TypeChecker, name Ident, kind SymbolKind, typ T
 }
 
 func (tc *TypeChecker) LookUpType(scope Scope, expr TypeExpr) Type {
-	if expr.Ident.Source == "array" {
-		if !tc.ExpectArgsLen(expr, len(expr.TypeArgs), 1) {
-			return TypeError
-		}
-		if !tc.ExpectArgsLen(expr, len(expr.ExprArgs), 1) {
-			return TypeError
-		}
-		elem := tc.LookUpType(scope, expr.TypeArgs[0])
-		// tc.ExpectMinArgsLen(node AstNode, gotten int, expected int)
-		// tc.ExpectMinArgsLen(node AstNode, gotten int, expected int)
-		// len := expr.ExprArgs[0].(IntLit).Value
-		lenLit, ok := expr.ExprArgs[0].(IntLit)
+	switch x := expr.(type) {
+	case Call:
+		ident, ok := x.Callee.(Ident)
 		if !ok {
-			tc.ReportErrorf(expr.ExprArgs[0], "Expect Int Lit")
+			tc.ReportErrorf(x.Callee, "identifier expected but got %T", x.Callee)
 			return TypeError
 		}
-		return GetArrayType(elem, lenLit.Value)
-	}
+		switch ident.Source {
+		case "array":
+			if !tc.ExpectArgsLen(expr, len(x.Args), 2) {
+				return TypeError
+			}
 
-	if expr.Ident.Source == "set" {
-		if !tc.ExpectArgsLen(expr, len(expr.TypeArgs), 1) {
+			arg0 := tc.LookUpType(scope, x.Args[0])
+			if arg0 == TypeError {
+				// maybe fall back to unchecked array
+				return TypeError
+			}
+			intLit, ok := arg0.(*IntLit)
+			if !ok {
+				tc.ReportErrorf(x.Args[0], "expect int literal but got %T", x.Args[0])
+				return TypeError
+			}
+			elem := tc.LookUpType(scope, x.Args[1])
+			return GetArrayType(elem, intLit.Value)
+		case "set":
+			arg0 := tc.LookUpType(scope, x.Args[0])
+			if arg0 == TypeError {
+				return TypeError
+			}
+			elem, ok := arg0.(*EnumType)
+			if !ok {
+				tc.ReportErrorf(x.Args[0], "expect enum type but got %T", arg0)
+				return TypeError
+			}
+			return GetEnumSetType(elem)
+		default:
+			// TODO implement this
+			tc.ReportErrorf(ident, "expected 'array' or 'set' here, but got '%s'", ident.Source)
 			return TypeError
 		}
-		if !tc.ExpectArgsLen(expr, len(expr.ExprArgs), 0) {
-			return TypeError
+	case Ident:
+		name := x.Source
+		if typ, ok := scope.Types[name]; ok {
+			return typ
 		}
-		elem, ok := tc.LookUpType(scope, expr.TypeArgs[0]).(*EnumType)
-		if !ok {
-			tc.ReportErrorf(expr.TypeArgs[0], "expect enum type")
+		if scope.Parent != nil {
+			return tc.LookUpType(scope.Parent, expr)
 		}
-		return GetEnumSetType(elem)
+		tc.ReportErrorf(expr, "Type not found: %s", name)
+		return TypeError
+	case IntLit:
+		return x.Type
 	}
-
-	name := expr.Ident.Source
-	if typ, ok := scope.Types[name]; ok {
-		return typ
-	}
-	if scope.Parent != nil {
-		return tc.LookUpType(scope.Parent, expr)
-	}
-	tc.ReportErrorf(expr, "Type not found: %s", name)
+	tc.ReportErrorf(expr, "unexpected ast node in type exper: %T", expr)
 	return TypeError
 }
 
@@ -174,7 +187,7 @@ func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def StructDef) *TcStructD
 			result.Fields = append(result.Fields, tcField)
 		}
 	}
-	tc.RegisterType(scope, structType, def.Name)
+	tc.RegisterType(scope, structType.Impl.Name, structType, def.Name)
 	return result
 }
 
@@ -189,7 +202,7 @@ func (tc *TypeChecker) TypeCheckEnumDef(scope Scope, def EnumDef) *TcEnumDef {
 		sym.Type = enumType
 		result.Values = append(result.Values, sym)
 	}
-	tc.RegisterType(scope, enumType, def.Name)
+	tc.RegisterType(scope, enumType.Impl.Name, enumType, def.Name)
 	registerBuiltin("string", fmt.Sprintf("%s_names_array[", result.Name), "", "]", []Type{enumType}, TypeString)
 	for _, intType := range TypeAnyInt.Items {
 		builtinType := intType.(*BuiltinType)
@@ -203,7 +216,7 @@ func (tc *TypeChecker) TypeCheckEnumDef(scope Scope, def EnumDef) *TcEnumDef {
 // tc.ReportErrorf(def.Kind, "invalid type kind %s, expect one of struct, enum, union", def.Kind.Source)
 func (tc *TypeChecker) NewGenericParam(scope Scope, name Ident) Type {
 	result := &TcGenericTypeParam{Source: name.Source}
-	tc.RegisterType(scope, result, name)
+	tc.RegisterType(scope, name.Source, result, name)
 	return result
 }
 
@@ -425,6 +438,11 @@ func (typ *EnumSetType) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
 
 func (typ *TcGenericTypeParam) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
 	return typ.Constraint.AppendToGroup(builder)
+}
+
+func (typ *IntLit) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
+	// TODO implement
+	panic("not implemented")
 }
 
 func argTypeGroupAtIndex(signatures []ProcSignature, idx int) (result Type) {
@@ -660,14 +678,10 @@ func (tc *TypeChecker) TypeCheckCodeBlock(scope Scope, arg CodeBlock, expected T
 	return
 }
 
-func (expr TypeExpr) IsSet() bool {
-	return expr.Source != ""
-}
-
 func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt) (result TcVariableDefStmt) {
 	result.Source = arg.Source
 	var expected Type = TypeUnspecified
-	if arg.TypeExpr.IsSet() {
+	if arg.TypeExpr != nil {
 		expected = tc.LookUpType(scope, arg.TypeExpr)
 	}
 	if arg.Value == nil {
@@ -982,6 +996,11 @@ func (tc *TypeChecker) TypeCheckArrayLit(scope Scope, arg ArrayLit, expected Typ
 			}
 			return result
 		}
+	case *BuiltinType:
+		if exp == TypeError {
+			return TcErrorNode{SourceNode: arg}
+		}
+		panic(fmt.Errorf("I don't know about type %s!", exp.Name))
 	default:
 		panic(fmt.Errorf("I don't know about type %T!", exp))
 	}
