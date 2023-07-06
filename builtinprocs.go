@@ -11,6 +11,8 @@ type BuiltinType struct {
 	MangleChar   rune
 }
 
+type ErrorType struct{}
+
 type TypeGroup struct {
 	Name  string
 	Items []Type
@@ -53,9 +55,14 @@ var _ Type = &EnumType{}
 var _ Type = &StructType{}
 var _ Type = &ArrayType{}
 var _ Type = &IntLit{}
+var _ Type = &ErrorType{}
 
 func (typ *BuiltinType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune(typ.MangleChar)
+}
+
+func (typ *ErrorType) ManglePrint(builder *strings.Builder) {
+	panic("internal error, an error type should not be here")
 }
 
 func (typ *TypeGroup) ManglePrint(builder *strings.Builder) {
@@ -144,7 +151,7 @@ var TypeUnspecified = &BuiltinType{"?unspecified?", "<unspecified>", ','}
 // this type is the internal representation when the type checker fails to
 // resolve the type. Expressions with this type cannot be further processed in
 // code generation. This should probably be a different type, not BuiltinType
-var TypeError = &BuiltinType{"?error?", "<error>", ','}
+var TypeError = &BuiltinType{}
 
 var TypeAnyInt = &TypeGroup{Name: "AnyInt", Items: []Type{TypeInt8, TypeInt16, TypeInt32, TypeInt64}}
 var TypeAnyFloat = &TypeGroup{Name: "AnyFloat", Items: []Type{TypeFloat32, TypeFloat64}}
@@ -171,6 +178,10 @@ func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	} else {
 		panic(fmt.Errorf("not implemented %+v", typ))
 	}
+	return nil
+}
+
+func (typ *ErrorType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	return nil
 }
 
@@ -327,8 +338,6 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) (result TcCal
 			formatStrC.WriteString("f")
 		case TypeFloat64:
 			formatStrC.WriteString("f")
-		case TypeError:
-			formatStrC.WriteString("<error>")
 		}
 		i++
 	}

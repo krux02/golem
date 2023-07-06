@@ -436,6 +436,13 @@ func (typ *EnumSetType) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
 	return false
 }
 
+func (typ *ErrorType) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
+	// not sure if this is correct
+	// either it should be appended, or all should just be replaced with the error type.
+	builder.Items = AppendNoDuplicats(builder.Items, typ)
+	return false
+}
+
 func (typ *TcGenericTypeParam) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
 	return typ.Constraint.AppendToGroup(builder)
 }

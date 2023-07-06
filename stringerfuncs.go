@@ -420,8 +420,13 @@ func (continuestmt ContinueStmt) PrettyPrint(builder *AstPrettyPrinter) {
 }
 
 // format type checked ast nodes
-func (typ BuiltinType) PrettyPrint(builder *AstPrettyPrinter) {
+func (typ *BuiltinType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(typ.Name)
+}
+
+func (typ *ErrorType) PrettyPrint(builder *AstPrettyPrinter) {
+	//fmt.Fprintf(&builder.Builder,
+	builder.WriteString("?err?")
 }
 
 func (typ *ArrayType) PrettyPrint(builder *AstPrettyPrinter) {
