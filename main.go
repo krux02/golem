@@ -29,18 +29,21 @@ func main() {
 		buildCmd.Parse(args)
 		compileAndRunFile(args[0], true)
 	case "test":
+
 		var tests []string
-		if len(args) > 0 {
-			tests = args
-		} else {
-			execDir := filepath.Dir(Must(os.Executable()))
-			pattern := filepath.Join(execDir, "tests/test_*.golem")
-			currentDir := Must(filepath.Abs("."))
-			pattern = Must(filepath.Rel(currentDir, pattern))
-			tests = Must(filepath.Glob(pattern))
+		for _, arg := range args {
+			tests = append(tests, Must(filepath.Abs(arg)))
+		}
+		execDir := filepath.Dir(Must(os.Executable()))
+		os.Chdir(execDir)
+
+		if len(tests) == 0 {
+			tests = globForTests()
 		}
 		fmt.Printf("%+v\n", tests)
-		runTests(tests)
+
+		// TODO, this doesn't work
+		runTests(nil, tests)
 	default:
 		fmt.Println("expected 'build', 'test' subcommands")
 		os.Exit(1)

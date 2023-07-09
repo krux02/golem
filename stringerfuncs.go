@@ -331,6 +331,11 @@ func (returnStmt ReturnStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteNode(returnStmt.Value)
 }
 
+func (expr TypeContext) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("type ")
+	builder.WriteNode(expr.Expr)
+}
+
 func (stmt VariableDefStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	switch stmt.Kind {
 	case SkLet:
@@ -546,6 +551,11 @@ func (stmt TcVariableDefStmt) PrettyPrint(builder *AstPrettyPrinter) {
 func (returnStmt TcReturnStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("return ")
 	builder.WriteNode(returnStmt.Value)
+}
+
+func (expr TcTypeContext) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("type ")
+	builder.WriteNode(expr.Type)
 }
 
 func (expr TcDotExpr) PrettyPrint(builder *AstPrettyPrinter) {

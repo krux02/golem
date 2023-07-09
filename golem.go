@@ -11,9 +11,10 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"testing"
 )
 
-func errorTest(filename string) error {
+func errorTest(t *testing.T, filename string) error {
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return err
@@ -46,7 +47,7 @@ func errorTest(filename string) error {
 		src := source
 		idx1 := strings.Index(src, "# NumErrors:")
 		if idx1 < 0 {
-			return fmt.Errorf("no '# NumErrors:' comment found")
+			t.Fatalf("no '# NumErrors:' comment found")
 		}
 		idx1 += 12
 		src = src[idx1:]
@@ -66,7 +67,7 @@ func errorTest(filename string) error {
 	}
 	numErrors := len(expectedErrors)
 	if numErrors != expectedNumErrors {
-		return fmt.Errorf("%d number of errors doesn't match the expected %d number of errors", numErrors, expectedNumErrors)
+		t.Fatalf("%d number of errors doesn't match the expected %d number of errors", numErrors, expectedNumErrors)
 	}
 	pak := parsePackage(source, filename)
 	validateSourceSet(pak.Source, pak)
@@ -79,15 +80,15 @@ func errorTest(filename string) error {
 		line, _, _ := LineColumnStr(source, error.node.GetSource())
 		expectedError, ok := expectedErrors[line]
 		if !ok {
-			return fmt.Errorf("unexpected error at line %d:\n  %s", line, error.msg)
+			t.Fatalf("unexpected error at line %d:\n  %s", line, error.msg)
 		}
 		if expectedError != error.msg {
-			return fmt.Errorf("errormessage does not match, got '%s' but expected '%s'\n", error.msg, expectedError)
+			t.Fatalf("errormessage does not match, got '%s' but expected '%s'\n", error.msg, expectedError)
 		}
 		delete(expectedErrors, line)
 	}
 	for line, expectedError := range expectedErrors {
-		return fmt.Errorf("expected error '%s' at line %d not triggered by the compiler", expectedError, line)
+		t.Fatalf("expected error '%s' at line %d not triggered by the compiler", expectedError, line)
 	}
 	return nil
 }
@@ -96,7 +97,7 @@ const debugPrintParesedCode = false
 const debugPrintTypecheckedCode = false
 const debugPrintGeneratedCode = false
 
-func normalTest(filename string) error {
+func normalTest(t *testing.T, filename string) error {
 	binaryAbsFilename, err := compile(filename)
 	if err != nil {
 		return err
@@ -104,45 +105,46 @@ func normalTest(filename string) error {
 	return exec.Command(binaryAbsFilename).Run()
 }
 
-func runTestFile(filename string) error {
+func runTestFile(t *testing.T, filename string) error {
 	if strings.HasPrefix(filepath.Base(filename), "test_error_") {
-		return errorTest(filename)
+		return errorTest(t, filename)
 	} else {
-		return normalTest(filename)
+		return normalTest(t, filename)
 	}
 }
 
-func runTests(testFiles []string) {
+func globForTests() []string {
+	return Must(filepath.Glob("tests/test_*.golem"))
+}
+
+func runTests(t *testing.T, testFiles []string) {
 	testFails := 0
 	testPasses := 0
 
 	for _, testFile := range testFiles {
-		err := runTestFile(testFile)
-		if err != nil {
-			testFails += 1
-			fmt.Printf("test Failed: %s\n", testFile)
-			fmt.Println(err)
-		} else {
-			testPasses += 1
-			fmt.Printf("test Passed: %s\n", testFile)
-		}
+		t.Run(testFile, func(t *testing.T) {
+			err := runTestFile(t, testFile)
+			if err != nil {
+				testFails += 1
+				t.Errorf("test Failed: %s\n%v\n", testFile, err)
+			} else {
+				testPasses += 1
+				t.Logf("test Passed: %s\n", testFile)
+			}
+		})
 	}
 
-	if testFails > 0 {
-		fmt.Printf("testFails: %v\n", testFails)
-		fmt.Printf("testPasses: %v\n", testPasses)
-		os.Exit(1)
-	}
+	// if testFails > 0 {
+	// 	t.Printf("testFails: %v\n", testFails)
+	// 	fmt.Printf("testPasses: %v\n", testPasses)
+	// 	os.Exit(1)
+	// }
 
-	fmt.Printf("testPasses: %v\n", testPasses)
+	// fmt.Printf("testPasses: %v\n", testPasses)
 }
 
 func compile(filename string) (string, error) {
-	bytes, err := ioutil.ReadFile(filename)
-	if err != nil {
-		fmt.Printf("error: %s\n", err.Error())
-		return "", err
-	}
+	bytes := Must(ioutil.ReadFile(filename))
 
 	source := string(bytes)
 	pak := parsePackage(source, filename)
@@ -174,7 +176,7 @@ func compile(filename string) (string, error) {
 	base = base[:len(base)-6]
 	fileName := fmt.Sprintf("%s.c", base)
 	absFilename := path.Join(tempDir, fileName)
-	err = os.MkdirAll(tempDir, os.ModePerm)
+	err := os.MkdirAll(tempDir, os.ModePerm)
 	if err != nil {
 		log.Fatal(err)
 	}

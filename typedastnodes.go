@@ -125,6 +125,11 @@ type TcReturnStmt struct {
 	Value  TcExpr
 }
 
+type TcTypeContext struct {
+	Source string
+	Type   Type
+}
+
 // Not an Ast node, but part of the ast as a normal member, therefore not the Tc prefix
 type ProcSignature struct {
 
@@ -139,7 +144,8 @@ type ProcSignature struct {
 	Validator PostResolveValidator
 	// TODO signature will be the identical data structure for ProcDef, TemplateDef and MacroDef,
 	// Impl pointing to TcProcDef is temporaray
-	Impl *TcProcDef
+	Impl         *TcProcDef
+	TemplateImpl *TcTemplateDef
 }
 
 type TcProcDef struct {
@@ -159,6 +165,13 @@ type TcProcDef struct {
 	// already scheduled for code generation. This flag is used to prevent
 	// generating the same type multiple times.
 	scheduledforgeneration bool
+}
+
+type TcTemplateDef struct {
+	Source    string
+	Name      string
+	Signature ProcSignature
+	Body      TcExpr
 }
 
 type TcArrayLit struct {
@@ -208,6 +221,7 @@ func (arg TcSymbol) GetSource() string          { return arg.Source }
 func (arg TcProcSymbol) GetSource() string      { return arg.Source }
 func (arg TcVariableDefStmt) GetSource() string { return arg.Source }
 func (arg TcReturnStmt) GetSource() string      { return arg.Source }
+func (arg TcTypeContext) GetSource() string     { return arg.Source }
 func (arg TcForLoopStmt) GetSource() string     { return arg.Source }
 func (arg TcIfStmt) GetSource() string          { return arg.Source }
 func (arg TcIfElseExpr) GetSource() string      { return arg.Source }

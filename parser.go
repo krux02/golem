@@ -43,8 +43,13 @@ func parseOperator(tokenizer *Tokenizer) (result Ident) {
 	return
 }
 
-func parseTypeExpr(tokenizer *Tokenizer) (result TypeExpr) {
-	return parseExpr(tokenizer, false)
+func parseTypeContext(tokenizer *Tokenizer) (result TypeContext) {
+	firstToken := tokenizer.Next()
+	tokenizer.expectKind(firstToken, TkType)
+	result.Expr = TypeExpr(parseExpr(tokenizer, false))
+	lastToken := tokenizer.token
+	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
+	return
 }
 
 func parseReturnStmt(tokenizer *Tokenizer) (result ReturnStmt) {
@@ -526,6 +531,8 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 		} else {
 			result = (Expr)(parsePrefixCall(tokenizer))
 		}
+	case TkType:
+		result = (Expr)(parseTypeContext(tokenizer))
 	default:
 		panic(tokenizer.formatWrongKind(tokenizer.lookAheadToken))
 	}
@@ -635,29 +642,6 @@ func parseTypeDef(tokenizer *Tokenizer) Expr {
 //		}
 //		return
 //	}
-func ToTypeExpr(expr Expr) (result TypeExpr) {
-	return expr
-	// result.Source = expr.GetSource()
-	// if lhs, args, ok := MatchBracketCall(expr); ok {
-	// 	for _, bracketArg := range args {
-	// 		result.TypeArgs = append(result.TypeArgs, ToTypeExpr(bracketArg))
-	// 	}
-	// 	expr = lhs
-	// }
-
-	// if call, ok := expr.(Call); ok && call.Braced {
-	// 	result.ExprArgs = call.Args
-	// 	expr = call.Callee
-	// }
-
-	// if ident, ok := expr.(Ident); ok {
-	// 	result.Ident = ident
-	// 	return result
-	// }
-
-	// intLit := expr.(IntLit)
-	// return intLit
-}
 
 func MatchColonExpr(expr Expr) (colonExpr ColonExpr, ok bool) {
 	call, ok := expr.(Call)
@@ -669,7 +653,7 @@ func MatchColonExpr(expr Expr) (colonExpr ColonExpr, ok bool) {
 		return colonExpr, false
 	}
 	colonExpr.Lhs = call.Args[0]
-	colonExpr.Rhs = ToTypeExpr(call.Args[1])
+	colonExpr.Rhs = TypeExpr(call.Args[1])
 	colonExpr.Source = call.Source
 	return colonExpr, true
 }

@@ -37,6 +37,7 @@ type Ident struct {
 	Comment DocLines
 }
 
+// an expression tagget to be a type expression
 type TypeExpr Expr
 
 type StructField struct {
@@ -79,6 +80,11 @@ type BreakStmt struct {
 
 type ContinueStmt struct {
 	Source string
+}
+
+type TypeContext struct {
+	Source string
+	Expr   TypeExpr
 }
 
 type ReturnStmt struct {
@@ -188,6 +194,7 @@ func (_ ForLoopStmt) expression()     {}
 func (_ IfExpr) expression()          {}
 func (_ IfElseExpr) expression()      {}
 func (_ ReturnStmt) expression()      {}
+func (_ TypeContext) expression()     {}
 func (_ BreakStmt) expression()       {}
 func (_ ContinueStmt) expression()    {}
 
@@ -213,6 +220,7 @@ func (arg IfElseExpr) GetSource() string      { return arg.Source }
 func (arg ReturnStmt) GetSource() string      { return arg.Source }
 func (arg BreakStmt) GetSource() string       { return arg.Source }
 func (arg ContinueStmt) GetSource() string    { return arg.Source }
+func (arg TypeContext) GetSource() string     { return arg.Source }
 
 //func (arg TypeExpr) GetSource() string        { return arg.Source }
 

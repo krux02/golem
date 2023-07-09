@@ -12,9 +12,9 @@
            (stmt-context (seq (or line-start ";" "{") (* " "))))
     (list
      (cons (rx (? "-") bow (1+ digit) (? "." (1+ digit)) eow) font-lock-constant-face)
-     (list (rx stmt-context (group (or "return" "var" "let" "if" "proc" "type")) eow) 1 font-lock-keyword-face)
+     (list (rx stmt-context (group (or "return" "var" "let" "if" "proc")) eow) 1 font-lock-keyword-face)
      ;; match else only when it follows a closing } (not correct anymore)
-     (list (rx bow (or "and" "or") eow) 0 font-lock-keyword-face)
+     (list (rx bow (or "and" "or" "type") eow) 0 font-lock-keyword-face)
      (list (rx bow (or "true" "false") eow) 0 font-lock-constant-face)
      (list (rx "}" (* " ") (group "else") eow) 1 font-lock-keyword-face)
      (cons "\t+" font-lock-warning-face)
@@ -86,7 +86,7 @@
    (let* ((project-root (projectile-project-root))
           (project-relative-file-name (file-relative-name  buffer-file-name project-root))
           (raw-file-name (file-name-nondirectory buffer-file-name))
-          (golem-command (if (string-prefix-p "test_" raw-file-name) "test" "build")))
+          (golem-command "build"))
      (concat
       "cd "
       (file-relative-name  project-root)

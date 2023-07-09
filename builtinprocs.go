@@ -49,6 +49,16 @@ type ArrayType struct {
 	scheduledforgeneration bool
 }
 
+// the type that represets types as arguments. Example:
+//
+//	sizeof(type int)
+//	max(type int)
+//	min(type int)
+//	alignof(type int)
+type TypeType struct {
+	Type Type
+}
+
 var _ Type = &BuiltinType{}
 var _ Type = &TypeGroup{}
 var _ Type = &EnumType{}
@@ -56,6 +66,7 @@ var _ Type = &StructType{}
 var _ Type = &ArrayType{}
 var _ Type = &IntLit{}
 var _ Type = &ErrorType{}
+var _ Type = &TypeType{}
 
 func (typ *BuiltinType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune(typ.MangleChar)
@@ -80,6 +91,11 @@ func (typ *TypeGroup) PrettyPrint(builder *AstPrettyPrinter) {
 		}
 		typ.PrettyPrint(builder)
 	}
+}
+
+func (typ *TypeType) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("type ")
+	builder.WriteNode(typ.Type)
 }
 
 type EnumSetType struct {
@@ -120,6 +136,10 @@ func (typ *TcGenericTypeParam) ManglePrint(builder *strings.Builder) {
 
 func (typ *TypeGroup) GetSource() string {
 	panic("type group does not have source")
+}
+
+func (typ *TypeType) ManglePrint(builder *strings.Builder) {
+	builder.WriteRune('T')
 }
 
 // **** Constants ****
@@ -209,6 +229,10 @@ func (typ *IntLit) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	return typ // and int lit is its own default value
 }
 
+func (typ *TypeType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+	panic("no default value for types")
+}
+
 func (typ *TcGenericTypeParam) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	panic("not implemented")
 }
@@ -257,6 +281,25 @@ func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams [
 
 func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Type) {
 	registerGenericBuiltin(name, prefix, infix, postfix, []Type{}, args, result, nil)
+}
+
+func registerSimpleTemplate(name string, args []Type, result Type, substitution TcExpr) {
+	templateDef := &TcTemplateDef{
+		// TODO set Source
+		Name: name,
+		Signature: ProcSignature{
+			Params:     make([]TcSymbol, len(args)),
+			ResultType: result,
+		},
+		Body: substitution,
+	}
+	sigParams := templateDef.Signature.Params
+	for i, arg := range args {
+		sigParams[i].Type = arg
+		sigParams[i].Kind = SkProcArg
+	}
+	templateDef.Signature.TemplateImpl = templateDef
+	builtinScope.Procedures[name] = append(builtinScope.Procedures[name], templateDef.Signature)
 }
 
 type PostResolveValidator func(tc *TypeChecker, scope Scope, call TcCall) TcCall
@@ -350,6 +393,7 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) (result TcCal
 func init() {
 	arrayTypeMap = make(map[ArrayTypeMapKey]*ArrayType)
 	enumSetTypeMap = make(map[*EnumType]*EnumSetType)
+	typeTypeMap = make(map[Type]*TypeType)
 
 	// Printf is literally the only use case for real varargs that I actually see as
 	// practical. Therefore the implementation for varargs will be strictly tied to
@@ -397,6 +441,11 @@ func init() {
 		registerBuiltin("f32", "(float)(", "", ")", []Type{typ}, TypeFloat32)
 		registerBuiltin("f64", "(double)(", "", ")", []Type{typ}, TypeFloat64)
 	}
+
+	registerSimpleTemplate("high", []Type{GetTypeType(TypeInt8)}, TypeInt8, IntLit{Value: 127, Type: TypeInt8})
+	registerSimpleTemplate("high", []Type{GetTypeType(TypeInt16)}, TypeInt16, IntLit{Value: 32767, Type: TypeInt16})
+	registerSimpleTemplate("high", []Type{GetTypeType(TypeInt32)}, TypeInt32, IntLit{Value: 2147483647, Type: TypeInt32})
+	registerSimpleTemplate("high", []Type{GetTypeType(TypeInt64)}, TypeInt64, IntLit{Value: 9223372036854775807, Type: TypeInt64})
 
 	{
 		// TODO: has no line information

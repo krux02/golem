@@ -31,7 +31,19 @@ proc main():i32 = {
   { # type assertions
     let tmp1: i8 = 123
     let tmp2 = 123:i8
-    # let tmp3 = i8(128) # problem
+    # let tmp3 = i8(128) # TODO uncomment this, problem
+  }
+
+  {
+    let high1 = high(type i8)
+    let high2 = high(type i16)
+    let high3 = high(type i32)
+    let high4 = high(type i64)
+
+    assert(high1 == 127)
+    assert(high2 == 32767)
+    assert(high3 == 2147483647)
+    assert(high4 == 9223372036854775807)
   }
 
   return 0

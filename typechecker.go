@@ -452,6 +452,11 @@ func (typ *IntLit) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
 	panic("not implemented")
 }
 
+func (typ *TypeType) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
+	builder.Items = AppendNoDuplicats(builder.Items, typ)
+	return false
+}
+
 func argTypeGroupAtIndex(signatures []ProcSignature, idx int) (result Type) {
 	builder := &TypeGroupBuilder{}
 	for _, sig := range signatures {
@@ -490,13 +495,12 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		if !tc.ExpectArgsLen(call, len(call.Args), 2) {
 			return TcErrorNode{SourceNode: call}
 		}
-		typ := tc.LookUpType(scope, ToTypeExpr(call.Args[1]))
+		typ := tc.LookUpType(scope, TypeExpr(call.Args[1]))
 		tc.ExpectType(call, typ, expected)
 		result := tc.TypeCheckExpr(scope, call.Args[0], typ)
 		return result
 	}
 	signatures := tc.LookUpProc(scope, ident, nil)
-	result := TcCall{Source: call.Source}
 	var checkedArgs []TcExpr
 	hasArgTypeError := false
 	for i, arg := range call.Args {
@@ -537,6 +541,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		signatures = signatures[:n]
 	}
 
+	result := TcCall{Source: call.Source}
 	switch len(signatures) {
 	case 0:
 		// don't report that proc `foo(TypeError)` can't be resolved.
@@ -559,15 +564,24 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 
 	case 1:
 		sig := signatures[0]
-		result.Sym = TcProcSymbol{Source: ident.Source, Impl: sig.Impl}
-		result.Args = checkedArgs
 
-		if sig.Validator != nil {
-			result = sig.Validator(tc, scope, result)
+		if sig.Impl != nil {
+
+			result.Sym = TcProcSymbol{Source: ident.Source, Impl: sig.Impl}
+			result.Args = checkedArgs
+
+			if sig.Validator != nil {
+				result = sig.Validator(tc, scope, result)
+			}
+
+			tc.ExpectType(call, sig.ResultType, expected)
+		} else if sig.TemplateImpl != nil {
+			substitution := sig.TemplateImpl.Body
+			tc.ExpectType(call, substitution.GetType(), expected)
+			return substitution
+		} else {
+			panic("internal error")
 		}
-
-		tc.ExpectType(call, signatures[0].ResultType, expected)
-
 	default:
 		tc.ReportErrorf(ident, "too many overloads: %s", ident.Source)
 		result.Sym = errorProcSym(ident)
@@ -796,6 +810,10 @@ func (returnStmt TcReturnStmt) GetType() Type {
 	return TypeNoReturn
 }
 
+func (expr TcTypeContext) GetType() Type {
+	return expr.Type
+}
+
 func (expr TcDotExpr) GetType() Type {
 	return expr.Rhs.Type
 }
@@ -887,6 +905,12 @@ func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExp
 		// ignoring expected type here, because the return as expression
 		// never evaluates to anything
 		return (TcExpr)(tc.TypeCheckReturnStmt(scope, arg))
+	case TypeContext:
+		var typ Type = GetTypeType(tc.LookUpType(scope, arg.Expr))
+		var tcExpr TcTypeContext
+		tcExpr.Source = arg.Source
+		tcExpr.Type = typ
+		return (TcExpr)(tcExpr)
 	case VariableDefStmt:
 		tc.ExpectType(arg, TypeVoid, expected)
 		return (TcExpr)(tc.TypeCheckVariableDefStmt(scope, arg))
@@ -916,6 +940,7 @@ var arrayTypeMap map[ArrayTypeMapKey]*ArrayType
 
 // is this safe, will this always look up a value? It is a pointer in a map
 var enumSetTypeMap map[*EnumType]*EnumSetType
+var typeTypeMap map[Type]*TypeType
 
 func GetArrayType(elem Type, len int64) (result *ArrayType) {
 	result, ok := arrayTypeMap[ArrayTypeMapKey{elem, len}]
@@ -932,6 +957,16 @@ func GetEnumSetType(elem *EnumType) (result *EnumSetType) {
 	if !ok {
 		result = &EnumSetType{Elem: elem}
 		enumSetTypeMap[elem] = result
+	}
+	return result
+}
+
+func GetTypeType(typ Type) (result *TypeType) {
+	result, ok := typeTypeMap[typ]
+	if !ok {
+		result = &TypeType{Type: typ}
+		typeTypeMap[typ] = result
+
 	}
 	return result
 }
