@@ -205,6 +205,7 @@ func (lit TcEnumSetLit) PrettyPrint(builder *AstPrettyPrinter) {
 }
 
 func WriteIntLit(builder *strings.Builder, value int64) {
+	//fmt.Fprintf(builder, "%d", value)
 	if value == 0 {
 		builder.WriteByte('0')
 		return
@@ -213,21 +214,30 @@ func WriteIntLit(builder *strings.Builder, value int64) {
 		builder.WriteRune('-')
 		value = -value
 	}
-	const N = 32
-	var buffer [N]byte
-	i := 0
-	for ; value > 0; i++ {
-		buffer[i] = "0123456789"[value%10]
-		value = value / 10
-	}
-	for ; i > 0; i-- {
-		builder.WriteByte(buffer[i-1])
+	if value >= 0 {
+		const N = 32
+		var buffer [N]byte
+		i := 0
+		for ; value > 0; i++ {
+			buffer[i] = "0123456789"[value%10]
+			value = value / 10
+		}
+		for ; i > 0; i-- {
+			builder.WriteByte(buffer[i-1])
+		}
+	} else {
+		// value = -value had no effect
+		if value != -9223372036854775808 {
+			panic("assert fail")
+		}
+		// C doesn't allow -9223372036854775808 as a singed integer literal
+		builder.WriteString("9223372036854775807 - 1")
 	}
 }
 
-func (lit IntLit) PrettyPrint(builder *AstPrettyPrinter) {
+func (lit *IntLit) PrettyPrint(builder *AstPrettyPrinter) {
 	WriteIntLit(&builder.Builder, lit.Value)
-	if lit.Type != nil {
+	if lit.Type != nil && lit.Type != lit {
 		builder.WriteString(":")
 		lit.Type.PrettyPrint(builder)
 	}

@@ -120,7 +120,7 @@ func (tc *TypeChecker) LookUpType(scope Scope, expr TypeExpr) Type {
 		}
 		tc.ReportErrorf(expr, "Type not found: %s", name)
 		return TypeError
-	case IntLit:
+	case *IntLit:
 		return x.Type
 	}
 	tc.ReportErrorf(expr, "unexpected ast node in type exper: %T", expr)
@@ -752,7 +752,7 @@ func (lit CharLit) GetType() Type {
 	return TypeChar
 }
 
-func (lit IntLit) GetType() Type {
+func (lit *IntLit) GetType() Type {
 	if lit.Type == nil {
 		panic(fmt.Errorf("internal error: type of IntLit not set"))
 	}
@@ -818,33 +818,52 @@ func (expr TcDotExpr) GetType() Type {
 	return expr.Rhs.Type
 }
 
-func MatchNegativeNumber(arg Call) (number IntLit, ok bool) {
-	if ident, kk := arg.Callee.(Ident); kk && ident.Source == "-" {
-		if len(arg.Args) == 1 {
-			switch lit := arg.Args[0].(type) {
-			case IntLit:
-				ok = true
-				number = lit
-			}
-		}
-	}
-	return
-}
-
 func (tc *TypeChecker) TypeCheckColonExpr(scope Scope, arg ColonExpr, expected Type) TcExpr {
 	typ := tc.LookUpType(scope, arg.Rhs)
 	typ = tc.ExpectType(arg, typ, expected)
 	return tc.TypeCheckExpr(scope, arg.Lhs, typ)
 }
 
+func (tc *TypeChecker) TypeCheckIntLit(scope Scope, arg *IntLit, expected Type) TcExpr {
+	typ := tc.ExpectType(arg, TypeAnyNumber, expected).(*BuiltinType)
+	if typ == TypeFloat32 || typ == TypeFloat64 {
+		var lit FloatLit
+		lit.Source = arg.Source
+		lit.Value = float64(arg.Value)
+		if typ == TypeFloat32 {
+			lit.Type = TypeFloat32
+			if int64(float32(lit.Value)) != arg.Value {
+				tc.ReportErrorf(arg, "can't represent %d as float32 precisely", arg.Value)
+			}
+		} else if typ == TypeFloat64 {
+			lit.Type = TypeFloat64
+			if int64(lit.Value) != arg.Value {
+				tc.ReportErrorf(arg, "can't represent %d as float64 precisely", arg.Value)
+			}
+		}
+		return lit
+	}
+	return &IntLit{
+		Source: arg.Source,
+		Type:   typ,
+		Value:  arg.Value,
+	}
+}
+
 func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExpr {
 	switch arg := arg.(type) {
 	case Call:
-		// HACK: support for negative literals
-		if number, ok := MatchNegativeNumber(arg); ok {
-			number.Value = -number.Value
-			number.Source = arg.Source
-			return (TcExpr)(number)
+		// HACK: support for negative literals this should probably be done in a
+		// different compiler pass that doesn't exist yet. Probably a prepass that
+		// also is responsible to create ProcDef, StructDef, EnumDef
+		if ident, kk := arg.Callee.(Ident); kk && ident.Source == "-" {
+			if len(arg.Args) == 1 {
+				if lit, ok := arg.Args[0].(*IntLit); ok {
+					result := &IntLit{Source: arg.Source, Value: -lit.Value}
+					result.Type = result
+					return tc.TypeCheckIntLit(scope, result, expected)
+				}
+			}
 		}
 		return (TcExpr)(tc.TypeCheckCall(scope, arg, expected))
 	case CodeBlock:
@@ -858,45 +877,8 @@ func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExp
 	case CharLit:
 		tc.ExpectType(arg, TypeChar, expected)
 		return (TcExpr)(arg)
-	case IntLit:
-		typ := tc.ExpectType(arg, TypeAnyNumber, expected)
-		if typ == TypeFloat32 || typ == TypeFloat64 {
-			var lit FloatLit
-			lit.Source = arg.Source
-			lit.Value = float64(arg.Value)
-			if typ == TypeFloat32 {
-				lit.Type = TypeFloat32
-				if int64(float32(lit.Value)) != arg.Value {
-					tc.ReportErrorf(arg, "can't represent %d as float32 precisely", arg.Value)
-				}
-			} else if typ == TypeFloat64 {
-				lit.Type = TypeFloat64
-				if int64(lit.Value) != arg.Value {
-					tc.ReportErrorf(arg, "can't represent %d as float64 precisely", arg.Value)
-				}
-			}
-			return lit
-		}
-		arg.Type = typ.(*BuiltinType)
-		// var upper int64 = 0
-		// var lower int64 = 0
-		// switch arg.Type {
-		// case TypeInt8:
-		// 	lower = -128
-		// 	uppert = 127
-		// case TypeInt16:
-		// 	lower = -32768
-		// 	upper = 32767
-		// case TypeInt32:
-		// 	lower = -2147483648
-		// 	upper = 2147483647
-		// case TypeInt64:
-		// 	lower = -9223372036854775808
-		// 	upper = 9223372036854775807
-		// default:
-		// 	panic("not implemented")
-		// }
-		return (TcExpr)(arg)
+	case *IntLit:
+		return (TcExpr)(tc.TypeCheckIntLit(scope, arg, expected))
 	case FloatLit:
 		typ := tc.ExpectType(arg, TypeAnyFloat, expected)
 		arg.Type = typ.(*BuiltinType)

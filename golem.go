@@ -144,7 +144,10 @@ func runTests(t *testing.T, testFiles []string) {
 }
 
 func compile(filename string) (string, error) {
-	bytes := Must(ioutil.ReadFile(filename))
+	bytes, err := ioutil.ReadFile(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	source := string(bytes)
 	pak := parsePackage(source, filename)
@@ -176,7 +179,7 @@ func compile(filename string) (string, error) {
 	base = base[:len(base)-6]
 	fileName := fmt.Sprintf("%s.c", base)
 	absFilename := path.Join(tempDir, fileName)
-	err := os.MkdirAll(tempDir, os.ModePerm)
+	err = os.MkdirAll(tempDir, os.ModePerm)
 	if err != nil {
 		log.Fatal(err)
 	}

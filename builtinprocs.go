@@ -190,7 +190,7 @@ func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	} else if typ == TypeChar {
 		return CharLit{}
 	} else if typ == TypeInt8 || typ == TypeInt16 || typ == TypeInt32 || typ == TypeInt64 {
-		return IntLit{Type: typ}
+		return &IntLit{Type: typ, Value: 0} // TODO no Source set
 	} else if typ == TypeBoolean {
 		panic("not implemented bool default value")
 	} else if typ == TypeVoid {
@@ -328,7 +328,8 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) (result TcCal
 	}
 	formatStr := formatStrLit.Value
 	formatStrC := &strings.Builder{}
-	for j, i := 0, 1; j < len(formatStr); j++ {
+	i := 1
+	for j := 0; j < len(formatStr); j++ {
 		c1 := formatStr[j]
 		formatStrC.WriteByte(c1)
 		if c1 != '%' {
@@ -383,6 +384,11 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) (result TcCal
 			formatStrC.WriteString("f")
 		}
 		i++
+	}
+
+	if i != len(call.Args) {
+		tc.ReportErrorf(call.Args[i], "too many arguments for %s", AstFormat(formatExpr))
+		return call
 	}
 
 	result = call
@@ -442,10 +448,14 @@ func init() {
 		registerBuiltin("f64", "(double)(", "", ")", []Type{typ}, TypeFloat64)
 	}
 
-	registerSimpleTemplate("high", []Type{GetTypeType(TypeInt8)}, TypeInt8, IntLit{Value: 127, Type: TypeInt8})
-	registerSimpleTemplate("high", []Type{GetTypeType(TypeInt16)}, TypeInt16, IntLit{Value: 32767, Type: TypeInt16})
-	registerSimpleTemplate("high", []Type{GetTypeType(TypeInt32)}, TypeInt32, IntLit{Value: 2147483647, Type: TypeInt32})
-	registerSimpleTemplate("high", []Type{GetTypeType(TypeInt64)}, TypeInt64, IntLit{Value: 9223372036854775807, Type: TypeInt64})
+	registerSimpleTemplate("high", []Type{GetTypeType(TypeInt8)}, TypeInt8, &IntLit{Value: 127, Type: TypeInt8})
+	registerSimpleTemplate("high", []Type{GetTypeType(TypeInt16)}, TypeInt16, &IntLit{Value: 32767, Type: TypeInt16})
+	registerSimpleTemplate("high", []Type{GetTypeType(TypeInt32)}, TypeInt32, &IntLit{Value: 2147483647, Type: TypeInt32})
+	registerSimpleTemplate("high", []Type{GetTypeType(TypeInt64)}, TypeInt64, &IntLit{Value: 9223372036854775807, Type: TypeInt64})
+	registerSimpleTemplate("low", []Type{GetTypeType(TypeInt8)}, TypeInt8, &IntLit{Value: -128, Type: TypeInt8})
+	registerSimpleTemplate("low", []Type{GetTypeType(TypeInt16)}, TypeInt16, &IntLit{Value: -32768, Type: TypeInt16})
+	registerSimpleTemplate("low", []Type{GetTypeType(TypeInt32)}, TypeInt32, &IntLit{Value: -2147483648, Type: TypeInt32})
+	registerSimpleTemplate("low", []Type{GetTypeType(TypeInt64)}, TypeInt64, &IntLit{Value: -9223372036854775808, Type: TypeInt64})
 
 	{
 		// TODO: has no line information

@@ -249,17 +249,14 @@ func parseStrLit(tokenizer *Tokenizer) (result StrLit) {
 	return
 }
 
-func parseIntLit(tokenizer *Tokenizer) (result IntLit) {
+func parseIntLit(tokenizer *Tokenizer) (result *IntLit) {
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkIntLit)
-	result.Source = token.value
-	intValue, err := strconv.Atoi(token.value)
-	if err != nil {
-		panic("internal error invalid int token")
-	}
+	result = &IntLit{Source: token.value}
+	intValue := Must(strconv.Atoi(token.value))
 	result.Value = int64(intValue)
 	// the type of an IntLit is the the intlit itself. So every integer literal is also a type
-	result.Type = &result
+	result.Type = result
 	return
 }
 
@@ -465,7 +462,7 @@ func attachDocComment(expr Expr, target string, value string) (result bool) {
 		return false
 	case StrLit:
 		return false
-	case IntLit:
+	case *IntLit:
 		return false
 	case FloatLit:
 		return false

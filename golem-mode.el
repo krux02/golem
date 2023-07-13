@@ -85,13 +85,12 @@
    compile-command
    (let* ((project-root (projectile-project-root))
           (project-relative-file-name (file-relative-name  buffer-file-name project-root))
-          (raw-file-name (file-name-nondirectory buffer-file-name))
-          (golem-command "build"))
+          (raw-file-name (file-name-nondirectory buffer-file-name)))
      (concat
       "cd "
       (file-relative-name  project-root)
       " && go build && ./golem "
-      golem-command " " project-relative-file-name))))
+      project-relative-file-name))))
 
 (provide 'golem-mode)
 ;;; golem-mode.el ends here

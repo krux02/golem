@@ -162,7 +162,7 @@ func (builder *CodeBuilder) compileStrLit(value string, boxed bool) {
 	}
 }
 
-func (builder *CodeBuilder) CompileIntLit(lit IntLit) {
+func (builder *CodeBuilder) CompileIntLit(lit *IntLit) {
 	WriteIntLit(&builder.Builder, lit.Value)
 }
 
@@ -329,7 +329,7 @@ func (builder *CodeBuilder) CompileExprWithPrefix(context *PackageGeneratorConte
 		builder.compileStrLit(ex.Value, false)
 	case CharLit:
 		builder.compileCharLit(ex)
-	case IntLit:
+	case *IntLit:
 		builder.CompileIntLit(ex)
 	case FloatLit:
 		builder.CompileFloatLit(ex)

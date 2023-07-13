@@ -183,7 +183,7 @@ func (_ DocComment) expression()      {}
 func (_ Ident) expression()           {}
 func (_ CodeBlock) expression()       {}
 func (_ StrLit) expression()          {}
-func (_ IntLit) expression()          {}
+func (_ *IntLit) expression()         {}
 func (_ FloatLit) expression()        {}
 func (_ ArrayLit) expression()        {}
 func (_ CharLit) expression()         {}
@@ -207,7 +207,7 @@ func (arg Ident) GetSource() string           { return arg.Source }
 func (arg CodeBlock) GetSource() string       { return arg.Source }
 func (arg StrLit) GetSource() string          { return arg.Source }
 func (arg CStrLit) GetSource() string         { return arg.Source }
-func (arg IntLit) GetSource() string          { return arg.Source }
+func (arg *IntLit) GetSource() string         { return arg.Source }
 func (arg FloatLit) GetSource() string        { return arg.Source }
 func (arg ArrayLit) GetSource() string        { return arg.Source }
 func (arg CharLit) GetSource() string         { return arg.Source }
