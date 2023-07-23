@@ -930,6 +930,7 @@ func GetArrayType(elem Type, len int64) (result *ArrayType) {
 		result = &ArrayType{Elem: elem, Len: len}
 		arrayTypeMap[ArrayTypeMapKey{elem, len}] = result
 		registerBuiltin("[", "", ".arr[", "]", []Type{result, TypeInt64}, elem)
+		registerSimpleTemplate("len", []Type{result}, TypeInt64, &IntLit{Source: "", Type: TypeInt64, Value: len})
 	}
 	return result
 }

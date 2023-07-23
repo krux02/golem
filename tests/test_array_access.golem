@@ -8,5 +8,10 @@ proc main(): i32 = {
   arr2[1] = arr1
   arr2[2] = arr1
   printf("%d %d %d\n", arr2[0][0], arr2[1][1], arr2[2][2])
+  printf("len(arr1): %d\n", len(arr1))
+  assert(len(arr1) == 20)
+  printf("len(arr2): %d\n", len(arr2))
+  assert(len(arr2) == 3)
+  printf("len(arr2[0]): %d\n", len(arr2[0]))
   return 0
 }
