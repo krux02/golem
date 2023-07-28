@@ -691,7 +691,7 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 
 	lhs, rhs, isAssign := MatchAssign(expr)
 	if !isAssign {
-		panic("expect assignment")
+		panic(fmt.Errorf("expect assignment: %s", expr.GetSource()))
 	}
 	result.Body = rhs
 

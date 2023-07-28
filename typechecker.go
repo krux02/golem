@@ -95,6 +95,9 @@ func (tc *TypeChecker) LookUpType(scope Scope, expr TypeExpr) Type {
 			elem := tc.LookUpType(scope, x.Args[1])
 			return GetArrayType(elem, intLit.Value)
 		case "set":
+			if !tc.ExpectArgsLen(expr, len(x.Args), 1) {
+				return TypeError
+			}
 			arg0 := tc.LookUpType(scope, x.Args[0])
 			if arg0 == TypeError {
 				return TypeError
@@ -105,6 +108,15 @@ func (tc *TypeChecker) LookUpType(scope Scope, expr TypeExpr) Type {
 				return TypeError
 			}
 			return GetEnumSetType(elem)
+		case "ptr":
+			if !tc.ExpectArgsLen(expr, len(x.Args), 1) {
+				return TypeError
+			}
+			targetType := tc.LookUpType(scope, x.Args[0])
+			if targetType == TypeError {
+				return TypeError
+			}
+			return GetPtrType(targetType)
 		default:
 			// TODO implement this
 			tc.ReportErrorf(ident, "expected 'array' or 'set' here, but got '%s'", ident.Source)
@@ -266,6 +278,10 @@ func (tc *TypeChecker) ReportErrorf(node AstNode, msg string, args ...interface{
 	}
 }
 
+func (tc *TypeChecker) ReportUnexpectedType(context AstNode, expected, gotten Type) {
+	tc.ReportErrorf(context, "expected type '%s' but got type '%s'", AstFormat(expected), AstFormat(gotten))
+}
+
 func (tc *TypeChecker) ReportInvalidDocCommentKey(section NamedDocSection) {
 	tc.ReportErrorf(section, "invalid doc comment key: %s", section.Name)
 }
@@ -309,7 +325,7 @@ func (tc *TypeChecker) ExpectType(node AstNode, gotten, expected Type) Type {
 				return gotten
 			}
 		}
-		tc.ReportErrorf(node, "expected type '%s' but got type '%s'", AstFormat(expected), AstFormat(gotten))
+		tc.ReportUnexpectedType(node, expected, gotten)
 		return TypeError
 	}
 
@@ -324,12 +340,12 @@ func (tc *TypeChecker) ExpectType(node AstNode, gotten, expected Type) Type {
 		}
 	}
 
-	if expected == gotten {
-		return expected
+	ok, _ := genericParamSignatureMatch(gotten, expected)
+	if ok {
+		return gotten
 	}
 
-	tc.ReportErrorf(node, "expected type '%s' but got type '%s'",
-		AstFormat(expected), AstFormat(gotten))
+	tc.ReportUnexpectedType(node, expected, gotten)
 	return TypeError
 }
 
@@ -436,6 +452,11 @@ func (typ *EnumSetType) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
 	return false
 }
 
+func (typ *PtrType) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
+	builder.Items = AppendNoDuplicats(builder.Items, typ)
+	return false
+}
+
 func (typ *ErrorType) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
 	// not sure if this is correct
 	// either it should be appended, or all should just be replaced with the error type.
@@ -482,6 +503,57 @@ func argTypeGroupAtIndex(signatures []ProcSignature, idx int) (result Type) {
 	return newResult
 }
 
+type Substitution = struct {
+	genType *TcGenericTypeParam
+	newType Type
+}
+
+func genericParamSignatureMatch(exprType, paramType Type) (ok bool, substitutions []Substitution) {
+	if exprType == paramType {
+		return true, []Substitution{}
+	}
+
+	genericParamType, paramIsGeneric := paramType.(*TcGenericTypeParam)
+	if paramIsGeneric {
+		// TODO actually check for generic constraint here
+		// printer := &AstPrettyPrinter{}
+		// printer.Builder.WriteString("sub: ")
+		// genericParamType.PrettyPrint(printer)
+		// printer.Builder.WriteString(" -> ")
+		// exprType.PrettyPrint(printer)
+		// printer.Builder.WriteString("\n")
+		// fmt.Print(printer.Builder.String())
+		// fmt.Printf("%+v %T\n", exprType, exprType)
+		return true, []Substitution{{genericParamType, exprType}}
+	}
+
+	exprArrType, exprIsArrType := exprType.(*ArrayType)
+	paramArrType, paramIsArrType := paramType.(*ArrayType)
+	if exprIsArrType && paramIsArrType {
+		if exprArrType.Len != paramArrType.Len {
+			return false, nil
+		}
+		return genericParamSignatureMatch(exprArrType.Elem, paramArrType.Elem)
+	}
+	exprPtrType, exprIsPtrType := exprType.(*PtrType)
+	paramPtrType, paramIsPtrType := paramType.(*PtrType)
+	if exprIsPtrType && paramIsPtrType {
+		ok, substitutions = genericParamSignatureMatch(exprPtrType.Target, paramPtrType.Target)
+		fmt.Printf("matching pointer type %s %s\n", AstFormat(exprPtrType.Target), AstFormat(paramPtrType.Target))
+		fmt.Printf("ok: %+v sub:\n", ok)
+		for _, sub := range substitutions {
+			fmt.Printf("    %s -> %s\n", AstFormat(sub.genType), AstFormat(sub.newType))
+		}
+		return
+	}
+	exprEnumSetType, exprIsEnumSetType := exprType.(*EnumSetType)
+	paramEnumSetType, paramIsEnumSetType := exprType.(*EnumSetType)
+	if exprIsEnumSetType && paramIsEnumSetType {
+		return genericParamSignatureMatch(exprEnumSetType.Elem, paramEnumSetType.Elem)
+	}
+	return false, nil
+}
+
 func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcExpr {
 	ident := call.Callee.(Ident)
 	// language level reserved calls
@@ -508,6 +580,10 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		expectedArgType := argTypeGroupAtIndex(signatures, i)
 		tcArg := tc.TypeCheckExpr(scope, arg, expectedArgType)
 		argType := tcArg.GetType()
+		if argType == TypeError {
+			signatures = nil
+			continue
+		}
 		hasArgTypeError = hasArgTypeError || argType == TypeError
 		checkedArgs = append(checkedArgs, tcArg)
 		// in place filter procedures for compatilbes
@@ -519,19 +595,22 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 				continue
 			}
 			typ := sig.Params[i].Type
-			if genTypParam, ok := typ.(*TcGenericTypeParam); ok {
-				// TODO check genTypParam.Constraint
+
+			if ok, substitutions := genericParamSignatureMatch(argType, typ); ok && len(substitutions) > 0 {
 				// instantiate generic
 				typ = argType
 				newParams := make([]TcSymbol, len(sig.Params))
 				for i, param := range sig.Params {
-					if param.Type == genTypParam {
-						param.Type = argType
+					for _, sub := range substitutions {
+						if param.Type == sub.genType {
+							param.Type = sub.newType
+						}
 					}
 					newParams[i] = param
 				}
 				sig.Params = newParams
 			}
+
 			if typ == argType {
 				signatures[n] = sig
 				n++
@@ -766,6 +845,13 @@ func (lit FloatLit) GetType() Type {
 	return lit.Type
 }
 
+func (lit NullPtrLit) GetType() Type {
+	if lit.Type == nil {
+		panic(fmt.Errorf("internal error: type of NullPtrLit not set"))
+	}
+	return lit.Type
+}
+
 func (lit TcArrayLit) GetType() Type {
 	return GetArrayType(lit.ElemType, int64(len(lit.Items)))
 }
@@ -922,6 +1008,7 @@ var arrayTypeMap map[ArrayTypeMapKey]*ArrayType
 
 // is this safe, will this always look up a value? It is a pointer in a map
 var enumSetTypeMap map[*EnumType]*EnumSetType
+var ptrTypeMap map[Type]*PtrType
 var typeTypeMap map[Type]*TypeType
 
 func GetArrayType(elem Type, len int64) (result *ArrayType) {
@@ -944,8 +1031,18 @@ func GetEnumSetType(elem *EnumType) (result *EnumSetType) {
 	return result
 }
 
+func GetPtrType(target Type) (result *PtrType) {
+	result, ok := ptrTypeMap[target]
+	if !ok {
+		result = &PtrType{Target: target}
+		ptrTypeMap[target] = result
+	}
+	return result
+}
+
 func GetTypeType(typ Type) (result *TypeType) {
 	result, ok := typeTypeMap[typ]
+	//result, ok := ptrTypeMap[typ]
 	if !ok {
 		result = &TypeType{Type: typ}
 		typeTypeMap[typ] = result

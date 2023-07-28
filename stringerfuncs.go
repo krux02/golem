@@ -252,6 +252,10 @@ func (lit FloatLit) PrettyPrint(builder *AstPrettyPrinter) {
 	}
 }
 
+func (lit NullPtrLit) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("nullptr")
+}
+
 // func (typeExpr TypeExpr) PrettyPrint(builder *AstPrettyPrinter) {
 // 	builder.WriteString(typeExpr.Ident.Source)
 // 	if len(typeExpr.ExprArgs) > 0 {
@@ -635,6 +639,25 @@ func (section NamedDocSection) PrettyPrint(builder *AstPrettyPrinter) {
 		builder.WriteString("##   ")
 		builder.WriteString(line)
 	}
+}
+
+func (typ *TypeGroup) PrettyPrint(builder *AstPrettyPrinter) {
+	if typ.Name != "" {
+		builder.WriteString(typ.Name)
+		return
+	}
+	for i, typ := range typ.Items {
+		if i != 0 {
+			builder.WriteString(" | ")
+		}
+		typ.PrettyPrint(builder)
+	}
+}
+
+func (typ *PtrType) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("ptr(")
+	typ.Target.PrettyPrint(builder)
+	builder.WriteString(")")
 }
 
 func (doc DocComment) PrettyPrint(builder *AstPrettyPrinter) {

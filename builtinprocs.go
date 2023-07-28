@@ -80,19 +80,6 @@ func (typ *TypeGroup) ManglePrint(builder *strings.Builder) {
 	panic("not a resolved type")
 }
 
-func (typ *TypeGroup) PrettyPrint(builder *AstPrettyPrinter) {
-	if typ.Name != "" {
-		builder.WriteString(typ.Name)
-		return
-	}
-	for i, typ := range typ.Items {
-		if i != 0 {
-			builder.WriteString(" | ")
-		}
-		typ.PrettyPrint(builder)
-	}
-}
-
 func (typ *TypeType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("type ")
 	builder.WriteNode(typ.Type)
@@ -100,6 +87,10 @@ func (typ *TypeType) PrettyPrint(builder *AstPrettyPrinter) {
 
 type EnumSetType struct {
 	Elem *EnumType
+}
+
+type PtrType struct {
+	Target Type
 }
 
 func (typ *ArrayType) ManglePrint(builder *strings.Builder) {
@@ -123,6 +114,11 @@ func (typ *EnumType) ManglePrint(builder *strings.Builder) {
 func (typ *EnumSetType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune('X')
 	typ.Elem.ManglePrint(builder)
+	builder.WriteRune('_')
+}
+func (typ *PtrType) ManglePrint(builder *strings.Builder) {
+	builder.WriteRune('P')
+	typ.Target.ManglePrint(builder)
 	builder.WriteRune('_')
 }
 
@@ -171,7 +167,7 @@ var TypeUnspecified = &BuiltinType{"?unspecified?", "<unspecified>", ','}
 // this type is the internal representation when the type checker fails to
 // resolve the type. Expressions with this type cannot be further processed in
 // code generation. This should probably be a different type, not BuiltinType
-var TypeError = &BuiltinType{}
+var TypeError = &BuiltinType{Name: "*Error*"}
 
 var TypeAnyInt = &TypeGroup{Name: "AnyInt", Items: []Type{TypeInt8, TypeInt16, TypeInt32, TypeInt64}}
 var TypeAnyFloat = &TypeGroup{Name: "AnyFloat", Items: []Type{TypeFloat32, TypeFloat64}}
@@ -219,6 +215,10 @@ func (typ *StructType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 
 func (typ *EnumType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	return typ.Impl.Values[0]
+}
+
+func (typ *PtrType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+	return NullPtrLit{Type: typ}
 }
 
 func (typ *EnumSetType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
@@ -399,6 +399,7 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) (result TcCal
 func init() {
 	arrayTypeMap = make(map[ArrayTypeMapKey]*ArrayType)
 	enumSetTypeMap = make(map[*EnumType]*EnumSetType)
+	ptrTypeMap = make(map[Type]*PtrType)
 	typeTypeMap = make(map[Type]*TypeType)
 
 	// Printf is literally the only use case for real varargs that I actually see as
@@ -456,6 +457,13 @@ func init() {
 	registerSimpleTemplate("low", []Type{GetTypeType(TypeInt16)}, TypeInt16, &IntLit{Value: -32768, Type: TypeInt16})
 	registerSimpleTemplate("low", []Type{GetTypeType(TypeInt32)}, TypeInt32, &IntLit{Value: -2147483648, Type: TypeInt32})
 	registerSimpleTemplate("low", []Type{GetTypeType(TypeInt64)}, TypeInt64, &IntLit{Value: -9223372036854775808, Type: TypeInt64})
+
+	{
+		// TODO: has no line information
+		T := &TcGenericTypeParam{Name: "T", Constraint: TypeUnspecified}
+		registerGenericBuiltin("addr", "&(", "", ")", []Type{T}, []Type{T}, GetPtrType(T), nil)
+		registerGenericBuiltin("[", "*(", "", ")", []Type{T}, []Type{GetPtrType(T)}, T, nil)
+	}
 
 	{
 		// TODO: has no line information

@@ -142,6 +142,11 @@ type FloatLit struct {
 	Value  float64
 }
 
+type NullPtrLit struct {
+	Source string
+	Type   Type
+}
+
 type ArrayLit struct {
 	Source string
 	Items  []Expr
@@ -221,6 +226,7 @@ func (arg ReturnStmt) GetSource() string      { return arg.Source }
 func (arg BreakStmt) GetSource() string       { return arg.Source }
 func (arg ContinueStmt) GetSource() string    { return arg.Source }
 func (arg TypeContext) GetSource() string     { return arg.Source }
+func (arg NullPtrLit) GetSource() string      { return arg.Source }
 
 //func (arg TypeExpr) GetSource() string        { return arg.Source }
 
