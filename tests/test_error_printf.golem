@@ -1,0 +1,8 @@
+# NumErrors: 2
+
+proc main() : i32 = {
+  let i:i32 = 123
+  printf("%d %d %d\n", i, i) # Error: not enough arguments for "%d %d %d\n"
+  printf("%d %d\n", i, i, i) # Error: too many arguments for "%d %d\n"
+  return 0
+}

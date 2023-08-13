@@ -1,0 +1,12 @@
+
+proc foo(x,y: ptr(i32)):void = {
+  x[] = 123
+  y[] = 321
+}
+
+proc main(): i32  = {
+  var x:i32
+  var y:i32
+  foo(addr(x), addr(y))
+  printf("foo x: %d y: %d\n", x, y)
+}
