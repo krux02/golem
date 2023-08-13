@@ -227,7 +227,7 @@ func (tc *TypeChecker) TypeCheckEnumDef(scope Scope, def EnumDef) *TcEnumDef {
 
 // tc.ReportErrorf(def.Kind, "invalid type kind %s, expect one of struct, enum, union", def.Kind.Source)
 func (tc *TypeChecker) NewGenericParam(scope Scope, name Ident) Type {
-	result := &TcGenericTypeParam{Source: name.Source}
+	result := &GenericTypeSymbol{Source: name.Source}
 	tc.RegisterType(scope, name.Source, result, name)
 	return result
 }
@@ -340,7 +340,7 @@ func (tc *TypeChecker) ExpectType(node AstNode, gotten, expected Type) Type {
 		}
 	}
 
-	ok, _ := genericParamSignatureMatch(gotten, expected)
+	ok, _ := ParamSignatureMatch(gotten, expected)
 	if ok {
 		return gotten
 	}
@@ -421,6 +421,11 @@ func (typ *BuiltinType) AppendToGroup(builder *TypeGroupBuilder) bool {
 	return false
 }
 
+func (typ *OpenGenericType) AppendToGroup(builder *TypeGroupBuilder) bool {
+	builder.Items = nil
+	return true
+}
+
 func (typ *TypeGroup) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
 	for _, it := range typ.Items {
 		result = it.AppendToGroup(builder)
@@ -464,7 +469,7 @@ func (typ *ErrorType) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
 	return false
 }
 
-func (typ *TcGenericTypeParam) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
+func (typ *GenericTypeSymbol) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
 	return typ.Constraint.AppendToGroup(builder)
 }
 
@@ -485,7 +490,7 @@ func argTypeGroupAtIndex(signatures []ProcSignature, idx int) (result Type) {
 			return TypeUnspecified
 		}
 		typ := sig.Params[idx].Type
-		if genTypParam, ok := typ.(*TcGenericTypeParam); ok {
+		if genTypParam, ok := typ.(*GenericTypeSymbol); ok {
 			typ = genTypParam.Constraint
 		}
 		typ.AppendToGroup(builder)
@@ -504,54 +509,73 @@ func argTypeGroupAtIndex(signatures []ProcSignature, idx int) (result Type) {
 }
 
 type Substitution = struct {
-	genType *TcGenericTypeParam
+	sym     *GenericTypeSymbol
 	newType Type
 }
 
-func genericParamSignatureMatch(exprType, paramType Type) (ok bool, substitutions []Substitution) {
-	if exprType == paramType {
-		return true, []Substitution{}
-	}
+func GenericParamSignatureMatch(exprType, paramType Type, substitutions []Substitution) (ok bool, outSubstitutions []Substitution) {
 
-	genericParamType, paramIsGeneric := paramType.(*TcGenericTypeParam)
-	if paramIsGeneric {
-		// TODO actually check for generic constraint here
-		// printer := &AstPrettyPrinter{}
-		// printer.Builder.WriteString("sub: ")
-		// genericParamType.PrettyPrint(printer)
-		// printer.Builder.WriteString(" -> ")
-		// exprType.PrettyPrint(printer)
-		// printer.Builder.WriteString("\n")
-		// fmt.Print(printer.Builder.String())
-		// fmt.Printf("%+v %T\n", exprType, exprType)
-		return true, []Substitution{{genericParamType, exprType}}
-	}
-
-	exprArrType, exprIsArrType := exprType.(*ArrayType)
-	paramArrType, paramIsArrType := paramType.(*ArrayType)
-	if exprIsArrType && paramIsArrType {
-		if exprArrType.Len != paramArrType.Len {
-			return false, nil
-		}
-		return genericParamSignatureMatch(exprArrType.Elem, paramArrType.Elem)
-	}
-	exprPtrType, exprIsPtrType := exprType.(*PtrType)
-	paramPtrType, paramIsPtrType := paramType.(*PtrType)
-	if exprIsPtrType && paramIsPtrType {
-		ok, substitutions = genericParamSignatureMatch(exprPtrType.Target, paramPtrType.Target)
-		fmt.Printf("matching pointer type %s %s\n", AstFormat(exprPtrType.Target), AstFormat(paramPtrType.Target))
-		fmt.Printf("ok: %+v sub:\n", ok)
+	if typeSym, isTypeSym := paramType.(*GenericTypeSymbol); isTypeSym {
+		// check if the type is somehow in the substitutions list
 		for _, sub := range substitutions {
-			fmt.Printf("    %s -> %s\n", AstFormat(sub.genType), AstFormat(sub.newType))
+			if typeSym == sub.sym {
+				if sub.sym == exprType {
+					return true, substitutions
+				} else {
+					return false, nil
+				}
+			}
 		}
-		return
+
+		// not in the substitutions list, so append it
+		return true, append(substitutions, Substitution{typeSym, exprType})
 	}
-	exprEnumSetType, exprIsEnumSetType := exprType.(*EnumSetType)
-	paramEnumSetType, paramIsEnumSetType := exprType.(*EnumSetType)
-	if exprIsEnumSetType && paramIsEnumSetType {
-		return genericParamSignatureMatch(exprEnumSetType.Elem, paramEnumSetType.Elem)
+
+	{
+		exprArrType, exprIsArrType := exprType.(*ArrayType)
+		paramArrType, paramIsArrType := paramType.(*ArrayType)
+		if exprIsArrType && paramIsArrType {
+			if exprArrType.Len != paramArrType.Len {
+				return false, nil
+			}
+			return GenericParamSignatureMatch(exprArrType.Elem, paramArrType.Elem, substitutions)
+		}
 	}
+
+	{
+		exprPtrType, exprIsPtrType := exprType.(*PtrType)
+		paramPtrType, paramIsPtrType := paramType.(*PtrType)
+		if exprIsPtrType && paramIsPtrType {
+			ok, substitutions = GenericParamSignatureMatch(exprPtrType.Target, paramPtrType.Target, substitutions)
+			fmt.Printf("matching pointer type %s %s\n", AstFormat(exprPtrType.Target), AstFormat(paramPtrType.Target))
+			fmt.Printf("ok: %+v sub:\n", ok)
+			for _, sub := range substitutions {
+				fmt.Printf("    %s -> %s\n", AstFormat(sub.sym), AstFormat(sub.newType))
+			}
+			return ok, substitutions
+		}
+	}
+
+	{
+		exprEnumSetType, exprIsEnumSetType := exprType.(*EnumSetType)
+		paramEnumSetType, paramIsEnumSetType := exprType.(*EnumSetType)
+		if exprIsEnumSetType && paramIsEnumSetType {
+			return GenericParamSignatureMatch(exprEnumSetType.Elem, paramEnumSetType.Elem, substitutions)
+		}
+	}
+
+	// TODO apply type substitutions to struct type
+
 	return false, nil
+}
+
+func ParamSignatureMatch(exprType, paramType Type) (ok bool, substitutions []Substitution) {
+	if genericParamType, paramIsGeneric := paramType.(*OpenGenericType); paramIsGeneric {
+		return GenericParamSignatureMatch(exprType, genericParamType.Type, nil)
+	}
+
+	// fast non recursive pass
+	return exprType == paramType, []Substitution{}
 }
 
 func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcExpr {
@@ -596,13 +620,13 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 			}
 			typ := sig.Params[i].Type
 
-			if ok, substitutions := genericParamSignatureMatch(argType, typ); ok && len(substitutions) > 0 {
+			if ok, substitutions := ParamSignatureMatch(argType, typ); ok && len(substitutions) > 0 {
 				// instantiate generic
 				typ = argType
 				newParams := make([]TcSymbol, len(sig.Params))
 				for i, param := range sig.Params {
 					for _, sub := range substitutions {
-						if param.Type == sub.genType {
+						if param.Type == sub.newType {
 							param.Type = sub.newType
 						}
 					}
@@ -635,7 +659,21 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 				}
 				arg.GetType().PrettyPrint(builder)
 			}
-			builder.WriteRune(')')
+			builder.WriteString(")")
+
+			// original signatures
+			signatures = tc.LookUpProc(scope, ident, nil)
+			if len(signatures) > 0 {
+				builder.NewlineAndIndent()
+				builder.WriteString("available overloads: ")
+				for _, sig := range signatures {
+					builder.NewlineAndIndent()
+					builder.WriteString("proc ")
+					builder.WriteString(ident.Source)
+					sig.PrettyPrint(builder)
+				}
+			}
+
 			tc.ReportErrorf(ident, "%s", builder.String())
 		}
 		result.Sym = errorProcSym(ident)

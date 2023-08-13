@@ -42,8 +42,8 @@ type TcStructDef struct {
 	Fields []TcStructField
 }
 
-// TODO: rename to GenericParamType
-type TcGenericTypeParam struct {
+type GenericTypeSymbol struct {
+	// a symbol that needs later substitution on generic instantiation
 	Source     string
 	Name       string
 	Constraint Type // TypeGroup or TypeUnspecified
@@ -135,7 +135,7 @@ type ProcSignature struct {
 
 	// type placeholders within this procedure that need to be substituted with
 	// real types in generic instantiations.
-	GenericParams []Type
+	GenericParams []*GenericTypeSymbol
 	Params        []TcSymbol
 	ResultType    Type
 
@@ -234,9 +234,9 @@ func (arg TcStructLit) GetSource() string       { return arg.Source }
 
 func (arg TcPackageDef) GetSource() string { return arg.Source }
 
-func (arg *TcStructDef) GetSource() string        { return arg.Source }
-func (arg *TcEnumDef) GetSource() string          { return arg.Source }
-func (arg *TcGenericTypeParam) GetSource() string { return arg.Source }
+func (arg *TcStructDef) GetSource() string       { return arg.Source }
+func (arg *TcEnumDef) GetSource() string         { return arg.Source }
+func (arg *GenericTypeSymbol) GetSource() string { return arg.Source }
 
 // func (arg *EnumSetType) GetSource() string { return arg.Source }
 // func (arg TypeGroup) GetSource() string    { return arg.Source }

@@ -67,6 +67,9 @@ var _ Type = &ArrayType{}
 var _ Type = &IntLit{}
 var _ Type = &ErrorType{}
 var _ Type = &TypeType{}
+var _ Type = &PtrType{}
+var _ Type = &OpenGenericType{}
+var _ Type = &GenericTypeSymbol{}
 
 func (typ *BuiltinType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune(typ.MangleChar)
@@ -91,6 +94,12 @@ type EnumSetType struct {
 
 type PtrType struct {
 	Target Type
+}
+
+type OpenGenericType struct {
+	// incomplete type that still needs Generic symbols to be substituted becfore it can be used.
+	Type        Type
+	OpenSymbols []*GenericTypeSymbol
 }
 
 func (typ *ArrayType) ManglePrint(builder *strings.Builder) {
@@ -126,7 +135,11 @@ func (typ *IntLit) ManglePrint(builder *strings.Builder) {
 	fmt.Fprintf(builder, "%d_", typ.Value)
 }
 
-func (typ *TcGenericTypeParam) ManglePrint(builder *strings.Builder) {
+func (typ *GenericTypeSymbol) ManglePrint(builder *strings.Builder) {
+	panic("illegal not a concrete type")
+}
+
+func (typ *OpenGenericType) ManglePrint(builder *strings.Builder) {
 	panic("illegal not a concrete type")
 }
 
@@ -233,7 +246,11 @@ func (typ *TypeType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	panic("no default value for types")
 }
 
-func (typ *TcGenericTypeParam) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+func (typ *GenericTypeSymbol) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+	panic("not implemented")
+}
+
+func (typ *OpenGenericType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	panic("not implemented")
 }
 
@@ -256,7 +273,65 @@ func registerTypeGroup(typ *TypeGroup) {
 	builtinScope.Types[typ.Name] = typ
 }
 
-func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []Type, args []Type, result Type, checker PostResolveValidator) {
+func extractGenericTypeSymbols(typ Type) (result []*GenericTypeSymbol) {
+	switch typ := typ.(type) {
+	case *BuiltinType:
+		return nil
+	case *TypeGroup:
+		panic("internal error")
+	case *EnumType:
+		return nil
+	case *StructType:
+		for _, field := range typ.Impl.Fields {
+			result = append(result, extractGenericTypeSymbols(field.Type)...)
+		}
+		return result
+	case *ArrayType:
+		return extractGenericTypeSymbols(typ.Elem)
+	case *IntLit:
+		return nil
+	case *ErrorType:
+		panic("internal error")
+	case *TypeType:
+		return extractGenericTypeSymbols(typ.Type)
+	case *PtrType:
+		return extractGenericTypeSymbols(typ.Target)
+	case *OpenGenericType:
+		panic("interanl error, OpenGenericType should not be created around another OpenGenericType")
+	case *GenericTypeSymbol:
+		return []*GenericTypeSymbol{typ}
+	}
+	panic("should be dead code")
+}
+
+func SymSubset(setA, setB []*GenericTypeSymbol) bool {
+OUTER:
+	for _, symA := range setA {
+		for _, symB := range setB {
+			if symA == symB {
+				continue OUTER
+			}
+		}
+		// symA not in setB
+		return false
+	}
+	// found all
+	return true
+}
+
+func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []*GenericTypeSymbol, args []Type, result Type, checker PostResolveValidator) {
+	if len(genericParams) > 0 {
+		for i, arg := range args {
+			syms := extractGenericTypeSymbols(arg)
+			if len(syms) > 0 {
+				if !SymSubset(syms, genericParams) {
+					panic("not a true subset")
+				}
+				args[i] = &OpenGenericType{arg, syms}
+			}
+		}
+	}
+
 	signature := ProcSignature{
 		GenericParams: genericParams,
 		Params:        make([]TcSymbol, len(args)),
@@ -280,7 +355,7 @@ func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams [
 }
 
 func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Type) {
-	registerGenericBuiltin(name, prefix, infix, postfix, []Type{}, args, result, nil)
+	registerGenericBuiltin(name, prefix, infix, postfix, nil, args, result, nil)
 }
 
 func registerSimpleTemplate(name string, args []Type, result Type, substitution TcExpr) {
@@ -306,7 +381,7 @@ type PostResolveValidator func(tc *TypeChecker, scope Scope, call TcCall) TcCall
 
 func registerBuiltinVararg(name, prefix, infix, postfix string, args []Type, result Type, checker PostResolveValidator) {
 	// TODO actually do something with PostResolveValidator
-	registerGenericBuiltin(name, prefix, infix, postfix, []Type{}, args, result, checker)
+	registerGenericBuiltin(name, prefix, infix, postfix, nil, args, result, checker)
 }
 
 func registerConstant(name string, typ Type) {
@@ -460,27 +535,28 @@ func init() {
 
 	{
 		// TODO: has no line information
-		T := &TcGenericTypeParam{Name: "T", Constraint: TypeUnspecified}
-		registerGenericBuiltin("addr", "&(", "", ")", []Type{T}, []Type{T}, GetPtrType(T), nil)
-		registerGenericBuiltin("[", "*(", "", ")", []Type{T}, []Type{GetPtrType(T)}, T, nil)
+		T := &GenericTypeSymbol{Name: "T", Constraint: TypeUnspecified}
+
+		registerGenericBuiltin("addr", "&(", "", ")", []*GenericTypeSymbol{T}, []Type{T}, GetPtrType(T), nil)
+		registerGenericBuiltin("[", "*(", "", ")", []*GenericTypeSymbol{T}, []Type{GetPtrType(T)}, T, nil)
 	}
 
 	{
 		// TODO: has no line information
-		T := &TcGenericTypeParam{Name: "T", Constraint: TypeUnspecified}
-		registerGenericBuiltin("=", "(", "=", ")", []Type{T}, []Type{T, T}, TypeVoid, nil)
+		T := &GenericTypeSymbol{Name: "T", Constraint: TypeUnspecified}
+		registerGenericBuiltin("=", "(", "=", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeVoid, nil)
 	}
 
 	{
 		// TODO: has no line information
-		T := &TcGenericTypeParam{Name: "T", Constraint: TypeUnspecified}
-		registerGenericBuiltin("==", "(", "==", ")", []Type{T}, []Type{T, T}, TypeBoolean, nil)
+		T := &GenericTypeSymbol{Name: "T", Constraint: TypeUnspecified}
+		registerGenericBuiltin("==", "(", "==", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeBoolean, nil)
 	}
 
 	{
 		// TODO: has no line information
-		T := &TcGenericTypeParam{Name: "T", Constraint: TypeUnspecified}
-		registerGenericBuiltin("!=", "(", "!=", ")", []Type{T}, []Type{T, T}, TypeBoolean, nil)
+		T := &GenericTypeSymbol{Name: "T", Constraint: TypeUnspecified}
+		registerGenericBuiltin("!=", "(", "!=", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeBoolean, nil)
 	}
 
 	registerBuiltin("and", "(", "&&", ")", []Type{TypeBoolean, TypeBoolean}, TypeBoolean)

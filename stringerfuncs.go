@@ -462,10 +462,12 @@ func (typ *EnumSetType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("]")
 }
 
-func (typ *TcGenericTypeParam) PrettyPrint(builder *AstPrettyPrinter) {
+func (typ *GenericTypeSymbol) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("(")
 	builder.WriteString(typ.Name)
 	builder.WriteString(" : ")
 	typ.Constraint.PrettyPrint(builder)
+	builder.WriteString(")")
 }
 
 func (call TcCall) PrettyPrint(builder *AstPrettyPrinter) {
@@ -578,16 +580,18 @@ func (expr TcDotExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(expr.Rhs.Name)
 }
 
-func (procDef TcProcDef) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("proc ")
-	builder.WriteString(procDef.Name)
+func (signature ProcSignature) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("(")
-	if len(procDef.Signature.Params) > 3 {
+	if len(signature.Params) > 3 {
 		builder.Indentation += 2
 		builder.NewlineAndIndent()
-		iLast := len(procDef.Signature.Params) - 1
-		for i, arg := range procDef.Signature.Params {
-			builder.WriteString(arg.Source)
+		iLast := len(signature.Params) - 1
+		for i, arg := range signature.Params {
+			if len(arg.Source) > 0 {
+				builder.WriteString(arg.Source)
+			} else {
+				builder.WriteString("_")
+			}
 			builder.WriteString(": ")
 			builder.WriteNode(arg.GetType())
 			if i == iLast {
@@ -597,17 +601,27 @@ func (procDef TcProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 		}
 
 	} else {
-		for i, arg := range procDef.Signature.Params {
+		for i, arg := range signature.Params {
 			if i != 0 {
 				builder.WriteString("; ")
 			}
-			builder.WriteString(arg.Source)
+			if len(arg.Source) > 0 {
+				builder.WriteString(arg.Source)
+			} else {
+				builder.WriteString("_")
+			}
 			builder.WriteString(": ")
 			builder.WriteNode(arg.GetType())
 		}
 	}
 	builder.WriteString("): ")
-	builder.WriteNode(procDef.Signature.ResultType)
+	builder.WriteNode(signature.ResultType)
+}
+
+func (procDef TcProcDef) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("proc ")
+	builder.WriteString(procDef.Name)
+	procDef.Signature.PrettyPrint(builder)
 	builder.WriteString(" = ")
 	builder.WriteNode(procDef.Body)
 }
@@ -652,6 +666,11 @@ func (typ *TypeGroup) PrettyPrint(builder *AstPrettyPrinter) {
 		}
 		typ.PrettyPrint(builder)
 	}
+}
+
+func (typ *OpenGenericType) PrettyPrint(builder *AstPrettyPrinter) {
+	// don't print open symbols for now
+	typ.Type.PrettyPrint(builder)
 }
 
 func (typ *PtrType) PrettyPrint(builder *AstPrettyPrinter) {
