@@ -62,6 +62,7 @@ type TypeType struct {
 var _ Type = &BuiltinType{}
 var _ Type = &TypeGroup{}
 var _ Type = &EnumType{}
+var _ Type = &EnumSetType{}
 var _ Type = &StructType{}
 var _ Type = &ArrayType{}
 var _ Type = &IntLit{}

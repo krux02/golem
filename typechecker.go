@@ -490,22 +490,19 @@ func argTypeGroupAtIndex(signatures []ProcSignature, idx int) (result Type) {
 			return TypeUnspecified
 		}
 		typ := sig.Params[idx].Type
-		if genTypParam, ok := typ.(*GenericTypeSymbol); ok {
-			typ = genTypParam.Constraint
+		if _, ok := typ.(*OpenGenericType); ok {
+			// TODO this can be more precise than the most generic `TypeUnspecified`
+			return TypeUnspecified
 		}
 		typ.AppendToGroup(builder)
 	}
-	var newResult Type
 	switch len(builder.Items) {
 	case 0:
-		newResult = TypeUnspecified
+		return TypeUnspecified
 	case 1:
-		newResult = builder.Items[0]
-	default:
-		newResult = (*TypeGroup)(builder)
+		return builder.Items[0]
 	}
-
-	return newResult
+	return (*TypeGroup)(builder)
 }
 
 type Substitution = struct {
@@ -578,6 +575,96 @@ func ParamSignatureMatch(exprType, paramType Type) (ok bool, substitutions []Sub
 	return exprType == paramType, []Substitution{}
 }
 
+func RecursiveTypeSubstitution(typ Type, substitutions []Substitution) Type {
+	switch typ := typ.(type) {
+	case *GenericTypeSymbol:
+		for _, it := range substitutions {
+			if it.sym == typ {
+				return it.newType
+			}
+		}
+		return typ
+	case *BuiltinType:
+		return typ
+	case *EnumType:
+		return typ
+	case *IntLit:
+		return typ
+	case *StructType:
+		return typ
+	case *EnumSetType:
+		GetEnumSetType(RecursiveTypeSubstitution(typ.Elem, substitutions).(*EnumType))
+	case *ArrayType:
+		// TODO: array length substitution is not possible right now
+		GetArrayType(RecursiveTypeSubstitution(typ.Elem, substitutions), typ.Len)
+	case *TypeType:
+		GetTypeType(RecursiveTypeSubstitution(typ.Type, substitutions))
+	case *PtrType:
+		GetPtrType(RecursiveTypeSubstitution(typ.Target, substitutions))
+	case *TypeGroup:
+		panic("internal error")
+	case *ErrorType:
+		panic("internal error")
+	case *OpenGenericType:
+		panic("internal error")
+	default:
+		panic("internal error")
+	}
+	return typ
+}
+
+func Contains(theSet []*GenericTypeSymbol, item *GenericTypeSymbol) bool {
+	for _, it := range theSet {
+		if it == item {
+			return true
+		}
+	}
+	return false
+}
+
+func Contains2(theSet []Substitution, item *GenericTypeSymbol) bool {
+	for _, it := range theSet {
+		if it.sym == item {
+			return true
+		}
+	}
+	return false
+}
+
+func ApplyTypeSubstitutions(argTyp Type, substitutions []Substitution) Type {
+	typ, isOpenGeneric := argTyp.(*OpenGenericType)
+	if !isOpenGeneric {
+		// not a type with open generic symbols. nothing to substitute here
+		return argTyp
+	}
+
+	var filteredSubstitutions []Substitution
+	for _, sub := range substitutions {
+		if Contains(typ.OpenSymbols, sub.sym) {
+			filteredSubstitutions = append(filteredSubstitutions, sub)
+		}
+	}
+
+	if len(filteredSubstitutions) == 0 {
+		// substitutions do not apply to this type, nothing to do here
+		return typ
+	}
+
+	// compute new open symbols
+	var openSymbols []*GenericTypeSymbol = nil
+	for _, sym := range typ.OpenSymbols {
+		if Contains2(filteredSubstitutions, sym) {
+			openSymbols = append(openSymbols, sym)
+		}
+	}
+	newTyp := RecursiveTypeSubstitution(typ.Type, filteredSubstitutions)
+	if len(openSymbols) == 0 {
+		return newTyp
+	}
+	return &OpenGenericType{newTyp, openSymbols}
+
+}
+
 func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcExpr {
 	ident := call.Callee.(Ident)
 	// language level reserved calls
@@ -625,11 +712,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 				typ = argType
 				newParams := make([]TcSymbol, len(sig.Params))
 				for i, param := range sig.Params {
-					for _, sub := range substitutions {
-						if param.Type == sub.newType {
-							param.Type = sub.newType
-						}
-					}
+					param.Type = ApplyTypeSubstitutions(param.Type, substitutions)
 					newParams[i] = param
 				}
 				sig.Params = newParams
