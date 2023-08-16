@@ -638,6 +638,7 @@ func ApplyTypeSubstitutions(argTyp Type, substitutions []Substitution) Type {
 		return argTyp
 	}
 
+	// all substitutions that are actively part of the open symbols
 	var filteredSubstitutions []Substitution
 	for _, sub := range substitutions {
 		if Contains(typ.OpenSymbols, sub.sym) {
@@ -653,7 +654,7 @@ func ApplyTypeSubstitutions(argTyp Type, substitutions []Substitution) Type {
 	// compute new open symbols
 	var openSymbols []*GenericTypeSymbol = nil
 	for _, sym := range typ.OpenSymbols {
-		if Contains2(filteredSubstitutions, sym) {
+		if !Contains2(filteredSubstitutions, sym) {
 			openSymbols = append(openSymbols, sym)
 		}
 	}
@@ -711,9 +712,9 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 				// instantiate generic
 				typ = argType
 				newParams := make([]TcSymbol, len(sig.Params))
-				for i, param := range sig.Params {
+				for j, param := range sig.Params {
 					param.Type = ApplyTypeSubstitutions(param.Type, substitutions)
-					newParams[i] = param
+					newParams[j] = param
 				}
 				sig.Params = newParams
 			}
