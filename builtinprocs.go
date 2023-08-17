@@ -331,6 +331,13 @@ func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams [
 				args[i] = &OpenGenericType{arg, syms}
 			}
 		}
+		syms := extractGenericTypeSymbols(result)
+		if len(syms) > 0 {
+			if !SymSubset(syms, genericParams) {
+				panic("not a true subset")
+			}
+			result = &OpenGenericType{result, syms}
+		}
 	}
 
 	signature := ProcSignature{

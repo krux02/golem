@@ -544,11 +544,6 @@ func GenericParamSignatureMatch(exprType, paramType Type, substitutions []Substi
 		paramPtrType, paramIsPtrType := paramType.(*PtrType)
 		if exprIsPtrType && paramIsPtrType {
 			ok, substitutions = GenericParamSignatureMatch(exprPtrType.Target, paramPtrType.Target, substitutions)
-			fmt.Printf("matching pointer type %s %s\n", AstFormat(exprPtrType.Target), AstFormat(paramPtrType.Target))
-			fmt.Printf("ok: %+v sub:\n", ok)
-			for _, sub := range substitutions {
-				fmt.Printf("    %s -> %s\n", AstFormat(sub.sym), AstFormat(sub.newType))
-			}
 			return ok, substitutions
 		}
 	}
@@ -593,14 +588,14 @@ func RecursiveTypeSubstitution(typ Type, substitutions []Substitution) Type {
 	case *StructType:
 		return typ
 	case *EnumSetType:
-		GetEnumSetType(RecursiveTypeSubstitution(typ.Elem, substitutions).(*EnumType))
+		return GetEnumSetType(RecursiveTypeSubstitution(typ.Elem, substitutions).(*EnumType))
 	case *ArrayType:
 		// TODO: array length substitution is not possible right now
-		GetArrayType(RecursiveTypeSubstitution(typ.Elem, substitutions), typ.Len)
+		return GetArrayType(RecursiveTypeSubstitution(typ.Elem, substitutions), typ.Len)
 	case *TypeType:
-		GetTypeType(RecursiveTypeSubstitution(typ.Type, substitutions))
+		return GetTypeType(RecursiveTypeSubstitution(typ.Type, substitutions))
 	case *PtrType:
-		GetPtrType(RecursiveTypeSubstitution(typ.Target, substitutions))
+		return GetPtrType(RecursiveTypeSubstitution(typ.Target, substitutions))
 	case *TypeGroup:
 		panic("internal error")
 	case *ErrorType:
@@ -610,7 +605,6 @@ func RecursiveTypeSubstitution(typ Type, substitutions []Substitution) Type {
 	default:
 		panic("internal error")
 	}
-	return typ
 }
 
 func Contains(theSet []*GenericTypeSymbol, item *GenericTypeSymbol) bool {
@@ -717,6 +711,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 					newParams[j] = param
 				}
 				sig.Params = newParams
+				sig.ResultType = ApplyTypeSubstitutions(sig.ResultType, substitutions)
 			}
 
 			if typ == argType {
@@ -729,6 +724,18 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 	}
 
 	result := TcCall{Source: call.Source}
+
+	// if call.Callee.GetSource() == "addr" {
+	// 	fmt.Printf("signatures: %s\n", call.Callee.GetSource())
+	// 	for i, sig := range signatures {
+	// 		fmt.Printf(" Signature: %v\n", i)
+	// 		for j, arg := range sig.Params {
+	// 			fmt.Printf("  arg %d: '%s'\n", j, AstFormat(arg.Type))
+	// 		}
+	// 		fmt.Printf("  result %v\n", AstFormat(sig.ResultType))
+	// 	}
+	// }
+
 	switch len(signatures) {
 	case 0:
 		// don't report that proc `foo(TypeError)` can't be resolved.
@@ -766,15 +773,30 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 	case 1:
 		sig := signatures[0]
 
+		for _, arg := range sig.Params {
+			if _, isGeneric := arg.Type.(*OpenGenericType); isGeneric {
+				panic("internal error")
+			}
+		}
+		if _, isGeneric := sig.ResultType.(*OpenGenericType); isGeneric {
+			panic("internal error")
+		}
+
 		if sig.Impl != nil {
+
+			// TODO: here is a significant problem. the signature has by now
+			// instantiated generics. Meaning that type variables such as `T` will be
+			// substituted with concrete types. The `Impl` member of the signature has
+			// again a `Signature` member, where these type instantiations have not
+			// been applied. In other words, generic instantiation of the ``Impl``
+			// does not happen yet. This cases the `TcCall` expression to still have a
+			// generic `T` as its type.
 
 			result.Sym = TcProcSymbol{Source: ident.Source, Impl: sig.Impl}
 			result.Args = checkedArgs
-
 			if sig.Validator != nil {
 				result = sig.Validator(tc, scope, result)
 			}
-
 			tc.ExpectType(call, sig.ResultType, expected)
 		} else if sig.TemplateImpl != nil {
 			substitution := sig.TemplateImpl.Body

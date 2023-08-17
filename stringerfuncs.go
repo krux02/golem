@@ -41,7 +41,11 @@ func (builder *AstPrettyPrinter) WriteNode(node PrettyPrintable) {
 func AstFormat(node PrettyPrintable) string {
 	builder := &AstPrettyPrinter{}
 	node.PrettyPrint(builder)
-	return builder.String()
+	result := builder.String()
+	if len(result) == 0 {
+		return fmt.Sprintf("%T", node)
+	}
+	return result
 }
 
 func (ident Ident) PrettyPrint(builder *AstPrettyPrinter) {
@@ -463,11 +467,11 @@ func (typ *EnumSetType) PrettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (typ *GenericTypeSymbol) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("(")
+	// builder.WriteString("(")
 	builder.WriteString(typ.Name)
-	builder.WriteString(" : ")
-	typ.Constraint.PrettyPrint(builder)
-	builder.WriteString(")")
+	// builder.WriteString(" : ")
+	// typ.Constraint.PrettyPrint(builder)
+	// builder.WriteString(")")
 }
 
 func (call TcCall) PrettyPrint(builder *AstPrettyPrinter) {
@@ -670,7 +674,9 @@ func (typ *TypeGroup) PrettyPrint(builder *AstPrettyPrinter) {
 
 func (typ *OpenGenericType) PrettyPrint(builder *AstPrettyPrinter) {
 	// don't print open symbols for now
+	builder.WriteString("OpenGenericType{")
 	typ.Type.PrettyPrint(builder)
+	builder.WriteString("}")
 }
 
 func (typ *PtrType) PrettyPrint(builder *AstPrettyPrinter) {
