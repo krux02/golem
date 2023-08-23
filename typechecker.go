@@ -686,12 +686,12 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		expectedArgType := argTypeGroupAtIndex(signatures, i)
 		tcArg := tc.TypeCheckExpr(scope, arg, expectedArgType)
 		argType := tcArg.GetType()
+		hasArgTypeError = hasArgTypeError || argType == TypeError
+		checkedArgs = append(checkedArgs, tcArg)
 		if argType == TypeError {
 			signatures = nil
 			continue
 		}
-		hasArgTypeError = hasArgTypeError || argType == TypeError
-		checkedArgs = append(checkedArgs, tcArg)
 		// in place filter procedures for compatilbes
 		n := 0
 		for _, sig := range signatures {
