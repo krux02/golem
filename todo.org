@@ -14,6 +14,8 @@
 * DONE distinguish between the type and the expression that defines it
 * DONE array access
 * DONE make high/low values of integer types somehow accessible.
+* DONE pointer
+* TODO pass by reference
 * TODO have macros (stubs at least)
 * TODO have varargs for macros (only)
 varargs is a thing now, but it is still problematic. the arguments should be
@@ -38,9 +40,7 @@ have an expected type set ~[a,b,c]:MyType~.
 * TODO test operator precedence when many ~:~ are in use
 * TODO default int, default float
 * DONE add ability for type assertions
-* TODO performance tracking over time to know when the compiler gets slower and which commits cause compilation slowdowns.
 * TODO maybe return TypeFloat like in Nim for integer division?
-* TODO pointer
 * TODO better distinguish go type information vs golem type information better
 * TODO vm for compile time code execution
 * TODO restrict operator precedence to common knowledge cases (+-*/) require explicit braces everywhere else.
@@ -50,6 +50,7 @@ have an expected type set ~[a,b,c]:MyType~.
 * TODO test default value
 * TODO compiler passes for some transformations (e.g. moving literals to constants)
 * TODO persistent statistic logging about compiler bootstrapping time, lines of code, test time, test lines of code
+* TODO performance tracking over time to know when the compiler gets slower and which commits cause compilation slowdowns.
 * TODO full set of types
 ** TODO vector/matrix/simd types
 ** DONE string
