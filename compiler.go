@@ -32,57 +32,40 @@ func (builder *CodeBuilder) NewlineAndIndent() {
 	}
 }
 
-func (builder *CodeBuilder) compileTypeExpr(typ Type) {
+func (builder *CodeBuilder) compileTypeExpr(context *PackageGeneratorContext, typ Type) {
 	switch typ := typ.(type) {
 	case *BuiltinType:
 		builder.WriteString(typ.InternalName)
-	case *StructType:
-		builder.WriteString(typ.Impl.Name)
-	case *EnumType:
-		builder.WriteString(typ.Impl.Name)
-	case *ArrayType:
-		typ.ManglePrint(&builder.Builder)
-	case *EnumSetType:
-		builder.WriteString("uint64_t")
-	default:
-		panic("not implemented")
-	}
-}
-
-func (builder *CodeBuilder) compileSymDeclaration(context *PackageGeneratorContext, sym TcSymbol) {
-	switch typ := sym.GetType().(type) {
-	case *BuiltinType:
-		builder.WriteString(typ.InternalName)
-		builder.WriteString(" ")
-		builder.WriteString(sym.Source)
 	case *ArrayType:
 		context.markArrayTypeForGeneration(typ)
 		typ.ManglePrint(&builder.Builder)
-		builder.WriteString(" ")
-		builder.WriteString(sym.Source)
 	case *StructType:
 		context.markStructTypeForGeneration(typ)
 		// TODO this should be the mangled name
 		builder.WriteString(typ.Impl.Name)
-		builder.WriteString(" ")
-		builder.WriteString(sym.Source)
 	case *EnumType:
 		context.markEnumTypeForGeneration(typ)
 		// TODO this should be the mangled name
 		builder.WriteString(typ.Impl.Name)
-		builder.WriteString(" ")
-		builder.WriteString(sym.Source)
 	case *EnumSetType:
 		context.markEnumTypeForGeneration(typ.Elem)
-		builder.WriteString("uint64_t ")
-		builder.WriteString(sym.Source)
+		builder.WriteString("uint64_t")
+	case *PtrType:
+		builder.compileTypeExpr(context, typ.Target)
+		builder.WriteRune('*')
 	default:
 		panic(fmt.Errorf("not implemented %T", typ))
 	}
 }
 
+func (builder *CodeBuilder) compileSymDeclaration(context *PackageGeneratorContext, sym TcSymbol) {
+	builder.compileTypeExpr(context, sym.GetType())
+	builder.WriteString(" ")
+	builder.WriteString(sym.Source)
+}
+
 func (builder *CodeBuilder) compileCall(context *PackageGeneratorContext, call TcCall) {
-	impl := call.Sym.Impl
+	impl := call.Sym.Sig.Impl
 	context.markProcForGeneration(impl)
 	builder.WriteString(impl.Prefix)
 	builder.CompileSeparatedExprList(context, call.Args, impl.Infix)
@@ -259,7 +242,7 @@ func (builder *CodeBuilder) CompileForLoopStmt(context *PackageGeneratorContext,
 		builder.WriteString(") ")
 	} else if arrayType, ok := stmt.Collection.GetType().(*ArrayType); ok {
 		builder.WriteString("for(")
-		builder.compileTypeExpr(arrayType.Elem)
+		builder.compileTypeExpr(context, arrayType.Elem)
 		builder.WriteString(" const ")
 		builder.CompileSymbol(stmt.LoopSym)
 		builder.WriteString(" = ")
@@ -301,7 +284,7 @@ func (builder *CodeBuilder) CompileArrayLit(context *PackageGeneratorContext, li
 
 func (builder *CodeBuilder) CompileStructLit(context *PackageGeneratorContext, lit TcStructLit) {
 	builder.WriteString("(")
-	builder.compileTypeExpr(lit.Type)
+	builder.compileTypeExpr(context, lit.Type)
 	builder.WriteString("){")
 	builder.CompileSeparatedExprList(context, lit.Items, ", ")
 	builder.WriteString("}")
@@ -389,7 +372,7 @@ func compileArrayDef(context *PackageGeneratorContext, arrayType *ArrayType) {
 	builder := &context.typeDecl
 	builder.NewlineAndIndent()
 	builder.WriteString("typedef struct {")
-	builder.compileTypeExpr(arrayType.Elem)
+	builder.compileTypeExpr(context, arrayType.Elem)
 	fmt.Fprintf(builder, " arr[%d];} ", arrayType.Len)
 	arrayType.ManglePrint(&builder.Builder)
 	builder.WriteString(";")
@@ -434,7 +417,7 @@ func compileStructDef(context *PackageGeneratorContext, structDef *TcStructDef) 
 	builder.Indentation += 1
 	for _, field := range structDef.Fields {
 		builder.NewlineAndIndent()
-		builder.compileTypeExpr(field.Type)
+		builder.compileTypeExpr(context, field.Type)
 		builder.WriteString(" ")
 		builder.WriteString(field.Name)
 		builder.WriteString(";")
@@ -453,7 +436,7 @@ func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 	// reuse string here
 	headBuilder := &CodeBuilder{}
 	headBuilder.NewlineAndIndent()
-	headBuilder.compileTypeExpr(procDef.Signature.ResultType)
+	headBuilder.compileTypeExpr(context, procDef.Signature.ResultType)
 	// headBuilder.compileTypeExpr(procDef.ResultType)
 	headBuilder.WriteString(" ")
 	headBuilder.WriteString(procDef.Prefix)

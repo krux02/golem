@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -15,7 +14,7 @@ import (
 )
 
 func errorTest(t *testing.T, filename string) error {
-	bytes, err := ioutil.ReadFile(filename)
+	bytes, err := os.ReadFile(filename)
 	if err != nil {
 		return err
 	}
@@ -144,7 +143,7 @@ func runTests(t *testing.T, testFiles []string) {
 }
 
 func compile(filename string) (string, error) {
-	bytes, err := ioutil.ReadFile(filename)
+	bytes, err := os.ReadFile(filename)
 	if err != nil {
 		log.Fatal(err)
 	}

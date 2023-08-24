@@ -396,7 +396,7 @@ func (tc *TypeChecker) TypeCheckDotExpr(scope Scope, parentSource string, lhs, r
 func errorProcSym(ident Ident) TcProcSymbol {
 	return TcProcSymbol{
 		Source: ident.GetSource(),
-		Impl:   nil,
+		Sig:    ProcSignature{ResultType: TypeError},
 	}
 }
 
@@ -792,7 +792,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 			// does not happen yet. This cases the `TcCall` expression to still have a
 			// generic `T` as its type.
 
-			result.Sym = TcProcSymbol{Source: ident.Source, Impl: sig.Impl}
+			result.Sym = TcProcSymbol{Source: ident.Source, Sig: sig}
 			result.Args = checkedArgs
 			if sig.Validator != nil {
 				result = sig.Validator(tc, scope, result)
@@ -956,11 +956,7 @@ func (block TcCodeBlock) GetType() Type {
 }
 
 func (call TcCall) GetType() Type {
-	impl := call.Sym.Impl
-	if impl == nil {
-		return TypeError
-	}
-	return impl.Signature.ResultType
+	return call.Sym.Sig.ResultType
 }
 
 func (lit StrLit) GetType() Type {

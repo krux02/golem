@@ -58,7 +58,7 @@ type TcCodeBlock struct {
 // TODO maybe Store Signature instead of Impl
 type TcProcSymbol struct {
 	Source string
-	Impl   *TcProcDef
+	Sig    ProcSignature
 }
 
 type SymbolKind int

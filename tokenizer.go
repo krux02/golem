@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 	u "unicode"
 	"unicode/utf8"
@@ -129,14 +128,14 @@ func LineColumnOffset(code string, offset int) (line, column int) {
 }
 
 func LineColumnStr(str, substr string) (line, columnStart, columnEnd int) {
-	header1 := (*reflect.StringHeader)(unsafe.Pointer(&str))
-	header2 := (*reflect.StringHeader)(unsafe.Pointer(&substr))
-	if header2.Data < header1.Data {
-		panic(fmt.Sprintf("internal error, no substring, %#v %#v", header1, header2))
+	data1 := (uintptr)(unsafe.Pointer(unsafe.StringData(str)))
+	data2 := (uintptr)(unsafe.Pointer(unsafe.StringData(substr)))
+	if data2 < data1 {
+		panic(fmt.Sprintf("internal error, no substring, (%d %d) (%d %d)", data1, len(str), data2, len(substr)))
 	}
-	offset := int(header2.Data - header1.Data)
+	offset := int(data2 - data1)
 	line, columnStart = LineColumnOffset(str, offset)
-	columnEnd = columnStart + header2.Len
+	columnEnd = columnStart + len(substr)
 	return
 }
 
