@@ -128,7 +128,7 @@ func runTests(t *testing.T, testFiles []string) {
 				t.Errorf("test Failed: %s\n%v\n", testFile, err)
 			} else {
 				testPasses += 1
-				t.Logf("test Passed: %s\n", testFile)
+				//t.Logf("test Passed: %s\n", testFile)
 			}
 		})
 	}

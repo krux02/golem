@@ -553,13 +553,12 @@ func compilePackageToC(pak TcPackageDef) string {
 	context := &PackageGeneratorContext{Pak: pak}
 	context.includes.NewlineAndIndent()
 	context.includes.WriteString("#include <stdint.h>")
+	context.includes.NewlineAndIndent()
 	// TODO this should depend on the usage of `printf`
-	context.includes.NewlineAndIndent()
 	context.includes.WriteString("#include <stdio.h>")
-	// TODO this should depend on the usage of `assert`
 	context.includes.NewlineAndIndent()
+	// TODO this should depend on the usage of `assert`
 	context.includes.WriteString("#include <assert.h>")
-	// TODO this sholud depend on the usage of `string` as a type
 	context.typeDecl.NewlineAndIndent()
 	context.typeDecl.WriteString("typedef struct string {size_t len; char const* data;} string;")
 	context.typeDecl.NewlineAndIndent()

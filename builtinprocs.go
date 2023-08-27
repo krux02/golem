@@ -544,26 +544,10 @@ func init() {
 	{
 		// TODO: has no line information
 		T := &GenericTypeSymbol{Name: "T", Constraint: TypeUnspecified}
-
 		registerGenericBuiltin("addr", "&(", "", ")", []*GenericTypeSymbol{T}, []Type{T}, GetPtrType(T), nil)
 		registerGenericBuiltin("[", "*(", "", ")", []*GenericTypeSymbol{T}, []Type{GetPtrType(T)}, T, nil)
-	}
-
-	{
-		// TODO: has no line information
-		T := &GenericTypeSymbol{Name: "T", Constraint: TypeUnspecified}
 		registerGenericBuiltin("=", "(", "=", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeVoid, nil)
-	}
-
-	{
-		// TODO: has no line information
-		T := &GenericTypeSymbol{Name: "T", Constraint: TypeUnspecified}
 		registerGenericBuiltin("==", "(", "==", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeBoolean, nil)
-	}
-
-	{
-		// TODO: has no line information
-		T := &GenericTypeSymbol{Name: "T", Constraint: TypeUnspecified}
 		registerGenericBuiltin("!=", "(", "!=", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeBoolean, nil)
 	}
 
