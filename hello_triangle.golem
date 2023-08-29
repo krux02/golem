@@ -1,7 +1,68 @@
+emit "#include<GL/gl.h>"
+emit "#include <GL/gl.h>"
+emit "#include <SDL2/SDL.h>"
+emit "#include <SDL2/SDL_events.h>"
+emit "#include <SDL2/SDL_video.h>"
 
 
+type SDL_Window = struct {} # SDL_Window from C
+type SDL_GLContext = struct {} # SDL_GLContext from C
+type SDL_Event = struct {} # SDL_Event from C
 
+proc SDL_CreateWindow(name: cstring, x:i32,y:i32,w:i32,h: i32, flags: u32): ptr(SDL_Window) = {}
+   # SDL_Window * SDL_CreateWindow(const char *title,
+   #                            int x, int y, int w,
+   #                            int h, Uint32 flags)
 
-proc main() -> int {
+proc SDL_GL_CreateContext(window: ptr(SDL_Window)): SDL_GLContext = {}
+proc SDL_GL_SwapWindow(window: ptr(SDL_Window)): void = {}
+proc SDL_PollEvent(event: ptr(SDL_Event)): bool = {}
 
+const SDL_WINDOWPOS_UNDEFINED: i32 = 0x1FFF0000
+const SDL_WINDOW_OPENGL:u32 = 0x00000002
+
+const abc = 0123
+
+proc glClear(mask: u32): void = {}
+proc glBegin(mode: u32): void = {}
+proc glEnd(): void = {}
+proc glColor3f(r,g,b: f32): void = {}
+proc glVertex2f(x,y: f32): void = {}
+
+proc main(): int = {
+  let window  = SDL_CreateWindow("hello triangle", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_OPENGL)
+  assert(window != null)
+  # SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4)
+  # SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6)
+  # SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG)
+  # SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE)
+  SDL_GLContext context = SDL_GL_CreateContext(window)
+
+  var running: bool
+
+  while running do {
+    var event: SDL_Event
+    while SDL_PollEvent(addr(event) do {
+      if event.type == SDL_QUIT then {
+        running = false
+      } else if event.type == SDL_KEYDOWN and event.key.keysym.scalncode == SDL_SCANCODE_ESCAPE {
+        running = false
+      }
+    }
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+    glBegin(GL_TRIANGLES)
+    glColor3f(1,0,0)
+    glVertex2f(-1,-1)
+    glColor3f(0,1,0)
+    glVertex2f(1,-1)
+    glColor3f(0,0,1)
+    glVertex2f(0,1)
+    glEnd()
+
+    SDL_GL_SwapWindow(window)
+  }
+
+  return 0
 }

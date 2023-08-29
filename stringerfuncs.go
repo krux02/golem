@@ -394,6 +394,13 @@ func (loopStmt TcForLoopStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteNode(loopStmt.Body)
 }
 
+func (loopStmt WhileLoopStmt) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("while ")
+	builder.WriteNode(loopStmt.Condition)
+	builder.WriteString(" do ")
+	builder.WriteNode(loopStmt.Body)
+}
+
 func (ifStmt IfExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("if ")
 	builder.WriteNode(ifStmt.Condition)
@@ -440,6 +447,11 @@ func (breakstmt BreakStmt) PrettyPrint(builder *AstPrettyPrinter) {
 }
 func (continuestmt ContinueStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("continue")
+}
+
+func (emitstmt EmitStmt) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("emit ")
+	emitstmt.Value.PrettyPrint(builder)
 }
 
 // format type checked ast nodes

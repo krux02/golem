@@ -28,7 +28,8 @@ who should type check the arguments.
 have an expected type set ~[a,b,c]:MyType~.
  * ~printf("<format-expr>", arg1, arg2, ...)~ needs to parse ~"<format-expr>"~ before it has an expected type for arg1, arg2, ...
  * How does this mix with overload resolution.
-
+* TODO ensure that int lit types are actually instanciated only once (BIG BUG right now)
+* TODO C interop (emit and function declarations)
 * TODO define order to generate type definitions in
 * TODO generic arguments (important for builtin array access)
 * TODO not all ast nodes have correct ~source~ values, for example ~[]~, code needs to deal with it

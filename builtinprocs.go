@@ -558,4 +558,5 @@ func init() {
 
 	registerConstant("true", TypeBoolean)
 	registerConstant("false", TypeBoolean)
+
 }

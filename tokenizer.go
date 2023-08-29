@@ -19,6 +19,7 @@ const (
 	TkOperator
 	TkStrLit
 	TkIntLit
+	TkHexLit
 	TkFloatLit
 	TkCharLit
 	TkPrefixDocComment
@@ -33,6 +34,7 @@ const (
 	TkReturn
 	TkBreak
 	TkContinue
+	TkEmit
 
 	TkOr
 	TkAnd
@@ -40,6 +42,7 @@ const (
 	TkIf
 	TkElse
 	TkFor
+	TkWhile
 	TkDo
 
 	// These tokens must be convertible from Open/Close by flipping the last bit
@@ -75,12 +78,14 @@ var TokenKindNames = [...]string{
 	TkReturn:            "Return",
 	TkBreak:             "Break",
 	TkContinue:          "Continue",
+	TkEmit:              "Emit",
 	TkOr:                "Or",
 	TkAnd:               "And",
 	TkIn:                "In",
 	TkIf:                "If",
 	TkElse:              "Else",
 	TkFor:               "For",
+	TkWhile:             "While",
 	TkDo:                "Do",
 	TkOpenBrace:         "OpenBrace",
 	TkCloseBrace:        "CloseBrace",
@@ -248,7 +253,7 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 	case u.IsLetter(c):
 		result.value = code
 		for pos, rune := range code {
-			if !u.IsDigit(rune) && !u.IsLetter(rune) {
+			if !u.IsDigit(rune) && !u.IsLetter(rune) && rune != '_' {
 				result.value = code[:pos]
 				break
 			}
@@ -271,7 +276,8 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			result.kind = TkBreak
 		case "continue":
 			result.kind = TkContinue
-
+		case "emit":
+			result.kind = TkEmit
 		case "or":
 			result.kind = TkOr
 		case "and":
@@ -284,6 +290,8 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			result.kind = TkElse
 		case "for":
 			result.kind = TkFor
+		case "while":
+			result.kind = TkWhile
 		case "do":
 			result.kind = TkDo
 		default:
@@ -300,7 +308,8 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			}
 		}
 
-		if rune, runeLen := utf8.DecodeRuneInString(code[it:]); rune == '.' {
+		rune, runeLen := utf8.DecodeRuneInString(code[it:])
+		if rune == '.' {
 			result.kind = TkFloatLit
 			it += runeLen
 
@@ -318,14 +327,26 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 				}
 			}
 			it = idx2
+		} else if rune == 'x' && code[:it] == "0" {
+			result.kind = TkHexLit
+			for pos, rune := range code[2:] {
+				switch rune {
+				case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'A', 'B', 'C', 'D', 'E', 'F':
+					continue
+				}
+				it = pos + 2
+				break
+			}
 		}
 
-		rune, _ := utf8.DecodeRuneInString(code[it:])
+		rune, runeLen = utf8.DecodeRuneInString(code[it:])
 		if u.IsLetter(rune) {
-			panic("invalid alpha character after literal")
+			panic(fmt.Errorf("invalid alpha character %c after literal: %s", rune, code[:it]))
 		}
 
 		result.value = code[:it]
+		fmt.Printf("literal: %s :literal\n", result.value)
+
 	case c == '"':
 		result.kind = TkStrLit
 		var lastRune = '"'

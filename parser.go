@@ -118,6 +118,19 @@ func parseForLoop(tokenizer *Tokenizer) (result ForLoopStmt) {
 	return
 }
 
+func parseWhileLoop(tokenizer *Tokenizer) (result WhileLoopStmt) {
+	firstToken := tokenizer.Next()
+	tokenizer.expectKind(firstToken, TkWhile)
+	result.Condition = parseExpr(tokenizer, false)
+	token := tokenizer.Next()
+	tokenizer.expectKind(token, TkDo)
+	result.Body = parseExpr(tokenizer, false)
+	lastToken := tokenizer.token
+	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
+	fmt.Printf("yay, got a while: %s", result.Source)
+	return
+}
+
 func parseIfStmt(tokenizer *Tokenizer) Expr {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkIf)
@@ -251,11 +264,63 @@ func parseStrLit(tokenizer *Tokenizer) (result StrLit) {
 
 func parseIntLit(tokenizer *Tokenizer) (result *IntLit) {
 	token := tokenizer.Next()
-	tokenizer.expectKind(token, TkIntLit)
+	tokenizer.expectKind2(token, TkIntLit, TkHexLit)
 	result = &IntLit{Source: token.value}
-	intValue := Must(strconv.Atoi(token.value))
-	result.Value = int64(intValue)
-	// the type of an IntLit is the the intlit itself. So every integer literal is also a type
+
+	if token.kind == TkIntLit {
+		intValue := Must(strconv.Atoi(token.value))
+		result.Value = int64(intValue)
+	} else {
+		str := token.value[2:]
+		var intValue uint64
+		for _, c := range str {
+			var nibble uint64
+			switch c {
+			case '0':
+				nibble = 0
+			case '1':
+				nibble = 1
+			case '2':
+				nibble = 2
+			case '3':
+				nibble = 3
+			case '4':
+				nibble = 4
+			case '5':
+				nibble = 5
+			case '6':
+				nibble = 6
+			case '7':
+				nibble = 7
+			case '8':
+				nibble = 8
+			case '9':
+				nibble = 9
+			case 'a', 'A':
+				nibble = 10
+			case 'b', 'B':
+				nibble = 11
+			case 'c', 'C':
+				nibble = 12
+			case 'd', 'D':
+				nibble = 13
+			case 'e', 'E':
+				nibble = 14
+			case 'f', 'F':
+				nibble = 15
+			default:
+				panic(fmt.Errorf("internal error, %c token.value: %s", c, token.value))
+			}
+			intValue = (intValue << 4) | nibble
+		}
+		result.Value = int64(intValue)
+	}
+
+	// BUG: types are assumed to have exactly once instance. Multiple
+	// instances of the same type will cause major problems during compilation. And it is violated here.
+	//
+	// the type of an IntLit
+	// is the the intlit itself. So every integer literal is also a type
 	result.Type = result
 	return
 }
@@ -353,6 +418,8 @@ func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
 		result = (Expr)(parseContinueStmt(tokenizer))
 	case TkFor:
 		result = (Expr)(parseForLoop(tokenizer))
+	case TkWhile:
+		result = (Expr)(parseWhileLoop(tokenizer))
 	case TkIf:
 		result = (Expr)(parseIfStmt(tokenizer))
 	default:
@@ -510,6 +577,8 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 	case TkStrLit:
 		result = (Expr)(parseStrLit(tokenizer))
 	case TkIntLit:
+		result = (Expr)(parseIntLit(tokenizer))
+	case TkHexLit:
 		result = (Expr)(parseIntLit(tokenizer))
 	case TkFloatLit:
 		result = (Expr)(parseFloatLit(tokenizer))
@@ -736,6 +805,13 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 	return
 }
 
+func parseEmitStmt(tokenizer *Tokenizer) EmitStmt {
+	firstToken := tokenizer.Next()
+	tokenizer.expectKind(firstToken, TkEmit)
+	strLit := parseStrLit(tokenizer)
+	return EmitStmt{Source: joinSubstr(tokenizer.code, firstToken.value, strLit.Source), Value: strLit}
+}
+
 func parsePackage(code, filename string) (result PackageDef) {
 	result.Name = strings.TrimSuffix(path.Base(filename), ".golem")
 	result.Source = code
@@ -749,6 +825,10 @@ func parsePackage(code, filename string) (result PackageDef) {
 			continue
 		case TkEof:
 			return
+		case TkEmit:
+			emitStmt := parseEmitStmt(tokenizer)
+			result.TopLevelStmts = append(result.TopLevelStmts, emitStmt)
+			continue
 		case TkType:
 			typeDef := parseTypeDef(tokenizer)
 			result.TopLevelStmts = append(result.TopLevelStmts, typeDef)

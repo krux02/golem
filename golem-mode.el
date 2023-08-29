@@ -12,14 +12,15 @@
            (stmt-context (seq (or line-start ";" "{") (* " "))))
     (list
      (cons (rx (? "-") bow (1+ digit) (? "." (1+ digit)) eow) font-lock-constant-face)
-     (list (rx stmt-context (group (or "return" "var" "let" "if" "proc")) eow) 1 font-lock-keyword-face)
+     (cons (rx bow "0x" (1+ hex) eow) font-lock-constant-face)
+     (list (rx stmt-context (group (or "const" "while" "return" "var" "let" "if" "proc" "emit")) eow) 1 font-lock-keyword-face)
      ;; match else only when it follows a closing } (not correct anymore)
      (list (rx bow (or "and" "or" "type") eow) 0 font-lock-keyword-face)
      (list (rx bow (or "true" "false") eow) 0 font-lock-constant-face)
      (list (rx "}" (* " ") (group "else") eow) 1 font-lock-keyword-face)
      (cons "\t+" font-lock-warning-face)
      ;; anchored pattern to match `in' keyword in a for loop
-     (list (rx stmt-context (group "for") eow) (list 1 font-lock-keyword-face)
+     (list (rx stmt-context (group "for" "while") eow) (list 1 font-lock-keyword-face)
            (list (rx bow (or "do" "in") eow) nil nil (list 0 font-lock-keyword-face)))
      (list (rx stmt-context (group "if") eow) (list 1 font-lock-keyword-face)
            (list (rx bow (or "do" "else") eow) nil nil (list 0 font-lock-keyword-face)))

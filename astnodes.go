@@ -61,6 +61,12 @@ type ForLoopStmt struct {
 	Body       Expr
 }
 
+type WhileLoopStmt struct {
+	Source    string
+	Condition Expr
+	Body      Expr
+}
+
 type IfExpr struct {
 	Source    string
 	Condition Expr
@@ -181,6 +187,11 @@ type PackageDef struct {
 	TopLevelStmts []Expr
 }
 
+type EmitStmt struct {
+	Source string
+	Value  StrLit
+}
+
 func (_ ProcDef) expression()         {}
 func (_ StructDef) expression()       {}
 func (_ EnumDef) expression()         {}
@@ -196,12 +207,14 @@ func (_ Call) expression()            {}
 func (_ ColonExpr) expression()       {}
 func (_ VariableDefStmt) expression() {}
 func (_ ForLoopStmt) expression()     {}
+func (_ WhileLoopStmt) expression()   {}
 func (_ IfExpr) expression()          {}
 func (_ IfElseExpr) expression()      {}
 func (_ ReturnStmt) expression()      {}
 func (_ TypeContext) expression()     {}
 func (_ BreakStmt) expression()       {}
 func (_ ContinueStmt) expression()    {}
+func (_ EmitStmt) expression()        {}
 
 func (arg ProcDef) GetSource() string         { return arg.Source }
 func (arg StructDef) GetSource() string       { return arg.Source }
@@ -220,6 +233,7 @@ func (arg Call) GetSource() string            { return arg.Source }
 func (arg ColonExpr) GetSource() string       { return arg.Source }
 func (arg VariableDefStmt) GetSource() string { return arg.Source }
 func (arg ForLoopStmt) GetSource() string     { return arg.Source }
+func (arg WhileLoopStmt) GetSource() string   { return arg.Source }
 func (arg IfExpr) GetSource() string          { return arg.Source }
 func (arg IfElseExpr) GetSource() string      { return arg.Source }
 func (arg ReturnStmt) GetSource() string      { return arg.Source }
@@ -227,6 +241,7 @@ func (arg BreakStmt) GetSource() string       { return arg.Source }
 func (arg ContinueStmt) GetSource() string    { return arg.Source }
 func (arg TypeContext) GetSource() string     { return arg.Source }
 func (arg NullPtrLit) GetSource() string      { return arg.Source }
+func (arg EmitStmt) GetSource() string        { return arg.Source }
 
 //func (arg TypeExpr) GetSource() string        { return arg.Source }
 
