@@ -345,7 +345,6 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 		}
 
 		result.value = code[:it]
-		fmt.Printf("literal: %s :literal\n", result.value)
 
 	case c == '"':
 		result.kind = TkStrLit
