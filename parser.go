@@ -127,7 +127,6 @@ func parseWhileLoop(tokenizer *Tokenizer) (result WhileLoopStmt) {
 	result.Body = parseExpr(tokenizer, false)
 	lastToken := tokenizer.token
 	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
-	fmt.Printf("yay, got a while: %s", result.Source)
 	return
 }
 
@@ -420,8 +419,6 @@ func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
 		result = (Expr)(parseForLoop(tokenizer))
 	case TkWhile:
 		result = (Expr)(parseWhileLoop(tokenizer))
-	case TkIf:
-		result = (Expr)(parseIfStmt(tokenizer))
 	default:
 
 		result = parseExpr(tokenizer, false)
@@ -566,6 +563,12 @@ func attachDocComment(expr Expr, target string, value string) (result bool) {
 	panic("not implementede")
 }
 
+func parseNilLit(tokenizer *Tokenizer) NilLit {
+	token := tokenizer.Next()
+	tokenizer.expectKind(token, TkNilLit)
+	return NilLit{Source: token.value, Type: TypeNilPtr}
+}
+
 func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 	switch tokenizer.lookAheadToken.kind {
 	case TkIdent:
@@ -574,6 +577,8 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 		result = (Expr)(parseCodeBlock(tokenizer))
 	case TkCharLit:
 		result = (Expr)(parseCharLit(tokenizer))
+	case TkIf:
+		result = (Expr)(parseIfStmt(tokenizer))
 	case TkStrLit:
 		result = (Expr)(parseStrLit(tokenizer))
 	case TkIntLit:
@@ -599,6 +604,8 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 		}
 	case TkType:
 		result = (Expr)(parseTypeContext(tokenizer))
+	case TkNilLit:
+		result = (Expr)(parseNilLit(tokenizer))
 	default:
 		panic(tokenizer.formatWrongKind(tokenizer.lookAheadToken))
 	}

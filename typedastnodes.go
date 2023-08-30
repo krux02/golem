@@ -87,6 +87,12 @@ type TcForLoopStmt struct {
 	Body       TcExpr
 }
 
+type TcWhileLoopStmt struct {
+	Source    string
+	Condition TcExpr
+	Body      TcExpr
+}
+
 type TcIfStmt struct {
 	Source    string
 	Condition TcExpr
@@ -103,7 +109,7 @@ type TcIfElseExpr struct {
 type TcDotExpr struct {
 	Source string
 	Lhs    TcExpr
-	Rhs    TcStructField
+	Rhs    TcExpr
 }
 
 type TcCall struct {
@@ -217,12 +223,14 @@ func (expr TcStructLit) expression()       {}
 
 func (arg TcErrorNode) GetSource() string       { return arg.SourceNode.GetSource() }
 func (arg TcDotExpr) GetSource() string         { return arg.Source }
+func (arg TcStructField) GetSource() string     { return arg.Source }
 func (arg TcSymbol) GetSource() string          { return arg.Source }
 func (arg TcProcSymbol) GetSource() string      { return arg.Source }
 func (arg TcVariableDefStmt) GetSource() string { return arg.Source }
 func (arg TcReturnStmt) GetSource() string      { return arg.Source }
 func (arg TcTypeContext) GetSource() string     { return arg.Source }
 func (arg TcForLoopStmt) GetSource() string     { return arg.Source }
+func (arg TcWhileLoopStmt) GetSource() string   { return arg.Source }
 func (arg TcIfStmt) GetSource() string          { return arg.Source }
 func (arg TcIfElseExpr) GetSource() string      { return arg.Source }
 func (arg TcCodeBlock) GetSource() string       { return arg.Source }

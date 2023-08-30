@@ -256,7 +256,7 @@ func (lit FloatLit) PrettyPrint(builder *AstPrettyPrinter) {
 	}
 }
 
-func (lit NullPtrLit) PrettyPrint(builder *AstPrettyPrinter) {
+func (lit NilLit) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("nullptr")
 }
 
@@ -395,6 +395,13 @@ func (loopStmt TcForLoopStmt) PrettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (loopStmt WhileLoopStmt) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("while ")
+	builder.WriteNode(loopStmt.Condition)
+	builder.WriteString(" do ")
+	builder.WriteNode(loopStmt.Body)
+}
+
+func (loopStmt TcWhileLoopStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("while ")
 	builder.WriteNode(loopStmt.Condition)
 	builder.WriteString(" do ")
@@ -593,7 +600,11 @@ func (expr TcTypeContext) PrettyPrint(builder *AstPrettyPrinter) {
 func (expr TcDotExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteNode(expr.Lhs)
 	builder.WriteByte('.')
-	builder.WriteString(expr.Rhs.Name)
+	builder.WriteNode(expr.Rhs)
+}
+
+func (expr TcStructField) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString(expr.Name)
 }
 
 func (signature ProcSignature) PrettyPrint(builder *AstPrettyPrinter) {

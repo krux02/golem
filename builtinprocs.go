@@ -161,11 +161,16 @@ var TypeInt8 = &BuiltinType{"i8", "int8_t", 'm'}
 var TypeInt16 = &BuiltinType{"i16", "int16_t", 's'}
 var TypeInt32 = &BuiltinType{"i32", "int32_t", 'i'}
 var TypeInt64 = &BuiltinType{"i64", "int64_t", 'l'}
+var TypeUInt8 = &BuiltinType{"u8", "uint8_t", 'M'}
+var TypeUInt16 = &BuiltinType{"u16", "uint16_t", 'S'}
+var TypeUInt32 = &BuiltinType{"u32", "uint32_t", 'I'}
+var TypeUInt64 = &BuiltinType{"u64", "uint64_t", 'L'}
 var TypeFloat32 = &BuiltinType{"f32", "float", 'f'}
 var TypeFloat64 = &BuiltinType{"f64", "double", 'd'}
-var TypeString = &BuiltinType{"string", "string", 'S'}
+var TypeString = &BuiltinType{"string", "string", 'R'}
 var TypeChar = &BuiltinType{"char", "char", 'c'}
 var TypeVoid = &BuiltinType{"void", "void", 'v'}
+var TypeNilPtr = &BuiltinType{"nilptr", "void*", 'n'}
 
 // This type is used to tag that a function never returns.
 var TypeNoReturn = &BuiltinType{"noreturn", "void", '-'}
@@ -181,11 +186,16 @@ var TypeUnspecified = &BuiltinType{"?unspecified?", "<unspecified>", ','}
 // this type is the internal representation when the type checker fails to
 // resolve the type. Expressions with this type cannot be further processed in
 // code generation. This should probably be a different type, not BuiltinType
-var TypeError = &BuiltinType{Name: "*Error*"}
+var TypeError = &ErrorType{}
 
+var TypeAnyUInt = &TypeGroup{Name: "AnyUInt", Items: []Type{TypeUInt8, TypeUInt16, TypeUInt32, TypeUInt64}}
 var TypeAnyInt = &TypeGroup{Name: "AnyInt", Items: []Type{TypeInt8, TypeInt16, TypeInt32, TypeInt64}}
 var TypeAnyFloat = &TypeGroup{Name: "AnyFloat", Items: []Type{TypeFloat32, TypeFloat64}}
-var TypeAnyNumber = &TypeGroup{Name: "AnyNumber", Items: []Type{TypeFloat32, TypeFloat64, TypeInt8, TypeInt16, TypeInt32, TypeInt64}}
+var TypeAnyNumber = &TypeGroup{Name: "AnyNumber", Items: []Type{
+	TypeFloat32, TypeFloat64,
+	TypeInt8, TypeInt16, TypeInt32, TypeInt64,
+	TypeUInt8, TypeUInt16, TypeUInt32, TypeUInt64,
+}}
 
 // types for C wrappers
 var TypeCString = &BuiltinType{"cstring", "char const*", 'x'}
@@ -202,7 +212,8 @@ func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	} else if typ == TypeInt8 || typ == TypeInt16 || typ == TypeInt32 || typ == TypeInt64 {
 		return &IntLit{Type: typ, Value: 0} // TODO no Source set
 	} else if typ == TypeBoolean {
-		panic("not implemented bool default value")
+		// TODO this is weird
+		tc.LookUpLetSym(builtinScope, Ident{Source: "false"}, TypeBoolean)
 	} else if typ == TypeVoid {
 		panic("not implemented void default value")
 	} else {
@@ -232,7 +243,7 @@ func (typ *EnumType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 }
 
 func (typ *PtrType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
-	return NullPtrLit{Type: typ}
+	return NilLit{Type: typ}
 }
 
 func (typ *EnumSetType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
@@ -465,6 +476,8 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) (result TcCal
 			formatStrC.WriteString("f")
 		case TypeFloat64:
 			formatStrC.WriteString("f")
+		default:
+			panic(fmt.Errorf("internal error: %s", AstFormat(argType)))
 		}
 		i++
 	}
@@ -496,14 +509,21 @@ func init() {
 	registerBuiltinType(TypeInt16)
 	registerBuiltinType(TypeInt32)
 	registerBuiltinType(TypeInt64)
+	registerBuiltinType(TypeUInt8)
+	registerBuiltinType(TypeUInt16)
+	registerBuiltinType(TypeUInt32)
+	registerBuiltinType(TypeUInt64)
 	registerBuiltinType(TypeFloat32)
 	registerBuiltinType(TypeFloat64)
 	registerBuiltinType(TypeString)
+	registerBuiltinType(TypeCString)
 	registerBuiltinType(TypeVoid)
 	registerBuiltinType(TypeNoReturn)
+	registerBuiltinType(TypeNilPtr)
 
 	registerTypeGroup(TypeAnyFloat)
 	registerTypeGroup(TypeAnyInt)
+	registerTypeGroup(TypeAnyUInt)
 	registerTypeGroup(TypeAnyNumber)
 
 	// this has no structure, just made to make the example compile

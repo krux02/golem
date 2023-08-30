@@ -148,7 +148,7 @@ type FloatLit struct {
 	Value  float64
 }
 
-type NullPtrLit struct {
+type NilLit struct {
 	Source string
 	Type   Type
 }
@@ -203,6 +203,7 @@ func (_ *IntLit) expression()         {}
 func (_ FloatLit) expression()        {}
 func (_ ArrayLit) expression()        {}
 func (_ CharLit) expression()         {}
+func (_ NilLit) expression()          {}
 func (_ Call) expression()            {}
 func (_ ColonExpr) expression()       {}
 func (_ VariableDefStmt) expression() {}
@@ -240,7 +241,7 @@ func (arg ReturnStmt) GetSource() string      { return arg.Source }
 func (arg BreakStmt) GetSource() string       { return arg.Source }
 func (arg ContinueStmt) GetSource() string    { return arg.Source }
 func (arg TypeContext) GetSource() string     { return arg.Source }
-func (arg NullPtrLit) GetSource() string      { return arg.Source }
+func (arg NilLit) GetSource() string          { return arg.Source }
 func (arg EmitStmt) GetSource() string        { return arg.Source }
 
 //func (arg TypeExpr) GetSource() string        { return arg.Source }

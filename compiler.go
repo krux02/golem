@@ -217,7 +217,7 @@ func (builder *CodeBuilder) CompileIfElseExpr(context *PackageGeneratorContext, 
 func (builder *CodeBuilder) CompileDotExpr(context *PackageGeneratorContext, dotExpr TcDotExpr) {
 	builder.CompileExpr(context, dotExpr.Lhs)
 	builder.WriteString(".")
-	builder.WriteString(dotExpr.Rhs.Name)
+	builder.CompileExpr(context, dotExpr.Rhs)
 }
 
 func (builder *CodeBuilder) CompileForLoopStmt(context *PackageGeneratorContext, stmt TcForLoopStmt) {
@@ -336,6 +336,8 @@ func (builder *CodeBuilder) CompileExprWithPrefix(context *PackageGeneratorConte
 		builder.CompileStructLit(context, ex)
 	case TcEnumSetLit:
 		builder.CompileEnumSetLit(context, ex)
+	case TcStructField:
+		builder.WriteString(ex.Name)
 	case nil:
 		panic(fmt.Sprintf("invalid Ast, expression is nil %T", expr))
 	default:

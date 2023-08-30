@@ -65,10 +65,15 @@ func validateSourceSetInternal(code string, node reflect.Value) {
 	case reflect.Struct:
 		// direct ast node
 		// validateSourceSetInternal(code, fieldValue)
-		if typ.Field(0).Name != "Source" {
-			panic("expected field `Source` here")
+		name := typ.Name()
+		if name == "BuiltinType" {
+			return
 		}
-		if typ.Name() == "IntLit" {
+		if typ.Field(0).Name != "Source" {
+			panic(fmt.Errorf("type %s expected field `Source` at the beginning", typ.Name()))
+		}
+		if name == "IntLit" {
+			// this would be eteral recursion as long as the typo of an IntLit is the IntLit itself
 			return
 		}
 		N := node.NumField()

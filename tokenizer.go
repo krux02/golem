@@ -22,6 +22,7 @@ const (
 	TkHexLit
 	TkFloatLit
 	TkCharLit
+	TkNilLit
 	TkPrefixDocComment
 	TkPostfixDocComment
 
@@ -68,6 +69,7 @@ var TokenKindNames = [...]string{
 	TkIntLit:            "IntLit",
 	TkFloatLit:          "FloatLit",
 	TkCharLit:           "CharLit",
+	TkNilLit:            "NilLit",
 	TkPrefixDocComment:  "PrefixDocComment",
 	TkPostfixDocComment: "PostfixDocComment",
 	TkType:              "Type",
@@ -294,6 +296,8 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			result.kind = TkWhile
 		case "do":
 			result.kind = TkDo
+		case "nil":
+			result.kind = TkNilLit
 		default:
 			result.kind = TkIdent
 		}

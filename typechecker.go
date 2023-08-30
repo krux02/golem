@@ -377,7 +377,10 @@ func (structDef *TcStructDef) GetField(name string) (resField TcStructField, idx
 func (tc *TypeChecker) TypeCheckDotExpr(scope Scope, parentSource string, lhs, rhs Expr, expected Type) (result TcDotExpr) {
 	result.Lhs = tc.TypeCheckExpr(scope, lhs, TypeUnspecified)
 	result.Source = parentSource
-	switch t := result.Lhs.GetType().(type) {
+
+	// fmt.Printf("lhs: %T %+v\n", result.Lhs, result.Lhs)
+	typ := result.Lhs.GetType()
+	switch t := typ.(type) {
 	case *StructType:
 		rhsSrc := rhs.GetSource()
 		var idx int
@@ -386,10 +389,14 @@ func (tc *TypeChecker) TypeCheckDotExpr(scope Scope, parentSource string, lhs, r
 			tc.ReportErrorf(rhs, "type %s has no field %s", t.Impl.Name, rhs.GetSource())
 			return result
 		}
-		tc.ExpectType(rhs, result.Rhs.Type, expected)
+		tc.ExpectType(rhs, result.Rhs.GetType(), expected)
+		return result
+	case *ErrorType:
 		return result
 	default:
-		panic("dot call is only supported on struct field")
+		tc.ReportErrorf(lhs, "dot call is only supported on struct types, but got: %s %T", AstFormat(typ), typ)
+		result.Rhs = TcErrorNode{rhs}
+		return result
 	}
 }
 
@@ -985,7 +992,7 @@ func (lit FloatLit) GetType() Type {
 	return lit.Type
 }
 
-func (lit NullPtrLit) GetType() Type {
+func (lit NilLit) GetType() Type {
 	if lit.Type == nil {
 		panic(fmt.Errorf("internal error: type of NullPtrLit not set"))
 	}
@@ -1017,6 +1024,10 @@ func (stmt TcForLoopStmt) GetType() Type {
 	return TypeVoid
 }
 
+func (stmt TcWhileLoopStmt) GetType() Type {
+	return TypeVoid
+}
+
 func UnifyType(a, b Type) Type {
 	if a != b {
 		panic("type incompatible")
@@ -1041,7 +1052,11 @@ func (expr TcTypeContext) GetType() Type {
 }
 
 func (expr TcDotExpr) GetType() Type {
-	return expr.Rhs.Type
+	return expr.Rhs.GetType()
+}
+
+func (field TcStructField) GetType() Type {
+	return field.Type
 }
 
 func (tc *TypeChecker) TypeCheckColonExpr(scope Scope, arg ColonExpr, expected Type) TcExpr {
@@ -1076,6 +1091,14 @@ func (tc *TypeChecker) TypeCheckIntLit(scope Scope, arg *IntLit, expected Type) 
 	}
 }
 
+func (tc *TypeChecker) TypeCheckStrLit(scope Scope, arg StrLit, expected Type) TcExpr {
+	if expected == TypeCString {
+		return CStrLit{arg.Source, arg.Value}
+	}
+	tc.ExpectType(arg, TypeString, expected)
+	return (TcExpr)(arg)
+}
+
 func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExpr {
 	switch arg := arg.(type) {
 	case Call:
@@ -1098,8 +1121,7 @@ func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExp
 		sym := tc.LookUpLetSym(scope, arg, expected)
 		return (TcExpr)(sym)
 	case StrLit:
-		tc.ExpectType(arg, TypeString, expected)
-		return (TcExpr)(arg)
+		return tc.TypeCheckStrLit(scope, arg, expected)
 	case CharLit:
 		tc.ExpectType(arg, TypeChar, expected)
 		return (TcExpr)(arg)
@@ -1132,8 +1154,12 @@ func (tc *TypeChecker) TypeCheckExpr(scope Scope, arg Expr, expected Type) TcExp
 		return (TcExpr)(tc.TypeCheckIfElseStmt(scope, arg, expected))
 	case ArrayLit:
 		return (TcExpr)(tc.TypeCheckArrayLit(scope, arg, expected))
+	case NilLit:
+		return (TcExpr)(tc.TypeCheckNilLit(scope, arg, expected))
 	case ColonExpr:
 		return (TcExpr)(tc.TypeCheckColonExpr(scope, arg, expected))
+	case WhileLoopStmt:
+		return (TcExpr)(tc.TypeCheckWhileLoopStmt(scope, arg))
 	default:
 		panic(fmt.Errorf("not implemented %T", arg))
 	}
@@ -1259,14 +1285,26 @@ func (tc *TypeChecker) TypeCheckArrayLit(scope Scope, arg ArrayLit, expected Typ
 			}
 			return result
 		}
+	case *ErrorType:
+		return TcErrorNode{SourceNode: arg}
 	case *BuiltinType:
-		if exp == TypeError {
-			return TcErrorNode{SourceNode: arg}
-		}
 		panic(fmt.Errorf("I don't know about type %s!", exp.Name))
 	default:
 		panic(fmt.Errorf("I don't know about type %T!", exp))
 	}
+}
+
+func (tc *TypeChecker) TypeCheckNilLit(scope Scope, arg NilLit, expected Type) NilLit {
+	switch exp := expected.(type) {
+	case *PtrType:
+		return NilLit{Source: arg.Source, Type: exp}
+	case *BuiltinType:
+		if exp == TypeUnspecified {
+			return NilLit{Source: arg.Source, Type: TypeNilPtr}
+		}
+	}
+	tc.ReportUnexpectedType(arg, expected, TypeNilPtr)
+	return NilLit{Source: arg.Source, Type: TypeError}
 }
 
 func (tc *TypeChecker) TypeCheckIfStmt(scope Scope, stmt IfExpr) (result TcIfStmt) {
@@ -1308,6 +1346,15 @@ func (tc *TypeChecker) TypeCheckForLoopStmt(scope Scope, loopArg ForLoopStmt) (r
 	result.LoopSym = scope.NewSymbol(tc, loopArg.LoopIdent, SkLoopIterator, elementType)
 	result.Body = tc.TypeCheckExpr(scope, loopArg.Body, TypeVoid)
 	return
+}
+
+func (tc *TypeChecker) TypeCheckWhileLoopStmt(scope Scope, loopArg WhileLoopStmt) (result TcWhileLoopStmt) {
+	scope = scope.NewSubScope()
+
+	result.Source = loopArg.Source
+	result.Condition = tc.TypeCheckExpr(scope, loopArg.Condition, TypeBoolean)
+	result.Body = tc.TypeCheckExpr(scope, loopArg.Body, TypeVoid)
+	return result
 }
 
 func (tc *TypeChecker) TypeCheckPackage(arg PackageDef, requiresMain bool) (result TcPackageDef) {

@@ -33,7 +33,7 @@ proc foobar(arg: MyStruct): void = {
   printf("c: %s\n", arg.c)
 }
 
-proc max(a,b: i64): i64 = {if a > b do a else b}
+proc max(a,b: i64): i64 = if a > b do a else b
 
 
 proc max(a,b: f64): f64 = {

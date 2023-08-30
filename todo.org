@@ -16,6 +16,7 @@
 * DONE make high/low values of integer types somehow accessible.
 * DONE pointer
 * TODO pass by reference
+* TODO mutable flag in type
 * TODO have macros (stubs at least)
 * TODO have varargs for macros (only)
 varargs is a thing now, but it is still problematic. the arguments should be
@@ -28,25 +29,21 @@ who should type check the arguments.
 have an expected type set ~[a,b,c]:MyType~.
  * ~printf("<format-expr>", arg1, arg2, ...)~ needs to parse ~"<format-expr>"~ before it has an expected type for arg1, arg2, ...
  * How does this mix with overload resolution.
+* TODO proper constants, current implementation for ~true/false~ is a big hack
 * TODO ensure that int lit types are actually instanciated only once (BIG BUG right now)
 * TODO C interop (emit and function declarations)
+* TODO C++ interop
 * TODO define order to generate type definitions in
-* TODO generic arguments (important for builtin array access)
+* DONE generic arguments (important for builtin array access)
 * TODO not all ast nodes have correct ~source~ values, for example ~[]~, code needs to deal with it
 * TODO display parsing errors as normal error messages
-* TODO call by reference
-* TODO mutable flag in type
-* TODO multiple return values??
 * TODO full coverage of all error messages
-* TODO test operator precedence when many ~:~ are in use
-* TODO default int, default float
+* TODO test operator precedence when many ~:~ and ~.~ are in use (currently buggy)
 * DONE add ability for type assertions
 * TODO maybe return TypeFloat like in Nim for integer division?
-* TODO better distinguish go type information vs golem type information better
 * TODO vm for compile time code execution
 * TODO restrict operator precedence to common knowledge cases (+-*/) require explicit braces everywhere else.
 * DONE static overloading
-* TODO C++ interop
 * DONE automatic narrowing of literals when type is known from outside.
 * TODO test default value
 * TODO compiler passes for some transformations (e.g. moving literals to constants)
@@ -66,5 +63,3 @@ have an expected type set ~[a,b,c]:MyType~.
  [ ] jump to catch from throw
  [ ] jump to throw from catch
  [ ] jump to definition
-* TODO dotExpr should be strictly limited to two elements
-
