@@ -336,23 +336,38 @@ func parseFloatLit(tokenizer *Tokenizer) (result FloatLit) {
 	return
 }
 
+func applyOperatorPrecedenceFromLeft(tokenizerCode string, lhs Expr, op Ident, rhs Expr) Call {
+	if rhsCall, ok := rhs.(Call); ok && !rhsCall.Braced {
+		rhsOperator, isIdent := rhsCall.Callee.(Ident)
+		if isIdent && OperatorPrecedence[op.Source] >= OperatorPrecedence[rhsOperator.Source] {
+			// if operator.Source == "." {
+			// 	fmt.Printf("before rehang %s\n", AstFormat(result))
+			// }
+
+			newLhs := applyOperatorPrecedenceFromLeft(tokenizerCode, lhs, op, rhsCall.Args[0])
+			newRhs := rhsCall.Args[1]
+			return Call{
+				Source: joinSubstr(tokenizerCode, newLhs.GetSource(), newRhs.GetSource()),
+				Callee: rhsOperator,
+				Args:   []Expr{newLhs, newRhs},
+			}
+		}
+	}
+
+	return Call{
+		Source: joinSubstr(tokenizerCode, lhs.GetSource(), rhs.GetSource()),
+		Callee: op,
+		Args:   []Expr{lhs, rhs},
+	}
+}
+
 func parseInfixCall(tokenizer *Tokenizer, lhs Expr) (result Call) {
 	operator := parseOperator(tokenizer)
 	rhs := parseExpr(tokenizer, false)
-	result = Call{Callee: operator, Args: []Expr{lhs, rhs}}
-
-	if rhsCall, ok := rhs.(Call); ok && !rhsCall.Braced {
-		rhsOperator, isIdent := rhsCall.Callee.(Ident)
-		if isIdent && OperatorPrecedence[operator.Source] > OperatorPrecedence[rhsOperator.Source] {
-			// operator precedence
-			result.Args[1] = rhsCall.Args[0]
-			result.Source = joinSubstr(tokenizer.code, result.Args[0].GetSource(), result.Args[1].GetSource())
-			rhsCall.Args[0] = result
-			rhsCall.Source = joinSubstr(tokenizer.code, rhsCall.Args[0].GetSource(), rhsCall.Args[1].GetSource())
-			return rhsCall
-		}
-	}
-	result.Source = joinSubstr(tokenizer.code, lhs.GetSource(), rhs.GetSource())
+	// parseExpr recursively eats all follow operator calls. Therefore `lhs` is
+	// the _new_ operatore that needs to be applied in the expression from the
+	// left.
+	result = applyOperatorPrecedenceFromLeft(tokenizer.code, lhs, operator, rhs)
 	return
 }
 

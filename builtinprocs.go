@@ -526,8 +526,7 @@ func init() {
 	registerTypeGroup(TypeAnyUInt)
 	registerTypeGroup(TypeAnyNumber)
 
-	// this has no structure, just made to make the example compile
-	for _, typ := range []Type{TypeInt8, TypeInt16, TypeInt32, TypeInt64, TypeFloat32, TypeFloat64} {
+	for _, typ := range TypeAnyNumber.Items {
 		registerBuiltin("+", "(", "+", ")", []Type{typ, typ}, typ)
 		registerBuiltin("-", "(", "-", ")", []Type{typ, typ}, typ)
 		registerBuiltin("*", "(", "*", ")", []Type{typ, typ}, typ)

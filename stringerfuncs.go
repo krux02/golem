@@ -55,11 +55,22 @@ func (ident Ident) PrettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (call Call) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteNode(call.Callee)
+
+	ident, isIdent := call.Callee.(Ident)
+	isOperator := isIdent && ident.Source == "."
+
+	// maybe operator should be its own syntax token
+	if !isOperator {
+		builder.WriteNode(call.Callee)
+	}
 	builder.WriteString("(")
 	for i, arg := range call.Args {
 		if i != 0 {
-			builder.WriteString(", ")
+			if isOperator {
+				builder.WriteString(ident.Source)
+			} else {
+				builder.WriteString(", ")
+			}
 		}
 		builder.WriteNode(arg)
 	}

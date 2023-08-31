@@ -13,6 +13,18 @@ type MyEnum = enum {
   Option3
 }
 
+type StructNest1 = struct {
+  nest1: MyStruct
+}
+
+type StructNest2 = struct {
+  nest2: StructNest1
+}
+
+type StructNest3 = struct {
+  nest3: StructNest2
+}
+
 type FooFlags = enum { Any; Words; Work; As; Enum; Values }
 
 proc foo(arg: MyStruct, flags: set(FooFlags)): void = {
@@ -44,5 +56,10 @@ proc main():i32 = {
   printf("a: %d b: %f c: %s\n", myStruct2.a, myStruct2.b, myStruct2.c)
   printf("a: %d b: %f c: %s\n", myStruct3.a, myStruct3.b, myStruct3.c)
   foo(myStruct1, [Any,Work,As])
+
+  # struct nesting
+  var myNestedStruct: StructNest3
+  myNestedStruct.nest3.nest2.nest1.a = 123
+  printf("a: %d\n", myNestedStruct.nest3.nest2.nest1.a)
   0
 }

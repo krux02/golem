@@ -392,6 +392,7 @@ func (tc *TypeChecker) TypeCheckDotExpr(scope Scope, parentSource string, lhs, r
 		tc.ExpectType(rhs, result.Rhs.GetType(), expected)
 		return result
 	case *ErrorType:
+		result.Rhs = TcErrorNode{rhs}
 		return result
 	default:
 		tc.ReportErrorf(lhs, "dot call is only supported on struct types, but got: %s %T", AstFormat(typ), typ)
@@ -1066,29 +1067,39 @@ func (tc *TypeChecker) TypeCheckColonExpr(scope Scope, arg ColonExpr, expected T
 }
 
 func (tc *TypeChecker) TypeCheckIntLit(scope Scope, arg *IntLit, expected Type) TcExpr {
-	typ := tc.ExpectType(arg, TypeAnyNumber, expected).(*BuiltinType)
-	if typ == TypeFloat32 || typ == TypeFloat64 {
-		var lit FloatLit
-		lit.Source = arg.Source
-		lit.Value = float64(arg.Value)
-		if typ == TypeFloat32 {
-			lit.Type = TypeFloat32
-			if int64(float32(lit.Value)) != arg.Value {
-				tc.ReportErrorf(arg, "can't represent %d as float32 precisely", arg.Value)
-			}
-		} else if typ == TypeFloat64 {
-			lit.Type = TypeFloat64
-			if int64(lit.Value) != arg.Value {
-				tc.ReportErrorf(arg, "can't represent %d as float64 precisely", arg.Value)
-			}
+	switch typ := tc.ExpectType(arg, TypeAnyNumber, expected).(type) {
+	case *ErrorType:
+		return &IntLit{
+			Source: arg.Source,
+			Type:   typ,
 		}
-		return lit
+	case *BuiltinType:
+		if typ == TypeFloat32 || typ == TypeFloat64 {
+			var lit FloatLit
+			lit.Source = arg.Source
+			lit.Value = float64(arg.Value)
+			if typ == TypeFloat32 {
+				lit.Type = TypeFloat32
+				if int64(float32(lit.Value)) != arg.Value {
+					tc.ReportErrorf(arg, "can't represent %d as float32 precisely", arg.Value)
+				}
+			} else if typ == TypeFloat64 {
+				lit.Type = TypeFloat64
+				if int64(lit.Value) != arg.Value {
+					tc.ReportErrorf(arg, "can't represent %d as float64 precisely", arg.Value)
+				}
+			}
+			return lit
+		}
+		return &IntLit{
+			Source: arg.Source,
+			Type:   typ,
+			Value:  arg.Value,
+		}
+	default:
+		panic(fmt.Errorf("internal error: %T", typ))
 	}
-	return &IntLit{
-		Source: arg.Source,
-		Type:   typ,
-		Value:  arg.Value,
-	}
+
 }
 
 func (tc *TypeChecker) TypeCheckStrLit(scope Scope, arg StrLit, expected Type) TcExpr {
