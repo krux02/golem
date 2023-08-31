@@ -340,10 +340,6 @@ func applyOperatorPrecedenceFromLeft(tokenizerCode string, lhs Expr, op Ident, r
 	if rhsCall, ok := rhs.(Call); ok && !rhsCall.Braced {
 		rhsOperator, isIdent := rhsCall.Callee.(Ident)
 		if isIdent && OperatorPrecedence[op.Source] >= OperatorPrecedence[rhsOperator.Source] {
-			// if operator.Source == "." {
-			// 	fmt.Printf("before rehang %s\n", AstFormat(result))
-			// }
-
 			newLhs := applyOperatorPrecedenceFromLeft(tokenizerCode, lhs, op, rhsCall.Args[0])
 			newRhs := rhsCall.Args[1]
 			return Call{
