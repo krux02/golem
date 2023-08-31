@@ -33,7 +33,7 @@ have an expected type set ~[a,b,c]:MyType~.
 * TODO ensure that int lit types are actually instanciated only once (BIG BUG right now)
 * TODO C interop (emit and function declarations)
 * TODO C++ interop
-* TODO define order to generate type definitions in
+* DONE define order to generate type definitions in
 * DONE generic arguments (important for builtin array access)
 * TODO not all ast nodes have correct ~source~ values, for example ~[]~, code needs to deal with it
 * TODO display parsing errors as normal error messages

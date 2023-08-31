@@ -20,9 +20,7 @@ type PackageGeneratorContext struct {
 	// functions marked for code generation
 	TodoListProc []*TcProcDef
 	// types marked for code generation
-	TodoListArray  []*ArrayType
-	TodoListEnum   []*EnumType
-	TodoListStruct []*StructType
+	TodoListTypes []Type
 }
 
 func (builder *CodeBuilder) NewlineAndIndent() {
@@ -33,22 +31,19 @@ func (builder *CodeBuilder) NewlineAndIndent() {
 }
 
 func (builder *CodeBuilder) compileTypeExpr(context *PackageGeneratorContext, typ Type) {
+	markTypeForGeneration(context, typ)
 	switch typ := typ.(type) {
 	case *BuiltinType:
 		builder.WriteString(typ.InternalName)
 	case *ArrayType:
-		context.markArrayTypeForGeneration(typ)
 		typ.ManglePrint(&builder.Builder)
 	case *StructType:
-		context.markStructTypeForGeneration(typ)
 		// TODO this should be the mangled name
 		builder.WriteString(typ.Impl.Name)
 	case *EnumType:
-		context.markEnumTypeForGeneration(typ)
 		// TODO this should be the mangled name
 		builder.WriteString(typ.Impl.Name)
 	case *EnumSetType:
-		context.markEnumTypeForGeneration(typ.Elem)
 		builder.WriteString("uint64_t")
 	case *PtrType:
 		builder.compileTypeExpr(context, typ.Target)
@@ -490,28 +485,52 @@ func (context *PackageGeneratorContext) markProcForGeneration(procDef *TcProcDef
 	procDef.scheduledforgeneration = true
 }
 
-func (context *PackageGeneratorContext) markArrayTypeForGeneration(typeDef *ArrayType) {
-	if typeDef.scheduledforgeneration {
-		return // nothing to do when already scheduled
+func markTypeForGeneration(context *PackageGeneratorContext, typ Type) {
+	switch typ := typ.(type) {
+	case *ArrayType:
+		markArrayTypeForGeneration(context, typ)
+	case *StructType:
+		markStructTypeForGeneration(context, typ)
+	case *EnumType:
+		markEnumTypeForGeneration(context, typ)
+	case *EnumSetType:
+		markEnumTypeForGeneration(context, typ.Elem)
+	case *PtrType:
+		markTypeForGeneration(context, typ.Target)
+	case *BuiltinType:
+		return
+	default:
+		panic(fmt.Errorf("internal error: %T", typ))
 	}
-	context.TodoListArray = append(context.TodoListArray, typeDef)
-	typeDef.scheduledforgeneration = true
 }
 
-func (context *PackageGeneratorContext) markStructTypeForGeneration(typ *StructType) {
+func markArrayTypeForGeneration(context *PackageGeneratorContext, typ *ArrayType) {
 	if typ.scheduledforgeneration {
 		return // nothing to do when already scheduled
 	}
-	context.TodoListStruct = append(context.TodoListStruct, typ)
+	markTypeForGeneration(context, typ.Elem)
 	typ.scheduledforgeneration = true
+	context.TodoListTypes = append(context.TodoListTypes, typ)
+	//fmt.Printf("marking type for generation: %s %s\n", AstFormat(typ), AstFormat(typ.Elem))
 }
 
-func (context *PackageGeneratorContext) markEnumTypeForGeneration(typ *EnumType) {
+func markStructTypeForGeneration(context *PackageGeneratorContext, typ *StructType) {
 	if typ.scheduledforgeneration {
 		return // nothing to do when already scheduled
 	}
-	context.TodoListEnum = append(context.TodoListEnum, typ)
+	for _, field := range typ.Impl.Fields {
+		markTypeForGeneration(context, field.Type)
+	}
 	typ.scheduledforgeneration = true
+	context.TodoListTypes = append(context.TodoListTypes, typ)
+}
+
+func markEnumTypeForGeneration(context *PackageGeneratorContext, typ *EnumType) {
+	if typ.scheduledforgeneration {
+		return // nothing to do when already scheduled
+	}
+	typ.scheduledforgeneration = true
+	context.TodoListTypes = append(context.TodoListTypes, typ)
 }
 
 // might return nil when nothing to do
@@ -524,29 +543,11 @@ func (context *PackageGeneratorContext) popMarkedForGenerationProcDef() (result 
 	return result
 }
 
-func (context *PackageGeneratorContext) popMarkedForGenerationEnumType() (result *EnumType) {
-	N := len(context.TodoListEnum)
+func (context *PackageGeneratorContext) popMarkedForGenerationType() (result Type) {
+	N := len(context.TodoListTypes)
 	if N > 0 {
-		result = context.TodoListEnum[N-1]
-		context.TodoListEnum = context.TodoListEnum[:N-1]
-	}
-	return result
-}
-
-func (context *PackageGeneratorContext) popMarkedForGenerationStructDef() (result *StructType) {
-	N := len(context.TodoListStruct)
-	if N > 0 {
-		result = context.TodoListStruct[N-1]
-		context.TodoListStruct = context.TodoListStruct[:N-1]
-	}
-	return result
-}
-
-func (context *PackageGeneratorContext) popMarkedForGenerationArrayDef() (result *ArrayType) {
-	N := len(context.TodoListArray)
-	if N > 0 {
-		result = context.TodoListArray[N-1]
-		context.TodoListArray = context.TodoListArray[:N-1]
+		result = context.TodoListTypes[N-1]
+		context.TodoListTypes = context.TodoListTypes[:N-1]
 	}
 	return result
 }
@@ -569,23 +570,19 @@ func compilePackageToC(pak TcPackageDef) string {
 	for procDef := context.popMarkedForGenerationProcDef(); procDef != nil; procDef = context.popMarkedForGenerationProcDef() {
 		compileProcDef(context, procDef)
 	}
-	for typ := context.popMarkedForGenerationEnumType(); typ != nil; typ = context.popMarkedForGenerationEnumType() {
-		compileEnumDef(context, typ.Impl)
-	}
-	for typ := context.popMarkedForGenerationStructDef(); typ != nil; typ = context.popMarkedForGenerationStructDef() {
-		compileStructDef(context, typ.Impl)
-	}
 
-	// TODO, this invertion of order is total bullshit. It's just made because it makes one example compile better
-	for i, N := 0, len(context.TodoListArray); i < (N / 2); i++ {
-		j := N - 1 - i
-		context.TodoListArray[i], context.TodoListArray[j] = context.TodoListArray[j], context.TodoListArray[i]
+	for _, typ := range context.TodoListTypes {
+		switch typ := typ.(type) {
+		case *EnumType:
+			compileEnumDef(context, typ.Impl)
+		case *StructType:
+			compileStructDef(context, typ.Impl)
+		case *ArrayType:
+			compileArrayDef(context, typ)
+		default:
+			panic(fmt.Errorf("internal error: this type should not be in the marked for generation queue: %T", typ))
+		}
 	}
-
-	for typeDef := context.popMarkedForGenerationArrayDef(); typeDef != nil; typeDef = context.popMarkedForGenerationArrayDef() {
-		compileArrayDef(context, typeDef)
-	}
-	// TODO this creates a type declaration for every usage. Should be done only once
 
 	final := &strings.Builder{}
 	final.WriteString("\n/* includes */")

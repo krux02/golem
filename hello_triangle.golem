@@ -51,7 +51,7 @@ proc main(): i32 = {
     while SDL_PollEvent(addr(event)) do {
       if event.typ == SDL_QUIT do { # TODO actually it is `type` but I can't write that
         running = false
-      } else if (event.typ) == SDL_KEYDOWN and (((event.key).keysym).scancode) == SDL_SCANCODE_ESCAPE do { # TODO actually it is `type` not `typ` but that isn't valid
+      } else if event.typ == SDL_KEYDOWN and event.key.keysym.scancode == SDL_SCANCODE_ESCAPE do { # TODO actually it is `type` not `typ` but that isn't valid
         running = false
       }
     }
