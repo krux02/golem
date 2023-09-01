@@ -7,7 +7,16 @@ emit "#include <SDL2/SDL_video.h>"
 
 type SDL_Window = struct {} # SDL_Window from C
 type SDL_GLContext = struct {} # SDL_GLContext from C
-type SDL_Event = struct {typ: u32} # SDL_Event from C
+type SDL_Keysym = struct {
+  scancode: u32
+}
+type SDL_KeyboardEvent = struct {
+  keysym: SDL_Keysym
+}
+type SDL_Event = struct {
+  typ: u32
+  key: SDL_KeyboardEvent
+} # SDL_Event from C
 
 proc SDL_CreateWindow(name: cstring, x,y,w,h: i32, flags: u32): ptr(SDL_Window) = nil
    # SDL_Window * SDL_CreateWindow(const char *title,
@@ -49,7 +58,7 @@ proc main(): i32 = {
   while running do {
     var event: SDL_Event
     while SDL_PollEvent(addr(event)) do {
-      if event.typ == SDL_QUIT do { # TODO actually it is `type` but I can't write that
+      if event.typ == SDL_QUIT do { # TODO actually it is ~type~ but I can't write that
         running = false
       } else if event.typ == SDL_KEYDOWN and event.key.keysym.scancode == SDL_SCANCODE_ESCAPE do { # TODO actually it is `type` not `typ` but that isn't valid
         running = false

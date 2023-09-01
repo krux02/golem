@@ -944,6 +944,7 @@ func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt
 		result.Sym = scope.NewSymbol(tc, arg.Name, arg.Kind, result.Value.GetType())
 	}
 
+	fmt.Println(AstFormat(result))
 	return result
 }
 
@@ -1400,6 +1401,10 @@ func (tc *TypeChecker) TypeCheckPackage(arg PackageDef, requiresMain bool) (resu
 		case DocComment:
 			docComment = stmt
 			hasDocComment = true
+		case EmitStmt:
+			panic("emit statement not implemented")
+		default:
+			panic(fmt.Errorf("internal error: %T", stmt))
 		}
 	}
 	if requiresMain && result.Main == nil {

@@ -261,6 +261,13 @@ func (builder *CodeBuilder) CompileForLoopStmt(context *PackageGeneratorContext,
 	builder.CompileExpr(context, stmt.Body)
 }
 
+func (builder *CodeBuilder) CompileWhileLoopStmt(context *PackageGeneratorContext, stmt TcWhileLoopStmt) {
+	builder.WriteString("while(")
+	builder.CompileExpr(context, stmt.Condition)
+	builder.WriteString(") ")
+	builder.CompileExpr(context, stmt.Body)
+}
+
 func (builder *CodeBuilder) CompileSeparatedExprList(context *PackageGeneratorContext, list []TcExpr, separator string) {
 	for i, it := range list {
 		if i != 0 {
@@ -311,6 +318,8 @@ func (builder *CodeBuilder) CompileExprWithPrefix(context *PackageGeneratorConte
 		builder.CompileIntLit(ex)
 	case FloatLit:
 		builder.CompileFloatLit(ex)
+	case NilLit:
+		builder.WriteString("NULL")
 	case TcArrayLit:
 		builder.CompileArrayLit(context, ex)
 	case TcSymbol:
@@ -327,6 +336,8 @@ func (builder *CodeBuilder) CompileExprWithPrefix(context *PackageGeneratorConte
 		builder.CompileIfElseExpr(context, ex)
 	case TcForLoopStmt:
 		builder.CompileForLoopStmt(context, ex)
+	case TcWhileLoopStmt:
+		builder.CompileWhileLoopStmt(context, ex)
 	case TcStructLit:
 		builder.CompileStructLit(context, ex)
 	case TcEnumSetLit:

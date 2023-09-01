@@ -213,7 +213,7 @@ func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 		return &IntLit{Type: typ, Value: 0} // TODO no Source set
 	} else if typ == TypeBoolean {
 		// TODO this is weird
-		tc.LookUpLetSym(builtinScope, Ident{Source: "false"}, TypeBoolean)
+		return tc.LookUpLetSym(builtinScope, Ident{Source: "false"}, TypeBoolean)
 	} else if typ == TypeVoid {
 		panic("not implemented void default value")
 	} else {
