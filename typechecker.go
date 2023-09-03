@@ -943,8 +943,6 @@ func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt
 		result.Value = tc.TypeCheckExpr(scope, arg.Value, expected)
 		result.Sym = scope.NewSymbol(tc, arg.Name, arg.Kind, result.Value.GetType())
 	}
-
-	fmt.Println(AstFormat(result))
 	return result
 }
 
