@@ -1,0 +1,9 @@
+
+
+proc main():i32 = {
+  # use keyword as identifier when in `backticks`
+  # use string literal with escaped quotes inside
+  let `proc`: string = "hello \"something quoted\" end"
+  printf("the string: %s\n", `proc`)
+  return 0
+}
