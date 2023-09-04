@@ -215,7 +215,7 @@ func (tc *TypeChecker) TypeCheckEnumDef(scope Scope, def EnumDef) *TcEnumDef {
 		result.Values = append(result.Values, sym)
 	}
 	tc.RegisterType(scope, enumType.Impl.Name, enumType, def.Name)
-	registerBuiltin("string", fmt.Sprintf("%s_names_array[", result.Name), "", "]", []Type{enumType}, TypeString)
+	registerBuiltin("string", fmt.Sprintf("%s_names_array[", result.Name), "", "]", []Type{enumType}, TypeStr)
 	for _, intType := range TypeAnyInt.Items {
 		builtinType := intType.(*BuiltinType)
 		registerBuiltin(builtinType.Name, fmt.Sprintf("(%s)", builtinType.InternalName), "", "", []Type{enumType}, intType)
@@ -965,7 +965,7 @@ func (call TcCall) GetType() Type {
 }
 
 func (lit StrLit) GetType() Type {
-	return TypeString
+	return TypeStr
 }
 
 func (lit CStrLit) GetType() Type {
@@ -1115,7 +1115,7 @@ func (tc *TypeChecker) TypeCheckStrLit(scope Scope, arg StrLit, expected Type) T
 	if expected == TypeCString {
 		return CStrLit{arg.Source, arg.Value}
 	}
-	tc.ExpectType(arg, TypeString, expected)
+	tc.ExpectType(arg, TypeStr, expected)
 	return (TcExpr)(arg)
 }
 
@@ -1348,7 +1348,7 @@ func (tc *TypeChecker) ElementType(expr TcExpr) Type {
 	case *EnumSetType:
 		return typ.Elem
 	case *BuiltinType:
-		if typ.Name == "string" {
+		if typ == TypeStr {
 			return TypeChar
 		}
 	}

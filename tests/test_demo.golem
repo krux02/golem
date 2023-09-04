@@ -6,7 +6,7 @@
 type MyStruct = struct {
   a: i64
   b: f64
-  c: string
+  c: str
 }
 
 proc myfun1(a, b, c: i64): i64 = {
@@ -24,7 +24,7 @@ proc myfun2(a,b:i64, c: i64): i64 = a * b + a * c
 ## d: even more arugment that is very very importanti
 ## e: yabadabaduditaaa
 ## f:
-proc myfun3(a,b,c,d,e,f: string): void = {
+proc myfun3(a,b,c,d,e,f: str): void = {
 }
 
 proc foobar(arg: MyStruct): void = {
@@ -61,7 +61,7 @@ proc testBooleanOpsWithBlockExpr(): void = {
   }
 }
 
-proc maxParenDepth(expr: string): i64 = {
+proc maxParenDepth(expr: str): i64 = {
   var depth: i64 = 0
   var maxDepth: i64 = 0
   for c in expr do {

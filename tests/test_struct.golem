@@ -4,7 +4,7 @@
 type MyStruct = struct {
   a: i64
   b: f64
-  c: string
+  c: str
 }
 
 type MyEnum = enum {
@@ -38,7 +38,7 @@ proc bar(arg1: i64, arg2: MyEnum): void = {
   printf("bar:\n  arg1: %d, string(arg2): %s int(arg2): %d\n", arg1, string(arg2), i32(arg2))
 }
 
-proc bar(arg1: i64, arg2: string): void = {}
+proc bar(arg1: i64, arg2: str): void = {}
 
 proc main():i32 = {
   var myStruct1: MyStruct = [a=12, b=34.56, c="def"] # type at variable def, all fields assigned

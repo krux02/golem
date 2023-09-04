@@ -7,7 +7,7 @@ import (
 
 type BuiltinType struct {
 	Name         string
-	InternalName string // name for C code generation
+	InternalName string // name in code generation
 	MangleChar   rune
 }
 
@@ -82,7 +82,10 @@ func (typ *UnspecifiedType) ManglePrint(builder *strings.Builder) {
 }
 
 func (typ *ErrorType) ManglePrint(builder *strings.Builder) {
-	panic("internal error, an error type should not be here")
+	// this should not fail, as it is used during type checking phase, when an
+	// error previously occured. It should not write anything that could actually
+	// be used in the C compilation backend.
+	builder.WriteString("?ErrorType?")
 }
 
 func (typ *TypeGroup) ManglePrint(builder *strings.Builder) {
@@ -172,7 +175,7 @@ var TypeUInt32 = &BuiltinType{"u32", "uint32_t", 'I'}
 var TypeUInt64 = &BuiltinType{"u64", "uint64_t", 'L'}
 var TypeFloat32 = &BuiltinType{"f32", "float", 'f'}
 var TypeFloat64 = &BuiltinType{"f64", "double", 'd'}
-var TypeString = &BuiltinType{"string", "string", 'R'}
+var TypeStr = &BuiltinType{"str", "string", 'R'}
 var TypeChar = &BuiltinType{"char", "char", 'c'}
 var TypeVoid = &BuiltinType{"void", "void", 'v'}
 var TypeNilPtr = &BuiltinType{"nilptr", "void*", 'n'}
@@ -449,7 +452,7 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) (result TcCal
 			formatStrC.WriteRune('%')
 			continue
 		case 's':
-			typeExpectation = TypeString
+			typeExpectation = TypeStr
 		case 'd':
 			typeExpectation = TypeAnyInt
 		case 'f':
@@ -478,7 +481,7 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) (result TcCal
 			formatStrC.WriteString("ld")
 		case TypeCString:
 			formatStrC.WriteString("s")
-		case TypeString:
+		case TypeStr:
 			formatStrC.WriteString("*s")
 		case TypeFloat32:
 			formatStrC.WriteString("f")
@@ -510,7 +513,7 @@ func init() {
 	// practical. Therefore the implementation for varargs will be strictly tied to
 	// printf for now. A general concept for varargs will be specified out as soon
 	// as it becomes necessary, but right now it is not planned.
-	registerBuiltinVararg("printf", "printf(", ", ", ")", []Type{TypeString}, TypeVoid, ValidatePrintfCall)
+	registerBuiltinVararg("printf", "printf(", ", ", ")", []Type{TypeStr}, TypeVoid, ValidatePrintfCall)
 
 	registerBuiltinType(TypeBoolean)
 	registerBuiltinType(TypeInt8)
@@ -523,7 +526,7 @@ func init() {
 	registerBuiltinType(TypeUInt64)
 	registerBuiltinType(TypeFloat32)
 	registerBuiltinType(TypeFloat64)
-	registerBuiltinType(TypeString)
+	registerBuiltinType(TypeStr)
 	registerBuiltinType(TypeCString)
 	registerBuiltinType(TypeVoid)
 	registerBuiltinType(TypeNoReturn)

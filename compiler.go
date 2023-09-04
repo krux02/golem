@@ -227,7 +227,7 @@ func (builder *CodeBuilder) CompileDotExpr(context *PackageGeneratorContext, dot
 }
 
 func (builder *CodeBuilder) CompileForLoopStmt(context *PackageGeneratorContext, stmt TcForLoopStmt) {
-	if stmt.Collection.GetType() == TypeString {
+	if stmt.Collection.GetType() == TypeStr {
 		// for(char const *it = collection.data, *it_END = collection.data + collection.len; it != it_END; ++it)
 		builder.WriteString("for(char const")
 		builder.CompileSymbol(stmt.LoopSym)

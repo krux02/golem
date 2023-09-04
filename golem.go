@@ -112,36 +112,6 @@ func runTestFile(t *testing.T, filename string) error {
 	}
 }
 
-func globForTests() []string {
-	return Must(filepath.Glob("tests/test_*.golem"))
-}
-
-func runTests(t *testing.T, testFiles []string) {
-	testFails := 0
-	testPasses := 0
-
-	for _, testFile := range testFiles {
-		t.Run(testFile, func(t *testing.T) {
-			err := runTestFile(t, testFile)
-			if err != nil {
-				testFails += 1
-				t.Errorf("test Failed: %s\n%v\n", testFile, err)
-			} else {
-				testPasses += 1
-				//t.Logf("test Passed: %s\n", testFile)
-			}
-		})
-	}
-
-	// if testFails > 0 {
-	// 	t.Printf("testFails: %v\n", testFails)
-	// 	fmt.Printf("testPasses: %v\n", testPasses)
-	// 	os.Exit(1)
-	// }
-
-	// fmt.Printf("testPasses: %v\n", testPasses)
-}
-
 func compile(filename string) (string, error) {
 	bytes, err := os.ReadFile(filename)
 	if err != nil {
