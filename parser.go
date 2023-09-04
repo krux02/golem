@@ -9,7 +9,6 @@ import (
 	"unicode/utf8"
 )
 
-// TODO this is not a function sybol table, it is just an Operator Precedence table
 var OperatorPrecedence map[string]int = map[string]int{
 	".": 10,
 	":": 9,

@@ -1,8 +1,10 @@
-# NumErrors: 2
+# NumErrors: 3
 
 proc main() : i32 = {
   let i:i32 = 123
+  let mystr: str = "abc123"
   printf("%d %d %d\n", i, i) # Error: not enough arguments for "%d %d %d\n"
   printf("%d %d\n", i, i, i) # Error: too many arguments for "%d %d\n"
+  printf(mystr) # Error: format string must be a string literal
   return 0
 }

@@ -119,7 +119,7 @@ func (tc *TypeChecker) LookUpType(scope Scope, expr TypeExpr) Type {
 			return GetPtrType(targetType)
 		default:
 			// TODO implement this
-			tc.ReportErrorf(ident, "expected 'array' or 'set' here, but got '%s'", ident.Source)
+			tc.ReportErrorf(ident, "expected 'array', 'set' or 'ptr' here, but got '%s'", ident.Source)
 			return TypeError
 		}
 	case Ident:
@@ -233,23 +233,23 @@ func (tc *TypeChecker) NewGenericParam(scope Scope, name Ident) Type {
 }
 
 func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result *TcProcDef) {
-	scope := parentScope.NewSubScope()
+	procScope := parentScope.NewSubScope()
 	result = &TcProcDef{}
 	result.Signature.Impl = result
-	scope.CurrentProc = result
+	procScope.CurrentProc = result
 	result.Name = def.Name.Source
 	mangledNameBuilder := &strings.Builder{}
 	mangledNameBuilder.WriteString(def.Name.Source)
 	mangledNameBuilder.WriteRune('_')
 	for _, arg := range def.Args {
-		typ := tc.LookUpType(scope, arg.Type)
-		tcArg := scope.NewSymbol(tc, arg.Name, SkProcArg, typ)
+		typ := tc.LookUpType(procScope, arg.Type)
+		tcArg := procScope.NewSymbol(tc, arg.Name, SkProcArg, typ)
 		result.Signature.Params = append(result.Signature.Params, tcArg)
 		typ.ManglePrint(mangledNameBuilder)
 	}
-	resultType := tc.LookUpType(scope, def.ResultType)
+	resultType := tc.LookUpType(procScope, def.ResultType)
 	result.Signature.ResultType = resultType
-	result.Body = tc.TypeCheckExpr(scope, def.Body, resultType)
+	result.Body = tc.TypeCheckExpr(procScope, def.Body, resultType)
 	parentScope.Procedures[result.Name] = append(parentScope.Procedures[result.Name], result.Signature)
 
 	// TODO, don't special case it like this here

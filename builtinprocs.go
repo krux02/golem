@@ -185,10 +185,6 @@ var TypeNoReturn = &BuiltinType{"noreturn", "void", '-'}
 
 // this type is the internal representation when no type has been specified. It
 // is not a type by its own.
-//
-// TODO, maybe this should be a different Type that isn't ~BuiltinType~,
-// ~BuiltinType~ is used only for concrete types that actually can be
-// instantiated. It behaves very differently is is always the exception to be checked for.
 var TypeUnspecified = &UnspecifiedType{}
 
 // this type is the internal representation when the type checker fails to
@@ -424,10 +420,8 @@ func registerConstant(name string, typ Type) {
 func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) (result TcCall) {
 
 	formatExpr := call.Args[0]
-	// format string must be a string literal
 	formatStrLit, ok := formatExpr.(StrLit)
 	if !ok {
-		// TODO this needs a func Test
 		tc.ReportErrorf(formatExpr, "format string must be a string literal")
 		return
 	}
