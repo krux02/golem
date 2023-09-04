@@ -8,35 +8,33 @@ import (
 
 // joins str1 and str2 within parent. Both str1 and str2 must be
 // direct substrings in parent. Does not allocate a new string object
-func joinSubstr(parent, str1, str2 string) (result string) {
-	header1 := (*reflect.StringHeader)(unsafe.Pointer(&str1))
-	header2 := (*reflect.StringHeader)(unsafe.Pointer(&str2))
+func joinSubstr(parent, str1, str2 string) string {
+	//header1 := (*reflect.StringHeader)(unsafe.Pointer(&str1))
+	//header2 := (*reflect.StringHeader)(unsafe.Pointer(&str2))
+	data1 := uintptr(unsafe.Pointer(unsafe.StringData(str1)))
+	data2 := uintptr(unsafe.Pointer(unsafe.StringData(str2)))
 
 	// do rage checks
-	if header1.Data == header2.Data && header1.Len == header2.Len {
+	if data1 == data2 && len(str1) == len(str2) {
 		return str1
 	}
 
-	if header2.Data <= header1.Data {
+	if data2 <= data1 {
 		fmt.Printf("context: %#v\n", parent)
 		panic(fmt.Sprintf("illegal argument order of %#v and %#v", str1, str2))
 	}
 
-	header0 := (*reflect.StringHeader)(unsafe.Pointer(&parent))
-	begin := header0.Data
-	end := header0.Data + uintptr(header0.Len)
+	begin := uintptr(unsafe.Pointer(unsafe.StringData(parent)))
+	end := begin + uintptr(len(parent))
 
-	if header1.Data < begin || end < (header1.Data+uintptr(header1.Len)) {
+	if data1 < begin || end < (data1+uintptr(len(str1))) {
 		panic("str1 out of range")
 	}
-	if header2.Data < begin || end < (header2.Data+uintptr(header2.Len)) {
+	if data2 < begin || end < (data2+uintptr(len(str2))) {
 		panic("str1 out of range")
 	}
 
-	resultHeader := (*reflect.StringHeader)(unsafe.Pointer(&result))
-	resultHeader.Data = header1.Data
-	resultHeader.Len = int(header2.Data-header1.Data) + header2.Len
-	return
+	return unsafe.String((*byte)(unsafe.Pointer(data1)), int(data2-data1)+len(str2))
 }
 
 // ensure recursively that all nodes have `source` set, and that
