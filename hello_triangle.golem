@@ -14,7 +14,7 @@ type SDL_KeyboardEvent = struct {
   keysym: SDL_Keysym
 }
 type SDL_Event = struct {
-  typ: u32
+  `type`: u32
   key: SDL_KeyboardEvent
 } # SDL_Event from C
 
@@ -58,9 +58,9 @@ proc main(): i32 = {
   while running do {
     var event: SDL_Event
     while SDL_PollEvent(addr(event)) do {
-      if event.typ == SDL_QUIT do { # TODO actually it is ~type~ but I can't write that
+      if event.`type` == SDL_QUIT do {
         running = false
-      } else if event.typ == SDL_KEYDOWN and event.key.keysym.scancode == SDL_SCANCODE_ESCAPE do { # TODO actually it is `type` not `typ` but that isn't valid
+      } else if event.typ == SDL_KEYDOWN and event.key.keysym.scancode == SDL_SCANCODE_ESCAPE do {
         running = false
       }
     }

@@ -370,6 +370,7 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			} else if rune == '"' {
 				scanningDone = true
 			}
+			lastRune = rune
 		}
 		result.value = code[:idx2]
 	case c == '\'':
@@ -390,9 +391,18 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 		} else {
 			rune2, rune2Len := utf8.DecodeRuneInString(code[cLen+rune1Len:])
 			if rune2 != '\'' {
-				panic("illegal escape sequence")
+				panic(fmt.Errorf("illegal escape sequence at: %s...", code[:5]))
 			}
 			result.value = code[:cLen+rune1Len+rune2Len]
+		}
+	case c == '`':
+		result.kind = TkIdent
+		for pos, rune := range code[cLen:] {
+			if rune == '`' {
+				result.value = code[cLen : cLen+pos]
+				newOffset += cLen * 2
+				break
+			}
 		}
 	case c == '(':
 		result = Token{TkOpenBrace, code[:cLen]}
@@ -413,7 +423,7 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 	case u.IsSymbol(c) || u.IsPunct(c):
 		var idx2 = len(code)
 		for pos, rune := range code[cLen:] {
-			if !u.IsPunct(rune) && !u.IsSymbol(rune) || strings.ContainsRune("{}[](),;'\"", rune) {
+			if !u.IsPunct(rune) && !u.IsSymbol(rune) || strings.ContainsRune("{}[](),;'\"`", rune) {
 				idx2 = cLen + pos
 				break
 			}

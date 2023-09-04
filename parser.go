@@ -687,7 +687,7 @@ func parseTypeDef(tokenizer *Tokenizer) Expr {
 		for _, it := range body.Items {
 			colonExpr, ok := MatchColonExpr(it)
 			if !ok {
-				panic("parser error handling not implemented")
+				panic(fmt.Errorf("parser error handling not implemented: %s", AstFormat(it)))
 			}
 			result.Fields = append(result.Fields, colonExpr)
 		}

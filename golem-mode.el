@@ -4,29 +4,22 @@
 
 (require 'compile)
 
-;; TODO if and for constructs don't have a required block statement anymore.
+(rx "\t")
+
+
 (defconst golem-highlights
-  (rx-let ((ident (seq alpha (* (any alnum "_"))))
-           ;; keywords in golem only have a meaning when placed at the
-           ;; beginning of a statement.
-           (stmt-context (seq (or line-start ";" "{") (* " "))))
+  (rx-let ((ident (seq alpha (* (any alnum "_")))))
     (list
      (cons (rx (? "-") bow (1+ digit) (? "." (1+ digit)) eow) font-lock-constant-face)
      (cons (rx bow "0x" (1+ hex) eow) font-lock-constant-face)
-     (list (rx stmt-context (group (or "const" "while" "return" "var" "let" "if" "proc" "emit")) eow) 1 font-lock-keyword-face)
-     ;; match else only when it follows a closing } (not correct anymore)
-     (list (rx bow (or "and" "or" "type") eow) 0 font-lock-keyword-face)
+     (cons (rx bow (or
+        "const" "for" "while" "do" "in" "return" "var" "let" "if" "proc" "emit" "and" "or" "type" "else" "struct" "enum") eow) font-lock-keyword-face)
+     (cons (rx bow "`" ident "`") font-lock-variable-name-face)
+     (cons (rx (+ "\t")) font-lock-warning-face)
      (list (rx bow (or "true" "false") eow) 0 font-lock-constant-face)
-     (list (rx "}" (* " ") (group "else") eow) 1 font-lock-keyword-face)
-     (cons "\t+" font-lock-warning-face)
      ;; anchored pattern to match `in' keyword in a for loop
-     (list (rx stmt-context (group "for" "while") eow) (list 1 font-lock-keyword-face)
-           (list (rx bow (or "do" "in") eow) nil nil (list 0 font-lock-keyword-face)))
-     (list (rx stmt-context (group "if") eow) (list 1 font-lock-keyword-face)
-           (list (rx bow (or "do" "else") eow) nil nil (list 0 font-lock-keyword-face)))
      (list (rx ":" (* " ") (group ident)) 1 font-lock-type-face)
      (list (rx (group ident) "(") 1 font-lock-function-name-face)
-     (list (rx (group-n 1 (or "struct" "enum")) (* " ") "{") 1 font-lock-keyword-face)
      (list 'golem-string-escape-matcher 0 font-lock-preprocessor-face 'prepend)
      )))
 
