@@ -342,7 +342,7 @@ func (procDef ProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 	} else {
 		for i, arg := range procDef.Args {
 			if i != 0 {
-				builder.WriteString("; ")
+				builder.WriteString(", ")
 			}
 			builder.WriteNode(arg.Name)
 			builder.WriteString(": ")
@@ -475,6 +475,10 @@ func (emitstmt EmitStmt) PrettyPrint(builder *AstPrettyPrinter) {
 // format type checked ast nodes
 func (typ *BuiltinType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(typ.Name)
+}
+
+func (typ *UnspecifiedType) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("?unspecified?")
 }
 
 func (typ *ErrorType) PrettyPrint(builder *AstPrettyPrinter) {
@@ -656,8 +660,24 @@ func (signature ProcSignature) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteNode(signature.ResultType)
 }
 
-func (procDef TcProcDef) PrettyPrint(builder *AstPrettyPrinter) {
+func (procDef *TcProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("proc ")
+	builder.WriteString(procDef.Name)
+	procDef.Signature.PrettyPrint(builder)
+	builder.WriteString(" = ")
+	builder.WriteNode(procDef.Body)
+}
+
+func (procDef *TcBuiltinProcDef) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("# builtin # proc ")
+	builder.WriteString(procDef.Name)
+	procDef.Signature.PrettyPrint(builder)
+	builder.WriteString(" = ")
+	builder.WriteNode(procDef.Body)
+}
+
+func (procDef *TcTemplateDef) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("template ")
 	builder.WriteString(procDef.Name)
 	procDef.Signature.PrettyPrint(builder)
 	builder.WriteString(" = ")

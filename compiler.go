@@ -60,11 +60,22 @@ func (builder *CodeBuilder) compileSymDeclaration(context *PackageGeneratorConte
 }
 
 func (builder *CodeBuilder) compileCall(context *PackageGeneratorContext, call TcCall) {
-	impl := call.Sym.Sig.Impl
-	context.markProcForGeneration(impl)
-	builder.WriteString(impl.Prefix)
-	builder.CompileSeparatedExprList(context, call.Args, impl.Infix)
-	builder.WriteString(impl.Postfix)
+	switch impl := call.Sym.Sig.Impl.(type) {
+	case *TcBuiltinProcDef:
+		builder.WriteString(impl.Prefix)
+		builder.CompileSeparatedExprList(context, call.Args, impl.Infix)
+		builder.WriteString(impl.Postfix)
+	case *TcProcDef:
+		context.markProcForGeneration(impl)
+		builder.WriteString(impl.MangledName)
+		builder.WriteString("(")
+		builder.CompileSeparatedExprList(context, call.Args, ", ")
+		builder.WriteString(")")
+	case *TcTemplateDef:
+		panic(fmt.Errorf("internal error: templates must be resolved before code generation"))
+	default:
+		panic(fmt.Errorf("internal error: %T", impl))
+	}
 }
 
 func (builder *CodeBuilder) compileCharLit(lit CharLit) {
@@ -445,16 +456,16 @@ func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 	headBuilder := &CodeBuilder{}
 	headBuilder.NewlineAndIndent()
 	headBuilder.compileTypeExpr(context, procDef.Signature.ResultType)
-	// headBuilder.compileTypeExpr(procDef.ResultType)
 	headBuilder.WriteString(" ")
-	headBuilder.WriteString(procDef.Prefix)
+	headBuilder.WriteString(procDef.MangledName)
+	headBuilder.WriteString("(")
 	for i, arg := range procDef.Signature.Params {
 		if i != 0 {
-			headBuilder.WriteString(procDef.Infix)
+			headBuilder.WriteString(", ")
 		}
 		headBuilder.compileSymDeclaration(context, arg)
 	}
-	headBuilder.WriteString(procDef.Postfix)
+	headBuilder.WriteString(")")
 
 	builderStr := headBuilder.String()
 	context.forwardDecl.WriteString(builderStr)

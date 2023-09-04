@@ -254,14 +254,10 @@ func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result 
 
 	// TODO, don't special case it like this here
 	if def.Name.Source == "main" {
-		result.Prefix = "main("
+		result.MangledName = "main"
 	} else {
-		mangledNameBuilder.WriteRune('(')
-		result.Prefix = mangledNameBuilder.String()
+		result.MangledName = mangledNameBuilder.String()
 	}
-	result.Infix = ", "
-	result.Postfix = ")"
-
 	return result
 }
 
@@ -421,12 +417,13 @@ func AppendNoDuplicats(types []Type, typ Type) (result []Type) {
 
 // inversion of arguments, because go only has polymorphism on the self argument
 func (typ *BuiltinType) AppendToGroup(builder *TypeGroupBuilder) bool {
-	if typ == TypeUnspecified {
-		builder.Items = nil
-		return true
-	}
 	builder.Items = AppendNoDuplicats(builder.Items, typ)
 	return false
+}
+
+func (typ *UnspecifiedType) AppendToGroup(builder *TypeGroupBuilder) bool {
+	builder.Items = nil
+	return true
 }
 
 func (typ *OpenGenericType) AppendToGroup(builder *TypeGroupBuilder) bool {
@@ -790,14 +787,15 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 			panic("internal error")
 		}
 
-		if sig.Impl != nil {
+		switch impl := sig.Impl.(type) {
+		case *TcBuiltinProcDef, *TcProcDef:
 
-			// TODO: here is a significant problem. the signature has by now
+			// BUG TODO: here is a significant problem. the signature has by now
 			// instantiated generics. Meaning that type variables such as `T` will be
 			// substituted with concrete types. The `Impl` member of the signature has
 			// again a `Signature` member, where these type instantiations have not
 			// been applied. In other words, generic instantiation of the ``Impl``
-			// does not happen yet. This cases the `TcCall` expression to still have a
+			// does not happen yet. This causes the `TcCall` expression to still have a
 			// generic `T` as its type.
 
 			result.Sym = TcProcSymbol{Source: ident.Source, Sig: sig}
@@ -806,12 +804,12 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 				result = sig.Validator(tc, scope, result)
 			}
 			tc.ExpectType(call, sig.ResultType, expected)
-		} else if sig.TemplateImpl != nil {
-			substitution := sig.TemplateImpl.Body
+		case *TcTemplateDef:
+			substitution := impl.Body
 			tc.ExpectType(call, substitution.GetType(), expected)
 			return substitution
-		} else {
-			panic("internal error")
+		default:
+			panic(fmt.Errorf("internal error: %T", impl))
 		}
 	default:
 		tc.ReportErrorf(ident, "too many overloads: %s", ident.Source)
@@ -1025,6 +1023,18 @@ func (stmt TcForLoopStmt) GetType() Type {
 }
 
 func (stmt TcWhileLoopStmt) GetType() Type {
+	return TypeVoid
+}
+
+func (arg *TcBuiltinProcDef) GetType() Type {
+	return TypeVoid
+}
+
+func (arg *TcProcDef) GetType() Type {
+	return TypeVoid
+}
+
+func (arg *TcTemplateDef) GetType() Type {
 	return TypeVoid
 }
 
@@ -1308,10 +1318,8 @@ func (tc *TypeChecker) TypeCheckNilLit(scope Scope, arg NilLit, expected Type) N
 	switch exp := expected.(type) {
 	case *PtrType:
 		return NilLit{Source: arg.Source, Type: exp}
-	case *BuiltinType:
-		if exp == TypeUnspecified {
-			return NilLit{Source: arg.Source, Type: TypeNilPtr}
-		}
+	case *UnspecifiedType:
+		return NilLit{Source: arg.Source, Type: TypeNilPtr}
 	}
 	tc.ReportUnexpectedType(arg, expected, TypeNilPtr)
 	return NilLit{Source: arg.Source, Type: TypeError}

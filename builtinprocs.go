@@ -12,6 +12,7 @@ type BuiltinType struct {
 }
 
 type ErrorType struct{}
+type UnspecifiedType struct{}
 
 type TypeGroup struct {
 	Name  string
@@ -74,6 +75,10 @@ var _ Type = &GenericTypeSymbol{}
 
 func (typ *BuiltinType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune(typ.MangleChar)
+}
+
+func (typ *UnspecifiedType) ManglePrint(builder *strings.Builder) {
+	panic("internal error, an unspecifed type should not be here")
 }
 
 func (typ *ErrorType) ManglePrint(builder *strings.Builder) {
@@ -181,7 +186,7 @@ var TypeNoReturn = &BuiltinType{"noreturn", "void", '-'}
 // TODO, maybe this should be a different Type that isn't ~BuiltinType~,
 // ~BuiltinType~ is used only for concrete types that actually can be
 // instantiated. It behaves very differently is is always the exception to be checked for.
-var TypeUnspecified = &BuiltinType{"?unspecified?", "<unspecified>", ','}
+var TypeUnspecified = &UnspecifiedType{}
 
 // this type is the internal representation when the type checker fails to
 // resolve the type. Expressions with this type cannot be further processed in
@@ -201,10 +206,9 @@ var TypeAnyNumber = &TypeGroup{Name: "AnyNumber", Items: []Type{
 var TypeCString = &BuiltinType{"cstring", "char const*", 'x'}
 
 func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
-	if typ == TypeUnspecified {
-		tc.ReportErrorf(context, "variable definitions statements must have at least one, a type or a value expression")
-	} else if typ == TypeNoReturn {
+	if typ == TypeNoReturn {
 		tc.ReportErrorf(context, "a default value of no retrun does not exist")
+		return TcErrorNode{}
 	} else if typ == TypeFloat32 || typ == TypeFloat64 {
 		return FloatLit{Type: typ}
 	} else if typ == TypeChar {
@@ -219,7 +223,11 @@ func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	} else {
 		panic(fmt.Errorf("not implemented %+v", typ))
 	}
-	return nil
+}
+
+func (typ *UnspecifiedType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+	tc.ReportErrorf(context, "variable definitions statements must have at least one, a type or a value expression")
+	return TcErrorNode{}
 }
 
 func (typ *ErrorType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
@@ -358,7 +366,7 @@ func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams [
 		Varargs:       checker != nil,
 		Validator:     checker,
 	}
-	procDef := &TcProcDef{
+	procDef := &TcBuiltinProcDef{
 		Name:    name,
 		Prefix:  prefix,
 		Infix:   infix,
@@ -392,7 +400,7 @@ func registerSimpleTemplate(name string, args []Type, result Type, substitution 
 		sigParams[i].Type = arg
 		sigParams[i].Kind = SkProcArg
 	}
-	templateDef.Signature.TemplateImpl = templateDef
+	templateDef.Signature.Impl = templateDef
 	builtinScope.Procedures[name] = append(builtinScope.Procedures[name], templateDef.Signature)
 }
 

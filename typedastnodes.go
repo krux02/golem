@@ -150,22 +150,28 @@ type ProcSignature struct {
 	Validator PostResolveValidator
 	// TODO signature will be the identical data structure for ProcDef, TemplateDef and MacroDef,
 	// Impl pointing to TcProcDef is temporaray
-	Impl         *TcProcDef
-	TemplateImpl *TcTemplateDef
+	Impl TcExpr
 }
 
-type TcProcDef struct {
+type TcBuiltinProcDef struct {
 	Source    string
 	Name      string
 	Signature ProcSignature
 	Body      TcExpr
 
-	// TODO these are C backend specific fields and should not be bart of a general proc def node
+	// TODO these are fields to specifiy how to gonerate a call
 	// example1 "foo(", ", ", ")"        function call
 	// example2 "(", " + ", ")"          operator call
 	// example3 "somearray[", ", ", "]"  array access
 	Prefix, Infix, Postfix string
+}
 
+type TcProcDef struct {
+	Source      string
+	Name        string
+	MangledName string
+	Signature   ProcSignature
+	Body        TcExpr
 	// TODO: find a better solution for tagging other than mutuble setting a value
 	// this value is set to true in the code generator to mark this proc as
 	// already scheduled for code generation. This flag is used to prevent
@@ -237,7 +243,9 @@ func (arg TcCodeBlock) GetSource() string       { return arg.Source }
 func (arg TcCall) GetSource() string            { return arg.Source }
 func (arg TcArrayLit) GetSource() string        { return arg.Source }
 func (arg TcEnumSetLit) GetSource() string      { return arg.Source }
-func (arg TcProcDef) GetSource() string         { return arg.Source }
+func (arg *TcProcDef) GetSource() string        { return arg.Source }
+func (arg *TcBuiltinProcDef) GetSource() string { return arg.Source }
+func (arg *TcTemplateDef) GetSource() string    { return arg.Source }
 func (arg TcStructLit) GetSource() string       { return arg.Source }
 
 func (arg TcPackageDef) GetSource() string { return arg.Source }
