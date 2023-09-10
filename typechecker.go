@@ -665,6 +665,21 @@ func ApplyTypeSubstitutions(argTyp Type, substitutions []Substitution) Type {
 
 }
 
+func SignatureApplyTypeSubstitution(sig ProcSignature, substitutions []Substitution) ProcSignature {
+	if len(substitutions) == 0 {
+		return sig
+	}
+	newParams := make([]TcSymbol, len(sig.Params))
+	for j, param := range sig.Params {
+		param.Type = ApplyTypeSubstitutions(param.Type, substitutions)
+		newParams[j] = param
+	}
+	sig.Params = newParams
+	sig.ResultType = ApplyTypeSubstitutions(sig.ResultType, substitutions)
+	sig.Substitutions = append(sig.Substitutions, substitutions...)
+	return sig
+}
+
 func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcExpr {
 	ident := call.Callee.(Ident)
 	// language level reserved calls
@@ -690,10 +705,10 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		// TODO reuse TypeGroupBuilder here
 		expectedArgType := argTypeGroupAtIndex(signatures, i)
 		tcArg := tc.TypeCheckExpr(scope, arg, expectedArgType)
-		argType := tcArg.GetType()
-		hasArgTypeError = hasArgTypeError || argType == TypeError
 		checkedArgs = append(checkedArgs, tcArg)
+		argType := tcArg.GetType()
 		if argType == TypeError {
+			hasArgTypeError = true
 			signatures = nil
 			continue
 		}
@@ -707,22 +722,10 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 			}
 			typ := sig.Params[i].Type
 
-			if ok, substitutions := ParamSignatureMatch(argType, typ); ok && len(substitutions) > 0 {
+			if ok, substitutions := ParamSignatureMatch(argType, typ); ok {
 				// instantiate generic
-				typ = argType
-				newParams := make([]TcSymbol, len(sig.Params))
-				for j, param := range sig.Params {
-					param.Type = ApplyTypeSubstitutions(param.Type, substitutions)
-					newParams[j] = param
-				}
-				sig.Params = newParams
-				sig.ResultType = ApplyTypeSubstitutions(sig.ResultType, substitutions)
-			}
-
-			if typ == argType {
-				signatures[n] = sig
+				signatures[n] = SignatureApplyTypeSubstitution(sig, substitutions)
 				n++
-				continue
 			}
 		}
 		signatures = signatures[:n]
@@ -743,7 +746,9 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 
 	switch len(signatures) {
 	case 0:
-		// don't report that proc `foo(TypeError)` can't be resolved.
+		// don't report that proc `foo(TypeError)` can't be resolved. The error that
+		// lead to `TypeError` is already reported at this point, so nothing new to
+		// report here.
 		if !hasArgTypeError {
 			builder := &AstPrettyPrinter{}
 			builder.WriteString("proc not found: ")
@@ -789,16 +794,25 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 
 		switch impl := sig.Impl.(type) {
 		case *TcBuiltinProcDef, *TcProcDef:
-
-			// BUG TODO: here is a significant problem. the signature has by now
-			// instantiated generics. Meaning that type variables such as `T` will be
-			// substituted with concrete types. The `Impl` member of the signature has
-			// again a `Signature` member, where these type instantiations have not
-			// been applied. In other words, generic instantiation of the ``Impl``
-			// does not happen yet. This causes the `TcCall` expression to still have a
-			// generic `T` as its type.
-
 			result.Sym = TcProcSymbol{Source: ident.Source, Impl: impl}
+			result.Args = checkedArgs
+			tc.ExpectType(call, sig.ResultType, expected)
+		case *TcBuiltinGenericProcDef:
+			// TODO: actually use sig.Substitutions to instantiate the generic proc def.
+			// TODO: ensure that only one instance is generated per signature.
+			// TODO: add back reference to original generic TcGenericProcDef
+			//
+			// currently replacing the signature alone is enough, but that is not a
+			// general solution.
+			implInstance := &TcBuiltinProcDef{
+				Source:    impl.Source,
+				Name:      impl.Name,
+				Signature: sig,
+				Prefix:    impl.Prefix,
+				Infix:     impl.Infix,
+				Postfix:   impl.Postfix,
+			}
+			result.Sym = TcProcSymbol{Source: ident.Source, Impl: implInstance}
 			result.Args = checkedArgs
 			tc.ExpectType(call, sig.ResultType, expected)
 		case *TcTemplateDef:
@@ -1029,6 +1043,10 @@ func (stmt TcWhileLoopStmt) GetType() Type {
 }
 
 func (arg *TcBuiltinProcDef) GetType() Type {
+	return TypeVoid
+}
+
+func (arg *TcBuiltinGenericProcDef) GetType() Type {
 	return TypeVoid
 }
 

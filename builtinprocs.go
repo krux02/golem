@@ -358,7 +358,7 @@ func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams [
 		}
 	}
 
-	procDef := &TcBuiltinProcDef{
+	procDef := &TcBuiltinGenericProcDef{
 		Name: name,
 		Signature: ProcSignature{
 			GenericParams: genericParams,

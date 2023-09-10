@@ -146,7 +146,9 @@ type ProcSignature struct {
 
 	// NOTE: Varargs currently only used for printf.
 	Varargs bool
-	Impl    Overloadable
+	// current list of substitutions that are not yet applied to `Impl`
+	Substitutions []Substitution
+	Impl          Overloadable
 }
 
 type Overloadable interface {
@@ -159,9 +161,22 @@ type TcBuiltinProcDef struct {
 	Source    string // TODO: this can't be correct, it's builtin there is no source
 	Name      string
 	Signature ProcSignature
-	Body      TcExpr
+	//Body      TcExpr
 
-	// TODO these are fields to specifiy how to gonerate a call
+	// TODO these are fields to specifiy how to generate a call
+	// example1 "foo(", ", ", ")"        function call
+	// example2 "(", " + ", ")"          operator+ call
+	// example3 "somearray[", "][", "]"  array access
+	Prefix, Infix, Postfix string
+}
+
+type TcBuiltinGenericProcDef struct {
+	Source    string // TODO: this can't be correct, it's builtin there is no source
+	Name      string
+	Signature ProcSignature
+	//Body      TcExpr
+
+	// TODO these are fields to specifiy how to generate a call
 	// example1 "foo(", ", ", ")"        function call
 	// example2 "(", " + ", ")"          operator+ call
 	// example3 "somearray[", "][", "]"  array access
@@ -241,26 +256,27 @@ func (call TcArrayLit) expression()        {}
 func (call TcEnumSetLit) expression()      {}
 func (expr TcStructLit) expression()       {}
 
-func (arg TcErrorNode) GetSource() string       { return arg.SourceNode.GetSource() }
-func (arg TcDotExpr) GetSource() string         { return arg.Source }
-func (arg TcStructField) GetSource() string     { return arg.Source }
-func (arg TcSymbol) GetSource() string          { return arg.Source }
-func (arg TcProcSymbol) GetSource() string      { return arg.Source }
-func (arg TcVariableDefStmt) GetSource() string { return arg.Source }
-func (arg TcReturnStmt) GetSource() string      { return arg.Source }
-func (arg TcTypeContext) GetSource() string     { return arg.Source }
-func (arg TcForLoopStmt) GetSource() string     { return arg.Source }
-func (arg TcWhileLoopStmt) GetSource() string   { return arg.Source }
-func (arg TcIfStmt) GetSource() string          { return arg.Source }
-func (arg TcIfElseExpr) GetSource() string      { return arg.Source }
-func (arg TcCodeBlock) GetSource() string       { return arg.Source }
-func (arg TcCall) GetSource() string            { return arg.Source }
-func (arg TcArrayLit) GetSource() string        { return arg.Source }
-func (arg TcEnumSetLit) GetSource() string      { return arg.Source }
-func (arg *TcProcDef) GetSource() string        { return arg.Source }
-func (arg *TcBuiltinProcDef) GetSource() string { return arg.Source }
-func (arg *TcTemplateDef) GetSource() string    { return arg.Source }
-func (arg TcStructLit) GetSource() string       { return arg.Source }
+func (arg TcErrorNode) GetSource() string              { return arg.SourceNode.GetSource() }
+func (arg TcDotExpr) GetSource() string                { return arg.Source }
+func (arg TcStructField) GetSource() string            { return arg.Source }
+func (arg TcSymbol) GetSource() string                 { return arg.Source }
+func (arg TcProcSymbol) GetSource() string             { return arg.Source }
+func (arg TcVariableDefStmt) GetSource() string        { return arg.Source }
+func (arg TcReturnStmt) GetSource() string             { return arg.Source }
+func (arg TcTypeContext) GetSource() string            { return arg.Source }
+func (arg TcForLoopStmt) GetSource() string            { return arg.Source }
+func (arg TcWhileLoopStmt) GetSource() string          { return arg.Source }
+func (arg TcIfStmt) GetSource() string                 { return arg.Source }
+func (arg TcIfElseExpr) GetSource() string             { return arg.Source }
+func (arg TcCodeBlock) GetSource() string              { return arg.Source }
+func (arg TcCall) GetSource() string                   { return arg.Source }
+func (arg TcArrayLit) GetSource() string               { return arg.Source }
+func (arg TcEnumSetLit) GetSource() string             { return arg.Source }
+func (arg *TcProcDef) GetSource() string               { return arg.Source }
+func (arg *TcBuiltinProcDef) GetSource() string        { return arg.Source }
+func (arg *TcBuiltinGenericProcDef) GetSource() string { return arg.Source }
+func (arg *TcTemplateDef) GetSource() string           { return arg.Source }
+func (arg TcStructLit) GetSource() string              { return arg.Source }
 
 func (arg TcPackageDef) GetSource() string { return arg.Source }
 
@@ -275,14 +291,16 @@ func (arg *TcErrorProcDef) GetSource() string    { return "" }
 // func (arg *BuiltinType) GetSource() string { return arg.Source }
 // func (arg *ArrayType) GetSource() string   { return arg.Source }
 
-func (arg *TcBuiltinProcDef) GetName() string  { return arg.Name }
-func (arg *TcProcDef) GetName() string         { return arg.Name }
-func (arg *TcTemplateDef) GetName() string     { return arg.Name }
-func (arg *TcBuiltinMacroDef) GetName() string { return arg.Name }
-func (arg *TcErrorProcDef) GetName() string    { return arg.Name }
+func (arg *TcBuiltinProcDef) GetName() string        { return arg.Name }
+func (arg *TcBuiltinGenericProcDef) GetName() string { return arg.Name }
+func (arg *TcProcDef) GetName() string               { return arg.Name }
+func (arg *TcTemplateDef) GetName() string           { return arg.Name }
+func (arg *TcBuiltinMacroDef) GetName() string       { return arg.Name }
+func (arg *TcErrorProcDef) GetName() string          { return arg.Name }
 
-func (arg *TcBuiltinProcDef) GetSignature() ProcSignature  { return arg.Signature }
-func (arg *TcProcDef) GetSignature() ProcSignature         { return arg.Signature }
-func (arg *TcTemplateDef) GetSignature() ProcSignature     { return arg.Signature }
-func (arg *TcBuiltinMacroDef) GetSignature() ProcSignature { return arg.Signature }
-func (arg *TcErrorProcDef) GetSignature() ProcSignature    { panic("not thought through") }
+func (arg *TcBuiltinProcDef) GetSignature() ProcSignature        { return arg.Signature }
+func (arg *TcBuiltinGenericProcDef) GetSignature() ProcSignature { return arg.Signature }
+func (arg *TcProcDef) GetSignature() ProcSignature               { return arg.Signature }
+func (arg *TcTemplateDef) GetSignature() ProcSignature           { return arg.Signature }
+func (arg *TcBuiltinMacroDef) GetSignature() ProcSignature       { return arg.Signature }
+func (arg *TcErrorProcDef) GetSignature() ProcSignature          { panic("not thought through") }
