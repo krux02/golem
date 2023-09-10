@@ -13,10 +13,10 @@ import (
 	"testing"
 )
 
-func errorTest(t *testing.T, filename string) error {
+func errorTest(t *testing.T, filename string) {
 	bytes, err := os.ReadFile(filename)
 	if err != nil {
-		return err
+		t.Fatal(err)
 	}
 
 	source := string(bytes)
@@ -61,7 +61,7 @@ func errorTest(t *testing.T, filename string) error {
 
 		expectedNumErrors, err = strconv.Atoi(src)
 		if err != nil {
-			return err
+			t.Fatal(err)
 		}
 	}
 	numErrors := len(expectedErrors)
@@ -89,26 +89,29 @@ func errorTest(t *testing.T, filename string) error {
 	for line, expectedError := range expectedErrors {
 		t.Fatalf("expected error '%s' at line %d not triggered by the compiler", expectedError, line)
 	}
-	return nil
+	return
 }
 
 const debugPrintParesedCode = false
 const debugPrintTypecheckedCode = false
 const debugPrintGeneratedCode = false
 
-func normalTest(t *testing.T, filename string) error {
+func normalTest(t *testing.T, filename string) {
 	binaryAbsFilename, err := compile(filename)
 	if err != nil {
-		return err
+		t.Fail()
 	}
-	return exec.Command(binaryAbsFilename).Run()
+	err = exec.Command(binaryAbsFilename).Run()
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
-func runTestFile(t *testing.T, filename string) error {
+func runTestFile(t *testing.T, filename string) {
 	if strings.HasPrefix(filepath.Base(filename), "test_error_") {
-		return errorTest(t, filename)
+		errorTest(t, filename)
 	} else {
-		return normalTest(t, filename)
+		normalTest(t, filename)
 	}
 }
 
