@@ -338,7 +338,7 @@ OUTER:
 	return true
 }
 
-func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []*GenericTypeSymbol, args []Type, result Type, checker PostResolveValidator) {
+func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []*GenericTypeSymbol, args []Type, result Type) {
 	if len(genericParams) > 0 {
 		for i, arg := range args {
 			syms := extractGenericTypeSymbols(arg)
@@ -358,30 +358,45 @@ func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams [
 		}
 	}
 
-	signature := ProcSignature{
-		GenericParams: genericParams,
-		Params:        make([]TcSymbol, len(args)),
-		ResultType:    result,
-		Varargs:       checker != nil,
-		Validator:     checker,
-	}
 	procDef := &TcBuiltinProcDef{
-		Name:    name,
+		Name: name,
+		Signature: ProcSignature{
+			GenericParams: genericParams,
+			Params:        make([]TcSymbol, len(args)),
+			ResultType:    result,
+		},
 		Prefix:  prefix,
 		Infix:   infix,
 		Postfix: postfix,
 	}
 	for i, arg := range args {
-		signature.Params[i].Type = arg
-		signature.Params[i].Kind = SkProcArg
+		procDef.Signature.Params[i].Type = arg
+		procDef.Signature.Params[i].Kind = SkProcArg
 	}
-	signature.Impl = procDef
-	procDef.Signature = signature
-	builtinScope.Procedures[name] = append(builtinScope.Procedures[name], signature)
+	procDef.Signature.Impl = procDef
+	builtinScope.Procedures[name] = append(builtinScope.Procedures[name], procDef.Signature)
+}
+
+func registerBuiltinMacro(name string, varargs bool, args []Type, result Type, macroFunc BuiltinMacroFunc) {
+	macroDef := &TcBuiltinMacroDef{
+		Name: name,
+		Signature: ProcSignature{
+			Params:     make([]TcSymbol, len(args)),
+			ResultType: result,
+			Varargs:    varargs,
+		},
+		MacroFunc: macroFunc,
+	}
+	for i, arg := range args {
+		macroDef.Signature.Params[i].Type = arg
+		macroDef.Signature.Params[i].Kind = SkProcArg
+	}
+	macroDef.Signature.Impl = macroDef
+	builtinScope.Procedures[name] = append(builtinScope.Procedures[name], macroDef.Signature)
 }
 
 func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Type) {
-	registerGenericBuiltin(name, prefix, infix, postfix, nil, args, result, nil)
+	registerGenericBuiltin(name, prefix, infix, postfix, nil, args, result)
 }
 
 func registerSimpleTemplate(name string, args []Type, result Type, substitution TcExpr) {
@@ -394,21 +409,15 @@ func registerSimpleTemplate(name string, args []Type, result Type, substitution 
 		},
 		Body: substitution,
 	}
-	sigParams := templateDef.Signature.Params
 	for i, arg := range args {
-		sigParams[i].Type = arg
-		sigParams[i].Kind = SkProcArg
+		templateDef.Signature.Params[i].Type = arg
+		templateDef.Signature.Params[i].Kind = SkProcArg
 	}
 	templateDef.Signature.Impl = templateDef
 	builtinScope.Procedures[name] = append(builtinScope.Procedures[name], templateDef.Signature)
 }
 
-type PostResolveValidator func(tc *TypeChecker, scope Scope, call TcCall) TcCall
-
-func registerBuiltinVararg(name, prefix, infix, postfix string, args []Type, result Type, checker PostResolveValidator) {
-	// TODO actually do something with PostResolveValidator
-	registerGenericBuiltin(name, prefix, infix, postfix, nil, args, result, checker)
-}
+type BuiltinMacroFunc func(tc *TypeChecker, scope Scope, call TcCall) TcCall
 
 func registerConstant(name string, typ Type) {
 	// TODO this is wrong, a constant isn't a variable
@@ -418,12 +427,11 @@ func registerConstant(name string, typ Type) {
 }
 
 func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) (result TcCall) {
-
 	formatExpr := call.Args[0]
 	formatStrLit, ok := formatExpr.(StrLit)
 	if !ok {
 		tc.ReportErrorf(formatExpr, "format string must be a string literal")
-		return
+		return call
 	}
 	formatStr := formatStrLit.Value
 	formatStrC := &strings.Builder{}
@@ -455,11 +463,11 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) (result TcCal
 			typeExpectation = TypeUnspecified
 		default:
 			tc.ReportErrorf(formatExpr, "invalid format expr %%%c in %s", c2, AstFormat(formatExpr))
-			return
+			return call
 		}
 		if i == len(call.Args) {
 			tc.ReportErrorf(formatExpr, "not enough arguments for %s", AstFormat(formatExpr))
-			return
+			return call
 		}
 
 		argType := call.Args[i].GetType()
@@ -493,6 +501,11 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) (result TcCal
 	}
 
 	result = call
+	// TODO result.sym should be `printf` from C, with `cstring` as argument
+	result.Sym = TcProcSymbol{
+		Source: call.Sym.Source,
+		Impl:   tc.LookUpProc(builtinScope, Ident{Source: "c_printf"}, nil)[0].Impl,
+	}
 	result.Args[0] = CStrLit{Source: formatStrLit.Source, Value: formatStrC.String()}
 	return result
 }
@@ -507,7 +520,8 @@ func init() {
 	// practical. Therefore the implementation for varargs will be strictly tied to
 	// printf for now. A general concept for varargs will be specified out as soon
 	// as it becomes necessary, but right now it is not planned.
-	registerBuiltinVararg("printf", "printf(", ", ", ")", []Type{TypeStr}, TypeVoid, ValidatePrintfCall)
+	registerBuiltin("c_printf", "printf(", ", ", ")", []Type{TypeCString}, TypeVoid)
+	registerBuiltinMacro("printf", true, []Type{TypeStr}, TypeVoid, ValidatePrintfCall)
 
 	registerBuiltinType(TypeBoolean)
 	registerBuiltinType(TypeInt8)
@@ -568,11 +582,11 @@ func init() {
 	{
 		// TODO: has no line information
 		T := &GenericTypeSymbol{Name: "T", Constraint: TypeUnspecified}
-		registerGenericBuiltin("addr", "&(", "", ")", []*GenericTypeSymbol{T}, []Type{T}, GetPtrType(T), nil)
-		registerGenericBuiltin("[", "*(", "", ")", []*GenericTypeSymbol{T}, []Type{GetPtrType(T)}, T, nil)
-		registerGenericBuiltin("=", "(", "=", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeVoid, nil)
-		registerGenericBuiltin("==", "(", "==", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeBoolean, nil)
-		registerGenericBuiltin("!=", "(", "!=", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeBoolean, nil)
+		registerGenericBuiltin("addr", "&(", "", ")", []*GenericTypeSymbol{T}, []Type{T}, GetPtrType(T))
+		registerGenericBuiltin("[", "*(", "", ")", []*GenericTypeSymbol{T}, []Type{GetPtrType(T)}, T)
+		registerGenericBuiltin("=", "(", "=", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeVoid)
+		registerGenericBuiltin("==", "(", "==", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeBoolean)
+		registerGenericBuiltin("!=", "(", "!=", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeBoolean)
 	}
 
 	registerBuiltin("and", "(", "&&", ")", []Type{TypeBoolean, TypeBoolean}, TypeBoolean)

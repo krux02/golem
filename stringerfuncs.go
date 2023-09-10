@@ -684,6 +684,17 @@ func (procDef *TcTemplateDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteNode(procDef.Body)
 }
 
+func (procDef *TcBuiltinMacroDef) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("# builtin # macro ")
+	builder.WriteString(procDef.Name)
+	procDef.Signature.PrettyPrint(builder)
+}
+
+func (procDef *TcErrorProcDef) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("# this implemantation does not exist: ")
+	builder.WriteString(procDef.Name)
+}
+
 func (pak TcPackageDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("# file: ")
 	builder.WriteString(pak.Name)

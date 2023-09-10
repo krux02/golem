@@ -34,7 +34,7 @@ func joinSubstr(parent, str1, str2 string) string {
 		panic("str1 out of range")
 	}
 
-	return unsafe.String((*byte)(unsafe.Pointer(data1)), int(data2-data1)+len(str2))
+	return parent[int(data1-begin) : int(data2-begin)+len(str2)]
 }
 
 // ensure recursively that all nodes have `source` set, and that

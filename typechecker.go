@@ -400,7 +400,7 @@ func (tc *TypeChecker) TypeCheckDotExpr(scope Scope, parentSource string, lhs, r
 func errorProcSym(ident Ident) TcProcSymbol {
 	return TcProcSymbol{
 		Source: ident.GetSource(),
-		Sig:    ProcSignature{ResultType: TypeError},
+		Impl:   &TcErrorProcDef{}, // maybe add some debug information here
 	}
 }
 
@@ -798,18 +798,20 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 			// does not happen yet. This causes the `TcCall` expression to still have a
 			// generic `T` as its type.
 
-			result.Sym = TcProcSymbol{Source: ident.Source, Sig: sig}
+			result.Sym = TcProcSymbol{Source: ident.Source, Impl: impl}
 			result.Args = checkedArgs
-			if sig.Validator != nil {
-				result = sig.Validator(tc, scope, result)
-			}
 			tc.ExpectType(call, sig.ResultType, expected)
 		case *TcTemplateDef:
 			substitution := impl.Body
 			tc.ExpectType(call, substitution.GetType(), expected)
 			return substitution
+		case *TcBuiltinMacroDef:
+			result.Sym = TcProcSymbol{Source: ident.Source, Impl: impl}
+			result.Args = checkedArgs
+			result = impl.MacroFunc(tc, scope, result)
+			tc.ExpectType(call, result.GetType(), expected)
 		default:
-			panic(fmt.Errorf("internal error: %T", impl))
+			panic(fmt.Errorf("internal error: %T, call: %s", impl, AstFormat(call)))
 		}
 	default:
 		tc.ReportErrorf(ident, "too many overloads: %s", ident.Source)
@@ -961,7 +963,7 @@ func (block TcCodeBlock) GetType() Type {
 }
 
 func (call TcCall) GetType() Type {
-	return call.Sym.Sig.ResultType
+	return call.Sym.Impl.GetSignature().ResultType
 }
 
 func (lit StrLit) GetType() Type {
@@ -1036,6 +1038,14 @@ func (arg *TcProcDef) GetType() Type {
 
 func (arg *TcTemplateDef) GetType() Type {
 	return TypeVoid
+}
+
+func (arg *TcBuiltinMacroDef) GetType() Type {
+	return TypeVoid
+}
+
+func (arg *TcErrorProcDef) GetType() Type {
+	return TypeVoid // every proc/macro/template definition is of type void, even the one that doesn't exist
 }
 
 func UnifyType(a, b Type) Type {

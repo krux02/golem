@@ -60,7 +60,7 @@ func (builder *CodeBuilder) compileSymDeclaration(context *PackageGeneratorConte
 }
 
 func (builder *CodeBuilder) compileCall(context *PackageGeneratorContext, call TcCall) {
-	switch impl := call.Sym.Sig.Impl.(type) {
+	switch impl := call.Sym.Impl.(type) {
 	case *TcBuiltinProcDef:
 		builder.WriteString(impl.Prefix)
 		builder.CompileSeparatedExprList(context, call.Args, impl.Infix)
@@ -73,6 +73,8 @@ func (builder *CodeBuilder) compileCall(context *PackageGeneratorContext, call T
 		builder.WriteString(")")
 	case *TcTemplateDef:
 		panic(fmt.Errorf("internal error: templates must be resolved before code generation"))
+	case *TcBuiltinMacroDef:
+		panic(fmt.Errorf("internal error: macros must be resolved before code generation"))
 	default:
 		panic(fmt.Errorf("internal error: %T", impl))
 	}

@@ -55,10 +55,9 @@ type TcCodeBlock struct {
 }
 
 // TODO unify TcProcSym with the othe symbol types
-// TODO maybe Store Signature instead of Impl
 type TcProcSymbol struct {
 	Source string
-	Sig    ProcSignature
+	Impl   Overloadable // TcProcDef, TcBuiltinProcDef
 }
 
 type SymbolKind int
@@ -136,7 +135,7 @@ type TcTypeContext struct {
 	Type   Type
 }
 
-// Not an Ast node, but part of the ast as a normal member, therefore not the Tc prefix
+// TODO rename this, this is an OverloadableSignature
 type ProcSignature struct {
 
 	// type placeholders within this procedure that need to be substituted with
@@ -145,24 +144,27 @@ type ProcSignature struct {
 	Params        []TcSymbol
 	ResultType    Type
 
-	// NOTE: Varargs and Validator is currently only used for printf.
-	Varargs   bool
-	Validator PostResolveValidator
+	// NOTE: Varargs currently only used for printf.
+	Varargs bool
+	Impl    Overloadable
+}
 
-	// TODO the signature should not know the iplementation
-	Impl TcExpr
+type Overloadable interface {
+	TcExpr
+	GetName() string
+	GetSignature() ProcSignature
 }
 
 type TcBuiltinProcDef struct {
-	Source    string
+	Source    string // TODO: this can't be correct, it's builtin there is no source
 	Name      string
 	Signature ProcSignature
 	Body      TcExpr
 
 	// TODO these are fields to specifiy how to gonerate a call
 	// example1 "foo(", ", ", ")"        function call
-	// example2 "(", " + ", ")"          operator call
-	// example3 "somearray[", ", ", "]"  array access
+	// example2 "(", " + ", ")"          operator+ call
+	// example3 "somearray[", "][", "]"  array access
 	Prefix, Infix, Postfix string
 }
 
@@ -179,11 +181,23 @@ type TcProcDef struct {
 	scheduledforgeneration bool
 }
 
+type TcBuiltinMacroDef struct {
+	Source    string // TODO: this can't be correct, it's builtin there is no source
+	Name      string
+	Signature ProcSignature
+	MacroFunc BuiltinMacroFunc // this function transforms the call, post function resolution
+}
+
 type TcTemplateDef struct {
 	Source    string
 	Name      string
 	Signature ProcSignature
 	Body      TcExpr
+}
+
+type TcErrorProcDef struct {
+	// this is just a placeholder to set a TcProcSymbol to something
+	Name string
 }
 
 type TcArrayLit struct {
@@ -253,8 +267,22 @@ func (arg TcPackageDef) GetSource() string { return arg.Source }
 func (arg *TcStructDef) GetSource() string       { return arg.Source }
 func (arg *TcEnumDef) GetSource() string         { return arg.Source }
 func (arg *GenericTypeSymbol) GetSource() string { return arg.Source }
+func (arg *TcBuiltinMacroDef) GetSource() string { return arg.Source }
+func (arg *TcErrorProcDef) GetSource() string    { return "" }
 
 // func (arg *EnumSetType) GetSource() string { return arg.Source }
 // func (arg TypeGroup) GetSource() string    { return arg.Source }
 // func (arg *BuiltinType) GetSource() string { return arg.Source }
 // func (arg *ArrayType) GetSource() string   { return arg.Source }
+
+func (arg *TcBuiltinProcDef) GetName() string  { return arg.Name }
+func (arg *TcProcDef) GetName() string         { return arg.Name }
+func (arg *TcTemplateDef) GetName() string     { return arg.Name }
+func (arg *TcBuiltinMacroDef) GetName() string { return arg.Name }
+func (arg *TcErrorProcDef) GetName() string    { return arg.Name }
+
+func (arg *TcBuiltinProcDef) GetSignature() ProcSignature  { return arg.Signature }
+func (arg *TcProcDef) GetSignature() ProcSignature         { return arg.Signature }
+func (arg *TcTemplateDef) GetSignature() ProcSignature     { return arg.Signature }
+func (arg *TcBuiltinMacroDef) GetSignature() ProcSignature { return arg.Signature }
+func (arg *TcErrorProcDef) GetSignature() ProcSignature    { panic("not thought through") }
