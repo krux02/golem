@@ -31,15 +31,17 @@ type TcStructField struct {
 }
 
 type TcEnumDef struct {
-	Source string
-	Name   string
-	Values []TcSymbol
+	Source  string
+	Name    string
+	Values  []TcSymbol
+	Importc bool
 }
 
 type TcStructDef struct {
-	Source string
-	Name   string
-	Fields []TcStructField
+	Source  string
+	Name    string
+	Fields  []TcStructField
+	Importc bool
 }
 
 type GenericTypeSymbol struct {
@@ -189,6 +191,7 @@ type TcProcDef struct {
 	MangledName string
 	Signature   ProcSignature
 	Body        TcExpr
+	Importc     bool
 	// TODO: find a better solution for tagging other than mutuble setting a value
 	// this value is set to true in the code generator to mark this proc as
 	// already scheduled for code generation. This flag is used to prevent
@@ -234,13 +237,14 @@ type TcEnumSetLit struct {
 }
 
 type TcPackageDef struct {
-	Source     string
-	Name       string
-	StructDefs []*TcStructDef
-	EnumDefs   []*TcEnumDef
-	VarDefs    []TcVariableDefStmt
-	ProcDefs   []*TcProcDef
-	Main       *TcProcDef // main entry point
+	Source         string
+	Name           string
+	EmitStatements []EmitStmt
+	StructDefs     []*TcStructDef
+	EnumDefs       []*TcEnumDef
+	VarDefs        []TcVariableDefStmt
+	ProcDefs       []*TcProcDef
+	Main           *TcProcDef // main entry point
 }
 
 func (sym TcDotExpr) expression()          {}

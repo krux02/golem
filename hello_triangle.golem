@@ -4,28 +4,25 @@ emit "#include <SDL2/SDL.h>"
 emit "#include <SDL2/SDL_events.h>"
 emit "#include <SDL2/SDL_video.h>"
 
-
-type SDL_Window = struct {} # SDL_Window from C
-type SDL_GLContext = struct {} # SDL_GLContext from C
-type SDL_Keysym = struct {
+type "importc" SDL_Window = struct {} # SDL_Window from C
+type "importc" SDL_GLContext = struct {} # SDL_GLContext from C
+type "importc" SDL_Keysym = struct {
   scancode: u32
 }
-type SDL_KeyboardEvent = struct {
+
+type "importc" SDL_KeyboardEvent = struct  {
   keysym: SDL_Keysym
 }
-type SDL_Event = struct {
+
+type "importc" SDL_Event = struct  {
   `type`: u32
   key: SDL_KeyboardEvent
-} # SDL_Event from C
+}
 
-proc SDL_CreateWindow(name: cstring, x,y,w,h: i32, flags: u32): ptr(SDL_Window) = nil
-   # SDL_Window * SDL_CreateWindow(const char *title,
-   #                            int x, int y, int w,
-   #                            int h, Uint32 flags)
-
-proc SDL_GL_CreateContext(window: ptr(SDL_Window)): SDL_GLContext = []
-proc SDL_GL_SwapWindow(window: ptr(SDL_Window)): void = {}
-proc SDL_PollEvent(event: ptr(SDL_Event)): bool = false
+proc "importc" SDL_CreateWindow(name: cstring, x,y,w,h: i32, flags: u32): ptr(SDL_Window)
+proc "importc" SDL_GL_CreateContext(window: ptr(SDL_Window)): SDL_GLContext
+proc "importc" SDL_GL_SwapWindow(window: ptr(SDL_Window)): void
+proc "importc" SDL_PollEvent(event: ptr(SDL_Event)): bool
 
 const SDL_WINDOWPOS_UNDEFINED: i32 = 0x1FFF0000
 const SDL_WINDOW_OPENGL:u32 = 0x00000002
@@ -37,12 +34,11 @@ const GL_COLOR_BUFFER_BIT:u32 = 0x00004000
 const GL_DEPTH_BUFFER_BIT:u32 = 0x00000100
 const GL_TRIANGLES:u32 = 0x0004
 
-
-proc glClear(mask: u32): void = {}
-proc glBegin(mode: u32): void = {}
-proc glEnd(): void = {}
-proc glColor3f(r,g,b: f32): void = {}
-proc glVertex2f(x,y: f32): void = {}
+proc "importc" glClear(mask: u32): void
+proc "importc" glBegin(mode: u32): void
+proc "importc" glEnd(): void
+proc "importc" glColor3f(r,g,b: f32): void
+proc "importc" glVertex2f(x,y: f32): void
 
 proc main(): i32 = {
   let window  = SDL_CreateWindow("hello triangle", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_OPENGL)
@@ -60,7 +56,7 @@ proc main(): i32 = {
     while SDL_PollEvent(addr(event)) do {
       if event.`type` == SDL_QUIT do {
         running = false
-      } else if event.typ == SDL_KEYDOWN and event.key.keysym.scancode == SDL_SCANCODE_ESCAPE do {
+      } else if event.`type` == SDL_KEYDOWN and event.key.keysym.scancode == SDL_SCANCODE_ESCAPE do {
         running = false
       }
     }

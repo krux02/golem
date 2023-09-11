@@ -188,7 +188,12 @@ func (tc *TypeChecker) LineColumnNode(node AstNode) (line, columnStart, columnEn
 func (tc *TypeChecker) TypeCheckStructDef(scope Scope, def StructDef) *TcStructDef {
 	result := &TcStructDef{}
 	structType := &StructType{Impl: result}
+	result.Source = def.Source
 	result.Name = def.Name.Source
+	result.Importc = def.Annotations.Value == "importc"
+
+	// TODO: test when Importc that all fields are also Importc (or importc compatible, like builtin integer types)
+
 	for _, colonExpr := range def.Fields {
 		if nameIdent, ok := colonExpr.Lhs.(Ident); !ok {
 			tc.ReportErrorf(colonExpr.Lhs, "expect Ident, but got %T", colonExpr.Lhs)
@@ -207,6 +212,14 @@ func (tc *TypeChecker) TypeCheckEnumDef(scope Scope, def EnumDef) *TcEnumDef {
 	result := &TcEnumDef{}
 	enumType := &EnumType{Impl: result}
 	result.Name = def.Name.Source
+	if def.Annotations.Value != "" {
+		if def.Annotations.Value == "importc" {
+			result.Importc = true
+		} else {
+			tc.ReportInvalidAnnotations(def.Annotations)
+		}
+
+	}
 	for _, ident := range def.Values {
 		var sym TcSymbol
 		sym.Source = ident.Source
@@ -238,26 +251,46 @@ func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result 
 	result.Signature.Impl = result
 	procScope.CurrentProc = result
 	result.Name = def.Name.Source
-	mangledNameBuilder := &strings.Builder{}
-	mangledNameBuilder.WriteString(def.Name.Source)
-	mangledNameBuilder.WriteRune('_')
+
+	if def.Annotations.Source != "" {
+		if def.Annotations.Value == "importc" {
+			result.Importc = true
+		} else {
+			tc.ReportInvalidAnnotations(def.Annotations)
+		}
+	}
+
 	for _, arg := range def.Args {
 		typ := tc.LookUpType(procScope, arg.Type)
 		tcArg := procScope.NewSymbol(tc, arg.Name, SkProcArg, typ)
 		result.Signature.Params = append(result.Signature.Params, tcArg)
-		typ.ManglePrint(mangledNameBuilder)
+	}
+	if result.Importc || def.Name.Source == "main" {
+		// TODO, don't special case `main` like this here
+		result.MangledName = def.Name.Source
+	} else {
+		mangledNameBuilder := &strings.Builder{}
+		mangledNameBuilder.WriteString(def.Name.Source)
+		mangledNameBuilder.WriteRune('_')
+		for _, arg := range result.Signature.Params {
+			arg.Type.ManglePrint(mangledNameBuilder)
+		}
+		result.MangledName = mangledNameBuilder.String()
 	}
 	resultType := tc.LookUpType(procScope, def.ResultType)
 	result.Signature.ResultType = resultType
-	result.Body = tc.TypeCheckExpr(procScope, def.Body, resultType)
-	parentScope.Procedures[result.Name] = append(parentScope.Procedures[result.Name], result.Signature)
-
-	// TODO, don't special case it like this here
-	if def.Name.Source == "main" {
-		result.MangledName = "main"
+	if result.Importc {
+		if def.Body != nil {
+			tc.ReportErrorf(def.Body, "proc is importc, it may not have a body")
+		}
 	} else {
-		result.MangledName = mangledNameBuilder.String()
+		if def.Body == nil {
+			tc.ReportErrorf(def, "proc def missas a body")
+		} else {
+			result.Body = tc.TypeCheckExpr(procScope, def.Body, resultType)
+		}
 	}
+	parentScope.Procedures[result.Name] = append(parentScope.Procedures[result.Name], result.Signature)
 	return result
 }
 
@@ -280,6 +313,10 @@ func (tc *TypeChecker) ReportUnexpectedType(context AstNode, expected, gotten Ty
 
 func (tc *TypeChecker) ReportInvalidDocCommentKey(section NamedDocSection) {
 	tc.ReportErrorf(section, "invalid doc comment key: %s", section.Name)
+}
+
+func (tc *TypeChecker) ReportInvalidAnnotations(lit StrLit) {
+	tc.ReportErrorf(lit, "invalid annotations string: %s", lit.Value)
 }
 
 func (tc *TypeChecker) ReportIllegalDocComment(doc DocComment) {
@@ -1436,7 +1473,7 @@ func (tc *TypeChecker) TypeCheckPackage(arg PackageDef, requiresMain bool) (resu
 			docComment = stmt
 			hasDocComment = true
 		case EmitStmt:
-			panic("emit statement not implemented")
+			result.EmitStatements = append(result.EmitStatements, stmt)
 		default:
 			panic(fmt.Errorf("internal error: %T", stmt))
 		}

@@ -325,6 +325,10 @@ func (typeDef EnumDef) PrettyPrint(builder *AstPrettyPrinter) {
 
 func (procDef ProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("proc ")
+	if procDef.Annotations.Value != "" {
+		procDef.Annotations.PrettyPrint(builder)
+		builder.WriteString(" ")
+	}
 	builder.WriteNode(procDef.Name)
 	builder.WriteString("(")
 	if len(procDef.Args) > 3 {
@@ -351,8 +355,10 @@ func (procDef ProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 	}
 	builder.WriteString("): ")
 	builder.WriteNode(procDef.ResultType)
-	builder.WriteString(" = ")
-	builder.WriteNode(procDef.Body)
+	if procDef.Body != nil {
+		builder.WriteString(" = ")
+		builder.WriteNode(procDef.Body)
+	}
 }
 
 func (returnStmt ReturnStmt) PrettyPrint(builder *AstPrettyPrinter) {
@@ -526,6 +532,9 @@ func (structDef *StructType) PrettyPrint(builder *AstPrettyPrinter) {
 
 func (structDef *TcStructDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("type ")
+	if structDef.Importc {
+		builder.WriteString("\"importc\" ")
+	}
 	builder.WriteString(structDef.Name)
 	builder.WriteString(" = struct {")
 	builder.Indentation++
@@ -546,6 +555,9 @@ func (typ *EnumType) PrettyPrint(builder *AstPrettyPrinter) {
 
 func (enumDef *TcEnumDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("type ")
+	if enumDef.Importc {
+		builder.WriteString("\"importc\" ")
+	}
 	builder.WriteString(enumDef.Name)
 	builder.WriteString(" = struct {")
 	builder.Indentation++
@@ -662,24 +674,27 @@ func (signature ProcSignature) PrettyPrint(builder *AstPrettyPrinter) {
 
 func (procDef *TcProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("proc ")
+	if procDef.Importc {
+		builder.WriteString("\"importc\"")
+	}
 	builder.WriteString(procDef.Name)
 	procDef.Signature.PrettyPrint(builder)
-	builder.WriteString(" = ")
-	builder.WriteNode(procDef.Body)
+	if procDef.Body != nil {
+		builder.WriteString(" = ")
+		builder.WriteNode(procDef.Body)
+	}
 }
 
 func (procDef *TcBuiltinProcDef) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("proc ")
+	builder.WriteString("proc \"builtin\" ")
 	builder.WriteString(procDef.Name)
 	procDef.Signature.PrettyPrint(builder)
-	builder.WriteString(" = # builtin #")
 }
 
 func (procDef *TcBuiltinGenericProcDef) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("proc ")
+	builder.WriteString("proc \"builtin\" ")
 	builder.WriteString(procDef.Name)
 	procDef.Signature.PrettyPrint(builder)
-	builder.WriteString(" = # builtin #")
 }
 
 func (procDef *TcTemplateDef) PrettyPrint(builder *AstPrettyPrinter) {
@@ -691,7 +706,7 @@ func (procDef *TcTemplateDef) PrettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (procDef *TcBuiltinMacroDef) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("# builtin # macro ")
+	builder.WriteString("macro \"builtin\"")
 	builder.WriteString(procDef.Name)
 	procDef.Signature.PrettyPrint(builder)
 }

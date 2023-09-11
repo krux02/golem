@@ -672,6 +672,10 @@ func parseTypeDef(tokenizer *Tokenizer) Expr {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkType)
 
+	var annotations StrLit
+	if tokenizer.lookAheadToken.kind == TkStrLit {
+		annotations = parseStrLit(tokenizer)
+	}
 	name := parseIdent(tokenizer)
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkAssign)
@@ -681,7 +685,7 @@ func parseTypeDef(tokenizer *Tokenizer) Expr {
 
 	switch kind.Source {
 	case "struct":
-		result := StructDef{Name: name, Source: source}
+		result := StructDef{Name: name, Source: source, Annotations: annotations}
 		result.Name = name
 		for _, it := range body.Items {
 			colonExpr, ok := MatchColonExpr(it)
@@ -692,7 +696,7 @@ func parseTypeDef(tokenizer *Tokenizer) Expr {
 		}
 		return result
 	case "enum":
-		result := EnumDef{Name: name, Source: source}
+		result := EnumDef{Name: name, Source: source, Annotations: annotations}
 		for _, it := range body.Items {
 			ident, ok := it.(Ident)
 			if !ok {
@@ -773,22 +777,24 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkProc)
 
+	if tokenizer.lookAheadToken.kind == TkStrLit {
+		result.Annotations = parseStrLit(tokenizer)
+	}
+
 	expr := parseExpr(tokenizer, false)
 
-	lhs, rhs, isAssign := MatchAssign(expr)
-	if !isAssign {
-		panic(fmt.Errorf("expect assignment: %s", expr.GetSource()))
+	if lhs, rhs, isAssign := MatchAssign(expr); isAssign {
+		result.Body = rhs
+		expr = lhs
 	}
-	result.Body = rhs
 
-	colonExpr, isColonExpr := MatchColonExpr(lhs)
+	colonExpr, isColonExpr := MatchColonExpr(expr)
 	if !isColonExpr {
 		panic("expect colon expr")
 	}
 	result.ResultType = colonExpr.Rhs
-	lhs = colonExpr.Lhs
 
-	call, isCall := lhs.(Call)
+	call, isCall := colonExpr.Lhs.(Call)
 	if !isCall {
 		panic("expect call")
 	}
@@ -818,8 +824,8 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 		panic(fmt.Errorf("arguments have no type: %+v", newArgs))
 	}
 
-	result.Source = joinSubstr(tokenizer.code, firstToken.value, lhs.GetSource())
-	return
+	result.Source = joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value)
+	return result
 }
 
 func parseEmitStmt(tokenizer *Tokenizer) EmitStmt {

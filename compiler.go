@@ -38,10 +38,10 @@ func (builder *CodeBuilder) compileTypeExpr(context *PackageGeneratorContext, ty
 	case *ArrayType:
 		typ.ManglePrint(&builder.Builder)
 	case *StructType:
-		// TODO this should be the mangled name
+		// TODO this should be the mangled name (or importc name)
 		builder.WriteString(typ.Impl.Name)
 	case *EnumType:
-		// TODO this should be the mangled name
+		// TODO this should be the mangled name (or importc name)
 		builder.WriteString(typ.Impl.Name)
 	case *EnumSetType:
 		builder.WriteString("uint64_t")
@@ -503,8 +503,8 @@ func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 }
 
 func (context *PackageGeneratorContext) markProcForGeneration(procDef *TcProcDef) {
-	if procDef.Body == nil {
-		return // builtin procs don't have a procDef to point to
+	if procDef.Importc {
+		return // importc procs don't have an impl
 	}
 	if procDef.scheduledforgeneration {
 		return // nothing to do when already scheduled
@@ -543,7 +543,7 @@ func markArrayTypeForGeneration(context *PackageGeneratorContext, typ *ArrayType
 }
 
 func markStructTypeForGeneration(context *PackageGeneratorContext, typ *StructType) {
-	if typ.scheduledforgeneration {
+	if typ.scheduledforgeneration || typ.Impl.Importc {
 		return // nothing to do when already scheduled
 	}
 	for _, field := range typ.Impl.Fields {
@@ -554,7 +554,7 @@ func markStructTypeForGeneration(context *PackageGeneratorContext, typ *StructTy
 }
 
 func markEnumTypeForGeneration(context *PackageGeneratorContext, typ *EnumType) {
-	if typ.scheduledforgeneration {
+	if typ.scheduledforgeneration || typ.Impl.Importc {
 		return // nothing to do when already scheduled
 	}
 	typ.scheduledforgeneration = true
@@ -588,12 +588,19 @@ func compilePackageToC(pak TcPackageDef) string {
 	// TODO this should depend on the usage of `printf`
 	context.includes.WriteString("#include <stdio.h>")
 	context.includes.NewlineAndIndent()
+
+	for _, emit := range pak.EmitStatements {
+		context.includes.WriteString(emit.Value.Value)
+		context.includes.NewlineAndIndent()
+	}
+
 	// TODO this should depend on the usage of `assert`
 	context.includes.WriteString("#include <assert.h>")
 	context.typeDecl.NewlineAndIndent()
 	context.typeDecl.WriteString("typedef struct string {size_t len; char const* data;} string;")
 	context.typeDecl.NewlineAndIndent()
 	context.typeDecl.WriteString("typedef unsigned char bool;")
+
 	context.markProcForGeneration(pak.Main)
 	for procDef := context.popMarkedForGenerationProcDef(); procDef != nil; procDef = context.popMarkedForGenerationProcDef() {
 		compileProcDef(context, procDef)

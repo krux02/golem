@@ -99,15 +99,17 @@ type ReturnStmt struct {
 }
 
 type EnumDef struct {
-	Source string
-	Name   Ident
-	Values []Ident
+	Source      string
+	Name        Ident
+	Values      []Ident
+	Annotations StrLit
 }
 
 type StructDef struct {
-	Source string
-	Name   Ident
-	Fields []ColonExpr
+	Source      string
+	Name        Ident
+	Fields      []ColonExpr
+	Annotations StrLit
 }
 
 type ProcArgument struct {
@@ -174,11 +176,12 @@ type ColonExpr struct {
 }
 
 type ProcDef struct {
-	Source     string
-	Name       Ident
-	Args       []ProcArgument
-	ResultType TypeExpr
-	Body       Expr
+	Source      string
+	Name        Ident
+	Args        []ProcArgument
+	ResultType  TypeExpr
+	Body        Expr
+	Annotations StrLit
 }
 
 type PackageDef struct {
