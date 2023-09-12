@@ -478,6 +478,11 @@ func (emitstmt EmitStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	emitstmt.Value.PrettyPrint(builder)
 }
 
+func (staticExpr StaticExpr) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("static ")
+	staticExpr.Expr.PrettyPrint(builder)
+}
+
 // format type checked ast nodes
 func (typ *BuiltinType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(typ.Name)

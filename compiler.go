@@ -15,7 +15,7 @@ type PackageGeneratorContext struct {
 	typeDecl    CodeBuilder
 	forwardDecl CodeBuilder
 	functions   CodeBuilder
-	Pak         TcPackageDef
+	Pak         *TcPackageDef
 
 	// functions marked for code generation
 	TodoListProc []*TcProcDef
@@ -580,7 +580,7 @@ func (context *PackageGeneratorContext) popMarkedForGenerationType() (result Typ
 	return result
 }
 
-func compilePackageToC(pak TcPackageDef) string {
+func compilePackageToC(pak *TcPackageDef) string {
 	context := &PackageGeneratorContext{Pak: pak}
 	context.includes.NewlineAndIndent()
 	context.includes.WriteString("#include <stdint.h>")

@@ -835,6 +835,13 @@ func parseEmitStmt(tokenizer *Tokenizer) EmitStmt {
 	return EmitStmt{Source: joinSubstr(tokenizer.code, firstToken.value, strLit.Source), Value: strLit}
 }
 
+func parseStaticExpr(tokenizer *Tokenizer) StaticExpr {
+	firstToken := tokenizer.Next()
+	tokenizer.expectKind(firstToken, TkStatic)
+	expr := parseExpr(tokenizer, false)
+	return StaticExpr{Source: joinSubstr(tokenizer.code, firstToken.value, expr.GetSource()), Expr: expr}
+}
+
 func parsePackage(code, filename string) (result PackageDef) {
 	result.Name = strings.TrimSuffix(path.Base(filename), ".golem")
 	result.Source = code
@@ -863,6 +870,10 @@ func parsePackage(code, filename string) (result PackageDef) {
 		case TkVar, TkLet, TkConst:
 			varDef := parseVariableDefStmt(tokenizer)
 			result.TopLevelStmts = append(result.TopLevelStmts, varDef)
+			continue
+		case TkStatic:
+			expr := parseStaticExpr(tokenizer)
+			result.TopLevelStmts = append(result.TopLevelStmts, expr)
 			continue
 		case TkPrefixDocComment:
 			docComment := parseDocComment(tokenizer)

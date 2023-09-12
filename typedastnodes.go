@@ -185,6 +185,15 @@ type TcBuiltinGenericProcDef struct {
 	Prefix, Infix, Postfix string
 }
 
+type TcBuiltinStaticProcDef struct {
+	Source    string // TODO: this can't be correct, it's builtin there is no source
+	Name      string
+	Signature ProcSignature
+	//Body      TcExpr
+
+	ApplyFunc func(context *TcPackageDef, args []TcExpr) TcExpr
+}
+
 type TcProcDef struct {
 	Source      string
 	Name        string
@@ -239,6 +248,7 @@ type TcEnumSetLit struct {
 type TcPackageDef struct {
 	Source         string
 	Name           string
+	CFlags         []string
 	EmitStatements []EmitStmt
 	StructDefs     []*TcStructDef
 	EnumDefs       []*TcEnumDef

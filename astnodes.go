@@ -190,6 +190,11 @@ type PackageDef struct {
 	TopLevelStmts []Expr
 }
 
+type StaticExpr struct {
+	Source string
+	Expr   Expr
+}
+
 type EmitStmt struct {
 	Source string
 	Value  StrLit
@@ -219,6 +224,7 @@ func (_ TypeContext) expression()     {}
 func (_ BreakStmt) expression()       {}
 func (_ ContinueStmt) expression()    {}
 func (_ EmitStmt) expression()        {}
+func (_ StaticExpr) expression()      {}
 
 func (arg ProcDef) GetSource() string         { return arg.Source }
 func (arg StructDef) GetSource() string       { return arg.Source }
@@ -246,7 +252,5 @@ func (arg ContinueStmt) GetSource() string    { return arg.Source }
 func (arg TypeContext) GetSource() string     { return arg.Source }
 func (arg NilLit) GetSource() string          { return arg.Source }
 func (arg EmitStmt) GetSource() string        { return arg.Source }
-
-//func (arg TypeExpr) GetSource() string        { return arg.Source }
-
-func (arg PackageDef) GetSource() string { return arg.Source }
+func (arg StaticExpr) GetSource() string      { return arg.Source }
+func (arg PackageDef) GetSource() string      { return arg.Source }

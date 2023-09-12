@@ -35,6 +35,7 @@ const (
 	TkReturn
 	TkBreak
 	TkContinue
+	TkStatic
 	TkEmit
 
 	TkOr
@@ -80,6 +81,7 @@ var TokenKindNames = [...]string{
 	TkReturn:            "Return",
 	TkBreak:             "Break",
 	TkContinue:          "Continue",
+	TkStatic:            "Static",
 	TkEmit:              "Emit",
 	TkOr:                "Or",
 	TkAnd:               "And",
@@ -278,6 +280,8 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			result.kind = TkBreak
 		case "continue":
 			result.kind = TkContinue
+		case "static":
+			result.kind = TkStatic
 		case "emit":
 			result.kind = TkEmit
 		case "or":

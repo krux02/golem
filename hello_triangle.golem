@@ -4,6 +4,11 @@ emit "#include <SDL2/SDL.h>"
 emit "#include <SDL2/SDL_events.h>"
 emit "#include <SDL2/SDL_video.h>"
 
+static {
+  addCFlags("-lSDL2")
+  addCFlags("-lGL")
+}
+
 type "importc" SDL_Window = struct {} # SDL_Window from C
 type "importc" SDL_GLContext = struct {} # SDL_GLContext from C
 type "importc" SDL_Keysym = struct {
@@ -49,7 +54,7 @@ proc main(): i32 = {
   # SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE)
   let context: SDL_GLContext = SDL_GL_CreateContext(window)
 
-  var running: bool
+  var running: bool = true
 
   while running do {
     var event: SDL_Event

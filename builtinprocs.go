@@ -274,10 +274,12 @@ func (typ *OpenGenericType) DefaultValue(tc *TypeChecker, context AstNode) TcExp
 }
 
 var builtinScope Scope = &ScopeImpl{
-	Parent:     nil,
-	Types:      make(map[string]Type),
-	Procedures: make(map[string][]ProcSignature),
-	Variables:  make(map[string]TcSymbol),
+	Parent:         nil,
+	CurrentPackage: nil,
+	CurrentProc:    nil,
+	Types:          make(map[string]Type),
+	Procedures:     make(map[string][]ProcSignature),
+	Variables:      make(map[string]TcSymbol),
 }
 
 func registerBuiltinType(typ *BuiltinType) {
@@ -417,7 +419,7 @@ func registerSimpleTemplate(name string, args []Type, result Type, substitution 
 	builtinScope.Procedures[name] = append(builtinScope.Procedures[name], templateDef.Signature)
 }
 
-type BuiltinMacroFunc func(tc *TypeChecker, scope Scope, call TcCall) TcCall
+type BuiltinMacroFunc func(tc *TypeChecker, scope Scope, call TcCall) TcExpr
 
 func registerConstant(name string, typ Type) {
 	// TODO this is wrong, a constant isn't a variable
@@ -426,7 +428,7 @@ func registerConstant(name string, typ Type) {
 	_ = builtinScope.NewSymbol(nil, ident, SkConst, typ)
 }
 
-func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) (result TcCall) {
+func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 	formatExpr := call.Args[0]
 	formatStrLit, ok := formatExpr.(StrLit)
 	if !ok {
@@ -500,7 +502,7 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) (result TcCal
 		return call
 	}
 
-	result = call
+	result := call
 	// TODO result.sym should be `printf` from C, with `cstring` as argument
 	result.Sym = TcProcSymbol{
 		Source: call.Sym.Source,
@@ -508,6 +510,21 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) (result TcCal
 	}
 	result.Args[0] = CStrLit{Source: formatStrLit.Source, Value: formatStrC.String()}
 	return result
+}
+
+func BuiltinAddCFlags(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
+	if len(call.Args) != 1 {
+		tc.ReportErrorf(call, "expect single string literal as argument")
+		return TcErrorNode{call}
+	}
+	switch arg0 := call.Args[0].(type) {
+	case StrLit:
+		scope.CurrentPackage.CFlags = append(scope.CurrentPackage.CFlags, arg0.Value)
+	default:
+		tc.ReportErrorf(call, "expect single string literal as argument")
+		return TcErrorNode{call}
+	}
+	return TcCodeBlock{Source: call.Source}
 }
 
 func init() {
@@ -522,6 +539,8 @@ func init() {
 	// as it becomes necessary, but right now it is not planned.
 	registerBuiltin("c_printf", "printf(", ", ", ")", []Type{TypeCString}, TypeVoid)
 	registerBuiltinMacro("printf", true, []Type{TypeStr}, TypeVoid, ValidatePrintfCall)
+
+	registerBuiltinMacro("addCFlags", false, []Type{TypeStr}, TypeVoid, BuiltinAddCFlags)
 
 	registerBuiltinType(TypeBoolean)
 	registerBuiltinType(TypeInt8)

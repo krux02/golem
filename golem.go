@@ -145,10 +145,11 @@ func compile(filename string) (string, error) {
 	}
 	tempDir := path.Join(os.TempDir(), "golem")
 	base := filepath.Base(filename)
-	if base[len(base)-6:] != ".golem" {
+	base, hasFileEnding := strings.CutSuffix(base, ".golem")
+	if !hasFileEnding {
 		panic("Input file must end on .golem")
 	}
-	base = base[:len(base)-6]
+
 	fileName := fmt.Sprintf("%s.c", base)
 	absFilename := path.Join(tempDir, fileName)
 	err = os.MkdirAll(tempDir, os.ModePerm)
@@ -160,7 +161,10 @@ func compile(filename string) (string, error) {
 		log.Fatal(err)
 	}
 	binaryAbsFilename := path.Join(tempDir, base)
-	cmd := exec.Command("gcc", absFilename, "-o", binaryAbsFilename)
+	args := []string{}
+	args = append(args, typedPak.CFlags...)
+	args = append(args, absFilename, "-o", binaryAbsFilename)
+	cmd := exec.Command("gcc", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()

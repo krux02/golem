@@ -29,21 +29,23 @@ type ScopeImpl struct {
 	// A return stmt needs to know which procedure it belongs to. This
 	// pointer points to the corresponding procedure. This should
 	// probably be redued to be just the proc signature.
-	CurrentProc *TcProcDef
-	Variables   map[string]TcSymbol
-	Procedures  map[string][]ProcSignature
-	Types       map[string]Type
+	CurrentPackage *TcPackageDef
+	CurrentProc    *TcProcDef
+	Variables      map[string]TcSymbol
+	Procedures     map[string][]ProcSignature
+	Types          map[string]Type
 }
 
 type Scope = *ScopeImpl
 
 func (scope Scope) NewSubScope() Scope {
 	return &ScopeImpl{
-		Parent:      scope,
-		CurrentProc: scope.CurrentProc,
-		Variables:   make(map[string]TcSymbol),
-		Procedures:  make(map[string][]ProcSignature),
-		Types:       make(map[string]Type),
+		Parent:         scope,
+		CurrentPackage: scope.CurrentPackage,
+		CurrentProc:    scope.CurrentProc,
+		Variables:      make(map[string]TcSymbol),
+		Procedures:     make(map[string][]ProcSignature),
+		Types:          make(map[string]Type),
 	}
 }
 
@@ -859,8 +861,9 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		case *TcBuiltinMacroDef:
 			result.Sym = TcProcSymbol{Source: ident.Source, Impl: impl}
 			result.Args = checkedArgs
-			result = impl.MacroFunc(tc, scope, result)
-			tc.ExpectType(call, result.GetType(), expected)
+			newResult := impl.MacroFunc(tc, scope, result)
+			tc.ExpectType(call, newResult.GetType(), expected)
+			return newResult
 		default:
 			panic(fmt.Errorf("internal error: %T, call: %s", impl, AstFormat(call)))
 		}
@@ -1440,8 +1443,10 @@ func (tc *TypeChecker) TypeCheckWhileLoopStmt(scope Scope, loopArg WhileLoopStmt
 	return result
 }
 
-func (tc *TypeChecker) TypeCheckPackage(arg PackageDef, requiresMain bool) (result TcPackageDef) {
+func (tc *TypeChecker) TypeCheckPackage(arg PackageDef, requiresMain bool) (result *TcPackageDef) {
+	result = &TcPackageDef{}
 	scope := builtinScope.NewSubScope()
+	scope.CurrentPackage = result
 	result.Name = arg.Name
 
 	hasDocComment := false
@@ -1474,6 +1479,10 @@ func (tc *TypeChecker) TypeCheckPackage(arg PackageDef, requiresMain bool) (resu
 			hasDocComment = true
 		case EmitStmt:
 			result.EmitStatements = append(result.EmitStatements, stmt)
+		case StaticExpr:
+			// TODO: ensure this expression can be evaluated at compile time
+			tcExpr := tc.TypeCheckExpr(scope, stmt.Expr, TypeVoid)
+			EvalExpr(tcExpr, result)
 		default:
 			panic(fmt.Errorf("internal error: %T", stmt))
 		}
