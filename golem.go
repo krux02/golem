@@ -185,7 +185,7 @@ func compileAndRunFile(filename string, useExec bool) {
 	var argv []string = nil
 	// exec should not return
 	if useExec {
-		log.Fatal(syscall.Exec(binaryAbsFilename, argv, nil))
+		log.Fatal(syscall.Exec(binaryAbsFilename, argv, os.Environ()))
 		return // dead code
 	} else {
 		err = exec.Command(binaryAbsFilename, argv...).Run()
