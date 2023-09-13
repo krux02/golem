@@ -421,11 +421,11 @@ func registerSimpleTemplate(name string, args []Type, result Type, substitution 
 
 type BuiltinMacroFunc func(tc *TypeChecker, scope Scope, call TcCall) TcExpr
 
-func registerConstant(name string, typ Type) {
+func registerConstant(name string, value TcExpr) {
 	// TODO this is wrong, a constant isn't a variable
 	var ident Ident
 	ident.Source = name
-	_ = builtinScope.NewSymbol(nil, ident, SkConst, typ)
+	_ = builtinScope.NewConstSymbol(nil, ident, value)
 }
 
 func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
@@ -613,7 +613,7 @@ func init() {
 
 	registerBuiltin("assert", "assert(", "", ")", []Type{TypeBoolean}, TypeVoid)
 
-	registerConstant("true", TypeBoolean)
-	registerConstant("false", TypeBoolean)
+	registerConstant("true", &IntLit{Type: TypeBoolean, Value: 1})
+	registerConstant("false", &IntLit{Type: TypeBoolean, Value: 0})
 
 }

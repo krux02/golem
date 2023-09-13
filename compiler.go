@@ -167,20 +167,19 @@ func (builder *CodeBuilder) CompileFloatLit(lit FloatLit) {
 }
 
 func (builder *CodeBuilder) CompileSymbol(sym TcSymbol) {
-	switch sym.Source {
-	case "true":
-		builder.WriteString("1")
-	case "false":
-		builder.WriteString("0")
+	switch sym.Kind {
+	case SkLoopIterator:
+		builder.WriteString("*")
+		builder.WriteString(sym.Source)
+	case SkEnum:
+		typ := sym.Type.(*EnumType)
+		builder.WriteString(typ.Impl.Name)
+		builder.WriteRune('_')
+		builder.WriteString(sym.Source)
+	case SkConst:
+		// should be OK here to pass in nil as context. Only literals allowed here and they don't need a context argument
+		builder.CompileExpr(nil, sym.Value)
 	default:
-		switch sym.Kind {
-		case SkLoopIterator:
-			builder.WriteString("*")
-		case SkEnum:
-			typ := sym.Type.(*EnumType)
-			builder.WriteString(typ.Impl.Name)
-			builder.WriteRune('_')
-		}
 		builder.WriteString(sym.Source)
 	}
 }

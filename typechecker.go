@@ -61,7 +61,18 @@ func (tc *TypeChecker) RegisterType(scope Scope, name string, typ Type, context 
 func (scope Scope) NewSymbol(tc *TypeChecker, name Ident, kind SymbolKind, typ Type) TcSymbol {
 	//result := TcSymbol{Name: name.source, Kind: kind, Typ: typ}
 	rawName := name.Source
-	result := TcSymbol{Source: name.Source, Kind: kind, Type: typ}
+	result := TcSymbol{Source: rawName, Kind: kind, Value: nil, Type: typ}
+	_, alreadyExists := scope.Variables[rawName]
+	if alreadyExists {
+		tc.ReportErrorf(name, "redefinition of %s", rawName)
+	}
+	scope.Variables[name.Source] = result
+	return result
+}
+
+func (scope Scope) NewConstSymbol(tc *TypeChecker, name Ident, value TcExpr) TcSymbol {
+	rawName := name.Source
+	result := TcSymbol{Source: name.Source, Kind: SkConst, Value: value, Type: value.GetType()}
 	_, alreadyExists := scope.Variables[rawName]
 	if alreadyExists {
 		tc.ReportErrorf(name, "redefinition of %s", rawName)
@@ -953,6 +964,7 @@ func (tc *TypeChecker) ApplyDocComment(expr Expr, doc DocComment) Expr {
 	}
 }
 func (tc *TypeChecker) TypeCheckCodeBlock(scope Scope, arg CodeBlock, expected Type) (result TcCodeBlock) {
+	result.Source = arg.Source
 	scope = scope.NewSubScope()
 	N := len(arg.Items)
 	if N > 0 {
@@ -991,11 +1003,19 @@ func (tc *TypeChecker) TypeCheckVariableDefStmt(scope Scope, arg VariableDefStmt
 		expected = tc.LookUpType(scope, arg.TypeExpr)
 	}
 	if arg.Value == nil {
+		if arg.Kind != SkVar {
+			tc.ReportErrorf(arg, "initial value required")
+		}
 		result.Value = expected.DefaultValue(tc, arg.Name)
 		result.Sym = scope.NewSymbol(tc, arg.Name, arg.Kind, expected)
 	} else {
 		result.Value = tc.TypeCheckExpr(scope, arg.Value, expected)
-		result.Sym = scope.NewSymbol(tc, arg.Name, arg.Kind, result.Value.GetType())
+		if arg.Kind == SkConst {
+			// TODO: this needs proper checking if it can even computed
+			result.Sym = scope.NewConstSymbol(tc, arg.Name, EvalExpr(tc, result.Value, scope))
+		} else {
+			result.Sym = scope.NewSymbol(tc, arg.Name, arg.Kind, result.Value.GetType())
+		}
 	}
 	return result
 }
@@ -1482,7 +1502,7 @@ func (tc *TypeChecker) TypeCheckPackage(arg PackageDef, requiresMain bool) (resu
 		case StaticExpr:
 			// TODO: ensure this expression can be evaluated at compile time
 			tcExpr := tc.TypeCheckExpr(scope, stmt.Expr, TypeVoid)
-			EvalExpr(tcExpr, result)
+			EvalExpr(tc, tcExpr, scope)
 		default:
 			panic(fmt.Errorf("internal error: %T", stmt))
 		}

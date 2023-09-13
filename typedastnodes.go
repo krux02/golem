@@ -78,6 +78,7 @@ const (
 type TcSymbol struct {
 	Source string
 	Kind   SymbolKind
+	Value  TcExpr // only set when symbol in `const`
 	Type   Type
 }
 
