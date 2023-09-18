@@ -1284,6 +1284,7 @@ var arrayTypeMap map[ArrayTypeMapKey]*ArrayType
 var enumSetTypeMap map[*EnumType]*EnumSetType
 var ptrTypeMap map[Type]*PtrType
 var typeTypeMap map[Type]*TypeType
+var packageMap map[string]*TcPackageDef
 
 func GetArrayType(elem Type, len int64) (result *ArrayType) {
 	result, ok := arrayTypeMap[ArrayTypeMapKey{elem, len}]
@@ -1463,6 +1464,15 @@ func (tc *TypeChecker) TypeCheckWhileLoopStmt(scope Scope, loopArg WhileLoopStmt
 	return result
 }
 
+func GetPackage(pkg string) *TcPackageDef {
+	result, ok := packageMap[pkg]
+	if ok {
+		return result
+	}
+	panic("GetPackage not implemented")
+
+}
+
 func (tc *TypeChecker) TypeCheckPackage(arg PackageDef, requiresMain bool) (result *TcPackageDef) {
 	result = &TcPackageDef{}
 	scope := builtinScope.NewSubScope()
@@ -1503,6 +1513,8 @@ func (tc *TypeChecker) TypeCheckPackage(arg PackageDef, requiresMain bool) (resu
 			// TODO: ensure this expression can be evaluated at compile time
 			tcExpr := tc.TypeCheckExpr(scope, stmt.Expr, TypeVoid)
 			EvalExpr(tc, tcExpr, scope)
+		case ImportStmt:
+			result.Imports = append(result.Imports, GetPackage(stmt.StrLit.Value))
 		default:
 			panic(fmt.Errorf("internal error: %T", stmt))
 		}

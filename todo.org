@@ -15,15 +15,17 @@
 * DONE array access
 * DONE make high/low values of integer types somehow accessible.
 * DONE pointer
+* TODO reserve double bunderscore and underscore pre- and posfix
+* TODO packages and import
 * TODO type substitution/generic instancing after overload resolution
 * TODO pass by reference
 * TODO mutable flag in type
 * TODO have macros (stubs at least)
 * TODO have varargs for macros (only)
 varargs is a thing now, but it is still problematic. the arguments should be
-typechecked only once, but the expected types come from the first argument.
+type checked only once, but the expected types come from the first argument.
 Currently arguments are checked by TypeCheckCall and then rechecked by
-ValidatePrintfCall. This isn't good, there should be single respensibility of
+ValidatePrintfCall. This isn't good, there should be single responnsibility of
 who should type check the arguments.
 
  * constructor expressions, such as ~[a,b,c]~, might not have a meaning until they

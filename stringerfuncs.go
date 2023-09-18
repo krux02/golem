@@ -483,6 +483,11 @@ func (staticExpr StaticExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	staticExpr.Expr.PrettyPrint(builder)
 }
 
+func (importStmt ImportStmt) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("import ")
+	importStmt.StrLit.PrettyPrint(builder)
+}
+
 // format type checked ast nodes
 func (typ *BuiltinType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(typ.Name)

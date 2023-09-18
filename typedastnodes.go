@@ -250,6 +250,7 @@ type TcPackageDef struct {
 	Source         string
 	Name           string
 	CFlags         []string
+	Imports        []*TcPackageDef
 	EmitStatements []EmitStmt
 	StructDefs     []*TcStructDef
 	EnumDefs       []*TcEnumDef

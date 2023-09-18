@@ -35,7 +35,11 @@ const (
 	TkReturn
 	TkBreak
 	TkContinue
+	TkImport
 	TkStatic
+	TkStruct
+	TkUnion
+	TkEnum
 	TkEmit
 
 	TkOr
@@ -81,7 +85,11 @@ var TokenKindNames = [...]string{
 	TkReturn:            "Return",
 	TkBreak:             "Break",
 	TkContinue:          "Continue",
+	TkImport:            "Import",
 	TkStatic:            "Static",
+	TkStruct:            "Struct",
+	TkUnion:             "Union",
+	TkEnum:              "Enum",
 	TkEmit:              "Emit",
 	TkOr:                "Or",
 	TkAnd:               "And",
@@ -280,8 +288,16 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			result.kind = TkBreak
 		case "continue":
 			result.kind = TkContinue
+		case "import":
+			result.kind = TkImport
 		case "static":
 			result.kind = TkStatic
+		case "struct":
+			result.kind = TkStruct
+		case "union":
+			result.kind = TkUnion
+		case "enum":
+			result.kind = TkEnum
 		case "emit":
 			result.kind = TkEmit
 		case "or":
@@ -458,7 +474,7 @@ func (tokenizer *Tokenizer) Errorf(token Token, msg string, args ...interface{})
 }
 
 func (tokenizer *Tokenizer) formatWrongKind(token Token) error {
-	return tokenizer.Errorf(token, "unexpected token: %v", token)
+	return tokenizer.Errorf(token, "unexpected token: %s value: '%s'", TokenKindNames[token.kind], token.value)
 }
 
 func (tokenizer *Tokenizer) formatWrongIdent(token Token) error {
@@ -474,20 +490,6 @@ func (tokenizer *Tokenizer) expectKind(token Token, kind TokenKind) {
 func (tokenizer *Tokenizer) expectKind2(token Token, kind1, kind2 TokenKind) {
 	if token.kind != kind1 && token.kind != kind2 {
 		panic(tokenizer.formatWrongKind(token))
-	}
-}
-
-func (tokenizer *Tokenizer) expectIdent(token Token, ident string) {
-	tokenizer.expectKind(token, TkIdent)
-	if token.value != ident {
-		panic(tokenizer.Errorf(token, "expected ident %v got %v", ident, token.value))
-	}
-}
-
-func (tokenizer *Tokenizer) expectIdent2(token Token, ident1, ident2 string) {
-	tokenizer.expectKind(token, TkIdent)
-	if token.value != ident1 && token.value != ident2 {
-		panic(tokenizer.Errorf(token, "expected ident %v or %v got %v", ident1, ident2, token.value))
 	}
 }
 

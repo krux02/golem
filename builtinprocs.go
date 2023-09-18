@@ -532,6 +532,7 @@ func init() {
 	enumSetTypeMap = make(map[*EnumType]*EnumSetType)
 	ptrTypeMap = make(map[Type]*PtrType)
 	typeTypeMap = make(map[Type]*TypeType)
+	packageMap = make(map[string]*TcPackageDef)
 
 	// Printf is literally the only use case for real varargs that I actually see as
 	// practical. Therefore the implementation for varargs will be strictly tied to

@@ -1,0 +1,34 @@
+emit "#include <SDL2/SDL.h>"
+emit "#include <SDL2/SDL_events.h>"
+emit "#include <SDL2/SDL_video.h>"
+
+static {
+  addCFlags("-lSDL2")
+}
+
+type "importc" SDL_Window = struct {} # SDL_Window from C
+type "importc" SDL_GLContext = struct {} # SDL_GLContext from C
+type "importc" SDL_Keysym = struct {
+  scancode: u32
+}
+
+type "importc" SDL_KeyboardEvent = struct  {
+  keysym: SDL_Keysym
+}
+
+type "importc" SDL_Event = struct  {
+  `type`: u32
+  key: SDL_KeyboardEvent
+}
+
+proc "importc" SDL_CreateWindow(name: cstring, x,y,w,h: i32, flags: u32): ptr(SDL_Window)
+proc "importc" SDL_GL_CreateContext(window: ptr(SDL_Window)): SDL_GLContext
+proc "importc" SDL_GL_SwapWindow(window: ptr(SDL_Window)): void
+proc "importc" SDL_PollEvent(event: ptr(SDL_Event)): bool
+
+const SDL_WINDOWPOS_UNDEFINED: i32 = 0x1FFF0000
+const SDL_WINDOW_OPENGL:u32 = 0x00000002
+const SDL_QUIT: u32 = 0x100
+const SDL_KEYDOWN: u32 = 0x300
+const SDL_SCANCODE_ESCAPE: u32 = 41
+

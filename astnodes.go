@@ -195,6 +195,11 @@ type StaticExpr struct {
 	Expr   Expr
 }
 
+type ImportStmt struct {
+	Source string
+	StrLit StrLit
+}
+
 type EmitStmt struct {
 	Source string
 	Value  StrLit
@@ -225,6 +230,7 @@ func (_ BreakStmt) expression()       {}
 func (_ ContinueStmt) expression()    {}
 func (_ EmitStmt) expression()        {}
 func (_ StaticExpr) expression()      {}
+func (_ ImportStmt) expression()      {}
 
 func (arg ProcDef) GetSource() string         { return arg.Source }
 func (arg StructDef) GetSource() string       { return arg.Source }
@@ -253,4 +259,5 @@ func (arg TypeContext) GetSource() string     { return arg.Source }
 func (arg NilLit) GetSource() string          { return arg.Source }
 func (arg EmitStmt) GetSource() string        { return arg.Source }
 func (arg StaticExpr) GetSource() string      { return arg.Source }
+func (arg ImportStmt) GetSource() string      { return arg.Source }
 func (arg PackageDef) GetSource() string      { return arg.Source }

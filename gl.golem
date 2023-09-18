@@ -1,0 +1,9 @@
+const GL_COLOR_BUFFER_BIT:u32 = 0x00004000
+const GL_DEPTH_BUFFER_BIT:u32 = 0x00000100
+const GL_TRIANGLES:u32 = 0x0004
+
+proc "importc" glClear(mask: u32): void
+proc "importc" glBegin(mode: u32): void
+proc "importc" glEnd(): void
+proc "importc" glColor3f(r,g,b: f32): void
+proc "importc" glVertex2f(x,y: f32): void

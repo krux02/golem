@@ -679,12 +679,12 @@ func parseTypeDef(tokenizer *Tokenizer) Expr {
 	name := parseIdent(tokenizer)
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkAssign)
-	kind := parseIdent(tokenizer)
+	kindToken := tokenizer.Next()
 	body := parseCodeBlock(tokenizer)
 	source := joinSubstr(tokenizer.code, firstToken.value, body.Source)
 
-	switch kind.Source {
-	case "struct":
+	switch kindToken.kind {
+	case TkStruct:
 		result := StructDef{Name: name, Source: source, Annotations: annotations}
 		result.Name = name
 		for _, it := range body.Items {
@@ -695,7 +695,7 @@ func parseTypeDef(tokenizer *Tokenizer) Expr {
 			result.Fields = append(result.Fields, colonExpr)
 		}
 		return result
-	case "enum":
+	case TkEnum:
 		result := EnumDef{Name: name, Source: source, Annotations: annotations}
 		for _, it := range body.Items {
 			ident, ok := it.(Ident)
@@ -706,29 +706,10 @@ func parseTypeDef(tokenizer *Tokenizer) Expr {
 		}
 		return result
 	default:
+		tokenizer.expectKind2(kindToken, TkStruct, TkEnum)
 		panic("parser error handling not implemented")
 	}
 }
-
-//	func parseProcArgumentGroup(tokenizer *Tokenizer) (result []ProcArgument) {
-//		name := parseIdent(tokenizer)
-//		result = append(result, ProcArgument{Name: name})
-//		for tokenizer.lookAheadToken.kind == TkComma {
-//			_ = tokenizer.Next() // throw away the comma
-//			name := parseIdent(tokenizer)
-//			result = append(result, ProcArgument{Name: name})
-//		}
-//		token := tokenizer.Next()
-//		tokenizer.expectKind(token, TkOperator)
-//		typ := parseTypeExpr(tokenizer)
-//		lastToken := tokenizer.token
-//		for i := range result {
-//			result[i].Type = typ
-//			// the code is not continuous, doing best effort here
-//			result[i].Source = joinSubstr(tokenizer.code, result[i].Name.Source, lastToken.value)
-//		}
-//		return
-//	}
 
 func MatchColonExpr(expr Expr) (colonExpr ColonExpr, ok bool) {
 	call, ok := expr.(Call)
@@ -842,6 +823,13 @@ func parseStaticExpr(tokenizer *Tokenizer) StaticExpr {
 	return StaticExpr{Source: joinSubstr(tokenizer.code, firstToken.value, expr.GetSource()), Expr: expr}
 }
 
+func parseImportStmt(tokenizer *Tokenizer) ImportStmt {
+	firstToken := tokenizer.Next()
+	tokenizer.expectKind(firstToken, TkImport)
+	strLit := parseStrLit(tokenizer)
+	return ImportStmt{Source: joinSubstr(tokenizer.code, firstToken.value, strLit.Source), StrLit: strLit}
+}
+
 func parsePackage(code, filename string) (result PackageDef) {
 	result.Name = strings.TrimSuffix(path.Base(filename), ".golem")
 	result.Source = code
@@ -866,6 +854,10 @@ func parsePackage(code, filename string) (result PackageDef) {
 		case TkProc:
 			procDef := parseProcDef(tokenizer)
 			result.TopLevelStmts = append(result.TopLevelStmts, procDef)
+			continue
+		case TkImport:
+			importStmt := parseImportStmt(tokenizer)
+			result.TopLevelStmts = append(result.TopLevelStmts, importStmt)
 			continue
 		case TkVar, TkLet, TkConst:
 			varDef := parseVariableDefStmt(tokenizer)
