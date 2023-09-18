@@ -9,15 +9,27 @@ import (
 	"unicode/utf8"
 )
 
-var OperatorPrecedence map[string]int = map[string]int{
-	".": 10,
-	":": 9,
-	"*": 7, "/": 7,
-	"+": 6, "-": 6,
-	">": 5, "<": 5, ">=": 5, "<=": 5,
-	"==": 4, "!=": 4,
-	"and": 3, "or": 2,
-	"=": 1, "+=": 1, "-=": 1, "*=": 1, "/=": 1,
+func OperatorPrecedence(op string) int {
+	switch op {
+	case ".":
+		return 10
+	case ":":
+		return 9
+	case "*", "/":
+		return 7
+	case "+", "-":
+		return 6
+	case ">", "<", ">=", "<=":
+		return 5
+	case "==", "!=":
+		return 4
+	case "and", "or":
+		return 2
+	case "=", "+=", "-=", "*=", "/=":
+		return 1
+	}
+	// operator precedence does not exist
+	return -1
 }
 
 func parseIdent(tokenizer *Tokenizer) (result Ident) {
@@ -33,12 +45,13 @@ func parseOperator(tokenizer *Tokenizer) (result Ident) {
 	if tk != TkOperator && tk != TkAnd && tk != TkOr {
 		tokenizer.formatWrongKind(token)
 	}
+	// ensure operator precedence exists
+	precedence := OperatorPrecedence(token.value)
+	if precedence < 0 {
+		panic(tokenizer.Errorf(token, "invalid operator '%s'", token.value))
+	}
 	result.Source = token.value
 
-	_, ok := OperatorPrecedence[result.Source]
-	if !ok {
-		panic(tokenizer.Errorf(token, "invalid operator '%s'", result.Source))
-	}
 	return
 }
 
@@ -338,7 +351,7 @@ func parseFloatLit(tokenizer *Tokenizer) (result FloatLit) {
 func applyOperatorPrecedenceFromLeft(tokenizerCode string, lhs Expr, op Ident, rhs Expr) Call {
 	if rhsCall, ok := rhs.(Call); ok && !rhsCall.Braced {
 		rhsOperator, isIdent := rhsCall.Callee.(Ident)
-		if isIdent && OperatorPrecedence[op.Source] >= OperatorPrecedence[rhsOperator.Source] {
+		if isIdent && OperatorPrecedence(op.Source) >= OperatorPrecedence(rhsOperator.Source) {
 			newLhs := applyOperatorPrecedenceFromLeft(tokenizerCode, lhs, op, rhsCall.Args[0])
 			newRhs := rhsCall.Args[1]
 			return Call{
