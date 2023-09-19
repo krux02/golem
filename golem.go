@@ -92,10 +92,6 @@ func errorTest(t *testing.T, filename string) {
 	return
 }
 
-const debugPrintParesedCode = false
-const debugPrintTypecheckedCode = false
-const debugPrintGeneratedCode = false
-
 func normalTest(t *testing.T, filename string) {
 	binaryAbsFilename, err := compile(filename)
 	if err != nil {
@@ -115,40 +111,35 @@ func runTestFile(t *testing.T, filename string) {
 	}
 }
 
-func compile(filename string) (string, error) {
+func compileFileToPackage(filename string, requiresMain bool) (packageDef *TcPackageDef, err error) {
 	bytes, err := os.ReadFile(filename)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-
 	source := string(bytes)
 	pak := parsePackage(source, filename)
-	validateSourceSet(pak.Source, pak)
-	if debugPrintParesedCode {
-		fmt.Println("----------------------- parsed  code -----------------------")
-		fmt.Println(AstFormat(pak))
-	}
 	tc := NewTypeChecker(source, filename)
-	typedPak := tc.TypeCheckPackage(pak, true)
-	if debugPrintTypecheckedCode {
-		fmt.Println("--------------------- typechecked code ---------------------")
-		fmt.Println(AstFormat(typedPak))
-	}
+	packageDef = tc.TypeCheckPackage(pak, requiresMain)
 	if len(tc.errors) > 0 {
-		return "", fmt.Errorf("compilation has errors")
+		err = fmt.Errorf("package %s has errors", packageDef.Name)
 	}
 
-	sourceCodeC := compilePackageToC(typedPak)
-	if debugPrintGeneratedCode {
-		fmt.Println("-------------------------- C code --------------------------")
-		fmt.Println(sourceCodeC)
-	}
+	return packageDef, err
+}
+
+func compile(filename string) (string, error) {
+
 	tempDir := path.Join(os.TempDir(), "golem")
 	base := filepath.Base(filename)
 	base, hasFileEnding := strings.CutSuffix(base, ".golem")
 	if !hasFileEnding {
-		panic("Input file must end on .golem")
+		return "", fmt.Errorf("Input file name '%s' must end on .golem", filename)
 	}
+	typedPak, err := compileFileToPackage(filename, true)
+	if err != nil {
+		return "", err
+	}
+	sourceCodeC := compilePackageToC(typedPak)
 
 	fileName := fmt.Sprintf("%s.c", base)
 	absFilename := path.Join(tempDir, fileName)

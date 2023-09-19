@@ -39,15 +39,9 @@ func joinSubstr(parent, str1, str2 string) string {
 
 // ensure recursively that all nodes have `source` set, and that
 // `source` is substring of outer string. Purely a debugging function.
+// TODO use this fucntion again, currently deactivated
 func validateSourceSet(code string, pak AstNode) {
 	validateSourceSetInternal(code, reflect.ValueOf(pak))
-}
-
-func shortenMessage(msg string, maxLen int) string {
-	if len(msg) > maxLen {
-		return msg[:maxLen]
-	}
-	return msg
 }
 
 func validateSourceSetInternal(code string, node reflect.Value) {

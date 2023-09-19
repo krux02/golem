@@ -225,7 +225,8 @@ type TcTemplateDef struct {
 
 type TcErrorProcDef struct {
 	// this is just a placeholder to set a TcProcSymbol to something
-	Name string
+	Name      string
+	Signature ProcSignature
 }
 
 type TcArrayLit struct {
@@ -319,4 +320,4 @@ func (arg *TcBuiltinGenericProcDef) GetSignature() ProcSignature { return arg.Si
 func (arg *TcProcDef) GetSignature() ProcSignature               { return arg.Signature }
 func (arg *TcTemplateDef) GetSignature() ProcSignature           { return arg.Signature }
 func (arg *TcBuiltinMacroDef) GetSignature() ProcSignature       { return arg.Signature }
-func (arg *TcErrorProcDef) GetSignature() ProcSignature          { panic("not thought through") }
+func (arg *TcErrorProcDef) GetSignature() ProcSignature          { return arg.Signature }

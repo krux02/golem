@@ -448,9 +448,13 @@ func (tc *TypeChecker) TypeCheckDotExpr(scope Scope, parentSource string, lhs, r
 }
 
 func errorProcSym(ident Ident) TcProcSymbol {
+	Impl := &TcErrorProcDef{Name: ident.Source, Signature: ProcSignature{ResultType: TypeError}}
+	Impl.Signature.Impl = Impl
+
 	return TcProcSymbol{
 		Source: ident.GetSource(),
-		Impl:   &TcErrorProcDef{}, // maybe add some debug information here
+		// maybe add some debug information here
+		Impl: Impl,
 	}
 }
 
@@ -1286,6 +1290,21 @@ var ptrTypeMap map[Type]*PtrType
 var typeTypeMap map[Type]*TypeType
 var packageMap map[string]*TcPackageDef
 
+func GetPackage(importPath string) (result *TcPackageDef) {
+	var ok bool
+	var err error
+	result, ok = packageMap[importPath]
+	if !ok {
+		result, err = compileFileToPackage(fmt.Sprintf("%s.golem", importPath), false)
+		if err != nil {
+			// TODO implement proper error handling
+			panic(err)
+		}
+		packageMap[importPath] = result
+	}
+	return result
+}
+
 func GetArrayType(elem Type, len int64) (result *ArrayType) {
 	result, ok := arrayTypeMap[ArrayTypeMapKey{elem, len}]
 	if !ok {
@@ -1462,15 +1481,6 @@ func (tc *TypeChecker) TypeCheckWhileLoopStmt(scope Scope, loopArg WhileLoopStmt
 	result.Condition = tc.TypeCheckExpr(scope, loopArg.Condition, TypeBoolean)
 	result.Body = tc.TypeCheckExpr(scope, loopArg.Body, TypeVoid)
 	return result
-}
-
-func GetPackage(pkg string) *TcPackageDef {
-	result, ok := packageMap[pkg]
-	if ok {
-		return result
-	}
-	panic("GetPackage not implemented")
-
 }
 
 func (tc *TypeChecker) TypeCheckPackage(arg PackageDef, requiresMain bool) (result *TcPackageDef) {
