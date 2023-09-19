@@ -73,7 +73,7 @@ func errorTest(t *testing.T, filename string) {
 
 	tc := NewTypeChecker(source, filename)
 	tc.silentErrors = true
-	_ = tc.TypeCheckPackage(pak, true)
+	_ = TypeCheckPackage(tc, pak, true)
 
 	for _, error := range tc.errors {
 		line, _, _ := LineColumnStr(source, error.node.GetSource())
@@ -119,7 +119,7 @@ func compileFileToPackage(filename string, requiresMain bool) (packageDef *TcPac
 	source := string(bytes)
 	pak := parsePackage(source, filename)
 	tc := NewTypeChecker(source, filename)
-	packageDef = tc.TypeCheckPackage(pak, requiresMain)
+	packageDef = TypeCheckPackage(tc, pak, requiresMain)
 	if len(tc.errors) > 0 {
 		err = fmt.Errorf("package %s has errors", packageDef.Name)
 	}

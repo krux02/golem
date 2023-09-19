@@ -206,7 +206,7 @@ var TypeCString = &BuiltinType{"cstring", "char const*", 'x'}
 
 func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	if typ == TypeNoReturn {
-		tc.ReportErrorf(context, "a default value of no retrun does not exist")
+		ReportErrorf(tc, context, "a default value of no retrun does not exist")
 		return TcErrorNode{}
 	} else if typ == TypeFloat32 || typ == TypeFloat64 {
 		return FloatLit{Type: typ}
@@ -216,7 +216,7 @@ func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 		return &IntLit{Type: typ, Value: 0} // TODO no Source set
 	} else if typ == TypeBoolean {
 		// TODO this is weird
-		return tc.LookUpLetSym(builtinScope, Ident{Source: "false"}, TypeBoolean)
+		return LookUpLetSym(tc, builtinScope, Ident{Source: "false"}, TypeBoolean)
 	} else if typ == TypeVoid {
 		panic("not implemented void default value")
 	} else {
@@ -225,7 +225,7 @@ func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 }
 
 func (typ *UnspecifiedType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
-	tc.ReportErrorf(context, "variable definitions statements must have at least one, a type or a value expression")
+	ReportErrorf(tc, context, "variable definitions statements must have at least one, a type or a value expression")
 	return TcErrorNode{}
 }
 
@@ -422,7 +422,6 @@ func registerSimpleTemplate(name string, args []Type, result Type, substitution 
 type BuiltinMacroFunc func(tc *TypeChecker, scope Scope, call TcCall) TcExpr
 
 func registerConstant(name string, value TcExpr) {
-	// TODO this is wrong, a constant isn't a variable
 	var ident Ident
 	ident.Source = name
 	_ = builtinScope.NewConstSymbol(nil, ident, value)
@@ -432,7 +431,7 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 	formatExpr := call.Args[0]
 	formatStrLit, ok := formatExpr.(StrLit)
 	if !ok {
-		tc.ReportErrorf(formatExpr, "format string must be a string literal")
+		ReportErrorf(tc, formatExpr, "format string must be a string literal")
 		return call
 	}
 	formatStr := formatStrLit.Value
@@ -446,7 +445,7 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 		}
 		j++
 		if j == len(formatStr) {
-			tc.ReportErrorf(formatExpr, "incomplete format expr at end of format string")
+			ReportErrorf(tc, formatExpr, "incomplete format expr at end of format string")
 			break
 		}
 		c2 := formatStr[j]
@@ -464,16 +463,16 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 		case 'v':
 			typeExpectation = TypeUnspecified
 		default:
-			tc.ReportErrorf(formatExpr, "invalid format expr %%%c in %s", c2, AstFormat(formatExpr))
+			ReportErrorf(tc, formatExpr, "invalid format expr %%%c in %s", c2, AstFormat(formatExpr))
 			return call
 		}
 		if i == len(call.Args) {
-			tc.ReportErrorf(formatExpr, "not enough arguments for %s", AstFormat(formatExpr))
+			ReportErrorf(tc, formatExpr, "not enough arguments for %s", AstFormat(formatExpr))
 			return call
 		}
 
 		argType := call.Args[i].GetType()
-		tc.ExpectType(call.Args[i], argType, typeExpectation)
+		ExpectType(tc, call.Args[i], argType, typeExpectation)
 		switch argType {
 		case TypeInt8:
 			formatStrC.WriteString("hhd")
@@ -498,7 +497,7 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 	}
 
 	if i != len(call.Args) {
-		tc.ReportErrorf(call.Args[i], "too many arguments for %s", AstFormat(formatExpr))
+		ReportErrorf(tc, call.Args[i], "too many arguments for %s", AstFormat(formatExpr))
 		return call
 	}
 
@@ -514,14 +513,14 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 
 func BuiltinAddCFlags(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 	if len(call.Args) != 1 {
-		tc.ReportErrorf(call, "expect single string literal as argument")
+		ReportErrorf(tc, call, "expect single string literal as argument")
 		return TcErrorNode{call}
 	}
 	switch arg0 := call.Args[0].(type) {
 	case StrLit:
 		scope.CurrentPackage.CFlags = append(scope.CurrentPackage.CFlags, arg0.Value)
 	default:
-		tc.ReportErrorf(call, "expect single string literal as argument")
+		ReportErrorf(tc, call, "expect single string literal as argument")
 		return TcErrorNode{call}
 	}
 	return TcCodeBlock{Source: call.Source}

@@ -25,6 +25,6 @@ func EvalExpr(tc *TypeChecker, expr TcExpr, scope Scope) TcExpr {
 		// Note: this is wrong, this is not a value that actually can be used.
 		return lit
 	}
-	tc.ReportErrorf(expr, "eval for %T node not implemented", expr)
+	ReportErrorf(tc, expr, "eval for %T node not implemented", expr)
 	return expr
 }
