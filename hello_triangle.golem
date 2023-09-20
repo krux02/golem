@@ -1,9 +1,14 @@
 emit "#include <GL/gl.h>"
+emit "#include <SDL2/SDL.h>"
 
 import "sdl2"
 import "gl"
 
-
+# TODO this is wrong, this is a linker flag, not a package compilation flag, and it should be in the corresponding modules, gl and sdl2
+static {
+  addCFlags("-lSDL2")
+  addCFlags("-lGL")
+}
 
 proc main(): i32 = {
   let window  = SDL_CreateWindow("hello triangle", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_OPENGL)
