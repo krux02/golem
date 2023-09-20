@@ -200,6 +200,7 @@ func LineColumnNode(tc *TypeChecker, node AstNode) (line, columnStart, columnEnd
 }
 
 func TypeCheckStructDef(tc *TypeChecker, scope Scope, def StructDef) *TcStructDef {
+	ValidNameCheck(tc, def.Name, "type")
 	result := &TcStructDef{}
 	structType := &StructType{Impl: result}
 	result.Source = def.Source
@@ -212,6 +213,7 @@ func TypeCheckStructDef(tc *TypeChecker, scope Scope, def StructDef) *TcStructDe
 		if nameIdent, ok := colonExpr.Lhs.(Ident); !ok {
 			ReportErrorf(tc, colonExpr.Lhs, "expect Ident, but got %T", colonExpr.Lhs)
 		} else {
+			ValidNameCheck(tc, nameIdent, "struct field")
 			var tcField TcStructField
 			tcField.Name = nameIdent.Source
 			tcField.Type = LookUpType(tc, scope, colonExpr.Rhs)
@@ -223,6 +225,7 @@ func TypeCheckStructDef(tc *TypeChecker, scope Scope, def StructDef) *TcStructDe
 }
 
 func TypeCheckEnumDef(tc *TypeChecker, scope Scope, def EnumDef) *TcEnumDef {
+	ValidNameCheck(tc, def.Name, "type")
 	result := &TcEnumDef{}
 	enumType := &EnumType{Impl: result}
 	result.Name = def.Name.Source
@@ -232,9 +235,9 @@ func TypeCheckEnumDef(tc *TypeChecker, scope Scope, def EnumDef) *TcEnumDef {
 		} else {
 			ReportInvalidAnnotations(tc, def.Annotations)
 		}
-
 	}
 	for _, ident := range def.Values {
+		ValidNameCheck(tc, ident, "enum value")
 		var sym TcSymbol
 		sym.Source = ident.Source
 		sym.Kind = SkEnum
@@ -252,14 +255,8 @@ func TypeCheckEnumDef(tc *TypeChecker, scope Scope, def EnumDef) *TcEnumDef {
 	return result
 }
 
-// ReportErrorf(tc, def.Kind, "invalid type kind %s, expect one of struct, enum, union", def.Kind.Source)
-func (tc *TypeChecker) NewGenericParam(scope Scope, name Ident) Type {
-	result := &GenericTypeSymbol{Source: name.Source}
-	RegisterType(tc, scope, name.Source, result, name)
-	return result
-}
-
-func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result *TcProcDef) {
+func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def ProcDef) (result *TcProcDef) {
+	ValidNameCheck(tc, def.Name, "proc")
 	procScope := NewSubScope(parentScope)
 	result = &TcProcDef{}
 	result.Signature.Impl = result
@@ -275,6 +272,7 @@ func (tc *TypeChecker) TypeCheckProcDef(parentScope Scope, def ProcDef) (result 
 	}
 
 	for _, arg := range def.Args {
+		ValidNameCheck(tc, arg.Name, "proc arg")
 		typ := LookUpType(tc, procScope, arg.Type)
 		tcArg := procScope.NewSymbol(tc, arg.Name, SkProcArg, typ)
 		result.Signature.Params = append(result.Signature.Params, tcArg)
@@ -1008,7 +1006,7 @@ func (tc *TypeChecker) TypeCheckCodeBlock(scope Scope, arg CodeBlock, expected T
 	return
 }
 
-func ValidNameCheck(tc *TypeChecker, ident Ident) {
+func IsValidIdentifier(name string) string {
 	// double underscore __ is used in name mangling to concatenate identifires,
 	// e.g. package and function name. To make this process reversible, the
 	// identifier itself may not use start/end in _ or use __ within.
@@ -1017,17 +1015,23 @@ func ValidNameCheck(tc *TypeChecker, ident Ident) {
 	// starting/ending identifiers with _ globally in the language. I think it is
 	// extremely ugly and should never be done for anything.
 
-	if strings.HasPrefix(ident.Source, "_") || strings.HasSuffix(ident.Source, "_") {
-		ReportErrorf(tc, ident, "identifier may not start or end with _ (underscore), reserved for internal usage")
+	if strings.HasPrefix(name, "_") || strings.HasSuffix(name, "_") {
+		return "identifier may not start or end with _ (underscore), reserved for internal usage"
 	}
-	if strings.Contains(ident.Source, "__") {
-		ReportErrorf(tc, ident, "identifier may not use __ (double underscore), reserved for internal usage")
+	if strings.Contains(name, "__") {
+		return "identifier may not use __ (double underscore), reserved for internal usage"
 	}
+	return ""
+}
 
+func ValidNameCheck(tc *TypeChecker, ident Ident, extraword string) {
+	if errMsg := IsValidIdentifier(ident.Source); errMsg != "" {
+		ReportErrorf(tc, ident, "%s %s", extraword, errMsg)
+	}
 }
 
 func TypeCheckVariableDefStmt(tc *TypeChecker, scope Scope, arg VariableDefStmt) (result TcVariableDefStmt) {
-	ValidNameCheck(tc, arg.Name)
+	ValidNameCheck(tc, arg.Name, "var")
 	result.Source = arg.Source
 	var expected Type = TypeUnspecified
 	if arg.TypeExpr != nil {
@@ -1527,7 +1531,7 @@ func TypeCheckPackage(tc *TypeChecker, arg PackageDef, requiresMain bool) (resul
 			td := TypeCheckStructDef(tc, pkgScope, stmt)
 			result.StructDefs = append(result.StructDefs, td)
 		case ProcDef:
-			procDef := tc.TypeCheckProcDef(pkgScope, stmt)
+			procDef := TypeCheckProcDef(tc, pkgScope, stmt)
 			result.ProcDefs = append(result.ProcDefs, procDef)
 			if procDef.Name == "main" {
 				result.Main = procDef

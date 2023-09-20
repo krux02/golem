@@ -135,6 +135,10 @@ func compile(filename string) (string, error) {
 	if !hasFileEnding {
 		return "", fmt.Errorf("Input file name '%s' must end on .golem", filename)
 	}
+	if baseNameError := IsValidIdentifier(base); baseNameError != "" {
+		return "", fmt.Errorf("%s", baseNameError)
+	}
+
 	typedPak, err := compileFileToPackage(filename, true)
 	if err != nil {
 		return "", err

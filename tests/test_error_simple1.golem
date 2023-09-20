@@ -1,5 +1,5 @@
 
-# NumErrors:      6
+# NumErrors:      12
 
 proc foo(arg: i32): i64 = {
   printf("foo1: %d\n", i32(arg))
@@ -14,18 +14,22 @@ proc foo(arg: i64): i64 = {
 ## this should be a doc comment
 ## spanning multiple lines
 
+proc _foo(arg: i64): i64 = 0     # Error: proc identifier may not start or end with _ (underscore), reserved for internal usage
+proc foo_(arg: i64): i64 = 0     # Error: proc identifier may not start or end with _ (underscore), reserved for internal usage
+proc foo__bar(arg: i64): i64 = 0 # Error: proc identifier may not use __ (double underscore), reserved for internal usage
+
+proc bar1(_arg: i64): i64 = 0     # Error: proc arg identifier may not start or end with _ (underscore), reserved for internal usage
+proc bar2(arg_: i64): i64 = 0     # Error: proc arg identifier may not start or end with _ (underscore), reserved for internal usage
+proc bar3(arg__0: i64): i64 = 0   # Error: proc arg identifier may not use __ (double underscore), reserved for internal usage
+
 proc main():i64 = {
   let tmp: i8 = 123
   foo(tmp) # Error: expected type 'i32 | i64' but got type 'i8'
-
   let str = "abcdef"
   baz(str, tmp) # Error: proc not found: baz(str, i8)
-
   let x : i32 = "somestring" # Error: expected type 'i32' but got type 'str'
-
-  let x_ : i32 = 123 # Error: identifier may not start or end with _ (underscore), reserved for internal usage
-  let _x : i32 = 321 # Error: identifier may not start or end with _ (underscore), reserved for internal usage
-  let x__x : str = "abc" # Error: identifier may not use __ (double underscore), reserved for internal usage
-
-   return 0
+  let x_ : i32 = 123 # Error: var identifier may not start or end with _ (underscore), reserved for internal usage
+  let _x : i32 = 321 # Error: var identifier may not start or end with _ (underscore), reserved for internal usage
+  let x__x : str = "abc" # Error: var identifier may not use __ (double underscore), reserved for internal usage
+  return 0
 }

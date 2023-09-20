@@ -4,11 +4,8 @@
 
 (require 'compile)
 
-(rx "\t")
-
-
 (defconst golem-highlights
-  (rx-let ((ident (seq alpha (* (any alnum "_")))))
+  (rx-let ((ident (seq (any alpha "_") (* (any alnum "_")))))
     (list
      (cons (rx (? "-") bow (1+ digit) (? "." (1+ digit)) eow) font-lock-constant-face)
      (cons (rx bow "0x" (1+ hex) eow) font-lock-constant-face)
@@ -50,7 +47,8 @@
 
 (progn
   (modify-syntax-entry ?\# "<" golem-mode-syntax-table)
-  (modify-syntax-entry ?\n ">#" golem-mode-syntax-table))
+  (modify-syntax-entry ?\n ">#" golem-mode-syntax-table)
+  (modify-syntax-entry ?_ "w" golem-mode-syntax-table))
 
 (defun golem-string-escape-matcher (&optional limit)
   "Highlight matcher escape sequence in string within LIMIT."

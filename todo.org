@@ -1,8 +1,8 @@
-* TODO type substitution/generic instancing after overload resolution
 * TODO pass by reference
 * TODO mutable flag in type
 * TODO templates
 * TODO generic functions
+* TODO type substitution/generic instancing after overload resolution
 * TODO have macros (stubs at least)
 * TODO proper constants, current implementation for ~true/false~ is a big hack
 * TODO BUG ensure that int lit types are actually instantiated only once (BIG BUG right now)
@@ -11,7 +11,7 @@
 * TODO display parsing errors as normal error messages
 * TODO full coverage of all error messages
 * TODO test operator precedence when many ~:~ and ~.~ are in use (currently buggy)
-* TODO maybe return TypeFloat like in Nim for integer division?
+* TODO maybe return TypeFloat like in Nim for integer division, or a tuple with remainder?
 * TODO virtual machine for compile time code execution
 * TODO restrict operator precedence to common knowledge cases (+-*/) require explicit braces everywhere else.
 * TODO test default value
