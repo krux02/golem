@@ -49,7 +49,7 @@ func NewSubScope(scope Scope) Scope {
 	}
 }
 
-func (tc *TypeChecker) RegisterType(scope Scope, name string, typ Type, context AstNode) {
+func RegisterType(tc *TypeChecker, scope Scope, name string, typ Type, context AstNode) {
 	if _, ok := scope.Types[name]; ok {
 		ReportErrorf(tc, context, "double definition of type '%s'", name)
 		// TODO previously defined at ...
@@ -218,7 +218,7 @@ func TypeCheckStructDef(tc *TypeChecker, scope Scope, def StructDef) *TcStructDe
 			result.Fields = append(result.Fields, tcField)
 		}
 	}
-	tc.RegisterType(scope, structType.Impl.Name, structType, def.Name)
+	RegisterType(tc, scope, structType.Impl.Name, structType, def.Name)
 	return result
 }
 
@@ -241,7 +241,7 @@ func TypeCheckEnumDef(tc *TypeChecker, scope Scope, def EnumDef) *TcEnumDef {
 		sym.Type = enumType
 		result.Values = append(result.Values, sym)
 	}
-	tc.RegisterType(scope, enumType.Impl.Name, enumType, def.Name)
+	RegisterType(tc, scope, enumType.Impl.Name, enumType, def.Name)
 	registerBuiltin("string", fmt.Sprintf("%s_names_array[", result.Name), "", "]", []Type{enumType}, TypeStr)
 	for _, intType := range TypeAnyInt.Items {
 		builtinType := intType.(*BuiltinIntType)
@@ -255,7 +255,7 @@ func TypeCheckEnumDef(tc *TypeChecker, scope Scope, def EnumDef) *TcEnumDef {
 // ReportErrorf(tc, def.Kind, "invalid type kind %s, expect one of struct, enum, union", def.Kind.Source)
 func (tc *TypeChecker) NewGenericParam(scope Scope, name Ident) Type {
 	result := &GenericTypeSymbol{Source: name.Source}
-	tc.RegisterType(scope, name.Source, result, name)
+	RegisterType(tc, scope, name.Source, result, name)
 	return result
 }
 
@@ -1484,8 +1484,11 @@ func TypeCheckWhileLoopStmt(tc *TypeChecker, scope Scope, loopArg WhileLoopStmt)
 
 func TypeCheckPackage(tc *TypeChecker, arg PackageDef, requiresMain bool) (result *TcPackageDef) {
 	result = &TcPackageDef{}
-	scope := NewSubScope(builtinScope)
-	scope.CurrentPackage = result
+	importScope := NewSubScope(builtinScope)
+	pkgScope := NewSubScope(importScope)
+
+	importScope.CurrentPackage = result //
+	pkgScope.CurrentPackage = result
 	result.Name = arg.Name
 
 	hasDocComment := false
@@ -1499,19 +1502,19 @@ func TypeCheckPackage(tc *TypeChecker, arg PackageDef, requiresMain bool) (resul
 		switch stmt := stmt.(type) {
 
 		case EnumDef:
-			td := TypeCheckEnumDef(tc, scope, stmt)
+			td := TypeCheckEnumDef(tc, pkgScope, stmt)
 			result.EnumDefs = append(result.EnumDefs, td)
 		case StructDef:
-			td := TypeCheckStructDef(tc, scope, stmt)
+			td := TypeCheckStructDef(tc, pkgScope, stmt)
 			result.StructDefs = append(result.StructDefs, td)
 		case ProcDef:
-			procDef := tc.TypeCheckProcDef(scope, stmt)
+			procDef := tc.TypeCheckProcDef(pkgScope, stmt)
 			result.ProcDefs = append(result.ProcDefs, procDef)
 			if procDef.Name == "main" {
 				result.Main = procDef
 			}
 		case VariableDefStmt:
-			varDef := TypeCheckVariableDefStmt(tc, scope, stmt)
+			varDef := TypeCheckVariableDefStmt(tc, pkgScope, stmt)
 			result.VarDefs = append(result.VarDefs, varDef)
 		case DocComment:
 			docComment = stmt
@@ -1520,12 +1523,31 @@ func TypeCheckPackage(tc *TypeChecker, arg PackageDef, requiresMain bool) (resul
 			result.EmitStatements = append(result.EmitStatements, stmt)
 		case StaticExpr:
 			// TODO: ensure this expression can be evaluated at compile time
-			tcExpr := TypeCheckExpr(tc, scope, stmt.Expr, TypeVoid)
-			EvalExpr(tc, tcExpr, scope)
+			tcExpr := TypeCheckExpr(tc, pkgScope, stmt.Expr, TypeVoid)
+			EvalExpr(tc, tcExpr, pkgScope)
 		case ImportStmt:
 			pkg, err := GetPackage(stmt.StrLit.Value)
 			if err != nil {
 				ReportErrorf(tc, stmt.StrLit, "%s", err.Error())
+			}
+			for key, value := range pkg.ExportScope.Variables {
+				// TODO solution for conflicts and actually find out where the conflicting symbol comes from.
+				_, hasKey := importScope.Variables[key]
+				if hasKey {
+					panic(fmt.Errorf("name conflicts in imported variable not yet implemented: %s.%s conflicts with some other symbol", stmt.StrLit.Value, key))
+				}
+				importScope.Variables[key] = value
+			}
+			for key, value := range pkg.ExportScope.Types {
+				_, hasKey := importScope.Types[key]
+				if hasKey {
+					panic(fmt.Errorf("name conflicts in imported type not yet implemented: %s.%s conflicts with some other symbol", stmt.StrLit.Value, key))
+				}
+				importScope.Types[key] = value
+			}
+			for key, value := range pkg.ExportScope.Procedures {
+				procs, _ := importScope.Procedures[key]
+				importScope.Procedures[key] = append(procs, value...)
 			}
 			result.Imports = append(result.Imports, pkg)
 		default:
@@ -1535,5 +1557,12 @@ func TypeCheckPackage(tc *TypeChecker, arg PackageDef, requiresMain bool) (resul
 	if requiresMain && result.Main == nil {
 		ReportErrorf(tc, arg, "package %s misses main proc", result.Name)
 	}
-	return
+
+	// TODO: only export what actually wants to be exported
+	exportScope := NewSubScope(builtinScope)
+	*exportScope = *pkgScope
+	exportScope.Parent = builtinScope
+	result.ExportScope = exportScope
+
+	return result
 }

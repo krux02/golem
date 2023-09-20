@@ -257,6 +257,7 @@ type TcPackageDef struct {
 	EnumDefs       []*TcEnumDef
 	VarDefs        []TcVariableDefStmt
 	ProcDefs       []*TcProcDef
+	ExportScope    *ScopeImpl
 	Main           *TcProcDef // main entry point
 }
 
