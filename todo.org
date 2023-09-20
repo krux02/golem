@@ -1,53 +1,19 @@
-* DONE just use keywords
-* DONE implement type checking on 'return'
-* DONE implement ~context~ type and parameter for ~TypeCheck~ functions
-* DONE provide proper error messages or error instead of panic
-* DONE negative literals
-* DONE error reporting instead of compiler crashing
-* DONE add error type to represent invalid / non-typeable ast
-* DONE test infrastructure compiler error reporting
-* DONE add field values to struct literals
-* DONE testing framework to test the compiler
-* DONE allow conversion between enum/int/string
-* DONE enum set type
-* DONE consistent Typ/Type member name
-* DONE distinguish between the type and the expression that defines it
-* DONE array access
-* DONE make high/low values of integer types somehow accessible.
-* DONE pointer
-* TODO reserve double bunderscore and underscore pre- and posfix
-* TODO packages and import
 * TODO type substitution/generic instancing after overload resolution
 * TODO pass by reference
 * TODO mutable flag in type
+* TODO templates
+* TODO generic functions
 * TODO have macros (stubs at least)
-* TODO have varargs for macros (only)
-varargs is a thing now, but it is still problematic. the arguments should be
-type checked only once, but the expected types come from the first argument.
-Currently arguments are checked by TypeCheckCall and then rechecked by
-ValidatePrintfCall. This isn't good, there should be single responnsibility of
-who should type check the arguments.
-
- * constructor expressions, such as ~[a,b,c]~, might not have a meaning until they
-have an expected type set ~[a,b,c]:MyType~.
- * ~printf("<format-expr>", arg1, arg2, ...)~ needs to parse ~"<format-expr>"~ before it has an expected type for arg1, arg2, ...
- * How does this mix with overload resolution.
 * TODO proper constants, current implementation for ~true/false~ is a big hack
-* TODO ensure that int lit types are actually instanciated only once (BIG BUG right now)
-* TODO C interop (emit and function declarations)
+* TODO BUG ensure that int lit types are actually instantiated only once (BIG BUG right now)
 * TODO C++ interop
-* DONE define order to generate type definitions in
-* DONE generic arguments (important for builtin array access)
 * TODO not all ast nodes have correct ~source~ values, for example ~[]~, code needs to deal with it
 * TODO display parsing errors as normal error messages
 * TODO full coverage of all error messages
 * TODO test operator precedence when many ~:~ and ~.~ are in use (currently buggy)
-* DONE add ability for type assertions
 * TODO maybe return TypeFloat like in Nim for integer division?
-* TODO vm for compile time code execution
+* TODO virtual machine for compile time code execution
 * TODO restrict operator precedence to common knowledge cases (+-*/) require explicit braces everywhere else.
-* DONE static overloading
-* DONE automatic narrowing of literals when type is known from outside.
 * TODO test default value
 * TODO compiler passes for some transformations (e.g. moving literals to constants)
 * TODO persistent statistic logging about compiler bootstrapping time, lines of code, test time, test lines of code
@@ -61,8 +27,34 @@ have an expected type set ~[a,b,c]:MyType~.
 ** DONE array
 ** DONE struct
 ** DONE literals
-* DONE documentation structure
 * TODO code navigation
  [ ] jump to catch from throw
  [ ] jump to throw from catch
  [ ] jump to definition
+* done
+** implement type checking on 'return'
+** implement ~context~ type and parameter for ~TypeCheck~ functions
+** provide proper error messages or error instead of panic
+** negative literals
+** error reporting instead of compiler crashing
+** add error type to represent invalid / non-typeable ast
+** test infrastructure compiler error reporting
+** add field values to struct literals
+** testing framework to test the compiler
+** allow conversion between enum/int/string
+** enum set type
+** consistent Typ/Type member name
+** distinguish between the type and the expression that defines it
+** make high/low values of integer types somehow accessible.
+** array access
+** pointer
+** have varargs for macros (only)
+** define order to generate type definitions in
+** generic arguments (important for builtin array access)
+** add ability for type assertions
+** static overloading
+** automatic narrowing of literals when type is known from outside.
+** documentation structure
+** packages and import
+** reserve double underscore and underscore pre- and postfix
+** C interop (emit and function declarations)

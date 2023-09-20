@@ -1,5 +1,5 @@
 
-# NumErrors:      3
+# NumErrors:      6
 
 proc foo(arg: i32): i64 = {
   printf("foo1: %d\n", i32(arg))
@@ -22,5 +22,10 @@ proc main():i64 = {
   baz(str, tmp) # Error: proc not found: baz(str, i8)
 
   let x : i32 = "somestring" # Error: expected type 'i32' but got type 'str'
-  return 0
+
+  let x_ : i32 = 123 # Error: identifier may not start or end with _ (underscore), reserved for internal usage
+  let _x : i32 = 321 # Error: identifier may not start or end with _ (underscore), reserved for internal usage
+  let x__x : str = "abc" # Error: identifier may not use __ (double underscore), reserved for internal usage
+
+   return 0
 }

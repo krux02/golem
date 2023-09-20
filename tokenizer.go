@@ -262,7 +262,7 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 	}
 
 	switch {
-	case u.IsLetter(c):
+	case u.IsLetter(c) || c == '_':
 		result.value = code
 		for pos, rune := range code {
 			if !u.IsDigit(rune) && !u.IsLetter(rune) && rune != '_' {

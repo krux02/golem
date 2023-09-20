@@ -1008,7 +1008,26 @@ func (tc *TypeChecker) TypeCheckCodeBlock(scope Scope, arg CodeBlock, expected T
 	return
 }
 
+func ValidNameCheck(tc *TypeChecker, ident Ident) {
+	// double underscore __ is used in name mangling to concatenate identifires,
+	// e.g. package and function name. To make this process reversible, the
+	// identifier itself may not use start/end in _ or use __ within.
+	//
+	// This technical detail gives me the excuse to forbid the technique of
+	// starting/ending identifiers with _ globally in the language. I think it is
+	// extremely ugly and should never be done for anything.
+
+	if strings.HasPrefix(ident.Source, "_") || strings.HasSuffix(ident.Source, "_") {
+		ReportErrorf(tc, ident, "identifier may not start or end with _ (underscore), reserved for internal usage")
+	}
+	if strings.Contains(ident.Source, "__") {
+		ReportErrorf(tc, ident, "identifier may not use __ (double underscore), reserved for internal usage")
+	}
+
+}
+
 func TypeCheckVariableDefStmt(tc *TypeChecker, scope Scope, arg VariableDefStmt) (result TcVariableDefStmt) {
+	ValidNameCheck(tc, arg.Name)
 	result.Source = arg.Source
 	var expected Type = TypeUnspecified
 	if arg.TypeExpr != nil {

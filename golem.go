@@ -37,7 +37,7 @@ func errorTest(t *testing.T, filename string) {
 			}
 			currentLine += strings.Count(src[:idx1], "\n")
 
-			expectedErrors[currentLine] = src[idx1+9 : idx2]
+			expectedErrors[currentLine] = strings.TrimSpace(src[idx1+8 : idx2])
 			src = src[idx2:]
 		}
 	}
