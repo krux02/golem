@@ -3,9 +3,7 @@ emit "#include <GL/gl.h>"
 import "sdl2"
 import "gl"
 
-static {
-  addCFlags("-lGL")
-}
+
 
 proc main(): i32 = {
   let window  = SDL_CreateWindow("hello triangle", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_OPENGL)

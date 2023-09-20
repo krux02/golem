@@ -1,3 +1,9 @@
+emit "#include <GL/gl.h>"
+
+static {
+  addCFlags("-lGL")
+}
+
 const GL_COLOR_BUFFER_BIT:u32 = 0x00004000
 const GL_DEPTH_BUFFER_BIT:u32 = 0x00000100
 const GL_TRIANGLES:u32 = 0x0004

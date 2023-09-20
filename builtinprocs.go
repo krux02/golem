@@ -11,6 +11,14 @@ type BuiltinType struct {
 	MangleChar   rune
 }
 
+type BuiltinIntType struct {
+	Name         string
+	InternalName string
+	MangleChar   rune
+	MinValue     int64
+	MaxValue     uint64
+}
+
 type ErrorType struct{}
 type UnspecifiedType struct{}
 
@@ -61,6 +69,7 @@ type TypeType struct {
 }
 
 var _ Type = &BuiltinType{}
+var _ Type = &BuiltinIntType{}
 var _ Type = &TypeGroup{}
 var _ Type = &EnumType{}
 var _ Type = &EnumSetType{}
@@ -74,6 +83,10 @@ var _ Type = &OpenGenericType{}
 var _ Type = &GenericTypeSymbol{}
 
 func (typ *BuiltinType) ManglePrint(builder *strings.Builder) {
+	builder.WriteRune(typ.MangleChar)
+}
+
+func (typ *BuiltinIntType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune(typ.MangleChar)
 }
 
@@ -156,6 +169,7 @@ func (typ *TypeGroup) GetSource() string {
 	panic("type group does not have source")
 }
 
+// ManglePrint
 func (typ *TypeType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune('T')
 }
@@ -165,14 +179,14 @@ func (typ *TypeType) ManglePrint(builder *strings.Builder) {
 // something working.
 
 var TypeBoolean = &BuiltinType{"bool", "bool", 'b'}
-var TypeInt8 = &BuiltinType{"i8", "int8_t", 'm'}
-var TypeInt16 = &BuiltinType{"i16", "int16_t", 's'}
-var TypeInt32 = &BuiltinType{"i32", "int32_t", 'i'}
-var TypeInt64 = &BuiltinType{"i64", "int64_t", 'l'}
-var TypeUInt8 = &BuiltinType{"u8", "uint8_t", 'M'}
-var TypeUInt16 = &BuiltinType{"u16", "uint16_t", 'S'}
-var TypeUInt32 = &BuiltinType{"u32", "uint32_t", 'I'}
-var TypeUInt64 = &BuiltinType{"u64", "uint64_t", 'L'}
+var TypeInt8 = &BuiltinIntType{"i8", "int8_t", 'm', -0x80, 0x7f}
+var TypeInt16 = &BuiltinIntType{"i16", "int16_t", 's', -0x8000, 0x7fff}
+var TypeInt32 = &BuiltinIntType{"i32", "int32_t", 'i', -0x80000000, 0x7fffffff}
+var TypeInt64 = &BuiltinIntType{"i64", "int64_t", 'l', -0x8000000000000000, 0x7fffffffffffffff}
+var TypeUInt8 = &BuiltinIntType{"u8", "uint8_t", 'M', 0, 0xff}
+var TypeUInt16 = &BuiltinIntType{"u16", "uint16_t", 'S', 0, 0xffff}
+var TypeUInt32 = &BuiltinIntType{"u32", "uint32_t", 'I', 0, 0xffffffff}
+var TypeUInt64 = &BuiltinIntType{"u64", "uint64_t", 'L', 0, 0xffffffffffffffff}
 var TypeFloat32 = &BuiltinType{"f32", "float", 'f'}
 var TypeFloat64 = &BuiltinType{"f64", "double", 'd'}
 var TypeStr = &BuiltinType{"str", "string", 'R'}
@@ -193,7 +207,8 @@ var TypeUnspecified = &UnspecifiedType{}
 var TypeError = &ErrorType{}
 
 var TypeAnyUInt = &TypeGroup{Name: "AnyUInt", Items: []Type{TypeUInt8, TypeUInt16, TypeUInt32, TypeUInt64}}
-var TypeAnyInt = &TypeGroup{Name: "AnyInt", Items: []Type{TypeInt8, TypeInt16, TypeInt32, TypeInt64}}
+var TypeAnySInt = &TypeGroup{Name: "AnyInt", Items: []Type{TypeInt8, TypeInt16, TypeInt32, TypeInt64}}
+var TypeAnyInt = &TypeGroup{Name: "AnyInt", Items: []Type{TypeInt8, TypeInt16, TypeInt32, TypeInt64, TypeUInt8, TypeUInt16, TypeUInt32, TypeUInt64}}
 var TypeAnyFloat = &TypeGroup{Name: "AnyFloat", Items: []Type{TypeFloat32, TypeFloat64}}
 var TypeAnyNumber = &TypeGroup{Name: "AnyNumber", Items: []Type{
 	TypeFloat32, TypeFloat64,
@@ -212,8 +227,6 @@ func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 		return FloatLit{Type: typ}
 	} else if typ == TypeChar {
 		return CharLit{}
-	} else if typ == TypeInt8 || typ == TypeInt16 || typ == TypeInt32 || typ == TypeInt64 {
-		return &IntLit{Type: typ, Value: 0} // TODO no Source set
 	} else if typ == TypeBoolean {
 		// TODO this is weird
 		return LookUpLetSym(tc, builtinScope, Ident{Source: "false"}, TypeBoolean)
@@ -222,6 +235,10 @@ func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	} else {
 		panic(fmt.Errorf("not implemented %+v", typ))
 	}
+}
+
+func (typ *BuiltinIntType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+	return &IntLit{Type: typ, Value: 0} // TODO no Source set
 }
 
 func (typ *UnspecifiedType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
@@ -283,6 +300,14 @@ var builtinScope Scope = &ScopeImpl{
 }
 
 func registerBuiltinType(typ *BuiltinType) {
+	_, ok := builtinScope.Types[typ.Name]
+	if ok {
+		panic("internal error double definition of builtin type")
+	}
+	builtinScope.Types[typ.Name] = typ
+}
+
+func registerBuiltinIntType(typ *BuiltinIntType) {
 	_, ok := builtinScope.Types[typ.Name]
 	if ok {
 		panic("internal error double definition of builtin type")
@@ -543,14 +568,14 @@ func init() {
 	registerBuiltinMacro("addCFlags", false, []Type{TypeStr}, TypeVoid, BuiltinAddCFlags)
 
 	registerBuiltinType(TypeBoolean)
-	registerBuiltinType(TypeInt8)
-	registerBuiltinType(TypeInt16)
-	registerBuiltinType(TypeInt32)
-	registerBuiltinType(TypeInt64)
-	registerBuiltinType(TypeUInt8)
-	registerBuiltinType(TypeUInt16)
-	registerBuiltinType(TypeUInt32)
-	registerBuiltinType(TypeUInt64)
+	registerBuiltinIntType(TypeInt8)
+	registerBuiltinIntType(TypeInt16)
+	registerBuiltinIntType(TypeInt32)
+	registerBuiltinIntType(TypeInt64)
+	registerBuiltinIntType(TypeUInt8)
+	registerBuiltinIntType(TypeUInt16)
+	registerBuiltinIntType(TypeUInt32)
+	registerBuiltinIntType(TypeUInt64)
 	registerBuiltinType(TypeFloat32)
 	registerBuiltinType(TypeFloat64)
 	registerBuiltinType(TypeStr)
@@ -565,6 +590,7 @@ func init() {
 	registerTypeGroup(TypeAnyNumber)
 
 	for _, typ := range TypeAnyNumber.Items {
+
 		registerBuiltin("+", "(", "+", ")", []Type{typ, typ}, typ)
 		registerBuiltin("-", "(", "-", ")", []Type{typ, typ}, typ)
 		registerBuiltin("*", "(", "*", ")", []Type{typ, typ}, typ)
@@ -587,16 +613,12 @@ func init() {
 
 		registerBuiltin("f32", "(float)(", "", ")", []Type{typ}, TypeFloat32)
 		registerBuiltin("f64", "(double)(", "", ")", []Type{typ}, TypeFloat64)
-	}
 
-	registerSimpleTemplate("high", []Type{GetTypeType(TypeInt8)}, TypeInt8, &IntLit{Value: 127, Type: TypeInt8})
-	registerSimpleTemplate("high", []Type{GetTypeType(TypeInt16)}, TypeInt16, &IntLit{Value: 32767, Type: TypeInt16})
-	registerSimpleTemplate("high", []Type{GetTypeType(TypeInt32)}, TypeInt32, &IntLit{Value: 2147483647, Type: TypeInt32})
-	registerSimpleTemplate("high", []Type{GetTypeType(TypeInt64)}, TypeInt64, &IntLit{Value: 9223372036854775807, Type: TypeInt64})
-	registerSimpleTemplate("low", []Type{GetTypeType(TypeInt8)}, TypeInt8, &IntLit{Value: -128, Type: TypeInt8})
-	registerSimpleTemplate("low", []Type{GetTypeType(TypeInt16)}, TypeInt16, &IntLit{Value: -32768, Type: TypeInt16})
-	registerSimpleTemplate("low", []Type{GetTypeType(TypeInt32)}, TypeInt32, &IntLit{Value: -2147483648, Type: TypeInt32})
-	registerSimpleTemplate("low", []Type{GetTypeType(TypeInt64)}, TypeInt64, &IntLit{Value: -9223372036854775808, Type: TypeInt64})
+		if intType, isIntType := typ.(*BuiltinIntType); isIntType {
+			registerSimpleTemplate("high", []Type{GetTypeType(typ)}, typ, &IntLit{Value: int64(intType.MaxValue), Type: typ})
+			registerSimpleTemplate("low", []Type{GetTypeType(typ)}, typ, &IntLit{Value: intType.MinValue, Type: typ})
+		}
+	}
 
 	{
 		// TODO: has no line information

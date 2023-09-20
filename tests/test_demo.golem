@@ -85,7 +85,7 @@ proc main():i64 = {
   let i1: i64 = 123
   let i2: i64 = 456
 
-  printf("abc %d \n", 12345:i8);
+  printf("abc %d \n", 123:i8);
 
   # let myf32 = 123456789:f32
   printf("max(f1,f2) = %f\n", max(f1,f2))

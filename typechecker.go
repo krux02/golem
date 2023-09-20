@@ -244,7 +244,7 @@ func TypeCheckEnumDef(tc *TypeChecker, scope Scope, def EnumDef) *TcEnumDef {
 	tc.RegisterType(scope, enumType.Impl.Name, enumType, def.Name)
 	registerBuiltin("string", fmt.Sprintf("%s_names_array[", result.Name), "", "]", []Type{enumType}, TypeStr)
 	for _, intType := range TypeAnyInt.Items {
-		builtinType := intType.(*BuiltinType)
+		builtinType := intType.(*BuiltinIntType)
 		registerBuiltin(builtinType.Name, fmt.Sprintf("(%s)", builtinType.InternalName), "", "", []Type{enumType}, intType)
 		registerBuiltin(result.Name, fmt.Sprintf("(%s)", result.Name), "", "", []Type{intType}, enumType)
 	}
@@ -346,6 +346,19 @@ func ExpectType(tc *TypeChecker, node AstNode, gotten, expected Type) Type {
 	if gotten == TypeError {
 		return TypeError
 	}
+	if theIntLit, gotIntLit := gotten.(*IntLit); gotIntLit {
+		if theBuiltinType, expectBuiltinType := expected.(*BuiltinIntType); expectBuiltinType {
+			if theBuiltinType.MinValue <= theIntLit.Value && (theIntLit.Value < 0 || uint64(theIntLit.Value) <= theBuiltinType.MaxValue) {
+				return theBuiltinType
+			}
+			ReportErrorf(tc, node, "integer literal %d out of range for type '%s' [%d..%d]", theIntLit.Value, theBuiltinType.Name, theBuiltinType.MinValue, theBuiltinType.MaxValue)
+		}
+		if theBuiltinType, expectBuiltinType := expected.(*BuiltinType); expectBuiltinType {
+			if theBuiltinType == TypeFloat32 || theBuiltinType == TypeFloat64 {
+				return theBuiltinType
+			}
+		}
+	}
 
 	if expected == TypeUnspecified {
 		if gotten == TypeUnspecified {
@@ -353,6 +366,7 @@ func ExpectType(tc *TypeChecker, node AstNode, gotten, expected Type) Type {
 			return TypeError
 		}
 		if gottenTg, ok := gotten.(*TypeGroup); ok {
+			// TODO when is this branch active? it was used for AnyInt etc in type check int lit
 			ReportErrorf(tc, node, "narrowing of type '%s' is required", AstFormat(gottenTg))
 			return TypeError
 		}
@@ -472,6 +486,11 @@ func AppendNoDuplicats(types []Type, typ Type) (result []Type) {
 
 // inversion of arguments, because go only has polymorphism on the self argument
 func (typ *BuiltinType) AppendToGroup(builder *TypeGroupBuilder) bool {
+	builder.Items = AppendNoDuplicats(builder.Items, typ)
+	return false
+}
+
+func (typ *BuiltinIntType) AppendToGroup(builder *TypeGroupBuilder) bool {
 	builder.Items = AppendNoDuplicats(builder.Items, typ)
 	return false
 }
@@ -625,7 +644,6 @@ func ParamSignatureMatch(exprType, paramType Type) (ok bool, substitutions []Sub
 	if genericParamType, paramIsGeneric := paramType.(*OpenGenericType); paramIsGeneric {
 		return GenericParamSignatureMatch(exprType, genericParamType.Type, nil)
 	}
-
 	// fast non recursive pass
 	return exprType == paramType, []Substitution{}
 }
@@ -787,17 +805,6 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 	}
 
 	result := TcCall{Source: call.Source}
-
-	// if call.Callee.GetSource() == "addr" {
-	// 	fmt.Printf("signatures: %s\n", call.Callee.GetSource())
-	// 	for i, sig := range signatures {
-	// 		fmt.Printf(" Signature: %v\n", i)
-	// 		for j, arg := range sig.Params {
-	// 			fmt.Printf("  arg %d: '%s'\n", j, AstFormat(arg.Type))
-	// 		}
-	// 		fmt.Printf("  result %v\n", AstFormat(sig.ResultType))
-	// 	}
-	// }
 
 	switch len(signatures) {
 	case 0:
@@ -1168,12 +1175,13 @@ func TypeCheckColonExpr(tc *TypeChecker, scope Scope, arg ColonExpr, expected Ty
 	return TypeCheckExpr(tc, scope, arg.Lhs, typ)
 }
 
-func (tc *TypeChecker) TypeCheckIntLit(scope Scope, arg *IntLit, expected Type) TcExpr {
-	switch typ := ExpectType(tc, arg, TypeAnyNumber, expected).(type) {
-	case *ErrorType:
+func TypeCheckIntLit(tc *TypeChecker, scope Scope, arg *IntLit, expected Type) TcExpr {
+	switch typ := ExpectType(tc, arg, arg, expected).(type) {
+	case *ErrorType, *IntLit, *BuiltinIntType:
 		return &IntLit{
 			Source: arg.Source,
 			Type:   typ,
+			Value:  arg.Value,
 		}
 	case *BuiltinType:
 		if typ == TypeFloat32 || typ == TypeFloat64 {
@@ -1193,15 +1201,10 @@ func (tc *TypeChecker) TypeCheckIntLit(scope Scope, arg *IntLit, expected Type) 
 			}
 			return lit
 		}
-		return &IntLit{
-			Source: arg.Source,
-			Type:   typ,
-			Value:  arg.Value,
-		}
+		panic(fmt.Errorf("internal error: %T", typ))
 	default:
 		panic(fmt.Errorf("internal error: %T", typ))
 	}
-
 }
 
 func (tc *TypeChecker) TypeCheckStrLit(scope Scope, arg StrLit, expected Type) TcExpr {
@@ -1223,7 +1226,7 @@ func TypeCheckExpr(tc *TypeChecker, scope Scope, arg Expr, expected Type) TcExpr
 				if lit, ok := arg.Args[0].(*IntLit); ok {
 					result := &IntLit{Source: arg.Source, Value: -lit.Value}
 					result.Type = result
-					return tc.TypeCheckIntLit(scope, result, expected)
+					return TypeCheckIntLit(tc, scope, result, expected)
 				}
 			}
 		}
@@ -1239,7 +1242,7 @@ func TypeCheckExpr(tc *TypeChecker, scope Scope, arg Expr, expected Type) TcExpr
 		ExpectType(tc, arg, TypeChar, expected)
 		return (TcExpr)(arg)
 	case *IntLit:
-		return (TcExpr)(tc.TypeCheckIntLit(scope, arg, expected))
+		return (TcExpr)(TypeCheckIntLit(tc, scope, arg, expected))
 	case FloatLit:
 		typ := ExpectType(tc, arg, TypeAnyFloat, expected)
 		arg.Type = typ.(*BuiltinType)
@@ -1291,19 +1294,14 @@ var ptrTypeMap map[Type]*PtrType
 var typeTypeMap map[Type]*TypeType
 var packageMap map[string]*TcPackageDef
 
-func GetPackage(importPath string) (result *TcPackageDef) {
+func GetPackage(importPath string) (result *TcPackageDef, err error) {
 	var ok bool
-	var err error
 	result, ok = packageMap[importPath]
 	if !ok {
 		result, err = compileFileToPackage(fmt.Sprintf("%s.golem", importPath), false)
-		if err != nil {
-			// TODO implement proper error handling
-			panic(err)
-		}
 		packageMap[importPath] = result
 	}
-	return result
+	return result, err
 }
 
 func GetArrayType(elem Type, len int64) (result *ArrayType) {
@@ -1525,7 +1523,11 @@ func TypeCheckPackage(tc *TypeChecker, arg PackageDef, requiresMain bool) (resul
 			tcExpr := TypeCheckExpr(tc, scope, stmt.Expr, TypeVoid)
 			EvalExpr(tc, tcExpr, scope)
 		case ImportStmt:
-			result.Imports = append(result.Imports, GetPackage(stmt.StrLit.Value))
+			pkg, err := GetPackage(stmt.StrLit.Value)
+			if err != nil {
+				ReportErrorf(tc, stmt.StrLit, "%s", err.Error())
+			}
+			result.Imports = append(result.Imports, pkg)
 		default:
 			panic(fmt.Errorf("internal error: %T", stmt))
 		}
