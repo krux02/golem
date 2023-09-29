@@ -152,7 +152,7 @@ func LookUpType(tc *TypeChecker, scope Scope, expr TypeExpr) Type {
 	return TypeError
 }
 
-func (tc *TypeChecker) LookUpProc(scope Scope, ident Ident, signatures []ProcSignature) []ProcSignature {
+func LookUpProc(scope Scope, ident Ident, signatures []ProcSignature) []ProcSignature {
 	for scope != nil {
 		if localSignatures, ok := scope.Procedures[ident.Source]; ok {
 			signatures = append(signatures, localSignatures...)
@@ -433,17 +433,27 @@ func (structDef *TcStructDef) GetField(name string) (resField TcStructField, idx
 	return TcStructField{Source: name, Name: name, Type: TypeError}, -1
 }
 
-func TypeCheckDotExpr(tc *TypeChecker, scope Scope, parentSource string, lhs, rhs Expr, expected Type) (result TcDotExpr) {
-	result.Lhs = TypeCheckExpr(tc, scope, lhs, TypeUnspecified)
-	result.Source = parentSource
+func TypeCheckDotExpr(tc *TypeChecker, scope Scope, call Call, expected Type) TcExpr {
+	if !ExpectArgsLen(tc, call, len(call.Args), 2) {
+		return TcErrorNode{SourceNode: call}
+	}
 
+	lhs := TypeCheckExpr(tc, scope, call.Args[0], TypeUnspecified)
+
+	result := TcDotExpr{
+		Source: call.Source,
+		Lhs:    lhs,
+	}
 	// fmt.Printf("lhs: %T %+v\n", result.Lhs, result.Lhs)
 	typ := result.Lhs.GetType()
 	switch t := typ.(type) {
 	case *StructType:
-		rhsSrc := rhs.GetSource()
+		rhs, isIdent := call.Args[1].(Ident)
+		if !isIdent {
+			ReportErrorf(tc, call.Args[1], "right of dot operator needs to be an identifier, but it is %T", call.Args[1])
+		}
 		var idx int
-		result.Rhs, idx = t.Impl.GetField(rhsSrc)
+		result.Rhs, idx = t.Impl.GetField(rhs.Source)
 		if idx < 0 {
 			ReportErrorf(tc, rhs, "type %s has no field %s", t.Impl.Name, rhs.GetSource())
 			return result
@@ -451,12 +461,10 @@ func TypeCheckDotExpr(tc *TypeChecker, scope Scope, parentSource string, lhs, rh
 		ExpectType(tc, rhs, result.Rhs.GetType(), expected)
 		return result
 	case *ErrorType:
-		result.Rhs = TcErrorNode{rhs}
-		return result
+		return TcErrorNode{call}
 	default:
 		ReportErrorf(tc, lhs, "dot call is only supported on struct types, but got: %s %T", AstFormat(typ), typ)
-		result.Rhs = TcErrorNode{rhs}
-		return result
+		return TcErrorNode{call}
 	}
 }
 
@@ -756,10 +764,8 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 	// language level reserved calls
 	switch ident.Source {
 	case ".":
-		if !ExpectArgsLen(tc, call, len(call.Args), 2) {
-			return TcErrorNode{SourceNode: call}
-		}
-		return TypeCheckDotExpr(tc, scope, call.Source, call.Args[0], call.Args[1], expected)
+
+		return TypeCheckDotExpr(tc, scope, call, expected)
 	case ":":
 		if !ExpectArgsLen(tc, call, len(call.Args), 2) {
 			return TcErrorNode{SourceNode: call}
@@ -769,7 +775,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		result := TypeCheckExpr(tc, scope, call.Args[0], typ)
 		return result
 	}
-	signatures := tc.LookUpProc(scope, ident, nil)
+	signatures := LookUpProc(scope, ident, nil)
 	var checkedArgs []TcExpr
 	hasArgTypeError := false
 	for i, arg := range call.Args {
@@ -823,7 +829,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 			builder.WriteString(")")
 
 			// original signatures
-			signatures = tc.LookUpProc(scope, ident, nil)
+			signatures = LookUpProc(scope, ident, nil)
 			if len(signatures) > 0 {
 				builder.NewlineAndIndent()
 				builder.WriteString("available overloads: ")
@@ -1150,6 +1156,10 @@ func (arg *TcProcDef) GetType() Type {
 }
 
 func (arg *TcTemplateDef) GetType() Type {
+	return TypeVoid
+}
+
+func (arg *TcPackageDef) GetType() Type {
 	return TypeVoid
 }
 

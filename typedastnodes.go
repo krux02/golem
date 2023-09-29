@@ -111,7 +111,7 @@ type TcIfElseExpr struct {
 type TcDotExpr struct {
 	Source string
 	Lhs    TcExpr
-	Rhs    TcExpr
+	Rhs    TcStructField
 }
 
 type TcCall struct {
@@ -295,8 +295,7 @@ func (arg *TcBuiltinProcDef) GetSource() string        { return arg.Source }
 func (arg *TcBuiltinGenericProcDef) GetSource() string { return arg.Source }
 func (arg *TcTemplateDef) GetSource() string           { return arg.Source }
 func (arg TcStructLit) GetSource() string              { return arg.Source }
-
-func (arg TcPackageDef) GetSource() string { return arg.Source }
+func (arg TcPackageDef) GetSource() string             { return arg.Source }
 
 func (arg *TcStructDef) GetSource() string       { return arg.Source }
 func (arg *TcEnumDef) GetSource() string         { return arg.Source }

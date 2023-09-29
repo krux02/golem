@@ -219,6 +219,11 @@ var TypeAnyNumber = &TypeGroup{Name: "AnyNumber", Items: []Type{
 // types for C wrappers
 var TypeCString = &BuiltinType{"cstring", "char const*", 'x'}
 
+// builtin proc signatures
+var builtinCPrintf ProcSignature
+var builtinAddr ProcSignature
+var builtinDeref ProcSignature
+
 func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	if typ == TypeNoReturn {
 		ReportErrorf(tc, context, "a default value of no retrun does not exist")
@@ -365,7 +370,7 @@ OUTER:
 	return true
 }
 
-func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []*GenericTypeSymbol, args []Type, result Type) {
+func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []*GenericTypeSymbol, args []Type, result Type) ProcSignature {
 	if len(genericParams) > 0 {
 		for i, arg := range args {
 			syms := extractGenericTypeSymbols(arg)
@@ -402,6 +407,7 @@ func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams [
 	}
 	procDef.Signature.Impl = procDef
 	builtinScope.Procedures[name] = append(builtinScope.Procedures[name], procDef.Signature)
+	return procDef.Signature
 }
 
 func registerBuiltinMacro(name string, varargs bool, args []Type, result Type, macroFunc BuiltinMacroFunc) {
@@ -422,8 +428,8 @@ func registerBuiltinMacro(name string, varargs bool, args []Type, result Type, m
 	builtinScope.Procedures[name] = append(builtinScope.Procedures[name], macroDef.Signature)
 }
 
-func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Type) {
-	registerGenericBuiltin(name, prefix, infix, postfix, nil, args, result)
+func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Type) ProcSignature {
+	return registerGenericBuiltin(name, prefix, infix, postfix, nil, args, result)
 }
 
 func registerSimpleTemplate(name string, args []Type, result Type, substitution TcExpr) {
@@ -527,10 +533,10 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 	}
 
 	result := call
-	// TODO result.sym should be `printf` from C, with `cstring` as argument
+
 	result.Sym = TcProcSymbol{
 		Source: call.Sym.Source,
-		Impl:   tc.LookUpProc(builtinScope, Ident{Source: "c_printf"}, nil)[0].Impl,
+		Impl:   builtinCPrintf.Impl,
 	}
 	result.Args[0] = CStrLit{Source: formatStrLit.Source, Value: formatStrC.String()}
 	return result
@@ -562,7 +568,7 @@ func init() {
 	// practical. Therefore the implementation for varargs will be strictly tied to
 	// printf for now. A general concept for varargs will be specified out as soon
 	// as it becomes necessary, but right now it is not planned.
-	registerBuiltin("c_printf", "printf(", ", ", ")", []Type{TypeCString}, TypeVoid)
+	builtinCPrintf = registerBuiltin("c_printf", "printf(", ", ", ")", []Type{TypeCString}, TypeVoid)
 	registerBuiltinMacro("printf", true, []Type{TypeStr}, TypeVoid, ValidatePrintfCall)
 
 	registerBuiltinMacro("addCFlags", false, []Type{TypeStr}, TypeVoid, BuiltinAddCFlags)
@@ -623,8 +629,8 @@ func init() {
 	{
 		// TODO: has no line information
 		T := &GenericTypeSymbol{Name: "T", Constraint: TypeUnspecified}
-		registerGenericBuiltin("addr", "&(", "", ")", []*GenericTypeSymbol{T}, []Type{T}, GetPtrType(T))
-		registerGenericBuiltin("[", "*(", "", ")", []*GenericTypeSymbol{T}, []Type{GetPtrType(T)}, T)
+		builtinAddr = registerGenericBuiltin("addr", "&(", "", ")", []*GenericTypeSymbol{T}, []Type{T}, GetPtrType(T))
+		builtinDeref = registerGenericBuiltin("[", "*(", "", ")", []*GenericTypeSymbol{T}, []Type{GetPtrType(T)}, T)
 		registerGenericBuiltin("=", "(", "=", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeVoid)
 		registerGenericBuiltin("==", "(", "==", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeBoolean)
 		registerGenericBuiltin("!=", "(", "!=", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeBoolean)

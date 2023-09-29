@@ -143,6 +143,7 @@ func compile(filename string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	typedPak = cgenprepass(typedPak).(*TcPackageDef)
 	sourceCodeC := compilePackageToC(typedPak)
 
 	fileName := fmt.Sprintf("%s.c", base)

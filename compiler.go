@@ -228,8 +228,9 @@ func (builder *CodeBuilder) CompileIfElseExpr(context *PackageGeneratorContext, 
 }
 
 func (builder *CodeBuilder) CompileDotExpr(context *PackageGeneratorContext, dotExpr TcDotExpr) {
+	builder.WriteString("(")
 	builder.CompileExpr(context, dotExpr.Lhs)
-	builder.WriteString(".")
+	builder.WriteString(").")
 	builder.CompileExpr(context, dotExpr.Rhs)
 }
 
