@@ -159,7 +159,7 @@ func (builder *CodeBuilder) compileStrLit(value string, boxed bool) {
 	}
 }
 
-func (builder *CodeBuilder) CompileIntLit(lit *IntLit) {
+func (builder *CodeBuilder) CompileIntLit(lit IntLit) {
 	WriteIntLit(&builder.Builder, lit.Value)
 }
 
@@ -333,7 +333,7 @@ func (builder *CodeBuilder) CompileExprWithPrefix(context *PackageGeneratorConte
 		builder.compileStrLit(ex.Value, false)
 	case CharLit:
 		builder.compileCharLit(ex)
-	case *IntLit:
+	case IntLit:
 		builder.CompileIntLit(ex)
 	case FloatLit:
 		builder.CompileFloatLit(ex)
@@ -345,7 +345,7 @@ func (builder *CodeBuilder) CompileExprWithPrefix(context *PackageGeneratorConte
 		builder.CompileSymbol(ex)
 	case TcVariableDefStmt:
 		builder.CompileVariableDefStmt(context, ex)
-	case TcReturnStmt:
+	case TcReturnExpr:
 		// ignore the value of injectReturn here
 		builder.WriteString("return ")
 		builder.CompileExpr(context, ex.Value)
@@ -366,7 +366,7 @@ func (builder *CodeBuilder) CompileExprWithPrefix(context *PackageGeneratorConte
 	case nil:
 		panic(fmt.Sprintf("invalid Ast, expression is nil %T", expr))
 	default:
-		panic(fmt.Sprintf("Not implemented %T", expr))
+		panic(fmt.Sprintf("Not implemented %T expr: %s", expr, AstFormat(expr)))
 	}
 }
 
@@ -491,7 +491,7 @@ func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 	body.Source = procDef.Body.GetSource()
 
 	if injectReturn {
-		body.Items = append(body.Items, TcReturnStmt{Value: procDef.Body})
+		body.Items = append(body.Items, TcReturnExpr{Value: procDef.Body})
 	} else {
 		codeBlockBody, ok := procDef.Body.(TcCodeBlock)
 		if ok {

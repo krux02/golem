@@ -128,7 +128,7 @@ type TcVariableDefStmt struct {
 	Value  TcExpr
 }
 
-type TcReturnStmt struct {
+type TcReturnExpr struct {
 	Source string
 	Value  TcExpr
 }
@@ -264,7 +264,7 @@ type TcPackageDef struct {
 func (sym TcDotExpr) expression()          {}
 func (sym TcSymbol) expression()           {}
 func (stmt TcVariableDefStmt) expression() {}
-func (stmt TcReturnStmt) expression()      {}
+func (stmt TcReturnExpr) expression()      {}
 func (stmt TcForLoopStmt) expression()     {}
 func (stmt TcIfStmt) expression()          {}
 func (stmt TcIfElseExpr) expression()      {}
@@ -280,7 +280,7 @@ func (arg TcStructField) GetSource() string            { return arg.Source }
 func (arg TcSymbol) GetSource() string                 { return arg.Source }
 func (arg TcProcSymbol) GetSource() string             { return arg.Source }
 func (arg TcVariableDefStmt) GetSource() string        { return arg.Source }
-func (arg TcReturnStmt) GetSource() string             { return arg.Source }
+func (arg TcReturnExpr) GetSource() string             { return arg.Source }
 func (arg TcTypeContext) GetSource() string            { return arg.Source }
 func (arg TcForLoopStmt) GetSource() string            { return arg.Source }
 func (arg TcWhileLoopStmt) GetSource() string          { return arg.Source }

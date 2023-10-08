@@ -125,7 +125,7 @@ type Tokenizer struct {
 func NewTokenizer(code string, filename string) (result *Tokenizer) {
 	result = &Tokenizer{code: code, filename: filename}
 	result.lookAheadToken, result.lookAheadOffset = result.ScanTokenAt(0)
-	return
+	return result
 }
 
 func LineColumnOffset(code string, offset int) (line, column int) {
@@ -134,7 +134,7 @@ func LineColumnOffset(code string, offset int) (line, column int) {
 	for pos, rune := range code {
 		if offset <= pos {
 			column = pos - lineStart
-			return
+			return line, column
 		}
 		if rune == '\n' {
 			line++
@@ -153,7 +153,7 @@ func LineColumnStr(str, substr string) (line, columnStart, columnEnd int) {
 	offset := int(data2 - data1)
 	line, columnStart = LineColumnOffset(str, offset)
 	columnEnd = columnStart + len(substr)
-	return
+	return line, columnStart, columnEnd
 }
 
 func (this *Tokenizer) LineColumnCurrent() (line, column int) {
@@ -177,7 +177,7 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 	// Printf("read token in:%s...\n", code[:20]);
 	if len(code) == 0 {
 		result.kind = TkEof
-		return
+		return result, newOffset
 	}
 
 	{
@@ -227,7 +227,7 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 				newOffset += idx
 				result.kind = TkInvalid
 				result.value = code[:idx]
-				return
+				return result, newOffset
 			}
 		default:
 		}
@@ -240,14 +240,14 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 				result.kind = TkPostfixDocComment
 			}
 			result.value = code[:idx]
-			return
+			return result, newOffset
 		}
 
 		if gotNewLine {
 			newOffset += idx
 			result.kind = TkSemicolon
 			result.value = code[:idx]
-			return
+			return result, newOffset
 		}
 
 		code = code[idx:]
@@ -459,7 +459,7 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 	}
 
 	newOffset += len(result.value)
-	return
+	return result, newOffset
 }
 
 func (this *Tokenizer) AtEnd() bool {

@@ -1,5 +1,11 @@
 #proc assert(cond: Bool)
 
+proc mutableArgFunc(arg: f32, somearg: f32):void = {
+  # TODO user `var f32` here.
+  arg += somearg
+  arg *= somearg
+}
+
 proc main():i32 = {
   {
     let x = 1:i32
@@ -50,6 +56,13 @@ proc main():i32 = {
     assert(low(type i32) == -2147483648)
     # TODO this should also work without the () around the negative literal
     assert(low(type i64) == (-9223372036854775807):i64 - 1)
+  }
+
+  {
+    let myfloat1 = 12:f32
+    let myfloat2:f32 = 13
+    mutableArgFunc(myfloat1, myfloat2)
+    # TODO assert(myfloat1 == 325)
   }
 
   return 0

@@ -16,7 +16,7 @@ func EvalExpr(tc *TypeChecker, expr TcExpr, scope Scope) TcExpr {
 		return lit
 	case StrLit:
 		return lit
-	case *IntLit:
+	case IntLit:
 		return lit
 	case FloatLit:
 		return lit

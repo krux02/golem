@@ -58,6 +58,10 @@ type ArrayType struct {
 	scheduledforgeneration bool
 }
 
+type IntLitType struct {
+	Value int64
+}
+
 // the type that represets types as arguments. Example:
 //
 //	sizeof(type int)
@@ -75,7 +79,7 @@ var _ Type = &EnumType{}
 var _ Type = &EnumSetType{}
 var _ Type = &StructType{}
 var _ Type = &ArrayType{}
-var _ Type = &IntLit{}
+var _ Type = &IntLitType{}
 var _ Type = &ErrorType{}
 var _ Type = &TypeType{}
 var _ Type = &PtrType{}
@@ -153,7 +157,7 @@ func (typ *PtrType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune('_')
 }
 
-func (typ *IntLit) ManglePrint(builder *strings.Builder) {
+func (typ *IntLitType) ManglePrint(builder *strings.Builder) {
 	fmt.Fprintf(builder, "%d_", typ.Value)
 }
 
@@ -243,7 +247,7 @@ func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 }
 
 func (typ *BuiltinIntType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
-	return &IntLit{Type: typ, Value: 0} // TODO no Source set
+	return IntLit{Type: typ, Value: 0} // TODO no Source set
 }
 
 func (typ *UnspecifiedType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
@@ -279,8 +283,8 @@ func (typ *EnumSetType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	return TcEnumSetLit{ElemType: typ.Elem}
 }
 
-func (typ *IntLit) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
-	return typ // and int lit is its own default value
+func (typ *IntLitType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+	return IntLit{Type: typ, Value: typ.Value}
 }
 
 func (typ *TypeType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
@@ -339,7 +343,7 @@ func extractGenericTypeSymbols(typ Type) (result []*GenericTypeSymbol) {
 		return result
 	case *ArrayType:
 		return extractGenericTypeSymbols(typ.Elem)
-	case *IntLit:
+	case *IntLitType:
 		return nil
 	case *ErrorType:
 		panic("internal error")
@@ -563,6 +567,7 @@ func init() {
 	ptrTypeMap = make(map[Type]*PtrType)
 	typeTypeMap = make(map[Type]*TypeType)
 	packageMap = make(map[string]*TcPackageDef)
+	intLitTypeMap = make(map[int64]*IntLitType)
 
 	// Printf is literally the only use case for real varargs that I actually see as
 	// practical. Therefore the implementation for varargs will be strictly tied to
@@ -621,8 +626,8 @@ func init() {
 		registerBuiltin("f64", "(double)(", "", ")", []Type{typ}, TypeFloat64)
 
 		if intType, isIntType := typ.(*BuiltinIntType); isIntType {
-			registerSimpleTemplate("high", []Type{GetTypeType(typ)}, typ, &IntLit{Value: int64(intType.MaxValue), Type: typ})
-			registerSimpleTemplate("low", []Type{GetTypeType(typ)}, typ, &IntLit{Value: intType.MinValue, Type: typ})
+			registerSimpleTemplate("high", []Type{GetTypeType(typ)}, typ, IntLit{Value: int64(intType.MaxValue), Type: typ})
+			registerSimpleTemplate("low", []Type{GetTypeType(typ)}, typ, IntLit{Value: intType.MinValue, Type: typ})
 		}
 	}
 
@@ -641,7 +646,7 @@ func init() {
 
 	registerBuiltin("assert", "assert(", "", ")", []Type{TypeBoolean}, TypeVoid)
 
-	registerConstant("true", &IntLit{Type: TypeBoolean, Value: 1})
-	registerConstant("false", &IntLit{Type: TypeBoolean, Value: 0})
+	registerConstant("true", IntLit{Type: TypeBoolean, Value: 1})
+	registerConstant("false", IntLit{Type: TypeBoolean, Value: 0})
 
 }

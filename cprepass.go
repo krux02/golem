@@ -86,8 +86,8 @@ func cgenprepass(expr TcExpr) TcExpr {
 			Sym:    expr.Sym,
 			Value:  cgenprepass(expr.Value),
 		}
-	case TcReturnStmt:
-		return TcReturnStmt{
+	case TcReturnExpr:
+		return TcReturnExpr{
 			Source: expr.Source,
 			Value:  cgenprepass(expr.Value),
 		}
@@ -122,7 +122,7 @@ func cgenprepass(expr TcExpr) TcExpr {
 			Source: expr.Source,
 			Items:  cgenprepassSlice(expr.Items),
 		}
-	case *IntLit:
+	case IntLit:
 		return expr
 	case FloatLit:
 		return expr
@@ -157,7 +157,7 @@ func cgenprepass(expr TcExpr) TcExpr {
 		return expr
 	case *TcBuiltinGenericProcDef:
 		panic("i don't know what to do?")
-		return expr
+		// return expr
 	case *TcTemplateDef:
 		// TODO maybe error? templates shuold all be resolved at this point in compilation
 		return expr

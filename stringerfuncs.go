@@ -250,9 +250,9 @@ func WriteIntLit(builder *strings.Builder, value int64) {
 	}
 }
 
-func (lit *IntLit) PrettyPrint(builder *AstPrettyPrinter) {
+func (lit IntLit) PrettyPrint(builder *AstPrettyPrinter) {
 	WriteIntLit(&builder.Builder, lit.Value)
-	if lit.Type != nil && lit.Type != lit {
+	if lit.Type != nil && lit.Type != (Type)(GetIntLitType(lit.Value)) {
 		builder.WriteString(":")
 		lit.Type.PrettyPrint(builder)
 	}
@@ -361,9 +361,14 @@ func (procDef ProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 	}
 }
 
-func (returnStmt ReturnStmt) PrettyPrint(builder *AstPrettyPrinter) {
+func (returnExpr ReturnExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("return ")
-	builder.WriteNode(returnStmt.Value)
+	builder.WriteNode(returnExpr.Value)
+}
+
+func (varExpr VarExpr) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("var ")
+	builder.WriteNode(varExpr.Expr)
 }
 
 func (expr TypeContext) PrettyPrint(builder *AstPrettyPrinter) {
@@ -628,9 +633,9 @@ func (stmt TcVariableDefStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	}
 }
 
-func (returnStmt TcReturnStmt) PrettyPrint(builder *AstPrettyPrinter) {
+func (returnExpr TcReturnExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("return ")
-	builder.WriteNode(returnStmt.Value)
+	builder.WriteNode(returnExpr.Value)
 }
 
 func (expr TcTypeContext) PrettyPrint(builder *AstPrettyPrinter) {
@@ -783,6 +788,10 @@ func (typ *PtrType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("ptr(")
 	typ.Target.PrettyPrint(builder)
 	builder.WriteString(")")
+}
+
+func (lit *IntLitType) PrettyPrint(builder *AstPrettyPrinter) {
+	WriteIntLit(&builder.Builder, lit.Value)
 }
 
 func (doc DocComment) PrettyPrint(builder *AstPrettyPrinter) {

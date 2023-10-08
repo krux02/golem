@@ -36,7 +36,7 @@ func parseIdent(tokenizer *Tokenizer) (result Ident) {
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkIdent)
 	result.Source = token.value
-	return
+	return result
 }
 
 func parseOperator(tokenizer *Tokenizer) (result Ident) {
@@ -52,7 +52,7 @@ func parseOperator(tokenizer *Tokenizer) (result Ident) {
 	}
 	result.Source = token.value
 
-	return
+	return result
 }
 
 func parseTypeContext(tokenizer *Tokenizer) (result TypeContext) {
@@ -61,16 +61,25 @@ func parseTypeContext(tokenizer *Tokenizer) (result TypeContext) {
 	result.Expr = TypeExpr(parseExpr(tokenizer, false))
 	lastToken := tokenizer.token
 	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
-	return
+	return result
 }
 
-func parseReturnStmt(tokenizer *Tokenizer) (result ReturnStmt) {
+func parseReturnExpr(tokenizer *Tokenizer) (result ReturnExpr) {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkReturn)
 	result.Value = parseExpr(tokenizer, false)
 	lastToken := tokenizer.token
 	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
-	return
+	return result
+}
+
+func parseVarExpr(tokenizer *Tokenizer) (result VarExpr) {
+	firstToken := tokenizer.Next()
+	tokenizer.expectKind(firstToken, TkVar)
+	result.Expr = parseExpr(tokenizer, false)
+	lastToken := tokenizer.token
+	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
+	return result
 }
 
 /* (name string, typ TypeExpr, expr Expr) */
@@ -105,14 +114,14 @@ func parseBreakStmt(tokenizer *Tokenizer) (result BreakStmt) {
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkBreak)
 	result.Source = token.value
-	return
+	return result
 }
 
 func parseContinueStmt(tokenizer *Tokenizer) (result ContinueStmt) {
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkContinue)
 	result.Source = token.value
-	return
+	return result
 }
 
 func parseForLoop(tokenizer *Tokenizer) (result ForLoopStmt) {
@@ -127,7 +136,7 @@ func parseForLoop(tokenizer *Tokenizer) (result ForLoopStmt) {
 	result.Body = parseExpr(tokenizer, false)
 	lastToken := tokenizer.token
 	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
-	return
+	return result
 }
 
 func parseWhileLoop(tokenizer *Tokenizer) (result WhileLoopStmt) {
@@ -139,7 +148,7 @@ func parseWhileLoop(tokenizer *Tokenizer) (result WhileLoopStmt) {
 	result.Body = parseExpr(tokenizer, false)
 	lastToken := tokenizer.token
 	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
-	return
+	return result
 }
 
 func parseIfStmt(tokenizer *Tokenizer) Expr {
@@ -183,7 +192,7 @@ func parseCodeBlock(tokenizer *Tokenizer) (result CodeBlock) {
 	lastToken := tokenizer.Next()
 	tokenizer.expectKind(lastToken, TkCloseCurly)
 	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
-	return
+	return result
 }
 
 func parseCharLit(tokenizer *Tokenizer) (result CharLit) {
@@ -218,10 +227,10 @@ func parseCharLit(tokenizer *Tokenizer) (result CharLit) {
 		default:
 			panic(tokenizer.Errorf(token, "invalid escape \\%c in char literal", rune2))
 		}
-		return
+		return result
 	}
 	result.Rune = rune1
-	return
+	return result
 }
 
 func parseStrLit(tokenizer *Tokenizer) (result StrLit) {
@@ -270,13 +279,13 @@ func parseStrLit(tokenizer *Tokenizer) (result StrLit) {
 	}
 
 	result.Value = b.String()
-	return
+	return result
 }
 
-func parseIntLit(tokenizer *Tokenizer) (result *IntLit) {
+func parseIntLit(tokenizer *Tokenizer) (result IntLit) {
 	token := tokenizer.Next()
 	tokenizer.expectKind2(token, TkIntLit, TkHexLit)
-	result = &IntLit{Source: token.value}
+	result = IntLit{Source: token.value}
 
 	if token.kind == TkIntLit {
 		intValue := Must(strconv.Atoi(token.value))
@@ -327,13 +336,8 @@ func parseIntLit(tokenizer *Tokenizer) (result *IntLit) {
 		result.Value = int64(intValue)
 	}
 
-	// BUG: types are assumed to have exactly once instance. Multiple
-	// instances of the same type will cause major problems during compilation. And it is violated here.
-	//
-	// the type of an IntLit
-	// is the the intlit itself. So every integer literal is also a type
-	result.Type = result
-	return
+	result.Type = GetIntLitType(result.Value)
+	return result
 }
 
 func parseFloatLit(tokenizer *Tokenizer) (result FloatLit) {
@@ -345,7 +349,7 @@ func parseFloatLit(tokenizer *Tokenizer) (result FloatLit) {
 		panic("internal error invalid float token")
 	}
 	result.Value = floatValue
-	return
+	return result
 }
 
 func applyOperatorPrecedenceFromLeft(tokenizerCode string, lhs Expr, op Ident, rhs Expr) Call {
@@ -376,7 +380,7 @@ func parseInfixCall(tokenizer *Tokenizer, lhs Expr) (result Call) {
 	// the _new_ operatore that needs to be applied in the expression from the
 	// left.
 	result = applyOperatorPrecedenceFromLeft(tokenizer.code, lhs, operator, rhs)
-	return
+	return result
 }
 
 // comma separated list of expressions. used for call arguments and array literals
@@ -392,7 +396,7 @@ func parseExprList(tokenizer *Tokenizer, tkOpen, tkClose TokenKind) (result []Ex
 	}
 	next = tokenizer.Next()
 	tokenizer.expectKind(next, tkClose)
-	return
+	return result
 }
 
 func parseCall(tokenizer *Tokenizer, callee Expr) (result Call) {
@@ -402,7 +406,7 @@ func parseCall(tokenizer *Tokenizer, callee Expr) (result Call) {
 	result.Braced = true
 	lastToken := tokenizer.token
 	result.Source = joinSubstr(tokenizer.code, callee.GetSource(), lastToken.value)
-	return
+	return result
 }
 
 func parseBracketCall(tokenizer *Tokenizer, callee Expr) (result Call) {
@@ -415,7 +419,7 @@ func parseBracketCall(tokenizer *Tokenizer, callee Expr) (result Call) {
 	result.Braced = true
 	lastToken := tokenizer.token
 	result.Source = joinSubstr(tokenizer.code, callee.GetSource(), lastToken.value)
-	return
+	return result
 }
 
 func parseArrayLit(tokenizer *Tokenizer) (result ArrayLit) {
@@ -423,7 +427,7 @@ func parseArrayLit(tokenizer *Tokenizer) (result ArrayLit) {
 	result.Items = parseExprList(tokenizer, TkOpenBracket, TkCloseBracket)
 	lastToken := tokenizer.token
 	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
-	return
+	return result
 }
 
 func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
@@ -432,8 +436,6 @@ func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
 		result = (Expr)(parseDocComment(tokenizer))
 	case TkVar, TkLet, TkConst:
 		result = (Expr)(parseVariableDefStmt(tokenizer))
-	case TkReturn:
-		result = (Expr)(parseReturnStmt(tokenizer))
 	case TkBreak:
 		result = (Expr)(parseBreakStmt(tokenizer))
 	case TkContinue:
@@ -464,14 +466,14 @@ func parsePrefixCall(tokenizer *Tokenizer) (result Call) {
 	result.Braced = true
 	lastToken := tokenizer.token
 	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
-	return
+	return result
 }
 
 type DocCommentScanner struct {
 	rawsource string
 }
 
-func (this *DocCommentScanner) Next() (result string) {
+func (this *DocCommentScanner) Next() string {
 	i := strings.Index(this.rawsource, "##") + 2
 	if i < 0 {
 		this.rawsource = ""
@@ -534,7 +536,7 @@ func parseDocComment(tokenizer *Tokenizer) (result DocComment) {
 	return result
 }
 
-func attachDocComment(expr Expr, target string, value string) (result bool) {
+func attachDocComment(expr Expr, target string, value string) bool {
 	switch ex := expr.(type) {
 	case Ident:
 		if ex.Source == target {
@@ -549,7 +551,7 @@ func attachDocComment(expr Expr, target string, value string) (result bool) {
 		return false
 	case StrLit:
 		return false
-	case *IntLit:
+	case IntLit:
 		return false
 	case FloatLit:
 		return false
@@ -558,25 +560,25 @@ func attachDocComment(expr Expr, target string, value string) (result bool) {
 	case CharLit:
 		return false
 	case Call:
-		result = attachDocComment(ex.Callee, target, value)
+		result := attachDocComment(ex.Callee, target, value)
 		for _, arg := range ex.Args {
 			if result {
-				return
+				return result
 			}
 			result = attachDocComment(arg, target, value)
 		}
-		return
+		return result
 	case ColonExpr:
 		return false
 	case VariableDefStmt:
-		result = attachDocComment(ex.Name, target, value)
+		return attachDocComment(ex.Name, target, value)
 	case ForLoopStmt:
 		return false
 	case IfExpr:
 		return false
 	case IfElseExpr:
 		return false
-	case ReturnStmt:
+	case ReturnExpr:
 		return false
 	case BreakStmt:
 		return false
@@ -629,6 +631,10 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 		result = (Expr)(parseTypeContext(tokenizer))
 	case TkNilLit:
 		result = (Expr)(parseNilLit(tokenizer))
+	case TkReturn:
+		result = (Expr)(parseReturnExpr(tokenizer))
+	case TkVar:
+		result = (Expr)(parseVarExpr(tokenizer))
 	default:
 		panic(tokenizer.formatWrongKind(tokenizer.lookAheadToken))
 	}
@@ -672,13 +678,13 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 					panic("invalid doc comment, proper error message not implemented")
 				}
 			}
-			return
+			return result
 		default:
-			return
+			return result
 		}
 	}
 
-	return
+	return result
 }
 
 func parseTypeDef(tokenizer *Tokenizer) Expr {
@@ -784,7 +790,7 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 
 	colonExpr, isColonExpr := MatchColonExpr(expr)
 	if !isColonExpr {
-		panic("expect colon expr")
+		panic("proc def requres colon to specify return type")
 	}
 	result.ResultType = colonExpr.Rhs
 

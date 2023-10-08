@@ -1,14 +1,12 @@
-* TODO pass by reference
 * TODO mutable flag in type
+* TODO display parsing errors as normal error messages
 * TODO templates
 * TODO generic functions
 * TODO type substitution/generic instancing after overload resolution
 * TODO have macros (stubs at least)
-* TODO proper constants, current implementation for ~true/false~ is a big hack
-* TODO BUG ensure that int lit types are actually instantiated only once (BIG BUG right now)
+* TODO implement ~true/false~ as enum, currently a big hack.
 * TODO C++ interop
 * TODO not all ast nodes have correct ~source~ values, for example ~[]~, code needs to deal with it
-* TODO display parsing errors as normal error messages
 * TODO full coverage of all error messages
 * TODO test operator precedence when many ~:~ and ~.~ are in use (currently buggy)
 * TODO maybe return TypeFloat like in Nim for integer division, or a tuple with remainder?
@@ -31,7 +29,9 @@
  [ ] jump to catch from throw
  [ ] jump to throw from catch
  [ ] jump to definition
+* TODO potential ambiguous syntax between type definition and type context
 * done
+** ensure that int lit types are actually instantiated only once
 ** implement type checking on 'return'
 ** implement ~context~ type and parameter for ~TypeCheck~ functions
 ** provide proper error messages or error instead of panic
@@ -58,3 +58,4 @@
 ** packages and import
 ** reserve double underscore and underscore pre- and postfix
 ** C interop (emit and function declarations)
+** pass by reference

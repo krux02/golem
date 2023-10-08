@@ -100,7 +100,7 @@ func LookUpType(tc *TypeChecker, scope Scope, expr TypeExpr) Type {
 				// maybe fall back to unchecked array
 				return TypeError
 			}
-			intLit, ok := arg0.(*IntLit)
+			intLit, ok := arg0.(*IntLitType)
 			if !ok {
 				ReportErrorf(tc, x.Args[0], "expect int literal but got %T", x.Args[0])
 				return TypeError
@@ -145,10 +145,10 @@ func LookUpType(tc *TypeChecker, scope Scope, expr TypeExpr) Type {
 		}
 		ReportErrorf(tc, expr, "Type not found: %s", name)
 		return TypeError
-	case *IntLit:
-		return x.Type
+	case IntLit:
+		return GetIntLitType(x.Value)
 	}
-	ReportErrorf(tc, expr, "unexpected ast node in type exper: %T", expr)
+	ReportErrorf(tc, expr, "unexpected ast node in type expr: %T", expr)
 	return TypeError
 }
 
@@ -344,12 +344,15 @@ func ExpectType(tc *TypeChecker, node AstNode, gotten, expected Type) Type {
 	if gotten == TypeError {
 		return TypeError
 	}
-	if theIntLit, gotIntLit := gotten.(*IntLit); gotIntLit {
+	if theIntLitType, gotIntLitType := gotten.(*IntLitType); gotIntLitType {
 		if theBuiltinType, expectBuiltinType := expected.(*BuiltinIntType); expectBuiltinType {
-			if theBuiltinType.MinValue <= theIntLit.Value && (theIntLit.Value < 0 || uint64(theIntLit.Value) <= theBuiltinType.MaxValue) {
+			if theBuiltinType.MinValue <= theIntLitType.Value &&
+				(theIntLitType.Value < 0 || uint64(theIntLitType.Value) <= theBuiltinType.MaxValue) {
 				return theBuiltinType
 			}
-			ReportErrorf(tc, node, "integer literal %d out of range for type '%s' [%d..%d]", theIntLit.Value, theBuiltinType.Name, theBuiltinType.MinValue, theBuiltinType.MaxValue)
+			ReportErrorf(tc, node, "integer literal %d out of range for type '%s' [%d..%d]",
+				theIntLitType.Value, theBuiltinType.Name, theBuiltinType.MinValue, theBuiltinType.MaxValue)
+			return TypeError
 		}
 		if theBuiltinType, expectBuiltinType := expected.(*BuiltinType); expectBuiltinType {
 			if theBuiltinType == TypeFloat32 || theBuiltinType == TypeFloat64 {
@@ -558,7 +561,7 @@ func (typ *GenericTypeSymbol) AppendToGroup(builder *TypeGroupBuilder) (result b
 	return typ.Constraint.AppendToGroup(builder)
 }
 
-func (typ *IntLit) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
+func (typ *IntLitType) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
 	// TODO implement
 	panic("not implemented")
 }
@@ -667,7 +670,7 @@ func RecursiveTypeSubstitution(typ Type, substitutions []Substitution) Type {
 		return typ
 	case *EnumType:
 		return typ
-	case *IntLit:
+	case *IntLitType:
 		return typ
 	case *StructType:
 		return typ
@@ -764,7 +767,6 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 	// language level reserved calls
 	switch ident.Source {
 	case ".":
-
 		return TypeCheckDotExpr(tc, scope, call, expected)
 	case ":":
 		if !ExpectArgsLen(tc, call, len(call.Args), 2) {
@@ -1061,7 +1063,7 @@ func TypeCheckVariableDefStmt(tc *TypeChecker, scope Scope, arg VariableDefStmt)
 	return result
 }
 
-func TypeCheckReturnStmt(tc *TypeChecker, scope Scope, arg ReturnStmt) (result TcReturnStmt) {
+func TypeCheckReturnExpr(tc *TypeChecker, scope Scope, arg ReturnExpr) (result TcReturnExpr) {
 	result.Value = TypeCheckExpr(tc, scope, arg.Value, scope.CurrentProc.Signature.ResultType)
 	return
 }
@@ -1093,7 +1095,7 @@ func (lit CharLit) GetType() Type {
 	return TypeChar
 }
 
-func (lit *IntLit) GetType() Type {
+func (lit IntLit) GetType() Type {
 	if lit.Type == nil {
 		panic(fmt.Errorf("internal error: type of IntLit not set"))
 	}
@@ -1186,7 +1188,7 @@ func (stmt TcIfElseExpr) GetType() Type {
 	return UnifyType(stmt.Body.GetType(), stmt.Else.GetType())
 }
 
-func (returnStmt TcReturnStmt) GetType() Type {
+func (returnExpr TcReturnExpr) GetType() Type {
 	return TypeNoReturn
 }
 
@@ -1208,14 +1210,15 @@ func TypeCheckColonExpr(tc *TypeChecker, scope Scope, arg ColonExpr, expected Ty
 	return TypeCheckExpr(tc, scope, arg.Lhs, typ)
 }
 
-func TypeCheckIntLit(tc *TypeChecker, scope Scope, arg *IntLit, expected Type) TcExpr {
-	switch typ := ExpectType(tc, arg, arg, expected).(type) {
-	case *ErrorType, *IntLit, *BuiltinIntType:
-		return &IntLit{
+func TypeCheckIntLit(tc *TypeChecker, scope Scope, arg IntLit, expected Type) TcExpr {
+	switch typ := ExpectType(tc, arg, arg.Type, expected).(type) {
+	case *ErrorType, *IntLitType, *BuiltinIntType:
+		result := IntLit{
 			Source: arg.Source,
 			Type:   typ,
 			Value:  arg.Value,
 		}
+		return result
 	case *BuiltinType:
 		if typ == TypeFloat32 || typ == TypeFloat64 {
 			var lit FloatLit
@@ -1256,10 +1259,9 @@ func TypeCheckExpr(tc *TypeChecker, scope Scope, arg Expr, expected Type) TcExpr
 		// also is responsible to create ProcDef, StructDef, EnumDef
 		if ident, kk := arg.Callee.(Ident); kk && ident.Source == "-" {
 			if len(arg.Args) == 1 {
-				if lit, ok := arg.Args[0].(*IntLit); ok {
-					result := &IntLit{Source: arg.Source, Value: -lit.Value}
-					result.Type = result
-					return TypeCheckIntLit(tc, scope, result, expected)
+				if lit, ok := arg.Args[0].(IntLit); ok {
+					negativeIntLit := IntLit{Source: arg.Source, Value: -lit.Value, Type: GetIntLitType(-lit.Value)}
+					return TypeCheckIntLit(tc, scope, negativeIntLit, expected)
 				}
 			}
 		}
@@ -1274,16 +1276,16 @@ func TypeCheckExpr(tc *TypeChecker, scope Scope, arg Expr, expected Type) TcExpr
 	case CharLit:
 		ExpectType(tc, arg, TypeChar, expected)
 		return (TcExpr)(arg)
-	case *IntLit:
+	case IntLit:
 		return (TcExpr)(TypeCheckIntLit(tc, scope, arg, expected))
 	case FloatLit:
 		typ := ExpectType(tc, arg, TypeAnyFloat, expected)
 		arg.Type = typ.(*BuiltinType)
 		return (TcExpr)(arg)
-	case ReturnStmt:
+	case ReturnExpr:
 		// ignoring expected type here, because the return as expression
 		// never evaluates to anything
-		return (TcExpr)(TypeCheckReturnStmt(tc, scope, arg))
+		return (TcExpr)(TypeCheckReturnExpr(tc, scope, arg))
 	case TypeContext:
 		var typ Type = GetTypeType(LookUpType(tc, scope, arg.Expr))
 		var tcExpr TcTypeContext
@@ -1326,6 +1328,7 @@ var enumSetTypeMap map[*EnumType]*EnumSetType
 var ptrTypeMap map[Type]*PtrType
 var typeTypeMap map[Type]*TypeType
 var packageMap map[string]*TcPackageDef
+var intLitTypeMap map[int64]*IntLitType
 
 func GetPackage(importPath string) (result *TcPackageDef, err error) {
 	var ok bool
@@ -1343,7 +1346,7 @@ func GetArrayType(elem Type, len int64) (result *ArrayType) {
 		result = &ArrayType{Elem: elem, Len: len}
 		arrayTypeMap[ArrayTypeMapKey{elem, len}] = result
 		registerBuiltin("[", "", ".arr[", "]", []Type{result, TypeInt64}, elem)
-		registerSimpleTemplate("len", []Type{result}, TypeInt64, &IntLit{Source: "", Type: TypeInt64, Value: len})
+		registerSimpleTemplate("len", []Type{result}, TypeInt64, IntLit{Type: TypeInt64, Value: len})
 	}
 	return result
 }
@@ -1366,6 +1369,15 @@ func GetPtrType(target Type) (result *PtrType) {
 	return result
 }
 
+func GetIntLitType(value int64) (result *IntLitType) {
+	result, ok := intLitTypeMap[value]
+	if !ok {
+		result = &IntLitType{Value: value}
+		intLitTypeMap[value] = result
+	}
+	return result
+}
+
 func GetTypeType(typ Type) (result *TypeType) {
 	result, ok := typeTypeMap[typ]
 	//result, ok := ptrTypeMap[typ]
@@ -1378,9 +1390,6 @@ func GetTypeType(typ Type) (result *TypeType) {
 }
 
 func TypeCheckArrayLit(tc *TypeChecker, scope Scope, arg ArrayLit, expected Type) TcExpr {
-	// TODO expect use expect length
-	// expectedLen := expected.(ArrayType).Len
-	//
 	switch exp := expected.(type) {
 	case *ArrayType:
 		var result TcArrayLit
@@ -1389,6 +1398,7 @@ func TypeCheckArrayLit(tc *TypeChecker, scope Scope, arg ArrayLit, expected Type
 		for i, item := range arg.Items {
 			result.Items[i] = TypeCheckExpr(tc, scope, item, exp.Elem)
 		}
+		ExpectArgsLen(tc, arg, len(arg.Items), int(exp.Len))
 		return result
 	case *EnumSetType:
 		var result TcEnumSetLit

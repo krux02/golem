@@ -88,17 +88,22 @@ type ContinueStmt struct {
 	Source string
 }
 
-type TypeContext struct {
+type TypeContext struct { // type <Expr>
 	Source string
 	Expr   TypeExpr
 }
 
-type ReturnStmt struct {
+type ReturnExpr struct { // return <Expr>
 	Source string
 	Value  Expr
 }
 
-type EnumDef struct {
+type VarExpr struct {
+	Source string
+	Expr   Expr
+}
+
+type EnumDef struct { // type MyEnum enum <Expr>
 	Source      string
 	Name        Ident
 	Values      []Ident
@@ -190,7 +195,7 @@ type PackageDef struct {
 	TopLevelStmts []Expr
 }
 
-type StaticExpr struct {
+type StaticExpr struct { // static <Expr>
 	Source string
 	Expr   Expr
 }
@@ -212,7 +217,7 @@ func (_ DocComment) expression()      {}
 func (_ Ident) expression()           {}
 func (_ CodeBlock) expression()       {}
 func (_ StrLit) expression()          {}
-func (_ *IntLit) expression()         {}
+func (_ IntLit) expression()          {}
 func (_ FloatLit) expression()        {}
 func (_ ArrayLit) expression()        {}
 func (_ CharLit) expression()         {}
@@ -224,7 +229,8 @@ func (_ ForLoopStmt) expression()     {}
 func (_ WhileLoopStmt) expression()   {}
 func (_ IfExpr) expression()          {}
 func (_ IfElseExpr) expression()      {}
-func (_ ReturnStmt) expression()      {}
+func (_ ReturnExpr) expression()      {}
+func (_ VarExpr) expression()         {}
 func (_ TypeContext) expression()     {}
 func (_ BreakStmt) expression()       {}
 func (_ ContinueStmt) expression()    {}
@@ -241,7 +247,7 @@ func (arg Ident) GetSource() string           { return arg.Source }
 func (arg CodeBlock) GetSource() string       { return arg.Source }
 func (arg StrLit) GetSource() string          { return arg.Source }
 func (arg CStrLit) GetSource() string         { return arg.Source }
-func (arg *IntLit) GetSource() string         { return arg.Source }
+func (arg IntLit) GetSource() string          { return arg.Source }
 func (arg FloatLit) GetSource() string        { return arg.Source }
 func (arg ArrayLit) GetSource() string        { return arg.Source }
 func (arg CharLit) GetSource() string         { return arg.Source }
@@ -252,7 +258,8 @@ func (arg ForLoopStmt) GetSource() string     { return arg.Source }
 func (arg WhileLoopStmt) GetSource() string   { return arg.Source }
 func (arg IfExpr) GetSource() string          { return arg.Source }
 func (arg IfElseExpr) GetSource() string      { return arg.Source }
-func (arg ReturnStmt) GetSource() string      { return arg.Source }
+func (arg ReturnExpr) GetSource() string      { return arg.Source }
+func (arg VarExpr) GetSource() string         { return arg.Source }
 func (arg BreakStmt) GetSource() string       { return arg.Source }
 func (arg ContinueStmt) GetSource() string    { return arg.Source }
 func (arg TypeContext) GetSource() string     { return arg.Source }
