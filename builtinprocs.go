@@ -68,10 +68,6 @@ type IntLitType struct {
 	Value int64
 }
 
-type MutableType struct {
-	Target Type
-}
-
 // the type that represets types as arguments. Example:
 //
 //	sizeof(type int)
@@ -170,13 +166,6 @@ func (typ *PtrType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune('P')
 	typ.Target.ManglePrint(builder)
 	builder.WriteRune('_')
-}
-
-func (typ *MutableType) ManglePrint(builder *strings.Builder) {
-	// mutability has no affect on name mangling. This will probably cause
-	// problems later, but for now it can be used to explore the idea that
-	// overloading a function, both mutable and non-mutable does not exist.
-	typ.Target.ManglePrint(builder)
 }
 
 func (typ *IntLitType) ManglePrint(builder *strings.Builder) {
@@ -315,10 +304,6 @@ func (typ *IntLitType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	return IntLit{Type: typ, Value: typ.Value}
 }
 
-func (typ *MutableType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
-	return typ.Target.DefaultValue(tc, context)
-}
-
 func (typ *TypeType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	panic("no default value for types")
 }
@@ -390,8 +375,6 @@ func extractGenericTypeSymbols(typ Type) (result []*GenericTypeSymbol) {
 	case *TypeType:
 		return extractGenericTypeSymbols(typ.Type)
 	case *PtrType:
-		return extractGenericTypeSymbols(typ.Target)
-	case *MutableType:
 		return extractGenericTypeSymbols(typ.Target)
 	case *OpenGenericType:
 		panic("interanl error, OpenGenericType should not be created around another OpenGenericType")
@@ -610,7 +593,6 @@ func init() {
 	typeTypeMap = make(map[Type]*TypeType)
 	packageMap = make(map[string]*TcPackageDef)
 	intLitTypeMap = make(map[int64]*IntLitType)
-	mutableTypeMap = make(map[Type]*MutableType)
 
 	// Printf is literally the only use case for real varargs that I actually see as
 	// practical. Therefore the implementation for varargs will be strictly tied to
@@ -655,10 +637,11 @@ func init() {
 		registerBuiltin(">", "(", ">", ")", []Type{typ, typ}, TypeBoolean)
 		registerBuiltin(">=", "(", ">=", ")", []Type{typ, typ}, TypeBoolean)
 
-		registerBuiltin("+=", "(", "+=", ")", []Type{GetMutableType(typ), typ}, TypeVoid)
-		registerBuiltin("-=", "(", "-=", ")", []Type{GetMutableType(typ), typ}, TypeVoid)
-		registerBuiltin("*=", "(", "*=", ")", []Type{GetMutableType(typ), typ}, TypeVoid)
-		registerBuiltin("/=", "(", "/=", ")", []Type{GetMutableType(typ), typ}, TypeVoid)
+		// TODO mark first argument as mutable
+		registerBuiltin("+=", "(", "+=", ")", []Type{typ, typ}, TypeVoid)
+		registerBuiltin("-=", "(", "-=", ")", []Type{typ, typ}, TypeVoid)
+		registerBuiltin("*=", "(", "*=", ")", []Type{typ, typ}, TypeVoid)
+		registerBuiltin("/=", "(", "/=", ")", []Type{typ, typ}, TypeVoid)
 
 		registerBuiltin("i8", "(int8_t)(", "", ")", []Type{typ}, TypeInt8)
 		registerBuiltin("i16", "(int16_t)(", "", ")", []Type{typ}, TypeInt16)
@@ -677,9 +660,11 @@ func init() {
 	{
 		// TODO: has no line information
 		T := &GenericTypeSymbol{Name: "T", Constraint: TypeUnspecified}
-		builtinAddr = registerGenericBuiltin("addr", "&(", "", ")", []*GenericTypeSymbol{T}, []Type{GetMutableType(T)}, GetPtrType(T))
+		// TODO mark argument as mutable
+		builtinAddr = registerGenericBuiltin("addr", "&(", "", ")", []*GenericTypeSymbol{T}, []Type{T}, GetPtrType(T))
 		builtinDeref = registerGenericBuiltin("[", "*(", "", ")", []*GenericTypeSymbol{T}, []Type{GetPtrType(T)}, T)
-		registerGenericBuiltin("=", "(", "=", ")", []*GenericTypeSymbol{T}, []Type{GetMutableType(T), T}, TypeVoid)
+		// TODO mark first argument as mutable
+		registerGenericBuiltin("=", "(", "=", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeVoid)
 		registerGenericBuiltin("==", "(", "==", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeBoolean)
 		registerGenericBuiltin("!=", "(", "!=", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeBoolean)
 	}

@@ -118,9 +118,10 @@ type StructDef struct {
 }
 
 type ProcArgument struct {
-	Source string
-	Name   Ident
-	Type   TypeExpr
+	Source  string
+	Name    Ident
+	Mutable bool
+	Type    TypeExpr
 }
 
 type CodeBlock struct {

@@ -1,6 +1,6 @@
 #proc assert(cond: Bool)
 
-proc mutableArgFunc(arg: var f32, somearg: f32):void = {
+proc mutableArgFunc((var arg): f32, somearg: f32):void = {
   arg += somearg
   arg *= somearg
 }

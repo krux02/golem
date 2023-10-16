@@ -773,6 +773,18 @@ func MatchBracketCall(expr Expr) (lhs Expr, args []Expr, ok bool) {
 	return lhs, args, true
 }
 
+func parseProcArgumentNoType(arg Expr) ProcArgument {
+	var mutable = false
+	if varExpr, ok := arg.(VarExpr); ok {
+		mutable = true
+		arg = varExpr.Expr
+	}
+	if ident, isIdent := arg.(Ident); isIdent {
+		return ProcArgument{Source: ident.Source, Name: ident, Mutable: mutable}
+	}
+	panic(fmt.Errorf("expected identifier but got %T (%s)", arg, AstFormat(arg)))
+}
+
 func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkProc)
@@ -806,25 +818,22 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 	result.Name = name
 	argsRaw := call.Args
 
-	var newArgs []Ident
+	var newArgs []ProcArgument
 	for _, arg := range argsRaw {
 		if colonExpr, ok := MatchColonExpr(arg); ok {
-			for _, newArg := range newArgs {
-				result.Args = append(result.Args, ProcArgument{Source: newArg.Source, Name: newArg, Type: colonExpr.Rhs})
+			newArgs = append(newArgs, parseProcArgumentNoType(colonExpr.Lhs))
+			for i := range newArgs {
+				newArgs[i].Type = colonExpr.Rhs
 			}
-			procArg := ProcArgument{Source: colonExpr.Source, Name: colonExpr.Lhs.(Ident), Type: colonExpr.Rhs}
-			result.Args = append(result.Args, procArg)
+			result.Args = append(result.Args, newArgs...)
 			newArgs = newArgs[:0]
-		} else if ident, ok := arg.(Ident); ok {
-			newArgs = append(newArgs, ident)
 		} else {
-			panic(fmt.Errorf("expected identifier but got %T", arg))
+			newArgs = append(newArgs, parseProcArgumentNoType(arg))
 		}
 	}
 	if len(newArgs) > 0 {
 		panic(fmt.Errorf("arguments have no type: %+v", newArgs))
 	}
-
 	result.Source = joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value)
 	return result
 }

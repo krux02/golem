@@ -37,6 +37,8 @@ func (builder *CodeBuilder) compileTypeExpr(context *PackageGeneratorContext, ty
 		builder.WriteString(typ.InternalName)
 	case *BuiltinIntType:
 		builder.WriteString(typ.InternalName)
+	case *BuiltinFloatType:
+		builder.WriteString(typ.InternalName)
 	case *ArrayType:
 		typ.ManglePrint(&builder.Builder)
 	case *StructType:
@@ -527,7 +529,7 @@ func markTypeForGeneration(context *PackageGeneratorContext, typ Type) {
 		markEnumTypeForGeneration(context, typ.Elem)
 	case *PtrType:
 		markTypeForGeneration(context, typ.Target)
-	case *BuiltinType, *BuiltinIntType:
+	case *BuiltinType, *BuiltinIntType, *BuiltinFloatType:
 		return
 	default:
 		panic(fmt.Errorf("internal error: %T", typ))

@@ -145,8 +145,6 @@ func LookUpType(tc *TypeChecker, scope Scope, expr TypeExpr) Type {
 		}
 		ReportErrorf(tc, expr, "Type not found: %s", name)
 		return TypeError
-	case VarExpr:
-		return GetMutableType(LookUpType(tc, scope, x.Expr))
 	case IntLit:
 		return GetIntLitType(x.Value)
 	}
@@ -276,7 +274,11 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def ProcDef) (result *
 	for _, arg := range def.Args {
 		ValidNameCheck(tc, arg.Name, "proc arg")
 		typ := LookUpType(tc, procScope, arg.Type)
-		tcArg := procScope.NewSymbol(tc, arg.Name, SkProcArg, typ)
+		symKind := SkProcArg
+		if arg.Mutable {
+			symKind = SkVarProcArg
+		}
+		tcArg := procScope.NewSymbol(tc, arg.Name, symKind, typ)
 		result.Signature.Params = append(result.Signature.Params, tcArg)
 	}
 	if result.Importc || def.Name.Source == "main" {
@@ -1232,7 +1234,7 @@ func TypeCheckExpr(tc *TypeChecker, scope Scope, arg Expr, expected Type) TcExpr
 		return (TcExpr)(TypeCheckIntLit(tc, scope, arg, expected))
 	case FloatLit:
 		typ := ExpectType(tc, arg, TypeAnyFloat, expected)
-		arg.Type = typ.(*BuiltinType)
+		arg.Type = typ.(*BuiltinFloatType)
 		return (TcExpr)(arg)
 	case ReturnExpr:
 		// ignoring expected type here, because the return as expression
@@ -1281,7 +1283,6 @@ var ptrTypeMap map[Type]*PtrType
 var typeTypeMap map[Type]*TypeType
 var packageMap map[string]*TcPackageDef
 var intLitTypeMap map[int64]*IntLitType
-var mutableTypeMap map[Type]*MutableType
 
 func GetPackage(importPath string) (result *TcPackageDef, err error) {
 	var ok bool
@@ -1327,15 +1328,6 @@ func GetIntLitType(value int64) (result *IntLitType) {
 	if !ok {
 		result = &IntLitType{Value: value}
 		intLitTypeMap[value] = result
-	}
-	return result
-}
-
-func GetMutableType(target Type) *MutableType {
-	result, ok := mutableTypeMap[target]
-	if !ok {
-		result = &MutableType{Target: target}
-		mutableTypeMap[target] = result
 	}
 	return result
 }
