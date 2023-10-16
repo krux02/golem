@@ -356,10 +356,8 @@ func ExpectType(tc *TypeChecker, node AstNode, gotten, expected Type) Type {
 				theIntLitType.Value, theBuiltinType.Name, theBuiltinType.MinValue, theBuiltinType.MaxValue)
 			return TypeError
 		}
-		if theBuiltinType, expectBuiltinType := expected.(*BuiltinType); expectBuiltinType {
-			if theBuiltinType == TypeFloat32 || theBuiltinType == TypeFloat64 {
-				return theBuiltinType
-			}
+		if floatType, isFloatType := expected.(*BuiltinFloatType); isFloatType {
+			return floatType
 		}
 	}
 
@@ -1176,25 +1174,22 @@ func TypeCheckIntLit(tc *TypeChecker, scope Scope, arg IntLit, expected Type) Tc
 			Value:  arg.Value,
 		}
 		return result
-	case *BuiltinType:
-		if typ == TypeFloat32 || typ == TypeFloat64 {
-			var lit FloatLit
-			lit.Source = arg.Source
-			lit.Value = float64(arg.Value)
-			if typ == TypeFloat32 {
-				lit.Type = TypeFloat32
-				if int64(float32(lit.Value)) != arg.Value {
-					ReportErrorf(tc, arg, "can't represent %d as float32 precisely", arg.Value)
-				}
-			} else if typ == TypeFloat64 {
-				lit.Type = TypeFloat64
-				if int64(lit.Value) != arg.Value {
-					ReportErrorf(tc, arg, "can't represent %d as float64 precisely", arg.Value)
-				}
+	case *BuiltinFloatType:
+		var lit FloatLit
+		lit.Source = arg.Source
+		lit.Value = float64(arg.Value)
+		if typ == TypeFloat32 {
+			lit.Type = TypeFloat32
+			if int64(float32(lit.Value)) != arg.Value {
+				ReportErrorf(tc, arg, "can't represent %d as float32 precisely", arg.Value)
 			}
-			return lit
+		} else if typ == TypeFloat64 {
+			lit.Type = TypeFloat64
+			if int64(lit.Value) != arg.Value {
+				ReportErrorf(tc, arg, "can't represent %d as float64 precisely", arg.Value)
+			}
 		}
-		panic(fmt.Errorf("internal error: %T", typ))
+		return lit
 	default:
 		panic(fmt.Errorf("internal error: %T", typ))
 	}

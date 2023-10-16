@@ -502,6 +502,10 @@ func (typ *BuiltinIntType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(typ.Name)
 }
 
+func (typ *BuiltinFloatType) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString(typ.Name)
+}
+
 func (typ *UnspecifiedType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("?unspecified?")
 }

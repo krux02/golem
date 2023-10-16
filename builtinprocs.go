@@ -11,6 +11,12 @@ type BuiltinType struct {
 	MangleChar   rune
 }
 
+type BuiltinFloatType struct {
+	Name         string
+	InternalName string
+	MangleChar   rune
+}
+
 type BuiltinIntType struct {
 	Name         string
 	InternalName string
@@ -95,6 +101,10 @@ func (typ *BuiltinType) ManglePrint(builder *strings.Builder) {
 }
 
 func (typ *BuiltinIntType) ManglePrint(builder *strings.Builder) {
+	builder.WriteRune(typ.MangleChar)
+}
+
+func (typ *BuiltinFloatType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune(typ.MangleChar)
 }
 
@@ -195,16 +205,20 @@ func (typ *TypeType) ManglePrint(builder *strings.Builder) {
 // something working.
 
 var TypeBoolean = &BuiltinType{"bool", "bool", 'b'}
+
 var TypeInt8 = &BuiltinIntType{"i8", "int8_t", 'm', -0x80, 0x7f}
 var TypeInt16 = &BuiltinIntType{"i16", "int16_t", 's', -0x8000, 0x7fff}
 var TypeInt32 = &BuiltinIntType{"i32", "int32_t", 'i', -0x80000000, 0x7fffffff}
 var TypeInt64 = &BuiltinIntType{"i64", "int64_t", 'l', -0x8000000000000000, 0x7fffffffffffffff}
+
 var TypeUInt8 = &BuiltinIntType{"u8", "uint8_t", 'M', 0, 0xff}
 var TypeUInt16 = &BuiltinIntType{"u16", "uint16_t", 'S', 0, 0xffff}
 var TypeUInt32 = &BuiltinIntType{"u32", "uint32_t", 'I', 0, 0xffffffff}
 var TypeUInt64 = &BuiltinIntType{"u64", "uint64_t", 'L', 0, 0xffffffffffffffff}
-var TypeFloat32 = &BuiltinType{"f32", "float", 'f'}
-var TypeFloat64 = &BuiltinType{"f64", "double", 'd'}
+
+var TypeFloat32 = &BuiltinFloatType{"f32", "float", 'f'}
+var TypeFloat64 = &BuiltinFloatType{"f64", "double", 'd'}
+
 var TypeStr = &BuiltinType{"str", "string", 'R'}
 var TypeChar = &BuiltinType{"char", "char", 'c'}
 var TypeVoid = &BuiltinType{"void", "void", 'v'}
@@ -244,8 +258,6 @@ func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	if typ == TypeNoReturn {
 		ReportErrorf(tc, context, "a default value of no retrun does not exist")
 		return TcErrorNode{}
-	} else if typ == TypeFloat32 || typ == TypeFloat64 {
-		return FloatLit{Type: typ}
 	} else if typ == TypeChar {
 		return CharLit{}
 	} else if typ == TypeBoolean {
@@ -260,6 +272,10 @@ func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 
 func (typ *BuiltinIntType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	return IntLit{Type: typ, Value: 0} // TODO no Source set
+}
+
+func (typ *BuiltinFloatType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+	return FloatLit{Type: typ}
 }
 
 func (typ *UnspecifiedType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
@@ -333,6 +349,14 @@ func registerBuiltinType(typ *BuiltinType) {
 }
 
 func registerBuiltinIntType(typ *BuiltinIntType) {
+	_, ok := builtinScope.Types[typ.Name]
+	if ok {
+		panic("internal error double definition of builtin type")
+	}
+	builtinScope.Types[typ.Name] = typ
+}
+
+func registerBuiltinFloatType(typ *BuiltinFloatType) {
 	_, ok := builtinScope.Types[typ.Name]
 	if ok {
 		panic("internal error double definition of builtin type")
@@ -606,8 +630,8 @@ func init() {
 	registerBuiltinIntType(TypeUInt16)
 	registerBuiltinIntType(TypeUInt32)
 	registerBuiltinIntType(TypeUInt64)
-	registerBuiltinType(TypeFloat32)
-	registerBuiltinType(TypeFloat64)
+	registerBuiltinFloatType(TypeFloat32)
+	registerBuiltinFloatType(TypeFloat64)
 	registerBuiltinType(TypeStr)
 	registerBuiltinType(TypeCString)
 	registerBuiltinType(TypeVoid)
