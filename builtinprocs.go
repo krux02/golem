@@ -62,6 +62,10 @@ type IntLitType struct {
 	Value int64
 }
 
+type MutableType struct {
+	target Type
+}
+
 // the type that represets types as arguments. Example:
 //
 //	sizeof(type int)
@@ -151,10 +155,18 @@ func (typ *EnumSetType) ManglePrint(builder *strings.Builder) {
 	typ.Elem.ManglePrint(builder)
 	builder.WriteRune('_')
 }
+
 func (typ *PtrType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune('P')
 	typ.Target.ManglePrint(builder)
 	builder.WriteRune('_')
+}
+
+func (typ *MutableType) ManglePrint(builder *strings.Builder) {
+	// mutability has no affect on name mangling. This will probably cause
+	// problems later, but for now it can be used to explore the idea that
+	// overloading a function, both mutable and non-mutable does not exist.
+	typ.target.ManglePrint(builder)
 }
 
 func (typ *IntLitType) ManglePrint(builder *strings.Builder) {
@@ -285,6 +297,10 @@ func (typ *EnumSetType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 
 func (typ *IntLitType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	return IntLit{Type: typ, Value: typ.Value}
+}
+
+func (typ *MutableType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+	return typ.target.DefaultValue(tc, context)
 }
 
 func (typ *TypeType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
@@ -568,6 +584,7 @@ func init() {
 	typeTypeMap = make(map[Type]*TypeType)
 	packageMap = make(map[string]*TcPackageDef)
 	intLitTypeMap = make(map[int64]*IntLitType)
+	mutableTypeMap = make(map[Type]*MutableType)
 
 	// Printf is literally the only use case for real varargs that I actually see as
 	// practical. Therefore the implementation for varargs will be strictly tied to

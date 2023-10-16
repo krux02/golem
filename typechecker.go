@@ -145,6 +145,8 @@ func LookUpType(tc *TypeChecker, scope Scope, expr TypeExpr) Type {
 		}
 		ReportErrorf(tc, expr, "Type not found: %s", name)
 		return TypeError
+	case VarExpr:
+		return GetMutableType(LookUpType(tc, scope, x.Expr))
 	case IntLit:
 		return GetIntLitType(x.Value)
 	}
@@ -494,12 +496,29 @@ func AppendNoDuplicats(types []Type, typ Type) (result []Type) {
 }
 
 // inversion of arguments, because go only has polymorphism on the self argument
-func (typ *BuiltinType) AppendToGroup(builder *TypeGroupBuilder) bool {
-	builder.Items = AppendNoDuplicats(builder.Items, typ)
-	return false
-}
 
-func (typ *BuiltinIntType) AppendToGroup(builder *TypeGroupBuilder) bool {
+func AppendToGroup(builder *TypeGroupBuilder, typ Type) (result bool) {
+	switch typ := typ.(type) {
+	case *TypeGroup:
+		for _, it := range typ.Items {
+			result = AppendToGroup(builder, it)
+			// early return in case of TypeUnspecified
+			if result {
+				return result
+			}
+		}
+		return result
+	case *UnspecifiedType:
+		builder.Items = nil
+		return true
+	case *GenericTypeSymbol:
+		return AppendToGroup(builder, typ.Constraint)
+	case *OpenGenericType:
+		builder.Items = nil
+		return true
+	}
+	// TODO not sure if *ErrorType should be special cased or not.
+	//default
 	builder.Items = AppendNoDuplicats(builder.Items, typ)
 	return false
 }
@@ -507,68 +526,6 @@ func (typ *BuiltinIntType) AppendToGroup(builder *TypeGroupBuilder) bool {
 func (typ *UnspecifiedType) AppendToGroup(builder *TypeGroupBuilder) bool {
 	builder.Items = nil
 	return true
-}
-
-func (typ *OpenGenericType) AppendToGroup(builder *TypeGroupBuilder) bool {
-	builder.Items = nil
-	return true
-}
-
-func (typ *TypeGroup) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
-	for _, it := range typ.Items {
-		result = it.AppendToGroup(builder)
-		// early return in case of TypeUnspecified
-		if result {
-			return result
-		}
-	}
-	return result
-}
-
-func (typ *EnumType) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
-	builder.Items = AppendNoDuplicats(builder.Items, typ)
-	return false
-}
-
-func (typ *StructType) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
-	builder.Items = AppendNoDuplicats(builder.Items, typ)
-	return false
-}
-
-func (typ *ArrayType) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
-	builder.Items = AppendNoDuplicats(builder.Items, typ)
-	return false
-}
-
-func (typ *EnumSetType) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
-	builder.Items = AppendNoDuplicats(builder.Items, typ)
-	return false
-}
-
-func (typ *PtrType) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
-	builder.Items = AppendNoDuplicats(builder.Items, typ)
-	return false
-}
-
-func (typ *ErrorType) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
-	// not sure if this is correct
-	// either it should be appended, or all should just be replaced with the error type.
-	builder.Items = AppendNoDuplicats(builder.Items, typ)
-	return false
-}
-
-func (typ *GenericTypeSymbol) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
-	return typ.Constraint.AppendToGroup(builder)
-}
-
-func (typ *IntLitType) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
-	// TODO implement
-	panic("not implemented")
-}
-
-func (typ *TypeType) AppendToGroup(builder *TypeGroupBuilder) (result bool) {
-	builder.Items = AppendNoDuplicats(builder.Items, typ)
-	return false
 }
 
 func argTypeGroupAtIndex(signatures []ProcSignature, idx int) (result Type) {
@@ -582,7 +539,7 @@ func argTypeGroupAtIndex(signatures []ProcSignature, idx int) (result Type) {
 			// TODO this can be more precise than the most generic `TypeUnspecified`
 			return TypeUnspecified
 		}
-		typ.AppendToGroup(builder)
+		AppendToGroup(builder, typ)
 	}
 	switch len(builder.Items) {
 	case 0:
@@ -1329,6 +1286,7 @@ var ptrTypeMap map[Type]*PtrType
 var typeTypeMap map[Type]*TypeType
 var packageMap map[string]*TcPackageDef
 var intLitTypeMap map[int64]*IntLitType
+var mutableTypeMap map[Type]*MutableType
 
 func GetPackage(importPath string) (result *TcPackageDef, err error) {
 	var ok bool
@@ -1374,6 +1332,15 @@ func GetIntLitType(value int64) (result *IntLitType) {
 	if !ok {
 		result = &IntLitType{Value: value}
 		intLitTypeMap[value] = result
+	}
+	return result
+}
+
+func GetMutableType(target Type) *MutableType {
+	result, ok := mutableTypeMap[target]
+	if !ok {
+		result = &MutableType{target: target}
+		mutableTypeMap[target] = result
 	}
 	return result
 }

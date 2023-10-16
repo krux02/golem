@@ -790,6 +790,11 @@ func (typ *PtrType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(")")
 }
 
+func (typ *MutableType) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("var ")
+	typ.target.PrettyPrint(builder)
+}
+
 func (lit *IntLitType) PrettyPrint(builder *AstPrettyPrinter) {
 	WriteIntLit(&builder.Builder, lit.Value)
 }

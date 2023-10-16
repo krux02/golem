@@ -11,7 +11,6 @@ type Type interface {
 	PrettyPrint(*AstPrettyPrinter)
 	ManglePrint(*strings.Builder) // print for name magling
 	DefaultValue(tc *TypeChecker, context AstNode) TcExpr
-	AppendToGroup(*TypeGroupBuilder) bool // return true if the type group became `TypeUnspecified`
 }
 
 type TcExpr interface {

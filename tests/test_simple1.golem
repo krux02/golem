@@ -1,7 +1,6 @@
 #proc assert(cond: Bool)
 
-proc mutableArgFunc(arg: f32, somearg: f32):void = {
-  # TODO user `var f32` here.
+proc mutableArgFunc(arg: var f32, somearg: f32):void = {
   arg += somearg
   arg *= somearg
 }
@@ -62,7 +61,9 @@ proc main():i32 = {
     let myfloat1 = 12:f32
     let myfloat2:f32 = 13
     mutableArgFunc(myfloat1, myfloat2)
-    # TODO assert(myfloat1 == 325)
+    printf("myfloat1: %f\n", myfloat1)
+    assert(myfloat1 == 325)
+    assert(myfloat1 == 325)
   }
 
   return 0

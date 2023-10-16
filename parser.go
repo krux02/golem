@@ -812,7 +812,8 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 			for _, newArg := range newArgs {
 				result.Args = append(result.Args, ProcArgument{Source: newArg.Source, Name: newArg, Type: colonExpr.Rhs})
 			}
-			result.Args = append(result.Args, ProcArgument{Source: colonExpr.Source, Name: colonExpr.Lhs.(Ident), Type: colonExpr.Rhs})
+			procArg := ProcArgument{Source: colonExpr.Source, Name: colonExpr.Lhs.(Ident), Type: colonExpr.Rhs}
+			result.Args = append(result.Args, procArg)
 			newArgs = newArgs[:0]
 		} else if ident, ok := arg.(Ident); ok {
 			newArgs = append(newArgs, ident)
