@@ -16,6 +16,7 @@ type Type interface {
 type TcExpr interface {
 	AstNode
 	GetType() Type
+	GetMutable() bool
 }
 
 // node to wrap code that can't be typechecked
@@ -55,7 +56,7 @@ type TcCodeBlock struct {
 	Items  []TcExpr
 }
 
-// TODO unify TcProcSym with the othe symbol types
+// TODO maybe unify TcProcSym with the othe symbol types
 type TcProcSymbol struct {
 	Source string
 	Impl   Overloadable // TcProcDef, TcBuiltinProcDef
@@ -66,11 +67,13 @@ type SymbolKind int
 // not the type or properties of a symbol, just where it has been declared
 const (
 	SkInvalid SymbolKind = iota
+	SkConst
 	SkLet
 	SkVar
-	SkConst
 	SkProcArg
+	SkVarProcArg
 	SkLoopIterator
+	SkVarLoopIterator
 	SkEnum
 )
 
@@ -320,3 +323,55 @@ func (arg *TcProcDef) GetSignature() ProcSignature               { return arg.Si
 func (arg *TcTemplateDef) GetSignature() ProcSignature           { return arg.Signature }
 func (arg *TcBuiltinMacroDef) GetSignature() ProcSignature       { return arg.Signature }
 func (arg *TcErrorProcDef) GetSignature() ProcSignature          { return arg.Signature }
+
+func (arg TcDotExpr) GetMutable() bool   { return arg.Lhs.GetMutable() }
+func (arg TcErrorNode) GetMutable() bool { return true } // just to prevent noice from error nodes
+func (arg TcSymbol) GetMutable() bool {
+	k := arg.Kind
+	return k == SkVar || k == SkVarProcArg || k == SkVarLoopIterator || k == SkInvalid
+}
+func (arg TcCall) GetMutable() bool {
+	// TODO, actually do the mutability inference
+	return false
+}
+
+func (arg TcCodeBlock) GetMutable() bool {
+	if len(arg.Items) > 0 {
+		return arg.Items[len(arg.Items)-1].GetMutable()
+	}
+	return false
+}
+
+func (arg TcIfElseExpr) GetMutable() bool { return arg.Body.GetMutable() && arg.Else.GetMutable() }
+
+func (arg TcStructField) GetMutable() bool { return false }
+
+func (arg TcProcSymbol) GetMutable() bool      { return false }
+func (arg TcVariableDefStmt) GetMutable() bool { return false }
+func (arg TcReturnExpr) GetMutable() bool      { return false }
+func (arg TcTypeContext) GetMutable() bool     { return false }
+func (arg TcForLoopStmt) GetMutable() bool     { return false }
+func (arg TcWhileLoopStmt) GetMutable() bool   { return false }
+func (arg TcIfStmt) GetMutable() bool          { return false }
+
+func (arg TcArrayLit) GetMutable() bool   { return false }
+func (arg TcEnumSetLit) GetMutable() bool { return false }
+func (arg IntLit) GetMutable() bool       { return false }
+func (arg FloatLit) GetMutable() bool     { return false }
+func (arg CStrLit) GetMutable() bool      { return false }
+func (arg StrLit) GetMutable() bool       { return false }
+func (arg CharLit) GetMutable() bool      { return false }
+func (arg NilLit) GetMutable() bool       { return false }
+
+func (arg *TcProcDef) GetMutable() bool               { return false }
+func (arg *TcBuiltinProcDef) GetMutable() bool        { return false }
+func (arg *TcBuiltinGenericProcDef) GetMutable() bool { return false }
+func (arg *TcTemplateDef) GetMutable() bool           { return false }
+func (arg TcStructLit) GetMutable() bool              { return false }
+func (arg TcPackageDef) GetMutable() bool             { return false }
+
+func (arg *TcStructDef) GetMutable() bool       { return false }
+func (arg *TcEnumDef) GetMutable() bool         { return false }
+func (arg *GenericTypeSymbol) GetMutable() bool { return false }
+func (arg *TcBuiltinMacroDef) GetMutable() bool { return false }
+func (arg *TcErrorProcDef) GetMutable() bool    { return false }
