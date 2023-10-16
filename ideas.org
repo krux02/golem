@@ -460,7 +460,7 @@ and an integer containing the array length. For the reader this
 pointer integer pair instantly reads as an array argument. But it is
 more than just a reference to an array, it can seamlessly be used to
 reference a subarray without the introduction of a new type. Nim, Rust
-and C++ all have a specific type introduced, just to parss subarrays
+and C++ all have a specific type introduced, just to pass subarrays
 to functions.
 
 These new types are technically a good solution, but they bring in a
@@ -481,7 +481,7 @@ out yet.
 
 null terminating strings might be incompatible with this concept.
 
-* dynamical scoping with compile time check.
+* dynamic scoping with compile time check.
 
 This idea came from working on opengl sandbox, but it is also
 inspiried from dynamically scoped variables in emacs lisp.
@@ -549,7 +549,38 @@ just a programming pattern. This language doesn't try to implement
 entity component systems as a language feature either, but as a
 standard library macro. Similar to OO programming
 
+* Mutability
+
+The default way to pass arguments to a function is by const reference or by copy
+if that is easier to do. C++ and other languages approach this by constness of
+types. For every type ~Foo~ there is a ~const Foo~ and a ~mutable Foo~. Two
+different types. In the case of C++ also a path to introduce distinctive
+behavior for those types through overloading. Having mutability as part of the
+type makes the type system complicated. Every type will effectively be
+duplicated and in a lot of cases, where mutability isn't the question, this
+extra information needs to be actively ignore. Which likely causes compiler
+bugs.
+
+The proposed solution would be to tag the constness/mutability/assignability to
+the expression, rather than the type.
+
+** dynconst
+Problem:
+
+#+begin_src golem
+# with code duplication
+proc getItem(a: var Foo, idx: int): var Bar = {...}
+proc getItem(a: const Foo, idx: int): const Bar {...}
+# without code duplication
+proc getItem(a: dynconst Foo, idx: int): dynconstof(a) Bar = {...}
+#+end_src
+
+one implementation when /constness/ just needs to be propagated. The
+implementation has the restriction to worth with both const and
+mutable, arguments.
+
 * Compiler internal data structure for the Syntax Tree.
+
 
 For a syntax tree it is important to process with recursive
 algorithms (iterate members), but it is also important to provide
@@ -759,7 +790,7 @@ examples:
  * ~let x:i64 = a + b~ equivalent to ~let x = (a + b):i64~
  * ~let y = 123456789:i64~
  * ~let z = 123.456:f32~
- * ~let f = foo:proc(f32,f32):f32
+ * ~let f = foo:proc(f32,f32):f32~
 
 This is not a type cast, it is just an annotation for the type checker
 to declare the expected type.
@@ -769,23 +800,7 @@ for a symbol. The idea is to extend this syntax and allow it to be
 used for arbitrary expressions. It could be made a universal truth in
 golem that ~:~ is always followed by a /TYPEEXPR/
 
-** dynconst
-
-Name is not final.
-
-Problem:
-
-#+begin_src golem
-# with code duplication
-proc getItem(a: var Foo, idx: int): var Bar = {...}
-proc getItem(a: const Foo, idx: int): const Bar {...}
-# without code duplication
-proc getItem(a: dynconst Foo, idx: int): dynconstof(a) Bar = {...}
-#+end_src
-
-one implementation when /constness/ just needs to be propagated. The
-implementation has the restriction to worth with both const and
-mutable, arguments.
+**
 
 ** enforce divMod on integer division
 

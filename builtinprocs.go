@@ -63,7 +63,7 @@ type IntLitType struct {
 }
 
 type MutableType struct {
-	target Type
+	Target Type
 }
 
 // the type that represets types as arguments. Example:
@@ -166,7 +166,7 @@ func (typ *MutableType) ManglePrint(builder *strings.Builder) {
 	// mutability has no affect on name mangling. This will probably cause
 	// problems later, but for now it can be used to explore the idea that
 	// overloading a function, both mutable and non-mutable does not exist.
-	typ.target.ManglePrint(builder)
+	typ.Target.ManglePrint(builder)
 }
 
 func (typ *IntLitType) ManglePrint(builder *strings.Builder) {
@@ -300,7 +300,7 @@ func (typ *IntLitType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 }
 
 func (typ *MutableType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
-	return typ.target.DefaultValue(tc, context)
+	return typ.Target.DefaultValue(tc, context)
 }
 
 func (typ *TypeType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
@@ -367,12 +367,14 @@ func extractGenericTypeSymbols(typ Type) (result []*GenericTypeSymbol) {
 		return extractGenericTypeSymbols(typ.Type)
 	case *PtrType:
 		return extractGenericTypeSymbols(typ.Target)
+	case *MutableType:
+		return extractGenericTypeSymbols(typ.Target)
 	case *OpenGenericType:
 		panic("interanl error, OpenGenericType should not be created around another OpenGenericType")
 	case *GenericTypeSymbol:
 		return []*GenericTypeSymbol{typ}
 	}
-	panic("should be dead code")
+	panic(fmt.Errorf("unhandled type: %T", typ))
 }
 
 func SymSubset(setA, setB []*GenericTypeSymbol) bool {
@@ -629,10 +631,10 @@ func init() {
 		registerBuiltin(">", "(", ">", ")", []Type{typ, typ}, TypeBoolean)
 		registerBuiltin(">=", "(", ">=", ")", []Type{typ, typ}, TypeBoolean)
 
-		registerBuiltin("+=", "(", "+=", ")", []Type{typ, typ}, TypeVoid)
-		registerBuiltin("-=", "(", "-=", ")", []Type{typ, typ}, TypeVoid)
-		registerBuiltin("*=", "(", "*=", ")", []Type{typ, typ}, TypeVoid)
-		registerBuiltin("/=", "(", "/=", ")", []Type{typ, typ}, TypeVoid)
+		registerBuiltin("+=", "(", "+=", ")", []Type{GetMutableType(typ), typ}, TypeVoid)
+		registerBuiltin("-=", "(", "-=", ")", []Type{GetMutableType(typ), typ}, TypeVoid)
+		registerBuiltin("*=", "(", "*=", ")", []Type{GetMutableType(typ), typ}, TypeVoid)
+		registerBuiltin("/=", "(", "/=", ")", []Type{GetMutableType(typ), typ}, TypeVoid)
 
 		registerBuiltin("i8", "(int8_t)(", "", ")", []Type{typ}, TypeInt8)
 		registerBuiltin("i16", "(int16_t)(", "", ")", []Type{typ}, TypeInt16)
@@ -651,9 +653,9 @@ func init() {
 	{
 		// TODO: has no line information
 		T := &GenericTypeSymbol{Name: "T", Constraint: TypeUnspecified}
-		builtinAddr = registerGenericBuiltin("addr", "&(", "", ")", []*GenericTypeSymbol{T}, []Type{T}, GetPtrType(T))
+		builtinAddr = registerGenericBuiltin("addr", "&(", "", ")", []*GenericTypeSymbol{T}, []Type{GetMutableType(T)}, GetPtrType(T))
 		builtinDeref = registerGenericBuiltin("[", "*(", "", ")", []*GenericTypeSymbol{T}, []Type{GetPtrType(T)}, T)
-		registerGenericBuiltin("=", "(", "=", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeVoid)
+		registerGenericBuiltin("=", "(", "=", ")", []*GenericTypeSymbol{T}, []Type{GetMutableType(T), T}, TypeVoid)
 		registerGenericBuiltin("==", "(", "==", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeBoolean)
 		registerGenericBuiltin("!=", "(", "!=", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeBoolean)
 	}

@@ -1,4 +1,4 @@
-* TODO mutable flag in type
+* TODO mutability inference as orthogonal information to the type of expressions, get rid of MutableType
 * TODO display parsing errors as normal error messages
 * TODO templates
 * TODO generic functions

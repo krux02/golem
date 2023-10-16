@@ -1339,7 +1339,7 @@ func GetIntLitType(value int64) (result *IntLitType) {
 func GetMutableType(target Type) *MutableType {
 	result, ok := mutableTypeMap[target]
 	if !ok {
-		result = &MutableType{target: target}
+		result = &MutableType{Target: target}
 		mutableTypeMap[target] = result
 	}
 	return result
