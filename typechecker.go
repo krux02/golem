@@ -152,10 +152,20 @@ func LookUpType(tc *TypeChecker, scope Scope, expr TypeExpr) Type {
 	return TypeError
 }
 
-func LookUpProc(scope Scope, ident Ident, signatures []ProcSignature) []ProcSignature {
+func LookUpProc(scope Scope, ident Ident, numArgs int, signatures []ProcSignature) []ProcSignature {
 	for scope != nil {
 		if localSignatures, ok := scope.Procedures[ident.Source]; ok {
-			signatures = append(signatures, localSignatures...)
+			if numArgs >= 0 { // num args may be set to -1 to get all signatures
+				for _, sig := range localSignatures {
+					// TODO, the varargs logic herer needs a proper test
+					if len(sig.Params) == numArgs || sig.Varargs && len(sig.Params) <= numArgs {
+						signatures = append(signatures, sig)
+					}
+				}
+			} else {
+				signatures = append(signatures, localSignatures...)
+			}
+
 		}
 		scope = scope.Parent
 	}
@@ -245,13 +255,13 @@ func TypeCheckEnumDef(tc *TypeChecker, scope Scope, def EnumDef) *TcEnumDef {
 		result.Values = append(result.Values, sym)
 	}
 	RegisterType(tc, scope, enumType.Impl.Name, enumType, def.Name)
-	registerBuiltin("string", fmt.Sprintf("%s_names_array[", result.Name), "", "]", []Type{enumType}, TypeStr)
+	registerBuiltin("string", fmt.Sprintf("%s_names_array[", result.Name), "", "]", []Type{enumType}, TypeStr, false)
 	for _, intType := range TypeAnyInt.Items {
 		builtinType := intType.(*BuiltinIntType)
-		registerBuiltin(builtinType.Name, fmt.Sprintf("(%s)", builtinType.InternalName), "", "", []Type{enumType}, intType)
-		registerBuiltin(result.Name, fmt.Sprintf("(%s)", result.Name), "", "", []Type{intType}, enumType)
+		registerBuiltin(builtinType.Name, fmt.Sprintf("(%s)", builtinType.InternalName), "", "", []Type{enumType}, intType, false)
+		registerBuiltin(result.Name, fmt.Sprintf("(%s)", result.Name), "", "", []Type{intType}, enumType, false)
 	}
-	registerBuiltin("contains", "(((", ") & (1 << (", "))) != 0)", []Type{GetEnumSetType(enumType), enumType}, TypeBoolean)
+	registerBuiltin("contains", "(((", ") & (1 << (", "))) != 0)", []Type{GetEnumSetType(enumType), enumType}, TypeBoolean, false)
 	return result
 }
 
@@ -734,7 +744,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		result := TypeCheckExpr(tc, scope, call.Args[0], typ)
 		return result
 	}
-	signatures := LookUpProc(scope, ident, nil)
+	signatures := LookUpProc(scope, ident, len(call.Args), nil)
 	var checkedArgs []TcExpr
 	hasArgTypeError := false
 	for i, arg := range call.Args {
@@ -788,7 +798,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 			builder.WriteString(")")
 
 			// original signatures
-			signatures = LookUpProc(scope, ident, nil)
+			signatures = LookUpProc(scope, ident, -1, nil)
 			if len(signatures) > 0 {
 				builder.NewlineAndIndent()
 				builder.WriteString("available overloads: ")
@@ -830,7 +840,6 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 			// currently replacing the signature alone is enough, but that is not a
 			// general solution.
 			implInstance := &TcBuiltinProcDef{
-				Source:    impl.Source,
 				Name:      impl.Name,
 				Signature: sig,
 				Prefix:    impl.Prefix,
@@ -1299,7 +1308,7 @@ func GetArrayType(elem Type, len int64) (result *ArrayType) {
 	if !ok {
 		result = &ArrayType{Elem: elem, Len: len}
 		arrayTypeMap[ArrayTypeMapKey{elem, len}] = result
-		registerBuiltin("[", "", ".arr[", "]", []Type{result, TypeInt64}, elem)
+		registerBuiltin("[", "", ".arr[", "]", []Type{result, TypeInt64}, elem, true)
 		registerSimpleTemplate("len", []Type{result}, TypeInt64, IntLit{Type: TypeInt64, Value: len})
 	}
 	return result

@@ -399,7 +399,7 @@ OUTER:
 	return true
 }
 
-func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []*GenericTypeSymbol, args []Type, result Type) ProcSignature {
+func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []*GenericTypeSymbol, args []Type, result Type, firstArgMutable bool) ProcSignature {
 	if len(genericParams) > 0 {
 		for i, arg := range args {
 			syms := extractGenericTypeSymbols(arg)
@@ -432,7 +432,11 @@ func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams [
 	}
 	for i, arg := range args {
 		procDef.Signature.Params[i].Type = arg
-		procDef.Signature.Params[i].Kind = SkProcArg
+		if firstArgMutable && i == 0 {
+			procDef.Signature.Params[i].Kind = SkVarProcArg
+		} else {
+			procDef.Signature.Params[i].Kind = SkProcArg
+		}
 	}
 	procDef.Signature.Impl = procDef
 	builtinScope.Procedures[name] = append(builtinScope.Procedures[name], procDef.Signature)
@@ -457,8 +461,8 @@ func registerBuiltinMacro(name string, varargs bool, args []Type, result Type, m
 	builtinScope.Procedures[name] = append(builtinScope.Procedures[name], macroDef.Signature)
 }
 
-func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Type) ProcSignature {
-	return registerGenericBuiltin(name, prefix, infix, postfix, nil, args, result)
+func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Type, firstArgMutable bool) ProcSignature {
+	return registerGenericBuiltin(name, prefix, infix, postfix, nil, args, result, firstArgMutable)
 }
 
 func registerSimpleTemplate(name string, args []Type, result Type, substitution TcExpr) {
@@ -598,7 +602,7 @@ func init() {
 	// practical. Therefore the implementation for varargs will be strictly tied to
 	// printf for now. A general concept for varargs will be specified out as soon
 	// as it becomes necessary, but right now it is not planned.
-	builtinCPrintf = registerBuiltin("c_printf", "printf(", ", ", ")", []Type{TypeCString}, TypeVoid)
+	builtinCPrintf = registerBuiltin("c_printf", "printf(", ", ", ")", []Type{TypeCString}, TypeVoid, false)
 	registerBuiltinMacro("printf", true, []Type{TypeStr}, TypeVoid, ValidatePrintfCall)
 
 	registerBuiltinMacro("addCFlags", false, []Type{TypeStr}, TypeVoid, BuiltinAddCFlags)
@@ -627,29 +631,27 @@ func init() {
 
 	for _, typ := range TypeAnyNumber.Items {
 
-		registerBuiltin("+", "(", "+", ")", []Type{typ, typ}, typ)
-		registerBuiltin("-", "(", "-", ")", []Type{typ, typ}, typ)
-		registerBuiltin("*", "(", "*", ")", []Type{typ, typ}, typ)
-		registerBuiltin("/", "(", "/", ")", []Type{typ, typ}, typ)
+		registerBuiltin("+", "(", "+", ")", []Type{typ, typ}, typ, false)
+		registerBuiltin("-", "(", "-", ")", []Type{typ, typ}, typ, false)
+		registerBuiltin("*", "(", "*", ")", []Type{typ, typ}, typ, false)
+		registerBuiltin("/", "(", "/", ")", []Type{typ, typ}, typ, false)
 
-		registerBuiltin("<", "(", "<", ")", []Type{typ, typ}, TypeBoolean)
-		registerBuiltin("<=", "(", "<=", ")", []Type{typ, typ}, TypeBoolean)
-		registerBuiltin(">", "(", ">", ")", []Type{typ, typ}, TypeBoolean)
-		registerBuiltin(">=", "(", ">=", ")", []Type{typ, typ}, TypeBoolean)
+		registerBuiltin("<", "(", "<", ")", []Type{typ, typ}, TypeBoolean, false)
+		registerBuiltin("<=", "(", "<=", ")", []Type{typ, typ}, TypeBoolean, false)
+		registerBuiltin(">", "(", ">", ")", []Type{typ, typ}, TypeBoolean, false)
+		registerBuiltin(">=", "(", ">=", ")", []Type{typ, typ}, TypeBoolean, false)
 
-		// TODO mark first argument as mutable
-		registerBuiltin("+=", "(", "+=", ")", []Type{typ, typ}, TypeVoid)
-		registerBuiltin("-=", "(", "-=", ")", []Type{typ, typ}, TypeVoid)
-		registerBuiltin("*=", "(", "*=", ")", []Type{typ, typ}, TypeVoid)
-		registerBuiltin("/=", "(", "/=", ")", []Type{typ, typ}, TypeVoid)
+		for _, op := range []string{"+=", "-=", "*=", "/="} {
+			registerBuiltin(op, "(", op, ")", []Type{typ, typ}, TypeVoid, true)
+		}
 
-		registerBuiltin("i8", "(int8_t)(", "", ")", []Type{typ}, TypeInt8)
-		registerBuiltin("i16", "(int16_t)(", "", ")", []Type{typ}, TypeInt16)
-		registerBuiltin("i32", "(int32_t)(", "", ")", []Type{typ}, TypeInt32)
-		registerBuiltin("i64", "(int64_t)(", "", ")", []Type{typ}, TypeInt64)
+		registerBuiltin("i8", "(int8_t)(", "", ")", []Type{typ}, TypeInt8, false)
+		registerBuiltin("i16", "(int16_t)(", "", ")", []Type{typ}, TypeInt16, false)
+		registerBuiltin("i32", "(int32_t)(", "", ")", []Type{typ}, TypeInt32, false)
+		registerBuiltin("i64", "(int64_t)(", "", ")", []Type{typ}, TypeInt64, false)
 
-		registerBuiltin("f32", "(float)(", "", ")", []Type{typ}, TypeFloat32)
-		registerBuiltin("f64", "(double)(", "", ")", []Type{typ}, TypeFloat64)
+		registerBuiltin("f32", "(float)(", "", ")", []Type{typ}, TypeFloat32, false)
+		registerBuiltin("f64", "(double)(", "", ")", []Type{typ}, TypeFloat64, false)
 
 		if intType, isIntType := typ.(*BuiltinIntType); isIntType {
 			registerSimpleTemplate("high", []Type{GetTypeType(typ)}, typ, IntLit{Value: int64(intType.MaxValue), Type: typ})
@@ -661,18 +663,18 @@ func init() {
 		// TODO: has no line information
 		T := &GenericTypeSymbol{Name: "T", Constraint: TypeUnspecified}
 		// TODO mark argument as mutable
-		builtinAddr = registerGenericBuiltin("addr", "&(", "", ")", []*GenericTypeSymbol{T}, []Type{T}, GetPtrType(T))
-		builtinDeref = registerGenericBuiltin("[", "*(", "", ")", []*GenericTypeSymbol{T}, []Type{GetPtrType(T)}, T)
+		builtinAddr = registerGenericBuiltin("addr", "&(", "", ")", []*GenericTypeSymbol{T}, []Type{T}, GetPtrType(T), true)
+		builtinDeref = registerGenericBuiltin("[", "*(", "", ")", []*GenericTypeSymbol{T}, []Type{GetPtrType(T)}, T, true)
 		// TODO mark first argument as mutable
-		registerGenericBuiltin("=", "(", "=", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeVoid)
-		registerGenericBuiltin("==", "(", "==", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeBoolean)
-		registerGenericBuiltin("!=", "(", "!=", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeBoolean)
+		registerGenericBuiltin("=", "(", "=", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeVoid, true)
+		registerGenericBuiltin("==", "(", "==", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeBoolean, false)
+		registerGenericBuiltin("!=", "(", "!=", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeBoolean, false)
 	}
 
-	registerBuiltin("and", "(", "&&", ")", []Type{TypeBoolean, TypeBoolean}, TypeBoolean)
-	registerBuiltin("or", "(", "||", ")", []Type{TypeBoolean, TypeBoolean}, TypeBoolean)
+	registerBuiltin("and", "(", "&&", ")", []Type{TypeBoolean, TypeBoolean}, TypeBoolean, false)
+	registerBuiltin("or", "(", "||", ")", []Type{TypeBoolean, TypeBoolean}, TypeBoolean, false)
 
-	registerBuiltin("assert", "assert(", "", ")", []Type{TypeBoolean}, TypeVoid)
+	registerBuiltin("assert", "assert(", "", ")", []Type{TypeBoolean}, TypeVoid, false)
 
 	registerConstant("true", IntLit{Type: TypeBoolean, Value: 1})
 	registerConstant("false", IntLit{Type: TypeBoolean, Value: 0})

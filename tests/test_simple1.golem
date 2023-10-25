@@ -62,8 +62,7 @@ proc main():i32 = {
     let myfloat2:f32 = 13
     mutableArgFunc(myfloat1, myfloat2)
     printf("myfloat1: %f\n", myfloat1)
-    assert(myfloat1 == 325)
-    assert(myfloat1 == 325)
+    assert(myfloat1 == 325) # TODO this should wolrk
   }
 
   return 0

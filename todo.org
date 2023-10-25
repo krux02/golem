@@ -1,4 +1,5 @@
 * TODO mutability inference as orthogonal information to the type of expressions, get rid of MutableType
+* TODO inversion of control in mutability inference. Instead of `GetMutable` do request mutability
 * TODO display parsing errors as normal error messages
 * TODO templates
 * TODO generic functions

@@ -163,7 +163,6 @@ type Overloadable interface {
 }
 
 type TcBuiltinProcDef struct {
-	Source    string // TODO: this can't be correct, it's builtin there is no source
 	Name      string
 	Signature ProcSignature
 	//Body      TcExpr
@@ -176,7 +175,6 @@ type TcBuiltinProcDef struct {
 }
 
 type TcBuiltinGenericProcDef struct {
-	Source    string // TODO: this can't be correct, it's builtin there is no source
 	Name      string
 	Signature ProcSignature
 	//Body      TcExpr
@@ -293,8 +291,8 @@ func (arg TcCall) GetSource() string                   { return arg.Source }
 func (arg TcArrayLit) GetSource() string               { return arg.Source }
 func (arg TcEnumSetLit) GetSource() string             { return arg.Source }
 func (arg *TcProcDef) GetSource() string               { return arg.Source }
-func (arg *TcBuiltinProcDef) GetSource() string        { return arg.Source }
-func (arg *TcBuiltinGenericProcDef) GetSource() string { return arg.Source }
+func (arg *TcBuiltinProcDef) GetSource() string        { return "" } // builtins have no source location
+func (arg *TcBuiltinGenericProcDef) GetSource() string { return "" } // builtins have no source location
 func (arg *TcTemplateDef) GetSource() string           { return arg.Source }
 func (arg TcStructLit) GetSource() string              { return arg.Source }
 func (arg TcPackageDef) GetSource() string             { return arg.Source }
