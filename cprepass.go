@@ -2,22 +2,27 @@ package main
 
 import "fmt"
 
-func maybeDerefParam(expr TcExpr) TcExpr {
-	switch expr.GetType().(type) {
-	case *StructType:
-		sym := TcProcSymbol{
-			Source: "", // no source possible, hidden
-			Impl:   builtinAddr.Impl,
-		}
-		call := TcCall{
-			Source: "", // no source possible, hidden
-			Sym:    sym,
-			Args:   []TcExpr{expr},
-		}
-		return call
-	default:
-		return expr
+func newAddrExpr(arg TcExpr) TcExpr {
+	sym := TcProcSymbol{
+		Source: "", // no source possible, hidden
+		Impl:   builtinAddr.Impl,
 	}
+	call := TcCall{
+		Source: "", // no source possible, hidden
+		Sym:    sym,
+		Args:   []TcExpr{arg},
+	}
+	return call
+}
+
+func maybeDerefParam(expr TcExpr, isVarParam bool) TcExpr {
+	if isVarParam {
+		return newAddrExpr(expr)
+	}
+	if _, isStruct := expr.GetType().(*StructType); isStruct {
+		return newAddrExpr(expr)
+	}
+	return expr
 }
 
 func maybeUnrefParamSym(sym TcSymbol) TcExpr {
@@ -66,10 +71,16 @@ func cgenprepass(expr TcExpr) TcExpr {
 		if _, isBuiltin := expr.Sym.Impl.(*TcBuiltinProcDef); isBuiltin {
 			return expr
 		}
+		sig := expr.Sym.Impl.GetSignature()
 		newArgs := make([]TcExpr, len(expr.Args))
+		fmt.Printf("foobar: %s", AstFormat(expr))
 		for i, arg := range expr.Args {
 			newArg := cgenprepass(arg)
-			newArgs[i] = maybeDerefParam(newArg)
+			var isVarParam bool = false
+			if !sig.Varargs || i < len(sig.Params) {
+				isVarParam = sig.Params[i].Kind == SkVarProcArg
+			}
+			newArgs[i] = maybeDerefParam(newArg, isVarParam)
 		}
 		expr.Args = newArgs
 		return expr
