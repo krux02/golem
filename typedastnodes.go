@@ -159,12 +159,12 @@ type ProcSignature struct {
 type Overloadable interface {
 	TcExpr
 	GetName() string
-	GetSignature() ProcSignature
+	GetSignature() *ProcSignature
 }
 
 type TcBuiltinProcDef struct {
 	Name      string
-	Signature ProcSignature
+	Signature *ProcSignature
 	//Body      TcExpr
 
 	// TODO these are fields to specifiy how to generate a call
@@ -176,7 +176,7 @@ type TcBuiltinProcDef struct {
 
 type TcBuiltinGenericProcDef struct {
 	Name      string
-	Signature ProcSignature
+	Signature *ProcSignature
 	//Body      TcExpr
 
 	// TODO these are fields to specifiy how to generate a call
@@ -189,7 +189,7 @@ type TcBuiltinGenericProcDef struct {
 type TcBuiltinStaticProcDef struct {
 	Source    string // TODO: this can't be correct, it's builtin there is no source
 	Name      string
-	Signature ProcSignature
+	Signature *ProcSignature
 	//Body      TcExpr
 
 	ApplyFunc func(context *TcPackageDef, args []TcExpr) TcExpr
@@ -199,7 +199,7 @@ type TcProcDef struct {
 	Source      string
 	Name        string
 	MangledName string
-	Signature   ProcSignature
+	Signature   *ProcSignature
 	Body        TcExpr
 	Importc     bool
 	// TODO: find a better solution for tagging other than mutuble setting a value
@@ -212,21 +212,21 @@ type TcProcDef struct {
 type TcBuiltinMacroDef struct {
 	Source    string // TODO: this can't be correct, it's builtin there is no source
 	Name      string
-	Signature ProcSignature
+	Signature *ProcSignature
 	MacroFunc BuiltinMacroFunc // this function transforms the call, post function resolution
 }
 
 type TcTemplateDef struct {
 	Source    string
 	Name      string
-	Signature ProcSignature
+	Signature *ProcSignature
 	Body      TcExpr
 }
 
 type TcErrorProcDef struct {
 	// this is just a placeholder to set a TcProcSymbol to something
 	Name      string
-	Signature ProcSignature
+	Signature *ProcSignature
 }
 
 type TcArrayLit struct {
@@ -315,12 +315,12 @@ func (arg *TcTemplateDef) GetName() string           { return arg.Name }
 func (arg *TcBuiltinMacroDef) GetName() string       { return arg.Name }
 func (arg *TcErrorProcDef) GetName() string          { return arg.Name }
 
-func (arg *TcBuiltinProcDef) GetSignature() ProcSignature        { return arg.Signature }
-func (arg *TcBuiltinGenericProcDef) GetSignature() ProcSignature { return arg.Signature }
-func (arg *TcProcDef) GetSignature() ProcSignature               { return arg.Signature }
-func (arg *TcTemplateDef) GetSignature() ProcSignature           { return arg.Signature }
-func (arg *TcBuiltinMacroDef) GetSignature() ProcSignature       { return arg.Signature }
-func (arg *TcErrorProcDef) GetSignature() ProcSignature          { return arg.Signature }
+func (arg *TcBuiltinProcDef) GetSignature() *ProcSignature        { return arg.Signature }
+func (arg *TcBuiltinGenericProcDef) GetSignature() *ProcSignature { return arg.Signature }
+func (arg *TcProcDef) GetSignature() *ProcSignature               { return arg.Signature }
+func (arg *TcTemplateDef) GetSignature() *ProcSignature           { return arg.Signature }
+func (arg *TcBuiltinMacroDef) GetSignature() *ProcSignature       { return arg.Signature }
+func (arg *TcErrorProcDef) GetSignature() *ProcSignature          { return arg.Signature }
 
 func (arg TcDotExpr) GetMutable() bool   { return arg.Lhs.GetMutable() }
 func (arg TcErrorNode) GetMutable() bool { return true } // just to prevent noice from error nodes

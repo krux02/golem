@@ -239,9 +239,9 @@ var TypeAnyNumber = &TypeGroup{Name: "AnyNumber", Items: []Type{
 var TypeCString = &BuiltinType{"cstring", "char const*", 'x'}
 
 // builtin proc signatures
-var builtinCPrintf ProcSignature
-var builtinAddr ProcSignature
-var builtinDeref ProcSignature
+var builtinCPrintf *ProcSignature
+var builtinAddr *ProcSignature
+var builtinDeref *ProcSignature
 
 func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	if typ == TypeNoReturn {
@@ -321,7 +321,7 @@ var builtinScope Scope = &ScopeImpl{
 	CurrentPackage: nil,
 	CurrentProc:    nil,
 	Types:          make(map[string]Type),
-	Procedures:     make(map[string][]ProcSignature),
+	Procedures:     make(map[string][]*ProcSignature),
 	Variables:      make(map[string]TcSymbol),
 }
 
@@ -399,7 +399,7 @@ OUTER:
 	return true
 }
 
-func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []*GenericTypeSymbol, args []Type, result Type, firstArgMutable bool) ProcSignature {
+func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []*GenericTypeSymbol, args []Type, result Type, firstArgMutable bool) *ProcSignature {
 	if len(genericParams) > 0 {
 		for i, arg := range args {
 			syms := extractGenericTypeSymbols(arg)
@@ -421,7 +421,7 @@ func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams [
 
 	procDef := &TcBuiltinGenericProcDef{
 		Name: name,
-		Signature: ProcSignature{
+		Signature: &ProcSignature{
 			GenericParams: genericParams,
 			Params:        make([]TcSymbol, len(args)),
 			ResultType:    result,
@@ -446,7 +446,7 @@ func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams [
 func registerBuiltinMacro(name string, varargs bool, args []Type, result Type, macroFunc BuiltinMacroFunc) {
 	macroDef := &TcBuiltinMacroDef{
 		Name: name,
-		Signature: ProcSignature{
+		Signature: &ProcSignature{
 			Params:     make([]TcSymbol, len(args)),
 			ResultType: result,
 			Varargs:    varargs,
@@ -461,7 +461,7 @@ func registerBuiltinMacro(name string, varargs bool, args []Type, result Type, m
 	builtinScope.Procedures[name] = append(builtinScope.Procedures[name], macroDef.Signature)
 }
 
-func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Type, firstArgMutable bool) ProcSignature {
+func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Type, firstArgMutable bool) *ProcSignature {
 	return registerGenericBuiltin(name, prefix, infix, postfix, nil, args, result, firstArgMutable)
 }
 
@@ -469,7 +469,7 @@ func registerSimpleTemplate(name string, args []Type, result Type, substitution 
 	templateDef := &TcTemplateDef{
 		// TODO set Source
 		Name: name,
-		Signature: ProcSignature{
+		Signature: &ProcSignature{
 			Params:     make([]TcSymbol, len(args)),
 			ResultType: result,
 		},
@@ -603,6 +603,8 @@ func init() {
 	// printf for now. A general concept for varargs will be specified out as soon
 	// as it becomes necessary, but right now it is not planned.
 	builtinCPrintf = registerBuiltin("c_printf", "printf(", ", ", ")", []Type{TypeCString}, TypeVoid, false)
+	builtinCPrintf.Varargs = true
+
 	registerBuiltinMacro("printf", true, []Type{TypeStr}, TypeVoid, ValidatePrintfCall)
 
 	registerBuiltinMacro("addCFlags", false, []Type{TypeStr}, TypeVoid, BuiltinAddCFlags)

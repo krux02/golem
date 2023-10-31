@@ -52,7 +52,7 @@ func cgenprepassSlice(expr []TcExpr) []TcExpr {
 	return expr
 }
 
-func cgenprepassSignature(sig ProcSignature) ProcSignature {
+func cgenprepassSignature(sig *ProcSignature) *ProcSignature {
 	for i, param := range sig.Params {
 		if t, isStruct := param.Type.(*StructType); isStruct {
 			newType := GetPtrType(t)

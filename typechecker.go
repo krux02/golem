@@ -32,7 +32,7 @@ type ScopeImpl struct {
 	CurrentPackage *TcPackageDef
 	CurrentProc    *TcProcDef
 	Variables      map[string]TcSymbol
-	Procedures     map[string][]ProcSignature
+	Procedures     map[string][]*ProcSignature
 	Types          map[string]Type
 }
 
@@ -44,7 +44,7 @@ func NewSubScope(scope Scope) Scope {
 		CurrentPackage: scope.CurrentPackage,
 		CurrentProc:    scope.CurrentProc,
 		Variables:      make(map[string]TcSymbol),
-		Procedures:     make(map[string][]ProcSignature),
+		Procedures:     make(map[string][]*ProcSignature),
 		Types:          make(map[string]Type),
 	}
 }
@@ -152,7 +152,7 @@ func LookUpType(tc *TypeChecker, scope Scope, expr TypeExpr) Type {
 	return TypeError
 }
 
-func LookUpProc(scope Scope, ident Ident, numArgs int, signatures []ProcSignature) []ProcSignature {
+func LookUpProc(scope Scope, ident Ident, numArgs int, signatures []*ProcSignature) []*ProcSignature {
 	for scope != nil {
 		if localSignatures, ok := scope.Procedures[ident.Source]; ok {
 			if numArgs >= 0 { // num args may be set to -1 to get all signatures
@@ -269,6 +269,7 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def ProcDef) (result *
 	ValidNameCheck(tc, def.Name, "proc")
 	procScope := NewSubScope(parentScope)
 	result = &TcProcDef{}
+	result.Signature = &ProcSignature{}
 	result.Signature.Impl = result
 	procScope.CurrentProc = result
 	result.Name = def.Name.Source
@@ -484,7 +485,7 @@ func TypeCheckDotExpr(tc *TypeChecker, scope Scope, call Call, expected Type) Tc
 }
 
 func errorProcSym(ident Ident) TcProcSymbol {
-	Impl := &TcErrorProcDef{Name: ident.Source, Signature: ProcSignature{ResultType: TypeError}}
+	Impl := &TcErrorProcDef{Name: ident.Source, Signature: &ProcSignature{ResultType: TypeError}}
 	Impl.Signature.Impl = Impl
 
 	return TcProcSymbol{
@@ -538,7 +539,7 @@ func (typ *UnspecifiedType) AppendToGroup(builder *TypeGroupBuilder) bool {
 	return true
 }
 
-func argTypeGroupAtIndex(signatures []ProcSignature, idx int) (result Type) {
+func argTypeGroupAtIndex(signatures []*ProcSignature, idx int) (result Type) {
 	builder := &TypeGroupBuilder{}
 	for _, sig := range signatures {
 		if sig.Varargs && idx >= len(sig.Params) {
@@ -714,7 +715,7 @@ func ApplyTypeSubstitutions(argTyp Type, substitutions []Substitution) Type {
 
 }
 
-func SignatureApplyTypeSubstitution(sig ProcSignature, substitutions []Substitution) ProcSignature {
+func SignatureApplyTypeSubstitution(sig *ProcSignature, substitutions []Substitution) *ProcSignature {
 	if len(substitutions) == 0 {
 		return sig
 	}
@@ -723,10 +724,14 @@ func SignatureApplyTypeSubstitution(sig ProcSignature, substitutions []Substitut
 		param.Type = ApplyTypeSubstitutions(param.Type, substitutions)
 		newParams[j] = param
 	}
-	sig.Params = newParams
-	sig.ResultType = ApplyTypeSubstitutions(sig.ResultType, substitutions)
-	sig.Substitutions = append(sig.Substitutions, substitutions...)
-	return sig
+
+	result := &ProcSignature{}
+	result.Params = newParams
+	result.ResultType = ApplyTypeSubstitutions(sig.ResultType, substitutions)
+	result.Substitutions = append(sig.Substitutions, substitutions...)
+	result.Varargs = sig.Varargs
+	result.Impl = sig.Impl
+	return result
 }
 
 func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcExpr {
