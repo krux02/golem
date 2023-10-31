@@ -57,12 +57,6 @@ func (builder *CodeBuilder) compileTypeExpr(context *PackageGeneratorContext, ty
 	}
 }
 
-func (builder *CodeBuilder) compileSymDeclaration(context *PackageGeneratorContext, sym TcSymbol) {
-	builder.compileTypeExpr(context, sym.GetType())
-	builder.WriteString(" ")
-	builder.WriteString(sym.Source)
-}
-
 func (builder *CodeBuilder) compileCall(context *PackageGeneratorContext, call TcCall) {
 	switch impl := call.Sym.Impl.(type) {
 	case *TcBuiltinProcDef:
@@ -172,7 +166,7 @@ func (builder *CodeBuilder) CompileFloatLit(lit FloatLit) {
 
 func (builder *CodeBuilder) CompileSymbol(sym TcSymbol) {
 	switch sym.Kind {
-	case SkLoopIterator:
+	case SkLoopIterator, SkVarProcArg:
 		builder.WriteString("*")
 		builder.WriteString(sym.Source)
 	case SkEnum:
@@ -193,7 +187,9 @@ func (builder *CodeBuilder) CompileExpr(context *PackageGeneratorContext, expr T
 }
 
 func (builder *CodeBuilder) CompileVariableDefStmt(context *PackageGeneratorContext, stmt TcVariableDefStmt) {
-	builder.compileSymDeclaration(context, stmt.Sym)
+	builder.compileTypeExpr(context, stmt.Sym.GetType())
+	builder.WriteString(" ")
+	builder.WriteString(stmt.Sym.Source)
 	builder.WriteString(" = ")
 	builder.CompileExpr(context, stmt.Value)
 }
@@ -473,7 +469,12 @@ func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 		if i != 0 {
 			headBuilder.WriteString(", ")
 		}
-		headBuilder.compileSymDeclaration(context, arg)
+		headBuilder.compileTypeExpr(context, arg.GetType())
+		headBuilder.WriteString(" ")
+		if arg.Kind == SkVarProcArg {
+			headBuilder.WriteString("*")
+		}
+		headBuilder.WriteString(arg.Source)
 	}
 	headBuilder.WriteString(")")
 

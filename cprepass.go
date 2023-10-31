@@ -73,7 +73,6 @@ func cgenprepass(expr TcExpr) TcExpr {
 		}
 		sig := expr.Sym.Impl.GetSignature()
 		newArgs := make([]TcExpr, len(expr.Args))
-		fmt.Printf("foobar: %s", AstFormat(expr))
 		for i, arg := range expr.Args {
 			newArg := cgenprepass(arg)
 			var isVarParam bool = false
