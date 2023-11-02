@@ -823,9 +823,13 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 	case 1:
 		sig := signatures[0]
 
-		for _, arg := range sig.Params {
+		for i, arg := range sig.Params {
 			if _, isGeneric := arg.Type.(*OpenGenericType); isGeneric {
 				panic("internal error")
+			}
+
+			if arg.Kind == SkVarProcArg && !checkedArgs[i].GetMutable() {
+				ReportErrorf(tc, checkedArgs[i], "argument must be mutable")
 			}
 		}
 		if _, isGeneric := sig.ResultType.(*OpenGenericType); isGeneric {
@@ -1313,7 +1317,11 @@ func GetArrayType(elem Type, len int64) (result *ArrayType) {
 	if !ok {
 		result = &ArrayType{Elem: elem, Len: len}
 		arrayTypeMap[ArrayTypeMapKey{elem, len}] = result
-		registerBuiltin("[", "", ".arr[", "]", []Type{result, TypeInt64}, elem, true)
+		// TODO, this should be one generic builtin. Adding the overloads like here
+		// does have a negative effect or error messages.
+		//
+		// TODO the array index operator needs mutability propagation of the first argument.
+		registerBuiltin("[", "", ".arr[", "]", []Type{result, TypeInt64}, elem, false)
 		registerSimpleTemplate("len", []Type{result}, TypeInt64, IntLit{Type: TypeInt64, Value: len})
 	}
 	return result

@@ -109,8 +109,9 @@ proc main():i64 = {
 
   printf("max test: max(a,b): %d\n", i32(max(x,y)))
 
-  let ff1 = 123.456:f64
+  var ff1 = 123.456:f64
   let ff2 = 654.321:f64
+  ff1 += 8
   printf("ff1: %f ff2: %f\n", ff1, ff2);
   printf("max test: max(fx,f2): %f\n", max(ff1, ff2))
   printf("printftest %d %d %s\n", 1:i32, 2:i32, "mystring")

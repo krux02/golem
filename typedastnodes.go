@@ -328,8 +328,19 @@ func (arg TcSymbol) GetMutable() bool {
 	k := arg.Kind
 	return k == SkVar || k == SkVarProcArg || k == SkVarLoopIterator || k == SkInvalid
 }
-func (arg TcCall) GetMutable() bool {
-	// TODO, actually do the mutability inference
+func (call TcCall) GetMutable() bool {
+	// TODO, actually do the mutability inference, this is a real hack
+	if call.Sym.Source == "[" {
+		switch len(call.Args) {
+		case 1:
+			// pointer deref
+			return true
+		case 2:
+			// index operator
+			return call.Args[0].GetMutable()
+		}
+	}
+
 	return false
 }
 

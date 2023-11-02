@@ -1,5 +1,5 @@
 
-# NumErrors:      12
+# NumErrors:      13
 
 proc foo(arg: i32): i64 = {
   printf("foo1: %d\n", i32(arg))
@@ -25,6 +25,7 @@ proc bar3(arg__0: i64): i64 = 0   # Error: proc arg identifier may not use __ (d
 proc main():i64 = {
   let tmp: i8 = 123
   foo(tmp) # Error: expected type 'i32 | i64' but got type 'i8'
+  tmp -= 8 # Error: argument must be mutable
   let str = "abcdef"
   baz(str, tmp) # Error: proc not found: baz(str, i8)
   let x : i32 = "somestring" # Error: expected type 'i32' but got type 'str'

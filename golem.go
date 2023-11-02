@@ -95,7 +95,7 @@ func errorTest(t *testing.T, filename string) {
 func normalTest(t *testing.T, filename string) {
 	binaryAbsFilename, err := compile(filename)
 	if err != nil {
-		t.Fail()
+		t.Fatal(err)
 	}
 	err = exec.Command(binaryAbsFilename).Run()
 	if err != nil {
