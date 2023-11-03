@@ -193,8 +193,6 @@ func (typ *TypeType) ManglePrint(builder *strings.Builder) {
 // These type names are by no means final, there are just to get
 // something working.
 
-var TypeBoolean = &BuiltinType{"bool", "bool", 'b'}
-
 var TypeInt8 = &BuiltinIntType{"i8", "int8_t", 'm', -0x80, 0x7f}
 var TypeInt16 = &BuiltinIntType{"i16", "int16_t", 's', -0x8000, 0x7fff}
 var TypeInt32 = &BuiltinIntType{"i32", "int32_t", 'i', -0x80000000, 0x7fffffff}
@@ -208,6 +206,7 @@ var TypeUInt64 = &BuiltinIntType{"u64", "uint64_t", 'L', 0, 0xffffffffffffffff}
 var TypeFloat32 = &BuiltinFloatType{"f32", "float", 'f'}
 var TypeFloat64 = &BuiltinFloatType{"f64", "double", 'd'}
 
+var TypeBoolean = &BuiltinType{"bool", "bool", 'b'}
 var TypeStr = &BuiltinType{"str", "string", 'R'}
 var TypeChar = &BuiltinType{"char", "char", 'c'}
 var TypeVoid = &BuiltinType{"void", "void", 'v'}
@@ -222,11 +221,11 @@ var TypeUnspecified = &UnspecifiedType{}
 
 // this type is the internal representation when the type checker fails to
 // resolve the type. Expressions with this type cannot be further processed in
-// code generation. This should probably be a different type, not BuiltinType
+// code generation.
 var TypeError = &ErrorType{}
 
 var TypeAnyUInt = &TypeGroup{Name: "AnyUInt", Items: []Type{TypeUInt8, TypeUInt16, TypeUInt32, TypeUInt64}}
-var TypeAnySInt = &TypeGroup{Name: "AnyInt", Items: []Type{TypeInt8, TypeInt16, TypeInt32, TypeInt64}}
+var TypeAnySInt = &TypeGroup{Name: "AnySInt", Items: []Type{TypeInt8, TypeInt16, TypeInt32, TypeInt64}}
 var TypeAnyInt = &TypeGroup{Name: "AnyInt", Items: []Type{TypeInt8, TypeInt16, TypeInt32, TypeInt64, TypeUInt8, TypeUInt16, TypeUInt32, TypeUInt64}}
 var TypeAnyFloat = &TypeGroup{Name: "AnyFloat", Items: []Type{TypeFloat32, TypeFloat64}}
 var TypeAnyNumber = &TypeGroup{Name: "AnyNumber", Items: []Type{
