@@ -89,17 +89,24 @@ type Feature struct {
 	Remove  []FeatureList `xml:"remove"`
 }
 
+type Extension struct {
+	Name      string        `xml:"name,attr"`
+	Supported string        `xml:"supported"`
+	Comment   string        `xml:"comment"`
+	Require   []FeatureList `xml:"require"`
+}
+
 //type Extension struct{}
 
 type OpenGLRegistry struct {
-	XMLName  xml.Name  `xml:"registry"`
-	Comment  string    `xml:"comment"`
-	Types    Types     `xml:"types"`
-	Groups   Groups    `xml:"groups"`
-	Enums    []Enums   `xml:"enums"`
-	Commands Commands  `xml:"commands"`
-	Feature  []Feature `xml:"feature"`
-	//Extension []Extension `xml:"extension"`
+	XMLName   xml.Name    `xml:"registry"`
+	Comment   string      `xml:"comment"`
+	Types     Types       `xml:"types"`
+	Groups    Groups      `xml:"groups"`
+	Enums     []Enums     `xml:"enums"`
+	Commands  Commands    `xml:"commands"`
+	Feature   []Feature   `xml:"feature"`
+	Extension []Extension `xml:"extension"`
 }
 
 func main() {
@@ -137,34 +144,52 @@ func main() {
 	currentApi := "gl"
 
 	var commands []string
+	var enums []string
 
 	for _, feature := range reg.Feature {
 		if feature.Api == currentApi {
-			fmt.Printf("name: %s, api: %s, number: %s\n", feature.Name, feature.Api, feature.Number)
-
+			// fmt.Printf("name: %s, api: %s, number: %s\n", feature.Name, feature.Api, feature.Number)
 			for _, requireSection := range feature.Remove {
-				var removeList []string
+				var removeCommands []string
+
 				for _, command := range requireSection.Command {
-					removeList = append(removeList, command.Name)
-					// idx := slices.Index(commands, command.Name)
-					// fmt.Printf("-%s idx: %d\n", command.Name, idx)
+					removeCommands = append(removeCommands, command.Name)
 				}
-				slices.Sort(removeList)
+				slices.Sort(removeCommands)
+				var removeEnums []string
+				for _, enum := range requireSection.Enum {
+					removeEnums = append(removeEnums, enum.Name)
+				}
+				slices.Sort(removeEnums)
+
 				j := 0
 				for i := range commands {
 					command := commands[i]
-					if _, remove := slices.BinarySearch(removeList, command); !remove {
+					if _, remove := slices.BinarySearch(removeCommands, command); !remove {
 						commands[j] = command
 						j += 1
 					}
 				}
 				commands = commands[0:j]
+
+				j = 0
+				for i := range enums {
+					enum := enums[i]
+					if _, remove := slices.BinarySearch(removeCommands, enum); !remove {
+						enums[j] = enum
+						j += 1
+					}
+				}
+				enums = enums[0:j]
 			}
 
 			for _, requireSection := range feature.Require {
 				if requireSection.Profile != "compatibility" {
 					for _, command := range requireSection.Command {
 						commands = append(commands, command.Name)
+					}
+					for _, enum := range requireSection.Enum {
+						enums = append(enums, enum.Name)
 					}
 				}
 			}
@@ -183,6 +208,26 @@ func main() {
 		}
 		commands = commands[0:j]
 	}
+	slices.Sort(enums)
+	{
+		// remove duplicades
+		j := 0
+		for i := range enums {
+			if i == 0 || enums[i] != enums[i-1] {
+				enums[j] = enums[i]
+				j += 1
+			}
+		}
+		enums = enums[0:j]
+	}
+
+	for _, regEnums := range reg.Enums {
+		for _, enum := range regEnums.Enum {
+			if _, found := slices.BinarySearch(enums, enum.Name); found {
+				fmt.Printf("const %s:u32 = %s\n", enum.Name, enum.Value)
+			}
+		}
+	}
 
 	for _, command := range reg.Commands.Command {
 		if _, found := slices.BinarySearch(commands, command.Name); found {
@@ -191,10 +236,16 @@ func main() {
 				if i != 0 {
 					fmt.Printf(", ")
 				}
-				if param.Len != "" {
-					fmt.Printf("%s: pointer", param.Name)
+				if param.Name == "type" {
+					fmt.Printf("typ")
 				} else {
-					fmt.Printf("%s: %s", param.Name, param.PType)
+					fmt.Printf("%s", param.Name)
+				}
+				fmt.Printf(": ")
+				if param.Len != "" {
+					fmt.Printf("pointer")
+				} else {
+					fmt.Printf("%s", param.PType)
 				}
 			}
 			if command.Type != "" {
@@ -202,10 +253,11 @@ func main() {
 			} else if command.Name[0:5] == "glMap" {
 				fmt.Printf("): pointer\n")
 			} else {
-				fmt.Printf(")\n")
+				fmt.Printf("): void\n")
 			}
 		}
 	}
+
 	for i, command := range commands {
 		//fmt.Printf("commad: %s\n", command)
 		ok := slices.ContainsFunc(reg.Commands.Command, func(c Command) bool {
@@ -219,6 +271,7 @@ func main() {
 			fmt.Printf("found double: %s\n", command)
 		}
 	}
-	fmt.Printf("total commands: %d\n", len(commands))
+	// fmt.Printf("total enums: %d (%d)\n", len(enums))
+	// fmt.Printf("total commands: %d\n", len(commands))
 
 }
