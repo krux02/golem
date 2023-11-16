@@ -229,10 +229,38 @@ func main() {
 		}
 	}
 
-	for _, command := range reg.Commands.Command {
+	typemap := map[string]string{
+		"GLenum":      "u32",
+		"GLboolean":   "bool",
+		"GLbitfield":  "u32",
+		"GLvoid":      "void",
+		"GLubyte":     "u8",
+		"GLchar":      "i8",
+		"GLbyte":      "i8",
+		"GLushort":    "u16",
+		"GLshort":     "i16",
+		"GLuint":      "u32",
+		"GLuint64":    "u64",
+		"GLint64":     "i64",
+		"GLfloat":     "f32",
+		"GLdouble":    "f64",
+		"GLintptr":    "int",
+		"GLsizeiptr":  "int",
+		"GLsizei":     "i32",
+		"GLint":       "i32",
+		"GLsync":      "<not implemented GLsync>",
+		"GLDEBUGPROC": "<not implemented GLDEBUGPROC>",
+	}
+
+	for ii, command := range reg.Commands.Command {
 		if _, found := slices.BinarySearch(commands, command.Name); found {
 			fmt.Printf("proc \"importc\" %s(", command.Name)
 			for i, param := range command.Param {
+
+				if _, found := typemap[param.PType]; !found && param.PType != "" {
+					panic(fmt.Errorf("\n%d:  %s", ii, param.PType))
+				}
+
 				if i != 0 {
 					fmt.Printf(", ")
 				}
@@ -243,13 +271,20 @@ func main() {
 				}
 				fmt.Printf(": ")
 				if param.Len != "" {
-					fmt.Printf("pointer")
+					if param.PType != "" {
+						fmt.Printf("ptr[%s]", typemap[param.PType])
+					} else {
+						fmt.Printf("pointer")
+					}
 				} else {
-					fmt.Printf("%s", param.PType)
+					fmt.Printf("%s", typemap[param.PType])
 				}
 			}
 			if command.Type != "" {
-				fmt.Printf("): %s\n", command.Type)
+				if _, found := typemap[command.Type]; !found {
+					panic(fmt.Errorf("\n%d:  %s", ii, command.Type))
+				}
+				fmt.Printf("): %s\n", typemap[command.Type])
 			} else if command.Name[0:5] == "glMap" {
 				fmt.Printf("): pointer\n")
 			} else {
