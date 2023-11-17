@@ -122,8 +122,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("%s\n", strings.Join(strings.Split(reg.Comment, "\n"), "\n# "))
-
 	// fmt.Printf("types: %#v\n", reg.Types.Type)
 	// for _, typ := range reg.Types.Type {
 	// 	fmt.Printf("type %s = %s\n", typ.Name, typ.Data)
@@ -221,14 +219,6 @@ func main() {
 		enums = enums[0:j]
 	}
 
-	for _, regEnums := range reg.Enums {
-		for _, enum := range regEnums.Enum {
-			if _, found := slices.BinarySearch(enums, enum.Name); found {
-				fmt.Printf("const %s:u32 = %s\n", enum.Name, enum.Value)
-			}
-		}
-	}
-
 	typemap := map[string]string{
 		"GLenum":      "u32",
 		"GLboolean":   "bool",
@@ -252,7 +242,32 @@ func main() {
 		"GLDEBUGPROC": "<not implemented GLDEBUGPROC>",
 	}
 
+	fmt.Printf("%s\n", strings.Join(strings.Split(reg.Comment, "\n"), "\n# "))
+	fmt.Println(`emit "#include <GL/gl.h>"`)
+
+	for _, regEnums := range reg.Enums {
+		for _, enum := range regEnums.Enum {
+			if _, found := slices.BinarySearch(enums, enum.Name); found {
+				fmt.Printf("const %s:u32 = %s\n", enum.Name, enum.Value)
+			}
+		}
+	}
+
+	disable := []string{
+		"glClientWaitSync",
+		"glDeleteSync",
+		"glDebugMessageCallback",
+		"glFenceSync",
+		"glGetSynciv",
+		"glIsSync",
+		"glWaitSync",
+	}
+
 	for ii, command := range reg.Commands.Command {
+		if slices.Contains(disable, command.Name) {
+			continue
+		}
+
 		if _, found := slices.BinarySearch(commands, command.Name); found {
 			fmt.Printf("proc \"importc\" %s(", command.Name)
 			for i, param := range command.Param {
@@ -270,14 +285,12 @@ func main() {
 					fmt.Printf("%s", param.Name)
 				}
 				fmt.Printf(": ")
-				if param.Len != "" {
-					if param.PType != "" {
-						fmt.Printf("ptr[%s]", typemap[param.PType])
-					} else {
-						fmt.Printf("pointer")
-					}
-				} else {
+				if param.PType == "" {
+					fmt.Printf("pointer")
+				} else if param.Len == "" {
 					fmt.Printf("%s", typemap[param.PType])
+				} else {
+					fmt.Printf("ptr(%s)", typemap[param.PType])
 				}
 			}
 			if command.Type != "" {
