@@ -212,6 +212,8 @@ var TypeChar = &BuiltinType{"char", "char", 'c'}
 var TypeVoid = &BuiltinType{"void", "void", 'v'}
 var TypeNilPtr = &BuiltinType{"nilptr", "void*", 'n'}
 
+//var TypePointer = &BuiltinType{"pointer", "void*", 'p'}
+
 // This type is used to tag that a function never returns.
 var TypeNoReturn = &BuiltinType{"noreturn", "void", '-'}
 
@@ -624,6 +626,11 @@ func init() {
 	registerBuiltinType(TypeVoid)
 	registerBuiltinType(TypeNoReturn)
 	registerBuiltinType(TypeNilPtr)
+	// registerBuiltinType(TypePointer)
+	// type alias
+	builtinScope.Types["pointer"] = GetPtrType(TypeVoid)
+	builtinScope.Types["int"] = TypeInt64
+	builtinScope.Types["uint"] = TypeUInt64
 
 	registerTypeGroup(TypeAnyFloat)
 	registerTypeGroup(TypeAnyInt)

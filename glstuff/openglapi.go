@@ -10,8 +10,10 @@ import (
 )
 
 type Enum struct {
-	Name  string `xml:"name,attr"`
-	Value string `xml:"value,attr"`
+	Name    string `xml:"name,attr"`
+	Value   string `xml:"value,attr"`
+	Type    string `xml:"type,attr"`
+	Comment string `xml:"comment,attr"`
 }
 
 type Enums struct {
@@ -245,14 +247,6 @@ func main() {
 	fmt.Printf("%s\n", strings.Join(strings.Split(reg.Comment, "\n"), "\n# "))
 	fmt.Println(`emit "#include <GL/gl.h>"`)
 
-	for _, regEnums := range reg.Enums {
-		for _, enum := range regEnums.Enum {
-			if _, found := slices.BinarySearch(enums, enum.Name); found {
-				fmt.Printf("const %s:u32 = %s\n", enum.Name, enum.Value)
-			}
-		}
-	}
-
 	disable := []string{
 		"glClientWaitSync",
 		"glDeleteSync",
@@ -261,6 +255,23 @@ func main() {
 		"glGetSynciv",
 		"glIsSync",
 		"glWaitSync",
+	}
+
+	for _, regEnums := range reg.Enums {
+		for _, enum := range regEnums.Enum {
+			if _, found := slices.BinarySearch(enums, enum.Name); found {
+				if enum.Comment != "" {
+					fmt.Printf("# %s\n", enum.Comment)
+				}
+				if enum.Type == "ull" {
+					// this is just for GL_TIMEOUT_IGNORED
+					fmt.Printf("const %s:u64 = %s\n", enum.Name, enum.Value)
+				} else {
+					fmt.Printf("const %s:u32 = %s\n", enum.Name, enum.Value)
+				}
+
+			}
+		}
 	}
 
 	for ii, command := range reg.Commands.Command {
