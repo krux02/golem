@@ -1367,6 +1367,19 @@ func GetTypeType(typ Type) (result *TypeType) {
 
 func TypeCheckArrayLit(tc *TypeChecker, scope Scope, arg ArrayLit, expected Type) TcExpr {
 	switch exp := expected.(type) {
+	case *UnspecifiedType:
+		var result TcArrayLit
+		if len(arg.Items) == 0 {
+			result.ElemType = TypeVoid
+			return result
+		}
+		result.Items = make([]TcExpr, len(arg.Items))
+		result.Items[0] = TypeCheckExpr(tc, scope, arg.Items[0], TypeUnspecified)
+		expElem := result.Items[0].GetType()
+		for i := 1; i < len(arg.Items); i++ {
+			result.Items[i] = TypeCheckExpr(tc, scope, arg.Items[i], expElem)
+		}
+		return result
 	case *ArrayType:
 		var result TcArrayLit
 		result.Items = make([]TcExpr, len(arg.Items))

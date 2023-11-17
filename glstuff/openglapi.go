@@ -142,6 +142,7 @@ func main() {
 	// }
 
 	currentApi := "gl"
+	compatibility := true
 
 	var commands []string
 	var enums []string
@@ -149,42 +150,45 @@ func main() {
 	for _, feature := range reg.Feature {
 		if feature.Api == currentApi {
 			// fmt.Printf("name: %s, api: %s, number: %s\n", feature.Name, feature.Api, feature.Number)
-			for _, requireSection := range feature.Remove {
-				var removeCommands []string
 
-				for _, command := range requireSection.Command {
-					removeCommands = append(removeCommands, command.Name)
-				}
-				slices.Sort(removeCommands)
-				var removeEnums []string
-				for _, enum := range requireSection.Enum {
-					removeEnums = append(removeEnums, enum.Name)
-				}
-				slices.Sort(removeEnums)
+			if !compatibility {
+				for _, removeSection := range feature.Remove {
+					var removeCommands []string
 
-				j := 0
-				for i := range commands {
-					command := commands[i]
-					if _, remove := slices.BinarySearch(removeCommands, command); !remove {
-						commands[j] = command
-						j += 1
+					for _, command := range removeSection.Command {
+						removeCommands = append(removeCommands, command.Name)
 					}
-				}
-				commands = commands[0:j]
-
-				j = 0
-				for i := range enums {
-					enum := enums[i]
-					if _, remove := slices.BinarySearch(removeCommands, enum); !remove {
-						enums[j] = enum
-						j += 1
+					slices.Sort(removeCommands)
+					var removeEnums []string
+					for _, enum := range removeSection.Enum {
+						removeEnums = append(removeEnums, enum.Name)
 					}
+					slices.Sort(removeEnums)
+
+					j := 0
+					for i := range commands {
+						command := commands[i]
+						if _, remove := slices.BinarySearch(removeCommands, command); !remove {
+							commands[j] = command
+							j += 1
+						}
+					}
+					commands = commands[0:j]
+
+					j = 0
+					for i := range enums {
+						enum := enums[i]
+						if _, remove := slices.BinarySearch(removeCommands, enum); !remove {
+							enums[j] = enum
+							j += 1
+						}
+					}
+					enums = enums[0:j]
 				}
-				enums = enums[0:j]
 			}
 
 			for _, requireSection := range feature.Require {
-				if requireSection.Profile != "compatibility" {
+				if requireSection.Profile != "compatibility" || compatibility {
 					for _, command := range requireSection.Command {
 						commands = append(commands, command.Name)
 					}
@@ -265,7 +269,8 @@ func main() {
 				}
 				if enum.Type == "ull" {
 					// this is just for GL_TIMEOUT_IGNORED
-					fmt.Printf("const %s:u64 = %s\n", enum.Name, enum.Value)
+					// TODO, this literal is currently unsupported
+					fmt.Printf("# const %s:u64 = %s\n", enum.Name, enum.Value)
 				} else {
 					fmt.Printf("const %s:u32 = %s\n", enum.Name, enum.Value)
 				}
