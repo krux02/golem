@@ -605,6 +605,8 @@ func compilePackageToC(pak *TcPackageDef) string {
 	context.typeDecl.WriteString("typedef struct string {size_t len; char const* data;} string;")
 	context.typeDecl.NewlineAndIndent()
 	context.typeDecl.WriteString("typedef unsigned char bool;")
+	context.typeDecl.NewlineAndIndent()
+	context.typeDecl.WriteString("typedef float f32x4 __attribute__ ((vector_size(16), aligned(16)));")
 
 	context.markProcForGeneration(pak.Main)
 	for procDef := context.popMarkedForGenerationProcDef(); procDef != nil; procDef = context.popMarkedForGenerationProcDef() {

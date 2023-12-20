@@ -113,13 +113,20 @@ type Token struct {
 	value string
 }
 
+type ParseError struct {
+	code Token // untokenizable code
+	msg  string
+}
+
 // this is by now far from just a tokenizer, has evolved to become the
 // full parser of the language.
+
 type Tokenizer struct {
 	code                    string
 	filename                string
 	token, lookAheadToken   Token
 	offset, lookAheadOffset int
+	errors                  []ParseError
 }
 
 func NewTokenizer(code string, filename string) (result *Tokenizer) {
@@ -225,6 +232,7 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			default:
 				idx += length
 				newOffset += idx
+				// invalid escape
 				result.kind = TkInvalid
 				result.value = code[:idx]
 				return result, newOffset
@@ -257,8 +265,19 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 	result = Token{kind: TkInvalid, value: code[:1]}
 
 	c, cLen := utf8.DecodeRuneInString(code)
+
+	// this is not strictly failsafe
 	if c >= 128 {
-		panic("currently only 7 bit ascii is supported!!!")
+		invalidRangeLength := 0
+		for c >= 128 {
+			invalidRangeLength += cLen
+			c, cLen = utf8.DecodeRuneInString(code[invalidRangeLength:])
+		}
+		result.kind = TkInvalid
+		result.value = code[:invalidRangeLength]
+		newOffset += invalidRangeLength
+		this.reportError(result, "Currently only 7 bit ASCII is supported.")
+		return result, newOffset
 	}
 
 	switch {
@@ -340,7 +359,11 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			rune, _ := utf8.DecodeRuneInString(code[it:])
 
 			if !u.IsDigit(rune) {
-				panic(this.Errorf(result, "incomplete floating point literal"))
+				this.reportError(result, "incomplete floating point literal")
+				result.kind = TkInvalid
+				result.value = code[:it]
+				newOffset += it
+				return result, newOffset
 			}
 
 			var idx2 = len(code)
@@ -365,7 +388,17 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 
 		rune, runeLen = utf8.DecodeRuneInString(code[it:])
 		if u.IsLetter(rune) {
-			panic(fmt.Errorf("invalid alpha character %c after literal: %s", rune, code[:it]))
+			this.reportError(result, "invalid alpha character %c after literal: %s", rune, code[:it])
+
+			for u.IsLetter(rune) {
+				it += runeLen
+				rune, runeLen = utf8.DecodeRuneInString(code[it:])
+			}
+
+			result.kind = TkInvalid
+			result.value = code[:it]
+			newOffset += it
+			return result, newOffset
 		}
 
 		result.value = code[:it]
@@ -455,7 +488,7 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			result.kind = TkAssign
 		}
 	default:
-		panic(this.Errorf(result, "unexpected input: %c %d", c, c))
+		this.reportError(result, "unexpected input: %c %d", c, c)
 	}
 
 	newOffset += len(result.value)
@@ -466,36 +499,43 @@ func (this *Tokenizer) AtEnd() bool {
 	return this.offset == len(this.code)
 }
 
-func (tokenizer *Tokenizer) Errorf(token Token, msg string, args ...interface{}) error {
-	line, columnStart, columnEnd := tokenizer.LineColumnToken(token)
-	return fmt.Errorf("%s(%d, %d-%d) Error: %s",
-		tokenizer.filename, line, columnStart, columnEnd,
-		fmt.Sprintf(msg, args...))
+func (tokenizer *Tokenizer) reportError(token Token, msg string, args ...interface{}) {
+	error := ParseError{token, fmt.Sprintf(msg, args...)}
+	tokenizer.errors = append(tokenizer.errors, error)
+	return
 }
 
-func (tokenizer *Tokenizer) formatWrongKind(token Token) error {
-	return tokenizer.Errorf(token, "unexpected token: %s value: '%s'", TokenKindNames[token.kind], token.value)
+// 	line, columnStart, columnEnd := tokenizer.LineColumnToken(token)
+// 	return fmt.Errorf("%s(%d, %d-%d) Error: %s",
+// 		tokenizer.filename, line, columnStart, columnEnd,
+// 		fmt.Sprintf(msg, args...))
+// }
+
+func (tokenizer *Tokenizer) reportWrongKind(token Token) {
+	tokenizer.reportError(token, "unexpected token: %s value: '%s'", TokenKindNames[token.kind], token.value)
+	return
 }
 
-func (tokenizer *Tokenizer) formatWrongIdent(token Token) error {
-	return tokenizer.Errorf(token, "unexpected identifier: %s", token.value)
+func (tokenizer *Tokenizer) reportWrongIdent(token Token) {
+	tokenizer.reportError(token, "unexpected identifier: %s", token.value)
+	return
 }
 
 func (tokenizer *Tokenizer) expectKind(token Token, kind TokenKind) {
 	if token.kind != kind {
-		panic(tokenizer.formatWrongKind(token))
+		tokenizer.reportWrongKind(token)
 	}
 }
 
 func (tokenizer *Tokenizer) expectKind2(token Token, kind1, kind2 TokenKind) {
 	if token.kind != kind1 && token.kind != kind2 {
-		panic(tokenizer.formatWrongKind(token))
+		tokenizer.reportWrongKind(token)
 	}
 }
 
 func (tokenizer *Tokenizer) expectOperator(token Token, arg string) {
 	tokenizer.expectKind(token, TkOperator)
 	if token.value != arg {
-		panic(tokenizer.Errorf(token, "expected %v got %v", arg, token.value))
+		tokenizer.reportError(token, "expected %v got %v", arg, token.value)
 	}
 }

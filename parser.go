@@ -43,12 +43,12 @@ func parseOperator(tokenizer *Tokenizer) (result Ident) {
 	token := tokenizer.Next()
 	tk := token.kind
 	if tk != TkOperator && tk != TkAnd && tk != TkOr {
-		tokenizer.formatWrongKind(token)
+		tokenizer.reportWrongKind(token)
 	}
 	// ensure operator precedence exists
 	precedence := OperatorPrecedence(token.value)
 	if precedence < 0 {
-		panic(tokenizer.Errorf(token, "invalid operator '%s'", token.value))
+		tokenizer.reportError(token, "invalid operator '%s'", token.value)
 	}
 	result.Source = token.value
 
@@ -94,7 +94,9 @@ func parseVariableDefStmt(tokenizer *Tokenizer) (result VariableDefStmt) {
 	case TkConst:
 		result.Kind = SkConst
 	default:
-		panic(tokenizer.formatWrongKind(firstToken))
+		tokenizer.reportWrongKind(firstToken)
+		// TODO what now? Create an invalid expression? this default value of result is in valid stmt.
+		return result
 	}
 	expr := parseExpr(tokenizer, false)
 	if Lhs, Rhs, ok := MatchAssign(expr); ok {
@@ -225,7 +227,8 @@ func parseCharLit(tokenizer *Tokenizer) (result CharLit) {
 		case '"':
 			result.Rune = '"'
 		default:
-			panic(tokenizer.Errorf(token, "invalid escape \\%c in char literal", rune2))
+			tokenizer.reportError(token, "invalid escape \\%c in char literal", rune2)
+			result.Rune = '\u29EF'
 		}
 		return result
 	}
@@ -901,6 +904,7 @@ func parsePackage(code, filename string) (result PackageDef) {
 			result.TopLevelStmts = append(result.TopLevelStmts, docComment)
 			continue
 		}
+		tokenizer.errors = append(tokenizer.errors, ParseError{token})
 		panic(tokenizer.formatWrongKind(tokenizer.lookAheadToken))
 	}
 	panic("unreachable")

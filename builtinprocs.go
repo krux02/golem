@@ -212,7 +212,8 @@ var TypeChar = &BuiltinType{"char", "char", 'c'}
 var TypeVoid = &BuiltinType{"void", "void", 'v'}
 var TypeNilPtr = &BuiltinType{"nilptr", "void*", 'n'}
 
-//var TypePointer = &BuiltinType{"pointer", "void*", 'p'}
+// vector type
+var TypeFloat32x4 = &BuiltinType{"f32x4", "f32x4", '4'}
 
 // This type is used to tag that a function never returns.
 var TypeNoReturn = &BuiltinType{"noreturn", "void", '-'}
@@ -626,8 +627,10 @@ func init() {
 	registerBuiltinType(TypeVoid)
 	registerBuiltinType(TypeNoReturn)
 	registerBuiltinType(TypeNilPtr)
-	// registerBuiltinType(TypePointer)
-	// type alias
+
+	registerBuiltinType(TypeFloat32x4)
+
+	// type aliases
 	builtinScope.Types["pointer"] = GetPtrType(TypeVoid)
 	builtinScope.Types["int"] = TypeInt64
 	builtinScope.Types["uint"] = TypeUInt64
@@ -665,6 +668,20 @@ func init() {
 			registerSimpleTemplate("high", []Type{GetTypeType(typ)}, typ, IntLit{Value: int64(intType.MaxValue), Type: typ})
 			registerSimpleTemplate("low", []Type{GetTypeType(typ)}, typ, IntLit{Value: intType.MinValue, Type: typ})
 		}
+	}
+
+	// vector types
+	for _, typ := range []Type{TypeFloat32x4} {
+		registerBuiltin("+", "(", "+", ")", []Type{typ, typ}, typ, false)
+		registerBuiltin("-", "(", "-", ")", []Type{typ, typ}, typ, false)
+		registerBuiltin("*", "(", "*", ")", []Type{typ, typ}, typ, false)
+		registerBuiltin("/", "(", "/", ")", []Type{typ, typ}, typ, false)
+
+		registerBuiltin("<", "(", "<", ")", []Type{typ, typ}, TypeBoolean, false)
+		registerBuiltin("<=", "(", "<=", ")", []Type{typ, typ}, TypeBoolean, false)
+		registerBuiltin(">", "(", ">", ")", []Type{typ, typ}, TypeBoolean, false)
+		registerBuiltin(">=", "(", ">=", ")", []Type{typ, typ}, TypeBoolean, false)
+
 	}
 
 	{
