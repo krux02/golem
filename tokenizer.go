@@ -113,6 +113,7 @@ type Token struct {
 	value string
 }
 
+
 type ParseError struct {
 	code Token // untokenizable code
 	msg  string
@@ -521,21 +522,27 @@ func (tokenizer *Tokenizer) reportWrongIdent(token Token) {
 	return
 }
 
-func (tokenizer *Tokenizer) expectKind(token Token, kind TokenKind) {
+func (tokenizer *Tokenizer) expectKind(token Token, kind TokenKind) bool {
 	if token.kind != kind {
 		tokenizer.reportWrongKind(token)
+		return false
 	}
+	return true
 }
 
-func (tokenizer *Tokenizer) expectKind2(token Token, kind1, kind2 TokenKind) {
+func (tokenizer *Tokenizer) expectKind2(token Token, kind1, kind2 TokenKind) bool {
 	if token.kind != kind1 && token.kind != kind2 {
 		tokenizer.reportWrongKind(token)
+		return false
 	}
+	return true
 }
 
-func (tokenizer *Tokenizer) expectOperator(token Token, arg string) {
+func (tokenizer *Tokenizer) expectOperator(token Token, arg string) bool {
 	tokenizer.expectKind(token, TkOperator)
 	if token.value != arg {
 		tokenizer.reportError(token, "expected %v got %v", arg, token.value)
+		return false
 	}
+	return true
 }

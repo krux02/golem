@@ -267,7 +267,7 @@ func parseStrLit(tokenizer *Tokenizer) (result StrLit) {
 			case '"':
 				b.WriteRune('"')
 			default:
-				panic(tokenizer.Errorf(token, "invalid escape \\%c in string literal", rune))
+				tokenizer.reportError(token, "invalid escape \\%c in string literal", rune)
 			}
 			processEscape = false
 			continue
@@ -502,10 +502,10 @@ func init() {
 }
 
 func parseDocComment(tokenizer *Tokenizer) (result DocComment) {
-	token := tokenizer.Next()
-	if token.kind != TkPrefixDocComment {
-		panic(tokenizer.formatWrongKind(token))
+	if !tokenizer.expectKind(tokenizer.lookAheadToken, TkPrefixDocComment) {
+		return
 	}
+	token := tokenizer.Next()
 	result.Source = token.value
 	commentScanner := &DocCommentScanner{token.value}
 	for commentScanner.HasNext() {
@@ -626,10 +626,9 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 	case TkOperator:
 		if prefixExpr {
 			// do not allow prefix prefix expression?
-			panic(tokenizer.formatWrongKind(tokenizer.lookAheadToken))
-		} else {
-			result = (Expr)(parsePrefixCall(tokenizer))
+			tokenizer.reportWrongKind(tokenizer.lookAheadToken)
 		}
+		result = (Expr)(parsePrefixCall(tokenizer))
 	case TkType:
 		result = (Expr)(parseTypeContext(tokenizer))
 	case TkNilLit:
@@ -639,7 +638,8 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 	case TkVar:
 		result = (Expr)(parseVarExpr(tokenizer))
 	default:
-		panic(tokenizer.formatWrongKind(tokenizer.lookAheadToken))
+		tokenizer.reportWrongKind(tokenizer.lookAheadToken)
+		result = (Expr)(InvalidTokenExpr{tokenizer.Next()})
 	}
 
 	// any expression could be the start of a longer expression, this is
@@ -712,7 +712,8 @@ func parseTypeDef(tokenizer *Tokenizer) Expr {
 		for _, it := range body.Items {
 			colonExpr, ok := MatchColonExpr(it)
 			if !ok {
-				panic(fmt.Errorf("parser error handling not implemented: %s", AstFormat(it)))
+				//tokenizer.reportError(it, "expect colon expr")
+				panic("expect colon expr")
 			}
 			result.Fields = append(result.Fields, colonExpr)
 		}
@@ -903,9 +904,10 @@ func parsePackage(code, filename string) (result PackageDef) {
 			docComment := parseDocComment(tokenizer)
 			result.TopLevelStmts = append(result.TopLevelStmts, docComment)
 			continue
+		default:
+			tokenizer.reportWrongKind(tokenizer.Next())
+			continue
 		}
-		tokenizer.errors = append(tokenizer.errors, ParseError{token})
-		panic(tokenizer.formatWrongKind(tokenizer.lookAheadToken))
 	}
 	panic("unreachable")
 }

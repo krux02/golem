@@ -48,6 +48,14 @@ func AstFormat(node PrettyPrintable) string {
 	return result
 }
 
+func (arg InvalidTokenExpr) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("<invalid ")
+	builder.WriteString(TokenKindNames[arg.token.kind])
+	builder.WriteString(": ")
+	builder.WriteString(arg.token.value)
+	builder.WriteString(">")
+}
+
 func (ident Ident) PrettyPrint(builder *AstPrettyPrinter) {
 	// the only exception where pretty Print may print the original
 	// source.
