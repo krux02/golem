@@ -11,7 +11,7 @@ static {
 }
 
 proc main(): i32 = {
-  let window  = SDL_CreateWindow("hello triangle", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_OPENGL)
+  let window = SDL_CreateWindow("hello triangle", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_OPENGL)
   assert(window != nil)
   # SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4)
   # SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6)

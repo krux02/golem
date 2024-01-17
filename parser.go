@@ -42,7 +42,7 @@ func parseIdent(tokenizer *Tokenizer) (result Ident) {
 func parseOperator(tokenizer *Tokenizer) (result Ident) {
 	token := tokenizer.Next()
 	tk := token.kind
-	if tk != TkOperator && tk != TkAnd && tk != TkOr {
+	if tk != TkOperator && tk != TkAssign && tk != TkAnd && tk != TkOr {
 		tokenizer.reportWrongKind(token)
 	}
 	// ensure operator precedence exists
@@ -863,10 +863,9 @@ func parseImportStmt(tokenizer *Tokenizer) ImportStmt {
 	return ImportStmt{Source: joinSubstr(tokenizer.code, firstToken.value, strLit.Source), StrLit: strLit}
 }
 
-func parsePackage(code, filename string) (result PackageDef) {
-	result.Name = strings.TrimSuffix(path.Base(filename), ".golem")
-	result.Source = code
-	var tokenizer = NewTokenizer(code, filename)
+func parsePackage(tokenizer *Tokenizer) (result PackageDef, errors []ParseError) {
+	result.Name = strings.TrimSuffix(path.Base(tokenizer.filename), ".golem")
+	result.Source = tokenizer.code
 	for true {
 		switch tokenizer.lookAheadToken.kind {
 		//case TkLineComment:
@@ -875,7 +874,7 @@ func parsePackage(code, filename string) (result PackageDef) {
 			tokenizer.Next()
 			continue
 		case TkEof:
-			return
+			return result, tokenizer.errors
 		case TkEmit:
 			emitStmt := parseEmitStmt(tokenizer)
 			result.TopLevelStmts = append(result.TopLevelStmts, emitStmt)

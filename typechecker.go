@@ -205,10 +205,6 @@ func LookUpLetSym(tc *TypeChecker, scope Scope, ident Ident, expected Type) (res
 	return
 }
 
-func LineColumnNode(tc *TypeChecker, node AstNode) (line, columnStart, columnEnd int) {
-	return LineColumnStr(tc.code, node.GetSource())
-}
-
 func TypeCheckStructDef(tc *TypeChecker, scope Scope, def StructDef) *TcStructDef {
 	ValidNameCheck(tc, def.Name, "type")
 	result := &TcStructDef{}
@@ -328,7 +324,7 @@ func ReportErrorf(tc *TypeChecker, node AstNode, msg string, args ...interface{}
 		if node == nil {
 			fmt.Println(msg)
 		} else {
-			line, columnStart, columnEnd := LineColumnNode(tc, node)
+			line, columnStart, columnEnd := LineColumnStr(tc.code, node.GetSource())
 			fmt.Printf("%s(%d, %d-%d) Error: %s\n", tc.filename, line, columnStart, columnEnd, newMsg)
 		}
 	}

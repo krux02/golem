@@ -113,7 +113,6 @@ type Token struct {
 	value string
 }
 
-
 type ParseError struct {
 	code Token // untokenizable code
 	msg  string
@@ -128,6 +127,7 @@ type Tokenizer struct {
 	token, lookAheadToken   Token
 	offset, lookAheadOffset int
 	errors                  []ParseError
+	silentErrors            bool
 }
 
 func NewTokenizer(code string, filename string) (result *Tokenizer) {
@@ -501,8 +501,14 @@ func (this *Tokenizer) AtEnd() bool {
 }
 
 func (tokenizer *Tokenizer) reportError(token Token, msg string, args ...interface{}) {
-	error := ParseError{token, fmt.Sprintf(msg, args...)}
+	newMsg := fmt.Sprintf(msg, args...)
+	error := ParseError{token, newMsg}
 	tokenizer.errors = append(tokenizer.errors, error)
+
+	if !tokenizer.silentErrors {
+		line, columnStart, columnEnd := LineColumnStr(tokenizer.code, token.value)
+		fmt.Printf("%s(%d, %d-%d) Error: %s\n", tokenizer.filename, line, columnStart, columnEnd, newMsg)
+	}
 	return
 }
 

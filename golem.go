@@ -68,8 +68,22 @@ func errorTest(t *testing.T, filename string) {
 	if numErrors != expectedNumErrors {
 		t.Fatalf("%d number of errors doesn't match the expected %d number of errors", numErrors, expectedNumErrors)
 	}
-	pak := parsePackage(source, filename)
+
+	tokenizer := NewTokenizer(source, filename)
+	tokenizer.silentErrors = true
+	pak, parseErrors := parsePackage(tokenizer)
 	validateSourceSet(pak.Source, pak)
+	for _, error := range parseErrors {
+		line, _, _ := LineColumnStr(source, error.code.value)
+		expectedError, ok := expectedErrors[line]
+		if !ok {
+			t.Fatalf("unexpected error at line %d:\n  %s", line, error.msg)
+		}
+		if expectedError != error.msg {
+			t.Fatalf("errormessage does not match, got '%s' but expected '%s'\n", error.msg, expectedError)
+		}
+		delete(expectedErrors, line)
+	}
 
 	tc := NewTypeChecker(source, filename)
 	tc.silentErrors = true
@@ -117,7 +131,11 @@ func compileFileToPackage(filename string, requiresMain bool) (packageDef *TcPac
 		return nil, err
 	}
 	source := string(bytes)
-	pak := parsePackage(source, filename)
+	tokenizer := NewTokenizer(source, filename)
+	pak, parseErrors := parsePackage(tokenizer)
+	if len(parseErrors) > 0 {
+		return nil, fmt.Errorf("file '%s' has parsing errors", filename)
+	}
 	tc := NewTypeChecker(source, filename)
 	packageDef = TypeCheckPackage(tc, pak, requiresMain)
 	if len(tc.errors) > 0 {
