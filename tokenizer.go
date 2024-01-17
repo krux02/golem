@@ -231,11 +231,11 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 				idx += length
 				goto eatWhiteSpace
 			default:
+				result.kind = TkInvalid
+				result.value = code[idx-1 : idx+length]
 				idx += length
 				newOffset += idx
-				// invalid escape
-				result.kind = TkInvalid
-				result.value = code[:idx]
+				this.reportError(result, "invalid escape sequence \\%c", rune)
 				return result, newOffset
 			}
 		default:
@@ -277,7 +277,7 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 		result.kind = TkInvalid
 		result.value = code[:invalidRangeLength]
 		newOffset += invalidRangeLength
-		this.reportError(result, "Currently only 7 bit ASCII is supported.")
+		this.reportError(result, "currently only 7 bit ASCII is supported")
 		return result, newOffset
 	}
 
@@ -519,7 +519,10 @@ func (tokenizer *Tokenizer) reportError(token Token, msg string, args ...interfa
 // }
 
 func (tokenizer *Tokenizer) reportWrongKind(token Token) {
-	tokenizer.reportError(token, "unexpected token: %s value: '%s'", TokenKindNames[token.kind], token.value)
+	if token.kind != TkInvalid {
+		// Skip reporting invalid tokens, as they should already be reported as an error on creating them.
+		tokenizer.reportError(token, "unexpected token: %s value: '%s'", TokenKindNames[token.kind], token.value)
+	}
 	return
 }
 
@@ -529,6 +532,9 @@ func (tokenizer *Tokenizer) reportWrongIdent(token Token) {
 }
 
 func (tokenizer *Tokenizer) expectKind(token Token, kind TokenKind) bool {
+	if kind == TkInvalid {
+		panic("never expect an invalid token")
+	}
 	if token.kind != kind {
 		tokenizer.reportWrongKind(token)
 		return false
@@ -537,6 +543,9 @@ func (tokenizer *Tokenizer) expectKind(token Token, kind TokenKind) bool {
 }
 
 func (tokenizer *Tokenizer) expectKind2(token Token, kind1, kind2 TokenKind) bool {
+	if kind1 == TkInvalid || kind2 == TkInvalid {
+		panic("never expect an invalid token")
+	}
 	if token.kind != kind1 && token.kind != kind2 {
 		tokenizer.reportWrongKind(token)
 		return false

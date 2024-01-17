@@ -1,3 +1,4 @@
+# NumErrors: 2
 
-
-äöü # error: Currently only 7 bit ASCII is supported
+äöü # Error: currently only 7 bit ASCII is supported
+\x # Error: invalid escape sequence \x

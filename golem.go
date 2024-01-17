@@ -73,16 +73,22 @@ func errorTest(t *testing.T, filename string) {
 	tokenizer.silentErrors = true
 	pak, parseErrors := parsePackage(tokenizer)
 	validateSourceSet(pak.Source, pak)
-	for _, error := range parseErrors {
-		line, _, _ := LineColumnStr(source, error.code.value)
-		expectedError, ok := expectedErrors[line]
-		if !ok {
-			t.Fatalf("unexpected error at line %d:\n  %s", line, error.msg)
+	if len(parseErrors) > 0 {
+		for _, error := range parseErrors {
+			line, _, _ := LineColumnStr(source, error.code.value)
+			expectedError, ok := expectedErrors[line]
+			if !ok {
+				t.Fatalf("unexpected error at line %d:\n  %s", line, error.msg)
+			}
+			if expectedError != error.msg {
+				t.Fatalf("errormessage does not match, got '%s' but expected '%s'\n", error.msg, expectedError)
+			}
+			delete(expectedErrors, line)
 		}
-		if expectedError != error.msg {
-			t.Fatalf("errormessage does not match, got '%s' but expected '%s'\n", error.msg, expectedError)
+		for line, expectedError := range expectedErrors {
+			t.Fatalf("expected error '%s' at line %d not triggered by the compiler", expectedError, line)
 		}
-		delete(expectedErrors, line)
+		return
 	}
 
 	tc := NewTypeChecker(source, filename)
