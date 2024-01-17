@@ -200,11 +200,17 @@ func parseCodeBlock(tokenizer *Tokenizer) (result CodeBlock) {
 func parseCharLit(tokenizer *Tokenizer) (result CharLit) {
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkCharLit)
+	quotelessValue := token.value[1 : len(token.value)-1]
+	if len(quotelessValue) == 0 {
+		tokenizer.reportError(token, "char token must not be empty")
+	}
 	result.Source = token.value
-
-	rune1, rune1Len := utf8.DecodeRuneInString(token.value[1:])
+	rune1, rune1Len := utf8.DecodeRuneInString(quotelessValue)
 	if rune1 == '\\' {
-		rune2, _ := utf8.DecodeRuneInString(token.value[1+rune1Len:])
+		rune2, rune2Len := utf8.DecodeRuneInString(quotelessValue[rune1Len:])
+		if len(quotelessValue) != rune1Len+rune2Len {
+			tokenizer.reportError(token, "char token with escape sequence must contain exactly two characters")
+		}
 		switch rune2 {
 		case 'a':
 			result.Rune = '\a'
@@ -231,6 +237,9 @@ func parseCharLit(tokenizer *Tokenizer) (result CharLit) {
 			result.Rune = '\u29EF'
 		}
 		return result
+	}
+	if len(quotelessValue) != rune1Len {
+		tokenizer.reportError(token, "char token too long")
 	}
 	result.Rune = rune1
 	return result

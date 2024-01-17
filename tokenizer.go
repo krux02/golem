@@ -404,51 +404,28 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 
 		result.value = code[:it]
 
-	case c == '"':
-		result.kind = TkStrLit
-		var lastRune = '"'
-		var scanningDone = false
-		var idx2 = len(code)
+	case c == '"' || c == '\'':
+		if c == '"' {
+			result.kind = TkStrLit
+		} else {
+			result.kind = TkCharLit
+		}
+		delimiter := c
+		lastRune := c
+		scanningDone := false
+		idx2 := len(code)
 		for pos, rune := range code[cLen:] {
 			if scanningDone {
 				idx2 = cLen + pos
 				break
 			}
-
-			if lastRune == '\\' {
-				switch rune {
-				case 'a', 'b', 'f', 'n', 'r', 't', 'v', '\\', '\'', '"':
-				default:
-					panic("illegal escape sequence")
-				}
-			} else if rune == '"' {
+			if lastRune != '\\' && rune == delimiter {
+				// checking for correct escape sequences is done parseStrLit and parseCharLit
 				scanningDone = true
 			}
 			lastRune = rune
 		}
 		result.value = code[:idx2]
-	case c == '\'':
-		result.kind = TkCharLit
-		rune1, rune1Len := utf8.DecodeRuneInString(code[cLen:])
-		if rune1 == '\\' {
-			rune2, rune2Len := utf8.DecodeRuneInString(code[cLen+rune1Len:])
-			switch rune2 {
-			case 'a', 'b', 'f', 'n', 'r', 't', 'v', '\\', '\'', '"':
-			default:
-				panic("illegal escape sequence")
-			}
-			rune3, rune3Len := utf8.DecodeRuneInString(code[cLen+rune1Len+rune2Len:])
-			if rune3 != '\'' {
-				panic("illegal escape sequence")
-			}
-			result.value = code[:cLen+rune1Len+rune2Len+rune3Len]
-		} else {
-			rune2, rune2Len := utf8.DecodeRuneInString(code[cLen+rune1Len:])
-			if rune2 != '\'' {
-				panic(fmt.Errorf("illegal escape sequence at: %s...", code[:5]))
-			}
-			result.value = code[:cLen+rune1Len+rune2Len]
-		}
 	case c == '`':
 		result.kind = TkIdent
 		for pos, rune := range code[cLen:] {
