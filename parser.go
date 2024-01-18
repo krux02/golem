@@ -396,25 +396,27 @@ func parseInfixCall(tokenizer *Tokenizer, lhs Expr) (result Call) {
 }
 
 // comma separated list of expressions. used for call arguments and array literals
-func parseExprList(tokenizer *Tokenizer, tkOpen, tkClose TokenKind) (result []Expr) {
+func parseExprList(tokenizer *Tokenizer, tkOpen, tkClose TokenKind) (result ExprList) {
+	firstToken := tokenizer.lookAheadToken
 	next := tokenizer.Next()
 	tokenizer.expectKind(next, tkOpen)
 	if tokenizer.lookAheadToken.kind != tkClose {
-		result = append(result, parseExpr(tokenizer, false))
+		result.Items = append(result.Items, parseExpr(tokenizer, false))
 		for tokenizer.lookAheadToken.kind == TkComma {
 			tokenizer.Next()
-			result = append(result, parseExpr(tokenizer, false))
+			result.Items = append(result.Items, parseExpr(tokenizer, false))
 		}
 	}
 	next = tokenizer.Next()
 	tokenizer.expectKind(next, tkClose)
+	result.Source = joinSubstr(tokenizer.code, firstToken.value, next.value)
 	return result
 }
 
 func parseCall(tokenizer *Tokenizer, callee Expr) (result Call) {
 	// parse call expr
 	result.Callee = callee
-	result.Args = parseExprList(tokenizer, TkOpenBrace, TkCloseBrace)
+	result.Args = parseExprList(tokenizer, TkOpenBrace, TkCloseBrace).Items
 	result.Braced = true
 	lastToken := tokenizer.token
 	result.Source = joinSubstr(tokenizer.code, callee.GetSource(), lastToken.value)
@@ -427,7 +429,7 @@ func parseBracketCall(tokenizer *Tokenizer, callee Expr) (result Call) {
 	ident.Source = tokenizer.lookAheadToken.value
 	result.Callee = ident
 	result.Args = append(result.Args, callee)
-	result.Args = append(result.Args, parseExprList(tokenizer, TkOpenBracket, TkCloseBracket)...)
+	result.Args = append(result.Args, parseExprList(tokenizer, TkOpenBracket, TkCloseBracket).Items...)
 	result.Braced = true
 	lastToken := tokenizer.token
 	result.Source = joinSubstr(tokenizer.code, callee.GetSource(), lastToken.value)
@@ -435,10 +437,9 @@ func parseBracketCall(tokenizer *Tokenizer, callee Expr) (result Call) {
 }
 
 func parseArrayLit(tokenizer *Tokenizer) (result ArrayLit) {
-	firstToken := tokenizer.lookAheadToken
-	result.Items = parseExprList(tokenizer, TkOpenBracket, TkCloseBracket)
-	lastToken := tokenizer.token
-	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
+	exprList := parseExprList(tokenizer, TkOpenBracket, TkCloseBracket)
+	result.Items = exprList.Items
+	result.Source = exprList.Source
 	return result
 }
 
@@ -597,7 +598,7 @@ func attachDocComment(expr Expr, target string, value string) bool {
 	case ContinueStmt:
 		return false
 	}
-	panic("not implementede")
+	panic("not implemented")
 }
 
 func parseNilLit(tokenizer *Tokenizer) NilLit {
@@ -627,11 +628,17 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 	case TkOpenBracket:
 		result = (Expr)(parseArrayLit(tokenizer))
 	case TkOpenBrace:
+		token := tokenizer.lookAheadToken
 		exprList := parseExprList(tokenizer, TkOpenBrace, TkCloseBrace)
-		if len(exprList) != 1 {
-			panic("braced expression must have a single brace")
+
+		if len(exprList.Items) == 1 {
+			result = exprList.Items[0]
+		} else {
+			// TODO, this report is not on the right location. It should be on
+			// `exprList`, not token.
+			tokenizer.reportError(token, "braced expression must contain a single expression, but has %d", len(exprList.Items))
+			result = newErrorNode(exprList)
 		}
-		result = exprList[0]
 	case TkOperator:
 		if prefixExpr {
 			// do not allow prefix prefix expression?

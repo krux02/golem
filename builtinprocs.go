@@ -248,7 +248,7 @@ var builtinDeref *ProcSignature
 func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	if typ == TypeNoReturn {
 		ReportErrorf(tc, context, "a default value of no retrun does not exist")
-		return TcErrorNode{}
+		return newErrorNode(context)
 	} else if typ == TypeChar {
 		return CharLit{}
 	} else if typ == TypeBoolean {
@@ -271,7 +271,7 @@ func (typ *BuiltinFloatType) DefaultValue(tc *TypeChecker, context AstNode) TcEx
 
 func (typ *UnspecifiedType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	ReportErrorf(tc, context, "variable definitions statements must have at least one, a type or a value expression")
-	return TcErrorNode{}
+	return newErrorNode(context)
 }
 
 func (typ *ErrorType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
@@ -580,14 +580,14 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 func BuiltinAddCFlags(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 	if len(call.Args) != 1 {
 		ReportErrorf(tc, call, "expect single string literal as argument")
-		return TcErrorNode{call}
+		return newErrorNode(call)
 	}
 	switch arg0 := call.Args[0].(type) {
 	case StrLit:
 		scope.CurrentPackage.CFlags = append(scope.CurrentPackage.CFlags, arg0.Value)
 	default:
 		ReportErrorf(tc, call, "expect single string literal as argument")
-		return TcErrorNode{call}
+		return newErrorNode(call)
 	}
 	return TcCodeBlock{Source: call.Source}
 }

@@ -21,7 +21,12 @@ type TcExpr interface {
 
 // node to wrap code that can't be typechecked
 type TcErrorNode struct {
+	Source     string
 	SourceNode Expr
+}
+
+func newErrorNode(source Expr) *TcErrorNode {
+	return &TcErrorNode{Source: source.GetSource(), SourceNode: source}
 }
 
 type TcStructField struct {
@@ -274,7 +279,7 @@ func (call TcArrayLit) expression()        {}
 func (call TcEnumSetLit) expression()      {}
 func (expr TcStructLit) expression()       {}
 
-func (arg TcErrorNode) GetSource() string              { return arg.SourceNode.GetSource() }
+func (arg TcErrorNode) GetSource() string              { return arg.Source }
 func (arg TcDotExpr) GetSource() string                { return arg.Source }
 func (arg TcStructField) GetSource() string            { return arg.Source }
 func (arg TcSymbol) GetSource() string                 { return arg.Source }

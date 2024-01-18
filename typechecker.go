@@ -447,7 +447,7 @@ func (structDef *TcStructDef) GetField(name string) (resField TcStructField, idx
 
 func TypeCheckDotExpr(tc *TypeChecker, scope Scope, call Call, expected Type) TcExpr {
 	if !ExpectArgsLen(tc, call, len(call.Args), 2) {
-		return TcErrorNode{SourceNode: call}
+		return newErrorNode(call)
 	}
 
 	lhs := TypeCheckExpr(tc, scope, call.Args[0], TypeUnspecified)
@@ -473,10 +473,10 @@ func TypeCheckDotExpr(tc *TypeChecker, scope Scope, call Call, expected Type) Tc
 		ExpectType(tc, rhs, result.Rhs.GetType(), expected)
 		return result
 	case *ErrorType:
-		return TcErrorNode{call}
+		return newErrorNode(call)
 	default:
 		ReportErrorf(tc, lhs, "dot call is only supported on struct types, but got: %s %T", AstFormat(typ), typ)
-		return TcErrorNode{call}
+		return newErrorNode(call)
 	}
 }
 
@@ -738,7 +738,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcEx
 		return TypeCheckDotExpr(tc, scope, call, expected)
 	case ":":
 		if !ExpectArgsLen(tc, call, len(call.Args), 2) {
-			return TcErrorNode{SourceNode: call}
+			return newErrorNode(call)
 		}
 		typ := LookUpType(tc, scope, TypeExpr(call.Args[1]))
 		ExpectType(tc, call, typ, expected)
@@ -1441,7 +1441,7 @@ func TypeCheckArrayLit(tc *TypeChecker, scope Scope, arg ArrayLit, expected Type
 			return result
 		}
 	case *ErrorType:
-		return TcErrorNode{SourceNode: arg}
+		return newErrorNode(arg)
 	case *BuiltinType:
 		panic(fmt.Errorf("I don't know about type %s!", exp.Name))
 	default:

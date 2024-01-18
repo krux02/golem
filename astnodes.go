@@ -7,13 +7,7 @@ type AstNode interface {
 	GetSource() string
 }
 
-type Expr interface {
-	AstNode
-	// get the substring of the original source string. This needs to be
-	// a real substring to be convertible into line column
-	// representation
-	expression()
-}
+type Expr = AstNode
 
 // all lines from a documentation comment
 type DocLines []string
@@ -165,6 +159,11 @@ type NilLit struct {
 	Type   Type
 }
 
+type ExprList struct {
+	Source string
+	Items  []Expr
+}
+
 type ArrayLit struct {
 	Source string
 	Items  []Expr
@@ -215,36 +214,8 @@ type EmitStmt struct {
 	Value  StrLit
 }
 
-func (_ InvalidTokenExpr) expression() {}
-func (_ ProcDef) expression()          {}
-func (_ StructDef) expression()        {}
-func (_ EnumDef) expression()          {}
-func (_ DocComment) expression()       {}
-func (_ Ident) expression()            {}
-func (_ CodeBlock) expression()        {}
-func (_ StrLit) expression()           {}
-func (_ IntLit) expression()           {}
-func (_ FloatLit) expression()         {}
-func (_ ArrayLit) expression()         {}
-func (_ CharLit) expression()          {}
-func (_ NilLit) expression()           {}
-func (_ Call) expression()             {}
-func (_ ColonExpr) expression()        {}
-func (_ VariableDefStmt) expression()  {}
-func (_ ForLoopStmt) expression()      {}
-func (_ WhileLoopStmt) expression()    {}
-func (_ IfExpr) expression()           {}
-func (_ IfElseExpr) expression()       {}
-func (_ ReturnExpr) expression()       {}
-func (_ VarExpr) expression()          {}
-func (_ TypeContext) expression()      {}
-func (_ BreakStmt) expression()        {}
-func (_ ContinueStmt) expression()     {}
-func (_ EmitStmt) expression()         {}
-func (_ StaticExpr) expression()       {}
-func (_ ImportStmt) expression()       {}
-
 func (arg InvalidTokenExpr) GetSource() string { return arg.token.value }
+func (arg ExprList) GetSource() string         { return arg.Source }
 func (arg ProcDef) GetSource() string          { return arg.Source }
 func (arg StructDef) GetSource() string        { return arg.Source }
 func (arg EnumDef) GetSource() string          { return arg.Source }

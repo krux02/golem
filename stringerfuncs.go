@@ -174,6 +174,18 @@ func (lit CStrLit) PrettyPrint(builder *AstPrettyPrinter) {
 	StrLit{Value: lit.Value}.PrettyPrint(builder)
 }
 
+func (list ExprList) PrettyPrint(builder *AstPrettyPrinter) {
+	// TODO this is almost identical to `ArrayLit` maybe the node can me merged?
+	builder.WriteRune('(')
+	for i, expr := range list.Items {
+		if i != 0 {
+			builder.WriteString(", ")
+		}
+		builder.WriteNode(expr)
+	}
+	builder.WriteRune(')')
+}
+
 func (lit ArrayLit) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteRune('[')
 	for i, expr := range lit.Items {
