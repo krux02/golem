@@ -147,9 +147,10 @@ func LookUpType(tc *TypeChecker, scope Scope, expr TypeExpr) Type {
 		return TypeError
 	case IntLit:
 		return GetIntLitType(x.Value)
+		// case nil:
+		// 	return TypeError
 	}
-	ReportErrorf(tc, expr, "unexpected ast node in type expr: %T", expr)
-	return TypeError
+	panic(fmt.Sprintf("unexpected ast node in type expr: %v", expr))
 }
 
 func LookUpProc(scope Scope, ident Ident, numArgs int, signatures []*ProcSignature) []*ProcSignature {
@@ -1075,7 +1076,7 @@ func (lit IntLit) GetType() Type {
 
 func (lit FloatLit) GetType() Type {
 	if lit.Type == nil {
-		panic(fmt.Errorf("internal error: type of FloatLit not set"))
+		panic(fmt.Errorf("internal error: type of FloatLit %s not set", lit.Source))
 	}
 	return lit.Type
 }
@@ -1247,8 +1248,7 @@ func TypeCheckExpr(tc *TypeChecker, scope Scope, arg Expr, expected Type) TcExpr
 	case IntLit:
 		return (TcExpr)(TypeCheckIntLit(tc, scope, arg, expected))
 	case FloatLit:
-		typ := ExpectType(tc, arg, TypeAnyFloat, expected)
-		arg.Type = typ.(*BuiltinFloatType)
+		arg.Type = ExpectType(tc, arg, TypeAnyFloat, expected)
 		return (TcExpr)(arg)
 	case ReturnExpr:
 		// ignoring expected type here, because the return as expression
@@ -1557,27 +1557,28 @@ func TypeCheckPackage(tc *TypeChecker, arg PackageDef, requiresMain bool) (resul
 			pkg, err := GetPackage(stmt.StrLit.Value)
 			if err != nil {
 				ReportErrorf(tc, stmt.StrLit, "%s", err.Error())
-			}
-			for key, value := range pkg.ExportScope.Variables {
-				// TODO solution for conflicts and actually find out where the conflicting symbol comes from.
-				_, hasKey := importScope.Variables[key]
-				if hasKey {
-					panic(fmt.Errorf("name conflicts in imported variable not yet implemented: %s.%s conflicts with some other symbol", stmt.StrLit.Value, key))
+			} else {
+				for key, value := range pkg.ExportScope.Variables {
+					// TODO solution for conflicts and actually find out where the conflicting symbol comes from.
+					_, hasKey := importScope.Variables[key]
+					if hasKey {
+						panic(fmt.Errorf("name conflicts in imported variable not yet implemented: %s.%s conflicts with some other symbol", stmt.StrLit.Value, key))
+					}
+					importScope.Variables[key] = value
 				}
-				importScope.Variables[key] = value
-			}
-			for key, value := range pkg.ExportScope.Types {
-				_, hasKey := importScope.Types[key]
-				if hasKey {
-					panic(fmt.Errorf("name conflicts in imported type not yet implemented: %s.%s conflicts with some other symbol", stmt.StrLit.Value, key))
+				for key, value := range pkg.ExportScope.Types {
+					_, hasKey := importScope.Types[key]
+					if hasKey {
+						panic(fmt.Errorf("name conflicts in imported type not yet implemented: %s.%s conflicts with some other symbol", stmt.StrLit.Value, key))
+					}
+					importScope.Types[key] = value
 				}
-				importScope.Types[key] = value
+				for key, value := range pkg.ExportScope.Procedures {
+					procs, _ := importScope.Procedures[key]
+					importScope.Procedures[key] = append(procs, value...)
+				}
+				result.Imports = append(result.Imports, pkg)
 			}
-			for key, value := range pkg.ExportScope.Procedures {
-				procs, _ := importScope.Procedures[key]
-				importScope.Procedures[key] = append(procs, value...)
-			}
-			result.Imports = append(result.Imports, pkg)
 		default:
 			panic(fmt.Errorf("internal error: %T", stmt))
 		}

@@ -4,9 +4,8 @@ emit "#include <SDL2/SDL.h>"
 import "sdl2"
 import "gl"
 
-# TODO this is wrong, this is a linker flag, not a package compilation flag, and it should be in the corresponding modules, gl and sdl2
 static {
-  addCFlags("-lSDL2")
+  # addCFlags("-lSDL2")
   addCFlags("-lGL")
 }
 

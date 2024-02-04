@@ -822,17 +822,20 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 
 	colonExpr, isColonExpr := MatchColonExpr(expr)
 	if !isColonExpr {
-		panic("proc def requres colon to specify return type")
+		tokenizer.reportError(firstToken, "proc def requres colon to specify return type")
+		return
 	}
 	result.ResultType = colonExpr.Rhs
 
 	call, isCall := colonExpr.Lhs.(Call)
 	if !isCall {
-		panic("expect call")
+		tokenizer.reportError(firstToken, "proc def requires an argument list")
+		return
 	}
 	name, isIdent := call.Callee.(Ident)
 	if !isIdent {
-		panic("expect ident")
+		tokenizer.reportError(firstToken, "proc keyword must be followed by an identifier")
+		return
 	}
 
 	result.Name = name
