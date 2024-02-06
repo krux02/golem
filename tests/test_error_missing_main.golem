@@ -1,4 +1,4 @@
-# Error: package test_error_missing_main misses main proc
+# Error: package 'test_error_missing_main' misses main proc
 # NumErrors: 1
 
 proc fainuiaet(): i32 = {

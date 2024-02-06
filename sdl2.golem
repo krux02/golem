@@ -1,5 +1,5 @@
 static {
-  addCFlags("-lSDL2")
+  addLinkerFlags("-lSDL2")
 }
 
 emit "#include <SDL2/SDL.h>"

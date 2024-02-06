@@ -585,7 +585,9 @@ func (context *PackageGeneratorContext) popMarkedForGenerationType() (result Typ
 	return result
 }
 
-func compilePackageToC(pak *TcPackageDef) string {
+// TODO this needs a signature change. Compiling a Package will also trigger the
+// compilation of its imported packages. This is not yet reflected in the API.
+func compilePackageToC(program *ProgramContext, pak *TcPackageDef, mainPackage bool) string {
 	context := &PackageGeneratorContext{Pak: pak}
 	context.includes.NewlineAndIndent()
 	context.includes.WriteString("#include <stdint.h>")
@@ -608,7 +610,11 @@ func compilePackageToC(pak *TcPackageDef) string {
 	context.typeDecl.NewlineAndIndent()
 	context.typeDecl.WriteString("typedef float f32x4 __attribute__ ((vector_size(16), aligned(16)));")
 
-	context.markProcForGeneration(pak.Main)
+	// program.Main
+	if mainPackage {
+		context.markProcForGeneration(program.Main)
+	}
+
 	for procDef := context.popMarkedForGenerationProcDef(); procDef != nil; procDef = context.popMarkedForGenerationProcDef() {
 		compileProcDef(context, procDef)
 	}

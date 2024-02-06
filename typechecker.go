@@ -30,6 +30,7 @@ type ScopeImpl struct {
 	// A return stmt needs to know which procedure it belongs to. This
 	// pointer points to the corresponding procedure. This should
 	// probably be redued to be just the proc signature.
+	CurrentProgram *ProgramContext
 	CurrentPackage *TcPackageDef
 	CurrentProc    *TcProcDef
 	Variables      map[string]TcSymbol
@@ -42,6 +43,7 @@ type Scope = *ScopeImpl
 func NewSubScope(scope Scope) Scope {
 	return &ScopeImpl{
 		Parent:         scope,
+		CurrentProgram: scope.CurrentProgram,
 		CurrentPackage: scope.CurrentPackage,
 		CurrentProc:    scope.CurrentProc,
 		Variables:      make(map[string]TcSymbol),
@@ -1299,7 +1301,7 @@ var typeTypeMap map[Type]*TypeType
 var packageMap map[string]*TcPackageDef
 var intLitTypeMap map[int64]*IntLitType
 
-func GetPackage(workDir string, importPath string) (result *TcPackageDef, err error) {
+func GetPackage(currentProgram *ProgramContext, workDir string, importPath string) (result *TcPackageDef, err error) {
 	if !filepath.IsAbs(workDir) {
 		panic(fmt.Errorf("internal error: workDir '%s' must be absolute", workDir))
 	}
@@ -1307,7 +1309,7 @@ func GetPackage(workDir string, importPath string) (result *TcPackageDef, err er
 	var ok bool
 	result, ok = packageMap[fullpath]
 	if !ok {
-		result, err = compileFileToPackage(fmt.Sprintf("%s.golem", fullpath), false)
+		result, err = compileFileToPackage(currentProgram, fmt.Sprintf("%s.golem", fullpath), false)
 		packageMap[fullpath] = result
 	}
 	return result, err
@@ -1515,9 +1517,10 @@ func TypeCheckWhileLoopStmt(tc *TypeChecker, scope Scope, loopArg WhileLoopStmt)
 	return result
 }
 
-func TypeCheckPackage(tc *TypeChecker, arg PackageDef, requiresMain bool) (result *TcPackageDef) {
+func TypeCheckPackage(tc *TypeChecker, currentProgram *ProgramContext, arg PackageDef, mainPackage bool) (result *TcPackageDef) {
 	result = &TcPackageDef{}
 	importScope := NewSubScope(builtinScope)
+	importScope.CurrentProgram = currentProgram
 	pkgScope := NewSubScope(importScope)
 
 	importScope.CurrentPackage = result //
@@ -1543,8 +1546,8 @@ func TypeCheckPackage(tc *TypeChecker, arg PackageDef, requiresMain bool) (resul
 		case ProcDef:
 			procDef := TypeCheckProcDef(tc, pkgScope, stmt)
 			result.ProcDefs = append(result.ProcDefs, procDef)
-			if procDef.Name == "main" {
-				result.Main = procDef
+			if mainPackage && procDef.Name == "main" {
+				currentProgram.Main = procDef
 			}
 		case VariableDefStmt:
 			varDef := TypeCheckVariableDefStmt(tc, pkgScope, stmt)
@@ -1559,7 +1562,7 @@ func TypeCheckPackage(tc *TypeChecker, arg PackageDef, requiresMain bool) (resul
 			tcExpr := TypeCheckExpr(tc, pkgScope, stmt.Expr, TypeVoid)
 			EvalExpr(tc, tcExpr, pkgScope)
 		case ImportStmt:
-			pkg, err := GetPackage(arg.WorkDir, stmt.StrLit.Value)
+			pkg, err := GetPackage(currentProgram, arg.WorkDir, stmt.StrLit.Value)
 			if err != nil {
 				ReportErrorf(tc, stmt.StrLit, "%s", err.Error())
 			} else {
@@ -1588,12 +1591,13 @@ func TypeCheckPackage(tc *TypeChecker, arg PackageDef, requiresMain bool) (resul
 			panic(fmt.Errorf("internal error: %T", stmt))
 		}
 	}
-	if requiresMain && result.Main == nil {
-		ReportErrorf(tc, arg, "package %s misses main proc", result.Name)
+	if mainPackage && currentProgram.Main == nil {
+		ReportErrorf(tc, arg, "package '%s' misses main proc", result.Name)
 	}
 
 	// TODO: only export what actually wants to be exported
 	exportScope := NewSubScope(builtinScope)
+	exportScope.CurrentProgram = currentProgram
 	*exportScope = *pkgScope
 	exportScope.Parent = builtinScope
 	result.ExportScope = exportScope

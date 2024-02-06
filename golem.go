@@ -92,7 +92,7 @@ func errorTest(t *testing.T, filename string) {
 
 	tc := NewTypeChecker(source, filename)
 	tc.silentErrors = true
-	_ = TypeCheckPackage(tc, pak, true)
+	_ = TypeCheckPackage(tc, &ProgramContext{}, pak, true)
 
 	for _, error := range tc.errors {
 		line, _, _ := LineColumnStr(source, error.node.GetSource())
@@ -130,7 +130,7 @@ func runTestFile(t *testing.T, filename string) {
 	}
 }
 
-func compileFileToPackage(filename string, requiresMain bool) (packageDef *TcPackageDef, err error) {
+func compileFileToPackage(currentProgram *ProgramContext, filename string, mainPackage bool) (packageDef *TcPackageDef, err error) {
 	bytes, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -142,7 +142,7 @@ func compileFileToPackage(filename string, requiresMain bool) (packageDef *TcPac
 		return nil, fmt.Errorf("file '%s' has parsing errors", filename)
 	}
 	tc := NewTypeChecker(source, filename)
-	packageDef = TypeCheckPackage(tc, pak, requiresMain)
+	packageDef = TypeCheckPackage(tc, currentProgram, pak, mainPackage)
 	if len(tc.errors) > 0 {
 		err = fmt.Errorf("package %s has errors", packageDef.Name)
 	}
@@ -162,12 +162,14 @@ func compile(filename string) (string, error) {
 		return "", fmt.Errorf("%s", baseNameError)
 	}
 
-	typedPak, err := compileFileToPackage(filename, true)
+	currentProgram := &ProgramContext{}
+
+	mainPackage, err := compileFileToPackage(currentProgram, filename, true)
 	if err != nil {
 		return "", err
 	}
-	typedPak = cgenprepass(typedPak).(*TcPackageDef)
-	sourceCodeC := compilePackageToC(typedPak)
+	mainPackage = cgenprepass(mainPackage).(*TcPackageDef)
+	sourceCodeC := compilePackageToC(currentProgram, mainPackage, true)
 
 	fileName := fmt.Sprintf("%s.c", base)
 	absFilename := filepath.Join(tempDir, fileName)
@@ -181,7 +183,10 @@ func compile(filename string) (string, error) {
 	}
 	binaryAbsFilename := filepath.Join(tempDir, base)
 	args := []string{}
-	args = append(args, typedPak.CFlags...)
+	args = append(args, mainPackage.CFlags...)
+	args = append(args, currentProgram.LinkerFlags...)
+
+	// args = append(mainPackage.LinkerFlags
 	args = append(args, absFilename, "-o", binaryAbsFilename)
 	cmd := exec.Command("gcc", args...)
 	cmd.Stdout = os.Stdout

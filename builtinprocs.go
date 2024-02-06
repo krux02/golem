@@ -577,6 +577,22 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 	return result
 }
 
+func BuiltinAddLinkerFlags(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
+	if len(call.Args) != 1 {
+		ReportErrorf(tc, call, "expect single string literal as argument")
+		return newErrorNode(call)
+	}
+	switch arg0 := call.Args[0].(type) {
+	case StrLit:
+		program := scope.CurrentProgram
+		program.LinkerFlags = append(program.LinkerFlags, arg0.Value)
+	default:
+		ReportErrorf(tc, call, "expect single string literal as argument")
+		return newErrorNode(call)
+	}
+	return TcCodeBlock{Source: call.Source}
+}
+
 func BuiltinAddCFlags(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 	if len(call.Args) != 1 {
 		ReportErrorf(tc, call, "expect single string literal as argument")
@@ -610,6 +626,7 @@ func init() {
 	registerBuiltinMacro("printf", true, []Type{TypeStr}, TypeVoid, ValidatePrintfCall)
 
 	registerBuiltinMacro("addCFlags", false, []Type{TypeStr}, TypeVoid, BuiltinAddCFlags)
+	registerBuiltinMacro("addLinkerFlags", false, []Type{TypeStr}, TypeVoid, BuiltinAddLinkerFlags)
 
 	registerBuiltinType(TypeBoolean)
 	registerBuiltinIntType(TypeInt8)

@@ -252,6 +252,11 @@ type TcEnumSetLit struct {
 	ElemType *EnumType
 }
 
+type ProgramContext struct {
+	LinkerFlags []string
+	Main        *TcProcDef
+}
+
 type TcPackageDef struct {
 	Source         string
 	Name           string
@@ -263,7 +268,6 @@ type TcPackageDef struct {
 	VarDefs        []TcVariableDefStmt
 	ProcDefs       []*TcProcDef
 	ExportScope    *ScopeImpl
-	Main           *TcProcDef // main entry point
 }
 
 func (sym TcDotExpr) expression()          {}
