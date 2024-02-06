@@ -196,6 +196,7 @@ type ProcDef struct {
 type PackageDef struct {
 	Source        string
 	Name          string
+	WorkDir       string
 	TopLevelStmts []Expr
 }
 

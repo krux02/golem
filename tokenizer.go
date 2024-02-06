@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	u "unicode"
 	"unicode/utf8"
@@ -131,7 +132,11 @@ type Tokenizer struct {
 }
 
 func NewTokenizer(code string, filename string) (result *Tokenizer) {
-	result = &Tokenizer{code: code, filename: filename}
+	absfilename, err := filepath.Abs(filename)
+	if err != nil {
+		panic(err)
+	}
+	result = &Tokenizer{code: code, filename: absfilename}
 	result.lookAheadToken, result.lookAheadOffset = result.ScanTokenAt(0)
 	return result
 }

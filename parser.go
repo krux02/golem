@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -883,8 +883,9 @@ func parseImportStmt(tokenizer *Tokenizer) ImportStmt {
 }
 
 func parsePackage(tokenizer *Tokenizer) (result PackageDef, errors []ParseError) {
-	result.Name = strings.TrimSuffix(path.Base(tokenizer.filename), ".golem")
+	result.Name = strings.TrimSuffix(filepath.Base(tokenizer.filename), ".golem")
 	result.Source = tokenizer.code
+	result.WorkDir = filepath.Dir(tokenizer.filename)
 	for true {
 		switch tokenizer.lookAheadToken.kind {
 		//case TkLineComment:

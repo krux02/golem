@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 )
 
@@ -1298,12 +1299,16 @@ var typeTypeMap map[Type]*TypeType
 var packageMap map[string]*TcPackageDef
 var intLitTypeMap map[int64]*IntLitType
 
-func GetPackage(importPath string) (result *TcPackageDef, err error) {
+func GetPackage(workDir string, importPath string) (result *TcPackageDef, err error) {
+	if !filepath.IsAbs(workDir) {
+		panic(fmt.Errorf("internal error: workDir '%s' must be absolute", workDir))
+	}
+	fullpath := filepath.Clean(filepath.Join(workDir, importPath))
 	var ok bool
-	result, ok = packageMap[importPath]
+	result, ok = packageMap[fullpath]
 	if !ok {
-		result, err = compileFileToPackage(fmt.Sprintf("%s.golem", importPath), false)
-		packageMap[importPath] = result
+		result, err = compileFileToPackage(fmt.Sprintf("%s.golem", fullpath), false)
+		packageMap[fullpath] = result
 	}
 	return result, err
 }
@@ -1554,7 +1559,7 @@ func TypeCheckPackage(tc *TypeChecker, arg PackageDef, requiresMain bool) (resul
 			tcExpr := TypeCheckExpr(tc, pkgScope, stmt.Expr, TypeVoid)
 			EvalExpr(tc, tcExpr, pkgScope)
 		case ImportStmt:
-			pkg, err := GetPackage(stmt.StrLit.Value)
+			pkg, err := GetPackage(arg.WorkDir, stmt.StrLit.Value)
 			if err != nil {
 				ReportErrorf(tc, stmt.StrLit, "%s", err.Error())
 			} else {

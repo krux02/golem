@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -153,7 +152,7 @@ func compileFileToPackage(filename string, requiresMain bool) (packageDef *TcPac
 
 func compile(filename string) (string, error) {
 
-	tempDir := path.Join(os.TempDir(), "golem")
+	tempDir := filepath.Join(os.TempDir(), "golem")
 	base := filepath.Base(filename)
 	base, hasFileEnding := strings.CutSuffix(base, ".golem")
 	if !hasFileEnding {
@@ -171,7 +170,7 @@ func compile(filename string) (string, error) {
 	sourceCodeC := compilePackageToC(typedPak)
 
 	fileName := fmt.Sprintf("%s.c", base)
-	absFilename := path.Join(tempDir, fileName)
+	absFilename := filepath.Join(tempDir, fileName)
 	err = os.MkdirAll(tempDir, os.ModePerm)
 	if err != nil {
 		log.Fatal(err)
@@ -180,7 +179,7 @@ func compile(filename string) (string, error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	binaryAbsFilename := path.Join(tempDir, base)
+	binaryAbsFilename := filepath.Join(tempDir, base)
 	args := []string{}
 	args = append(args, typedPak.CFlags...)
 	args = append(args, absFilename, "-o", binaryAbsFilename)
