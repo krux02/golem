@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -35,7 +36,11 @@ type PrettyPrintable interface {
 }
 
 func (builder *AstPrettyPrinter) WriteNode(node PrettyPrintable) {
-	node.PrettyPrint(builder)
+	if node == nil {
+		builder.WriteString("<nil>")
+	} else {
+		node.PrettyPrint(builder)
+	}
 }
 
 func AstFormat(node PrettyPrintable) string {
@@ -63,9 +68,8 @@ func (ident Ident) PrettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (call Call) PrettyPrint(builder *AstPrettyPrinter) {
-
 	ident, isIdent := call.Callee.(Ident)
-	isOperator := isIdent && ident.Source == "."
+	isOperator := isIdent && slices.Contains([]string{".", ":"}, ident.Source)
 
 	// maybe operator should be its own syntax token
 	if !isOperator {
@@ -558,15 +562,26 @@ func (typ *GenericTypeSymbol) PrettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (call TcCall) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString(call.Sym.Source)
-	builder.WriteString("(")
-	for i, arg := range call.Args {
-		if i != 0 {
-			builder.WriteString(", ")
+	if call.Braced {
+		builder.WriteString(call.Sym.Source)
+		builder.WriteString("(")
+		for i, arg := range call.Args {
+			if i != 0 {
+				builder.WriteString(", ")
+			}
+			builder.WriteNode(arg)
 		}
-		builder.WriteNode(arg)
+		builder.WriteString(")")
+	} else {
+		for i, arg := range call.Args {
+			if i != 0 {
+				builder.WriteString(" ")
+				builder.WriteString(call.Sym.Source)
+				builder.WriteString(" ")
+			}
+			builder.WriteNode(arg)
+		}
 	}
-	builder.WriteString(")")
 }
 
 func (structDef *StructType) PrettyPrint(builder *AstPrettyPrinter) {
