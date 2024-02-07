@@ -16,7 +16,7 @@ proc main(): i32 = {
   var running: bool = true
 
   # TODO -1:f32 without braces should work
-  let vertexData = [(-1):f32,-1,0,1, 1,-1,0,1, 0,1,0,1]
+  let vertexData = [-1:f32,-1,0,1, 1,-1,0,1, 0,1,0,1]
   # let colorData = [1:f32,0,0,0, 0,1,0,0, 0,0,1,0]
 
   while running do {

@@ -1226,17 +1226,6 @@ func (tc *TypeChecker) TypeCheckStrLit(scope Scope, arg StrLit, expected Type) T
 func TypeCheckExpr(tc *TypeChecker, scope Scope, arg Expr, expected Type) TcExpr {
 	switch arg := arg.(type) {
 	case Call:
-		// HACK: support for negative literals this should probably be done in a
-		// different compiler pass that doesn't exist yet. Probably a prepass that
-		// also is responsible to create ProcDef, StructDef, EnumDef
-		if ident, kk := arg.Callee.(Ident); kk && ident.Source == "-" {
-			if len(arg.Args) == 1 {
-				if lit, ok := arg.Args[0].(IntLit); ok {
-					negativeIntLit := IntLit{Source: arg.Source, Value: -lit.Value, Type: GetIntLitType(-lit.Value)}
-					return TypeCheckIntLit(tc, scope, negativeIntLit, expected)
-				}
-			}
-		}
 		return (TcExpr)(tc.TypeCheckCall(scope, arg, expected))
 	case CodeBlock:
 		return (TcExpr)(tc.TypeCheckCodeBlock(scope, arg, expected))

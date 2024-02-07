@@ -64,6 +64,7 @@ type ArrayType struct {
 	scheduledforgeneration bool
 }
 
+// the type for integer literals. Each integer represented by a literal is its own type
 type IntLitType struct {
 	Value int64
 }
@@ -624,7 +625,6 @@ func init() {
 	builtinCPrintf.Varargs = true
 
 	registerBuiltinMacro("printf", true, []Type{TypeStr}, TypeVoid, ValidatePrintfCall)
-
 	registerBuiltinMacro("addCFlags", false, []Type{TypeStr}, TypeVoid, BuiltinAddCFlags)
 	registerBuiltinMacro("addLinkerFlags", false, []Type{TypeStr}, TypeVoid, BuiltinAddLinkerFlags)
 

@@ -464,16 +464,30 @@ func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
 	return result
 }
 
-func parsePrefixCall(tokenizer *Tokenizer) (result Call) {
+func parsePrefixCall(tokenizer *Tokenizer) Expr {
 	firstToken := tokenizer.lookAheadToken
 	op := parseOperator(tokenizer)
-	// this would be the place to introduce negative integer literals
-	// kind := tokenizer.lookAheadToken.kind
-	// if op.source == "-" && (kind == TkIntLit || kind == TkFloatLit) {
-	// }
+	arg := parseExpr(tokenizer, true)
 
+	// kind := tokenizer.lookAheadToken.kind
+	// Negation operator followed by a number literal is immediately collapsed into a negative literal.
+	if op.Source == "-" {
+		if intLit, isIntLit := arg.(IntLit); isIntLit {
+			intLit.Source = joinSubstr(tokenizer.code, op.Source, intLit.Source)
+			intLit.Value = -intLit.Value
+			intLit.Type = GetIntLitType(intLit.Value)
+			return intLit
+		}
+		if floatLit, isFloatLit := arg.(FloatLit); isFloatLit {
+			floatLit.Source = joinSubstr(tokenizer.code, op.Source, floatLit.Source)
+			floatLit.Value = -floatLit.Value
+			return floatLit
+		}
+	}
+
+	var result Call
 	result.Callee = op
-	result.Args = []Expr{parseExpr(tokenizer, true)}
+	result.Args = []Expr{arg}
 	// other properties (TODO can this be removed?)
 	result.Prefix = true
 	result.Braced = true
@@ -658,8 +672,12 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 		result = (Expr)(InvalidTokenExpr{tokenizer.Next()})
 	}
 
+	if prefixExpr {
+		// used for -1:f32
+		return result
+	}
 	// any expression could be the start of a longer expression, this is
-	// explorerd here
+	// explorerd here.
 
 	for true {
 		lookAhead := tokenizer.lookAheadToken
