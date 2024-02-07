@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"unicode/utf8"
+	"unsafe"
 )
 
 func OperatorPrecedence(op string) int {
@@ -467,21 +468,27 @@ func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
 func parsePrefixCall(tokenizer *Tokenizer) Expr {
 	firstToken := tokenizer.lookAheadToken
 	op := parseOperator(tokenizer)
+	secondToken := tokenizer.lookAheadToken
 	arg := parseExpr(tokenizer, true)
 
 	// kind := tokenizer.lookAheadToken.kind
-	// Negation operator followed by a number literal is immediately collapsed into a negative literal.
+	// Negation operator immediately followed by a number literal is collapsed into a negative literal.
 	if op.Source == "-" {
-		if intLit, isIntLit := arg.(IntLit); isIntLit {
-			intLit.Source = joinSubstr(tokenizer.code, op.Source, intLit.Source)
-			intLit.Value = -intLit.Value
-			intLit.Type = GetIntLitType(intLit.Value)
-			return intLit
-		}
-		if floatLit, isFloatLit := arg.(FloatLit); isFloatLit {
-			floatLit.Source = joinSubstr(tokenizer.code, op.Source, floatLit.Source)
-			floatLit.Value = -floatLit.Value
-			return floatLit
+		// check for spaces between the tokens
+		ptr1 := uintptr(unsafe.Pointer(unsafe.StringData(firstToken.value)))
+		ptr2 := uintptr(unsafe.Pointer(unsafe.StringData(secondToken.value)))
+		if ptr1+uintptr(len(op.Source)) == ptr2 {
+			if intLit, isIntLit := arg.(IntLit); isIntLit {
+				intLit.Source = joinSubstr(tokenizer.code, op.Source, intLit.Source)
+				intLit.Value = -intLit.Value
+				intLit.Type = GetIntLitType(intLit.Value)
+				return intLit
+			}
+			if floatLit, isFloatLit := arg.(FloatLit); isFloatLit {
+				floatLit.Source = joinSubstr(tokenizer.code, op.Source, floatLit.Source)
+				floatLit.Value = -floatLit.Value
+				return floatLit
+			}
 		}
 	}
 

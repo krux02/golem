@@ -54,8 +54,9 @@ proc main():i32 = {
     assert(low(type i16) == -32768)
     assert(low(type i32) == -2147483648)
     assert(low(type i64) == -9223372036854775807:i64 - 1)
-
   }
+
+
 
   {
     var myfloat1 = 12:f32
