@@ -1,0 +1,148 @@
+
+emit "#include <math.h>"
+
+## Compute cosine
+proc "importc" cos(arg:f64):f64
+## Compute sine
+proc "importc" sin(arg:f64):f64
+## Compute tangent
+proc "importc" tan(arg:f64):f64
+## Compute arc cosine
+proc "importc" acos(arg:f64):f64
+## Compute arc sine
+proc "importc" asin(arg:f64):f64
+## Compute arc tangent
+proc "importc" atan(arg:f64):f64
+## Compute arc tangent with two parameters
+proc "importc" atan2(y,x:f64):f64
+
+## Compute hyperbolic cosine (function)
+proc "importc" cosh(arg:f64):f64
+## Compute hyperbolic sine (function)
+proc "importc" sinh(arg:f64):f64
+## Compute hyperbolic tangent (function)
+proc "importc" tanh(arg:f64):f64
+## Compute area hyperbolic cosine (function)
+proc "importc" acosh(arg:f64):f64
+## Compute area hyperbolic sine (function)
+proc "importc" asinh(arg:f64):f64
+## Compute area hyperbolic tangent (function)
+proc "importc" atanh(arg:f64):f64
+
+# Exponential and logarithmic functions
+ ##	Compute exponential function (function)
+proc "importc" exp(arg:f64):f64
+## Get significand and exponent (function)
+proc "importc" frexp(arg:f64):f64
+## Generate value from significand and exponent (function)
+proc "importc" ldexp(arg:f64,exp:i32):f64
+## Compute natural logarithm (function)
+proc "importc" log(arg:f64):f64
+## Compute common logarithm (function)
+proc "importc" log10(arg:f64):f64
+## Break into fractional and integral parts (function)
+proc "importc" modf(arg:f64, iptr: ptr f64):f64
+## Compute binary exponential function (function)
+proc "importc" exp2(n:f64):f64
+## Compute exponential minus one (function)
+proc "importc" expm1(arg:f64):f64
+## Integer binary logarithm (function)
+proc "importc" ilogb(arg:f64):i32
+## Compute logarithm plus one (function)
+proc "importc" log1p(arg:f64):f64
+## Compute binary logarithm (function)
+proc "importc" log2(arg:f64):f64
+## Compute floating-point base logarithm (function)
+proc "importc" logb(arg:f64):f64
+## Scale significand using floating-point base exponent (function)
+proc "importc" scalbn(arg:f64):f64
+## Scale significand using floating-point base exponent (long) (function)
+proc "importc" scalbln(arg:f64):f64
+
+
+# Power functions
+## Raise to power (function)
+proc "importc" pow(base,exponent:f64):f64
+## Compute square root (function)
+proc "importc" sqrt(arg:f64):f64
+## Compute cubic root (function)
+proc "importc" cbrt(arg:f64):f64
+## Compute hypotenuse (function)
+proc "importc" hypot(x,y:f64):f64
+
+
+# Eror and gamma functio## 	Compute error function (function)ns
+proc "importc" erf(arg:f64):f64
+## Compute complementary error function (function)
+proc "importc" erfc(arg:f64):f64
+## Compute gamma function (function)
+proc "importc" tgamma(arg:f64):f64
+## Compute log-gamma function (function)
+proc "importc" lgamma(arg:f64):f64
+
+
+# Runding and remainder f## 	Round up value (function)unctions
+proc "importc" ceil(arg:f64):f64
+## Round down value (function)
+proc "importc" floor(arg:f64):f64
+## Compute remainder of division (function)
+proc "importc" fmod(x,y:f64):f64
+## Truncate value (function)
+proc "importc" trunc(arg:f64):f64
+## Round to nearest (function)
+proc "importc" round(arg:f64):f64
+## Round to nearest and cast to long integer (function)
+proc "importc" lround(arg:f64):i64
+
+# Round to nearest and cast to long long integer (function)
+# proc "importc" llround(arg:f64):i64
+
+## Round to integral value (function)
+proc "importc" rint(arg:f64):f64
+## Round and cast to long integer (function)
+proc "importc" lrint(arg:f64):i64
+
+# Round and cast to long long integer (function)
+# proc "importc" llrint(arg:f64)
+
+## Round to nearby integral value (function)
+proc "importc" nearbyint(arg:f64):f64
+## Compute remainder (IEC 60559) (function)
+proc "importc" remainder(x,y:f64):f64
+## Compute remainder and quotient (function)
+proc "importc" remquo(x,y:f64, quo: ptr i32):f64
+
+
+## Composes a floating point value with the magnitude of x and the sign of y.
+proc "importc" copysign(x,y:f64): f64
+## Generate quiet NaN (function)
+proc "importc" nan(arg: cstring): f64
+## Next representable value (function)
+proc "importc" nextafter(from, to:f64): f64
+
+# Next representable value toward precise value (function)
+# proc "importc" nexttoward(arg:f64)
+
+# Minimum, maximum, difference functions
+## Positive difference (function)
+proc "importc" fdim(x,y:f64): f64
+## Maximum value (function)
+proc "importc" fmax(x,y:f64): f64
+## Minimum value (function)
+proc "importc" fmin(x,y:f64): f64
+
+# TODO this should be called abs
+# Other functions
+## Compute absolute value (function)
+proc "importc" fabs(arg:f64): f64
+
+# Compute absolute value (function)
+# proc "importc" abs(arg:f64)
+
+## Multiply-add (function)
+proc "importc" fma(x,y,z:f64):f64
+
+const pi:f64 = 3.1415926535897932384626433
+
+
+proc main() : i32 = {0}

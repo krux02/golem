@@ -248,7 +248,13 @@ func main() {
 		"GLDEBUGPROC": "<not implemented GLDEBUGPROC>",
 	}
 
-	fmt.Printf("%s\n", strings.Join(strings.Split(reg.Comment, "\n"), "\n# "))
+	fmt.Println(strings.Join(strings.Split(reg.Comment, "\n"), "\n# "))
+
+	fmt.Println(`
+static {
+  addLinkerFlags("-lGL")
+}`)
+
 	fmt.Println(`emit "#include <GL/gl.h>"`)
 
 	disable := []string{
@@ -297,6 +303,8 @@ func main() {
 				}
 				if param.Name == "type" {
 					fmt.Printf("typ")
+				} else if param.Name == "ptr" {
+					fmt.Printf("`ptr`")
 				} else {
 					fmt.Printf("%s", param.Name)
 				}

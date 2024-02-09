@@ -40,7 +40,7 @@ func parseIdent(tokenizer *Tokenizer) (result Ident) {
 	return result
 }
 
-func parseOperator(tokenizer *Tokenizer) (result Ident) {
+func parseInfixOperator(tokenizer *Tokenizer) (result Ident) {
 	token := tokenizer.Next()
 	tk := token.kind
 	if tk != TkOperator && tk != TkAssign && tk != TkAnd && tk != TkOr {
@@ -77,7 +77,7 @@ func parseReturnExpr(tokenizer *Tokenizer) (result ReturnExpr) {
 func parseVarExpr(tokenizer *Tokenizer) (result VarExpr) {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkVar)
-	result.Expr = parseExpr(tokenizer, false)
+	result.Expr = parseExpr(tokenizer, true)
 	lastToken := tokenizer.token
 	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
 	return result
@@ -387,7 +387,7 @@ func applyOperatorPrecedenceFromLeft(tokenizerCode string, lhs Expr, op Ident, r
 }
 
 func parseInfixCall(tokenizer *Tokenizer, lhs Expr) (result Call) {
-	operator := parseOperator(tokenizer)
+	operator := parseInfixOperator(tokenizer)
 	rhs := parseExpr(tokenizer, false)
 	// parseExpr recursively eats all follow operator calls. Therefore `lhs` is
 	// the _new_ operatore that needs to be applied in the expression from the
@@ -466,8 +466,9 @@ func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
 }
 
 func parsePrefixCall(tokenizer *Tokenizer) Expr {
-	firstToken := tokenizer.lookAheadToken
-	op := parseOperator(tokenizer)
+	// Currently any token  is legal as prefix. I hope this won't fall on my head.
+	firstToken := tokenizer.Next()
+	op := Ident{Source: firstToken.value}
 	secondToken := tokenizer.lookAheadToken
 	arg := parseExpr(tokenizer, true)
 
@@ -660,7 +661,7 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 			tokenizer.reportError(token, "braced expression must contain a single expression, but has %d", len(exprList.Items))
 			result = newErrorNode(exprList)
 		}
-	case TkOperator:
+	case TkOperator, TkPtr:
 		if prefixExpr {
 			// do not allow prefix prefix expression?
 			tokenizer.reportWrongKind(tokenizer.lookAheadToken)

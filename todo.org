@@ -1,5 +1,4 @@
 
-* TODO package linker flags for gl and sdl2
 * TODO inversion of control in mutability inference. Instead of `GetMutable` do request mutability
 
 Currently, ~GetMutable~ returns, if an expression is mutable. I
@@ -7,7 +6,6 @@ Currently, ~GetMutable~ returns, if an expression is mutable. I
 * TODO templates
 * TODO generic functions
 * TODO type substitution/generic instancing after overload resolution
-* TODO full coverage of all error messages
 * TODO integer division with two return values
 * TODO restrict operator precedence to common knowledge cases (+-*/) require explicit braces everywhere else.
 * TODO persistent logging
@@ -19,6 +17,7 @@ Currently, ~GetMutable~ returns, if an expression is mutable. I
 ** TODO default value
 ** TODO operator precedence when many ~:~ and ~.~ are in use
 ** TODO correct ~Source~ values.
+** TODO full coverage of all error messages
 * TODO full set of types
 ** TODO vector/matrix/simd types
 ** DONE string
@@ -66,3 +65,4 @@ Currently, ~GetMutable~ returns, if an expression is mutable. I
 ** pass by reference
 ** mutability inference as orthogonal information to the type of expressions, get rid of MutableType
 ** display parsing errors as normal error messages
+** package linker flags for gl and sdl2

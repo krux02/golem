@@ -29,12 +29,11 @@
 # to generate C header files for OpenGL and OpenGL ES, can always be found
 # in the Khronos Registry at
 #         http://www.opengl.org/registry/
-#
+#     
 
 static {
   addLinkerFlags("-lGL")
 }
-
 emit "#include <GL/gl.h>"
 const GL_CURRENT_BIT:u32 = 0x00000001
 const GL_POINT_BIT:u32 = 0x00000002
@@ -2130,7 +2129,7 @@ proc "importc" glGetNamedFramebufferAttachmentParameteriv(framebuffer: u32, atta
 proc "importc" glGetNamedFramebufferParameteriv(framebuffer: u32, pname: u32, param: i32): void
 proc "importc" glGetNamedRenderbufferParameteriv(renderbuffer: u32, pname: u32, params: i32): void
 proc "importc" glGetObjectLabel(identifier: u32, name: u32, bufSize: i32, length: ptr(i32), label: ptr(i8)): void
-proc "importc" glGetObjectPtrLabel(ptr: pointer, bufSize: i32, length: ptr(i32), label: ptr(i8)): void
+proc "importc" glGetObjectPtrLabel(`ptr`: pointer, bufSize: i32, length: ptr(i32), label: ptr(i8)): void
 proc "importc" glGetPixelMapfv(map: u32, values: ptr(f32)): void
 proc "importc" glGetPixelMapuiv(map: u32, values: ptr(u32)): void
 proc "importc" glGetPixelMapusv(map: u32, values: ptr(u16)): void
@@ -2383,7 +2382,7 @@ proc "importc" glNormalP3ui(typ: u32, coords: u32): void
 proc "importc" glNormalP3uiv(typ: u32, coords: ptr(u32)): void
 proc "importc" glNormalPointer(typ: u32, stride: i32, pointer: pointer): void
 proc "importc" glObjectLabel(identifier: u32, name: u32, length: i32, label: ptr(i8)): void
-proc "importc" glObjectPtrLabel(ptr: pointer, length: i32, label: ptr(i8)): void
+proc "importc" glObjectPtrLabel(`ptr`: pointer, length: i32, label: ptr(i8)): void
 proc "importc" glOrtho(left: f64, right: f64, bottom: f64, top: f64, zNear: f64, zFar: f64): void
 proc "importc" glPassThrough(token: f32): void
 proc "importc" glPatchParameterfv(pname: u32, values: ptr(f32)): void
