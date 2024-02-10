@@ -1952,18 +1952,18 @@ proc "importc" glCopyTexSubImage3D(target: u32, level: i32, xoffset: i32, yoffse
 proc "importc" glCopyTextureSubImage1D(texture: u32, level: i32, xoffset: i32, x: i32, y: i32, width: i32): void
 proc "importc" glCopyTextureSubImage2D(texture: u32, level: i32, xoffset: i32, yoffset: i32, x: i32, y: i32, width: i32, height: i32): void
 proc "importc" glCopyTextureSubImage3D(texture: u32, level: i32, xoffset: i32, yoffset: i32, zoffset: i32, x: i32, y: i32, width: i32, height: i32): void
-proc "importc" glCreateBuffers(n: i32, buffers: u32): void
-proc "importc" glCreateFramebuffers(n: i32, framebuffers: u32): void
+proc "importc" glCreateBuffers(n: i32, buffers: ptr(u32)): void
+proc "importc" glCreateFramebuffers(n: i32, framebuffers: ptr(u32)): void
 proc "importc" glCreateProgram(): u32
-proc "importc" glCreateProgramPipelines(n: i32, pipelines: u32): void
-proc "importc" glCreateQueries(target: u32, n: i32, ids: u32): void
-proc "importc" glCreateRenderbuffers(n: i32, renderbuffers: u32): void
-proc "importc" glCreateSamplers(n: i32, samplers: u32): void
+proc "importc" glCreateProgramPipelines(n: i32, pipelines: ptr(u32)): void
+proc "importc" glCreateQueries(target: u32, n: i32, ids: ptr(u32)): void
+proc "importc" glCreateRenderbuffers(n: i32, renderbuffers: ptr(u32)): void
+proc "importc" glCreateSamplers(n: i32, samplers: ptr(u32)): void
 proc "importc" glCreateShader(typ: u32): u32
 proc "importc" glCreateShaderProgramv(typ: u32, count: i32, strings: ptr(i8)): u32
-proc "importc" glCreateTextures(target: u32, n: i32, textures: u32): void
-proc "importc" glCreateTransformFeedbacks(n: i32, ids: u32): void
-proc "importc" glCreateVertexArrays(n: i32, arrays: u32): void
+proc "importc" glCreateTextures(target: u32, n: i32, textures: ptr(u32)): void
+proc "importc" glCreateTransformFeedbacks(n: i32, ids: ptr(u32)): void
+proc "importc" glCreateVertexArrays(n: i32, arrays: ptr(u32)): void
 proc "importc" glCullFace(mode: u32): void
 proc "importc" glDebugMessageControl(source: u32, typ: u32, severity: u32, count: i32, ids: ptr(u32), enabled: bool): void
 proc "importc" glDebugMessageInsert(source: u32, typ: u32, id: u32, severity: u32, length: i32, buf: ptr(i8)): void
@@ -2121,13 +2121,13 @@ proc "importc" glGetMapiv(target: u32, query: u32, v: ptr(i32)): void
 proc "importc" glGetMaterialfv(face: u32, pname: u32, params: ptr(f32)): void
 proc "importc" glGetMaterialiv(face: u32, pname: u32, params: ptr(i32)): void
 proc "importc" glGetMultisamplefv(pname: u32, index: u32, val: ptr(f32)): void
-proc "importc" glGetNamedBufferParameteri64v(buffer: u32, pname: u32, params: i64): void
-proc "importc" glGetNamedBufferParameteriv(buffer: u32, pname: u32, params: i32): void
+proc "importc" glGetNamedBufferParameteri64v(buffer: u32, pname: u32, params: ptr(i64)): void
+proc "importc" glGetNamedBufferParameteriv(buffer: u32, pname: u32, params: ptr(i32)): void
 proc "importc" glGetNamedBufferPointerv(buffer: u32, pname: u32, params: pointer): void
 proc "importc" glGetNamedBufferSubData(buffer: u32, offset: int, size: int, data: pointer): void
-proc "importc" glGetNamedFramebufferAttachmentParameteriv(framebuffer: u32, attachment: u32, pname: u32, params: i32): void
-proc "importc" glGetNamedFramebufferParameteriv(framebuffer: u32, pname: u32, param: i32): void
-proc "importc" glGetNamedRenderbufferParameteriv(renderbuffer: u32, pname: u32, params: i32): void
+proc "importc" glGetNamedFramebufferAttachmentParameteriv(framebuffer: u32, attachment: u32, pname: u32, params: ptr(i32)): void
+proc "importc" glGetNamedFramebufferParameteriv(framebuffer: u32, pname: u32, param: ptr(i32)): void
+proc "importc" glGetNamedRenderbufferParameteriv(renderbuffer: u32, pname: u32, params: ptr(i32)): void
 proc "importc" glGetObjectLabel(identifier: u32, name: u32, bufSize: i32, length: ptr(i32), label: ptr(i8)): void
 proc "importc" glGetObjectPtrLabel(`ptr`: pointer, bufSize: i32, length: ptr(i32), label: ptr(i8)): void
 proc "importc" glGetPixelMapfv(map: u32, values: ptr(f32)): void
@@ -2183,17 +2183,17 @@ proc "importc" glGetTexParameterIuiv(target: u32, pname: u32, params: ptr(u32)):
 proc "importc" glGetTexParameterfv(target: u32, pname: u32, params: ptr(f32)): void
 proc "importc" glGetTexParameteriv(target: u32, pname: u32, params: ptr(i32)): void
 proc "importc" glGetTextureImage(texture: u32, level: i32, format: u32, typ: u32, bufSize: i32, pixels: pointer): void
-proc "importc" glGetTextureLevelParameterfv(texture: u32, level: i32, pname: u32, params: f32): void
-proc "importc" glGetTextureLevelParameteriv(texture: u32, level: i32, pname: u32, params: i32): void
-proc "importc" glGetTextureParameterIiv(texture: u32, pname: u32, params: i32): void
-proc "importc" glGetTextureParameterIuiv(texture: u32, pname: u32, params: u32): void
-proc "importc" glGetTextureParameterfv(texture: u32, pname: u32, params: f32): void
-proc "importc" glGetTextureParameteriv(texture: u32, pname: u32, params: i32): void
+proc "importc" glGetTextureLevelParameterfv(texture: u32, level: i32, pname: u32, params: ptr(f32)): void
+proc "importc" glGetTextureLevelParameteriv(texture: u32, level: i32, pname: u32, params: ptr(i32)): void
+proc "importc" glGetTextureParameterIiv(texture: u32, pname: u32, params: ptr(i32)): void
+proc "importc" glGetTextureParameterIuiv(texture: u32, pname: u32, params: ptr(u32)): void
+proc "importc" glGetTextureParameterfv(texture: u32, pname: u32, params: ptr(f32)): void
+proc "importc" glGetTextureParameteriv(texture: u32, pname: u32, params: ptr(i32)): void
 proc "importc" glGetTextureSubImage(texture: u32, level: i32, xoffset: i32, yoffset: i32, zoffset: i32, width: i32, height: i32, depth: i32, format: u32, typ: u32, bufSize: i32, pixels: pointer): void
 proc "importc" glGetTransformFeedbackVarying(program: u32, index: u32, bufSize: i32, length: ptr(i32), size: ptr(i32), typ: ptr(u32), name: ptr(i8)): void
-proc "importc" glGetTransformFeedbacki64_v(xfb: u32, pname: u32, index: u32, param: i64): void
-proc "importc" glGetTransformFeedbacki_v(xfb: u32, pname: u32, index: u32, param: i32): void
-proc "importc" glGetTransformFeedbackiv(xfb: u32, pname: u32, param: i32): void
+proc "importc" glGetTransformFeedbacki64_v(xfb: u32, pname: u32, index: u32, param: ptr(i64)): void
+proc "importc" glGetTransformFeedbacki_v(xfb: u32, pname: u32, index: u32, param: ptr(i32)): void
+proc "importc" glGetTransformFeedbackiv(xfb: u32, pname: u32, param: ptr(i32)): void
 proc "importc" glGetUniformBlockIndex(program: u32, uniformBlockName: ptr(i8)): u32
 proc "importc" glGetUniformIndices(program: u32, uniformCount: i32, uniformNames: ptr(i8), uniformIndices: ptr(u32)): void
 proc "importc" glGetUniformLocation(program: u32, name: i8): i32
@@ -2202,9 +2202,9 @@ proc "importc" glGetUniformdv(program: u32, location: i32, params: ptr(f64)): vo
 proc "importc" glGetUniformfv(program: u32, location: i32, params: ptr(f32)): void
 proc "importc" glGetUniformiv(program: u32, location: i32, params: ptr(i32)): void
 proc "importc" glGetUniformuiv(program: u32, location: i32, params: ptr(u32)): void
-proc "importc" glGetVertexArrayIndexed64iv(vaobj: u32, index: u32, pname: u32, param: i64): void
-proc "importc" glGetVertexArrayIndexediv(vaobj: u32, index: u32, pname: u32, param: i32): void
-proc "importc" glGetVertexArrayiv(vaobj: u32, pname: u32, param: i32): void
+proc "importc" glGetVertexArrayIndexed64iv(vaobj: u32, index: u32, pname: u32, param: ptr(i64)): void
+proc "importc" glGetVertexArrayIndexediv(vaobj: u32, index: u32, pname: u32, param: ptr(i32)): void
+proc "importc" glGetVertexArrayiv(vaobj: u32, pname: u32, param: ptr(i32)): void
 proc "importc" glGetVertexAttribIiv(index: u32, pname: u32, params: ptr(i32)): void
 proc "importc" glGetVertexAttribIuiv(index: u32, pname: u32, params: ptr(u32)): void
 proc "importc" glGetVertexAttribLdv(index: u32, pname: u32, params: ptr(f64)): void
@@ -2216,20 +2216,20 @@ proc "importc" glGetnColorTable(target: u32, format: u32, typ: u32, bufSize: i32
 proc "importc" glGetnCompressedTexImage(target: u32, lod: i32, bufSize: i32, pixels: pointer): void
 proc "importc" glGetnConvolutionFilter(target: u32, format: u32, typ: u32, bufSize: i32, image: pointer): void
 proc "importc" glGetnHistogram(target: u32, reset: bool, format: u32, typ: u32, bufSize: i32, values: pointer): void
-proc "importc" glGetnMapdv(target: u32, query: u32, bufSize: i32, v: f64): void
-proc "importc" glGetnMapfv(target: u32, query: u32, bufSize: i32, v: f32): void
-proc "importc" glGetnMapiv(target: u32, query: u32, bufSize: i32, v: i32): void
+proc "importc" glGetnMapdv(target: u32, query: u32, bufSize: i32, v: ptr(f64)): void
+proc "importc" glGetnMapfv(target: u32, query: u32, bufSize: i32, v: ptr(f32)): void
+proc "importc" glGetnMapiv(target: u32, query: u32, bufSize: i32, v: ptr(i32)): void
 proc "importc" glGetnMinmax(target: u32, reset: bool, format: u32, typ: u32, bufSize: i32, values: pointer): void
-proc "importc" glGetnPixelMapfv(map: u32, bufSize: i32, values: f32): void
-proc "importc" glGetnPixelMapuiv(map: u32, bufSize: i32, values: u32): void
-proc "importc" glGetnPixelMapusv(map: u32, bufSize: i32, values: u16): void
-proc "importc" glGetnPolygonStipple(bufSize: i32, pattern: u8): void
+proc "importc" glGetnPixelMapfv(map: u32, bufSize: i32, values: ptr(f32)): void
+proc "importc" glGetnPixelMapuiv(map: u32, bufSize: i32, values: ptr(u32)): void
+proc "importc" glGetnPixelMapusv(map: u32, bufSize: i32, values: ptr(u16)): void
+proc "importc" glGetnPolygonStipple(bufSize: i32, pattern: ptr(u8)): void
 proc "importc" glGetnSeparableFilter(target: u32, format: u32, typ: u32, rowBufSize: i32, row: pointer, columnBufSize: i32, column: pointer, span: pointer): void
 proc "importc" glGetnTexImage(target: u32, level: i32, format: u32, typ: u32, bufSize: i32, pixels: pointer): void
-proc "importc" glGetnUniformdv(program: u32, location: i32, bufSize: i32, params: f64): void
-proc "importc" glGetnUniformfv(program: u32, location: i32, bufSize: i32, params: f32): void
-proc "importc" glGetnUniformiv(program: u32, location: i32, bufSize: i32, params: i32): void
-proc "importc" glGetnUniformuiv(program: u32, location: i32, bufSize: i32, params: u32): void
+proc "importc" glGetnUniformdv(program: u32, location: i32, bufSize: i32, params: ptr(f64)): void
+proc "importc" glGetnUniformfv(program: u32, location: i32, bufSize: i32, params: ptr(f32)): void
+proc "importc" glGetnUniformiv(program: u32, location: i32, bufSize: i32, params: ptr(i32)): void
+proc "importc" glGetnUniformuiv(program: u32, location: i32, bufSize: i32, params: ptr(u32)): void
 proc "importc" glHint(target: u32, mode: u32): void
 proc "importc" glIndexMask(mask: u32): void
 proc "importc" glIndexPointer(typ: u32, stride: i32, pointer: pointer): void

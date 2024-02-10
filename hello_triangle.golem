@@ -4,6 +4,10 @@ emit "#include <SDL2/SDL.h>"
 import "sdl2"
 import "gl"
 
+static {
+  addCFlags("-Werror-implicit-function-declaration")
+}
+
 proc main(): i32 = {
   let window = SDL_CreateWindow("hello triangle", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_OPENGL)
   assert(window != nil)
@@ -15,9 +19,12 @@ proc main(): i32 = {
 
   var running: bool = true
 
-  # TODO -1:f32 without braces should work
+  var buffers : array(2, u32)
+
+  glCreateBuffers(2, addr(buffers[0]))
+
   let vertexData = [-1:f32,-1,0,1, 1,-1,0,1, 0,1,0,1]
-  # let colorData = [1:f32,0,0,0, 0,1,0,0, 0,0,1,0]
+  let colorData = [1:f32,0,0,0, 0,1,0,0, 0,0,1,0]
 
   while running do {
     var event: SDL_Event

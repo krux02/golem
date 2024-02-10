@@ -53,6 +53,7 @@ type Param struct {
 	PType string `xml:"ptype"`
 	Group string `xml:"group,attr"`
 	Len   string `xml:"len,attr"`
+	Data  string `xml:",chardata"`
 }
 
 type Command struct {
@@ -311,10 +312,10 @@ static {
 				fmt.Printf(": ")
 				if param.PType == "" {
 					fmt.Printf("pointer")
-				} else if param.Len == "" {
-					fmt.Printf("%s", typemap[param.PType])
-				} else {
+				} else if param.Len != "" || param.Data == " *" {
 					fmt.Printf("ptr(%s)", typemap[param.PType])
+				} else {
+					fmt.Printf("%s", typemap[param.PType])
 				}
 			}
 			if command.Type != "" {
