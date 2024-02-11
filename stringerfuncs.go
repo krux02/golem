@@ -542,15 +542,15 @@ func (typ *ErrorType) PrettyPrint(builder *AstPrettyPrinter) {
 func (typ *ArrayType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("array(")
 	WriteIntLit(&builder.Builder, typ.Len)
-	builder.WriteString(")[")
+	builder.WriteString(", ")
 	builder.WriteNode(typ.Elem)
-	builder.WriteString("]")
+	builder.WriteString(")")
 }
 
 func (typ *EnumSetType) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("set[")
+	builder.WriteString("set(")
 	builder.WriteNode(typ.Elem)
-	builder.WriteString("]")
+	builder.WriteString(")")
 }
 
 func (typ *GenericTypeSymbol) PrettyPrint(builder *AstPrettyPrinter) {

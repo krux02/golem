@@ -373,6 +373,10 @@ func extractGenericTypeSymbols(typ Type) (result []*GenericTypeSymbol) {
 		return extractGenericTypeSymbols(typ.Elem)
 	case *IntLitType:
 		return nil
+	case *BuiltinIntType:
+		return nil
+	case *BuiltinFloatType:
+		return nil
 	case *ErrorType:
 		panic("internal error")
 	case *TypeType:
@@ -402,7 +406,7 @@ OUTER:
 	return true
 }
 
-func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []*GenericTypeSymbol, args []Type, result Type, firstArgMutable bool) *ProcSignature {
+func makeGenericSignature(genericParams []*GenericTypeSymbol, args []Type, result Type, firstArgMutable bool) *ProcSignature {
 	if len(genericParams) > 0 {
 		for i, arg := range args {
 			syms := extractGenericTypeSymbols(arg)
@@ -422,24 +426,30 @@ func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams [
 		}
 	}
 
-	procDef := &TcBuiltinGenericProcDef{
-		Name: name,
-		Signature: &ProcSignature{
-			GenericParams: genericParams,
-			Params:        make([]TcSymbol, len(args)),
-			ResultType:    result,
-		},
-		Prefix:  prefix,
-		Infix:   infix,
-		Postfix: postfix,
+	signature := ProcSignature{
+		GenericParams: genericParams,
+		Params:        make([]TcSymbol, len(args)),
+		ResultType:    result,
 	}
 	for i, arg := range args {
-		procDef.Signature.Params[i].Type = arg
+		signature.Params[i].Type = arg
 		if firstArgMutable && i == 0 {
-			procDef.Signature.Params[i].Kind = SkVarProcArg
+			signature.Params[i].Kind = SkVarProcArg
 		} else {
-			procDef.Signature.Params[i].Kind = SkProcArg
+			signature.Params[i].Kind = SkProcArg
 		}
+	}
+
+	return &signature
+}
+
+func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []*GenericTypeSymbol, args []Type, result Type, firstArgMutable bool) *ProcSignature {
+	procDef := &TcBuiltinGenericProcDef{
+		Name:      name,
+		Signature: makeGenericSignature(genericParams, args, result, firstArgMutable),
+		Prefix:    prefix,
+		Infix:     infix,
+		Postfix:   postfix,
 	}
 	procDef.Signature.Impl = procDef
 	builtinScope.Procedures[name] = append(builtinScope.Procedures[name], procDef.Signature)
@@ -448,18 +458,11 @@ func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams [
 
 func registerBuiltinMacro(name string, varargs bool, args []Type, result Type, macroFunc BuiltinMacroFunc) {
 	macroDef := &TcBuiltinMacroDef{
-		Name: name,
-		Signature: &ProcSignature{
-			Params:     make([]TcSymbol, len(args)),
-			ResultType: result,
-			Varargs:    varargs,
-		},
+		Name:      name,
+		Signature: makeGenericSignature(nil, args, result, false),
 		MacroFunc: macroFunc,
 	}
-	for i, arg := range args {
-		macroDef.Signature.Params[i].Type = arg
-		macroDef.Signature.Params[i].Kind = SkProcArg
-	}
+	macroDef.Signature.Varargs = varargs
 	macroDef.Signature.Impl = macroDef
 	builtinScope.Procedures[name] = append(builtinScope.Procedures[name], macroDef.Signature)
 }
@@ -609,6 +612,16 @@ func BuiltinAddCFlags(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 	return TcCodeBlock{Source: call.Source}
 }
 
+// func BuiltinSizeOf(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
+// 	if len(call.Args) != 1 {
+// 		ReportErrorf(tc, call, "expect single string literal as argument")
+// 		return newErrorNode(call)
+// 	}
+// 	typ := call.Args[0].GetType()
+// 	size := GetTypeSize(typ)
+// 	return IntLit{Source: call.Source, Type: TypeInt64, Value: size}
+// }
+
 func init() {
 	arrayTypeMap = make(map[ArrayTypeMapKey]*ArrayType)
 	enumSetTypeMap = make(map[*EnumType]*EnumSetType)
@@ -627,6 +640,7 @@ func init() {
 	registerBuiltinMacro("printf", true, []Type{TypeStr}, TypeVoid, ValidatePrintfCall)
 	registerBuiltinMacro("addCFlags", false, []Type{TypeStr}, TypeVoid, BuiltinAddCFlags)
 	registerBuiltinMacro("addLinkerFlags", false, []Type{TypeStr}, TypeVoid, BuiltinAddLinkerFlags)
+	// registerBuiltinMacro("sizeof", false, []Type{TypeUnspecified}, TypeInt64, BuiltinSizeOf)
 
 	registerBuiltinType(TypeBoolean)
 	registerBuiltinIntType(TypeInt8)
@@ -711,6 +725,9 @@ func init() {
 		registerGenericBuiltin("=", "(", "=", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeVoid, true)
 		registerGenericBuiltin("==", "(", "==", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeBoolean, false)
 		registerGenericBuiltin("!=", "(", "!=", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeBoolean, false)
+
+		registerGenericBuiltin("pointer", "(void*)(", "", ")", []*GenericTypeSymbol{T}, []Type{GetPtrType(T)}, GetPtrType(TypeVoid), false)
+		registerGenericBuiltin("sizeof", "sizeof(", "", ")", []*GenericTypeSymbol{T}, []Type{T}, TypeInt64, false)
 	}
 
 	registerBuiltin("and", "(", "&&", ")", []Type{TypeBoolean, TypeBoolean}, TypeBoolean, false)

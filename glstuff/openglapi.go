@@ -290,11 +290,9 @@ static {
 		if slices.Contains(disable, command.Name) {
 			continue
 		}
-
 		if _, found := slices.BinarySearch(commands, command.Name); found {
 			fmt.Printf("proc \"importc\" %s(", command.Name)
 			for i, param := range command.Param {
-
 				if _, found := typemap[param.PType]; !found && param.PType != "" {
 					panic(fmt.Errorf("\n%d:  %s", ii, param.PType))
 				}
@@ -312,8 +310,20 @@ static {
 				fmt.Printf(": ")
 				if param.PType == "" {
 					fmt.Printf("pointer")
-				} else if param.Len != "" || param.Data == " *" {
-					fmt.Printf("ptr(%s)", typemap[param.PType])
+				} else if param.Len != "" || strings.ContainsRune(param.Data, '*') {
+					numDeref := strings.Count(param.Data, "*")
+					typ := typemap[param.PType]
+					if param.PType == "GLchar" && numDeref > 0 {
+						numDeref -= 1
+						typ = "cstring"
+					}
+					for i := 0; i < numDeref; i++ {
+						fmt.Print("ptr(")
+					}
+					fmt.Print(typ)
+					for i := 0; i < numDeref; i++ {
+						fmt.Print(")")
+					}
 				} else {
 					fmt.Printf("%s", typemap[param.PType])
 				}

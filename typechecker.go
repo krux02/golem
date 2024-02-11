@@ -467,19 +467,20 @@ func TypeCheckDotExpr(tc *TypeChecker, scope Scope, call Call, expected Type) Tc
 		rhs, isIdent := call.Args[1].(Ident)
 		if !isIdent {
 			ReportErrorf(tc, call.Args[1], "right of dot operator needs to be an identifier, but it is %T", call.Args[1])
+			return result
 		}
 		var idx int
 		result.Rhs, idx = t.Impl.GetField(rhs.Source)
 		if idx < 0 {
 			ReportErrorf(tc, rhs, "type %s has no field %s", t.Impl.Name, rhs.GetSource())
-			return result
+			return newErrorNode(call)
 		}
 		ExpectType(tc, rhs, result.Rhs.GetType(), expected)
 		return result
 	case *ErrorType:
 		return newErrorNode(call)
 	default:
-		ReportErrorf(tc, lhs, "dot call is only supported on struct types, but got: %s %T", AstFormat(typ), typ)
+		ReportErrorf(tc, lhs, "dot call is only supported on struct types, but got: %s", AstFormat(typ))
 		return newErrorNode(call)
 	}
 }
