@@ -669,6 +669,7 @@ func init() {
 	registerTypeGroup(TypeAnyFloat)
 	registerTypeGroup(TypeAnyInt)
 	registerTypeGroup(TypeAnyUInt)
+	registerTypeGroup(TypeAnySInt)
 	registerTypeGroup(TypeAnyNumber)
 
 	for _, typ := range TypeAnyNumber.Items {
@@ -706,6 +707,13 @@ func init() {
 			registerSimpleTemplate("high", []Type{GetTypeType(typ)}, typ, IntLit{Value: int64(intType.MaxValue), Type: typ})
 			registerSimpleTemplate("low", []Type{GetTypeType(typ)}, typ, IntLit{Value: intType.MinValue, Type: typ})
 		}
+	}
+
+	// TODO test this and use a generic for this
+	for _, typ := range TypeAnyInt.Items {
+		registerBuiltin("bitand", "(", "&", ")", []Type{typ, typ}, typ, false)
+		registerBuiltin("bitor", "(", "|", ")", []Type{typ, typ}, typ, false)
+		registerBuiltin("bitnot", "~(", "", ")", []Type{typ}, typ, false)
 	}
 
 	registerBuiltin("len", "", "", ".len", []Type{TypeStr}, TypeInt64, false)

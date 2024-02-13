@@ -138,6 +138,29 @@ proc createVertexArrayObject(label: str): VertexArrayObject = {
 
 proc attributeLocation(program: Program, name: str) : Location = [index = glGetAttribLocation(program.handle, cstring(name))]
 
+type OffsetAlign = struct {
+  offset: i32
+  align: i32
+}
+
+proc alignFunc(address, alignment: i32): i32 = bitand(address + (alignment - 1), bitnot(alignment - 1))
+
+proc std140AlignedWrite(dst: pointer, offset: i32, value: f32): OffsetAlign = {
+  var result: OffsetAlign = [offset = alignFunc(offset, 4), align = 4]
+  write(dst, result.offset, u32(value))
+}
+
+proc std140AlignedWrite(dst: pointer, offset: i32, uniformObject: UniformBufType_436214163): OffsetAlign = {
+  var result: OffsetAlign
+
+  result.align = 4
+  result.offset = alignFunc(offset, 4)
+
+
+  # write(dst, result.offset, uint32(value))
+  std140AlignedWrite(dst, offset, uniformObject.mvp)
+  result
+}
 
 proc main(): i32 = {
   let window = SDL_CreateWindow("hello triangle", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_OPENGL)
@@ -241,15 +264,18 @@ void main() {
   if location2.index < 0 do {
     printf("unused attribute: a_color\n")
   } else {
-    glVertexArrayAttribBinding(vao_436214160.handle, 1, cast[u32](location2.index))
+    glVertexArrayAttribBinding(vao_436214160.handle, 1, u32(location2.index))
   }
 }
+
+let mvp : array(16, f32) = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1] # identity
+
 
 glUseProgram(p_436214159.program.handle)
 glBindVertexArray(vao_436214160.handle)
 var uniformObject_436214161: UniformBufType_436214163
 uniformObject_436214161.mvp = mvp
-discard std140AlignedWrite(p_436214159.uniformBufferData, 0, uniformObject_436214161)
+discard(std140AlignedWrite(p_436214159.uniformBufferData, 0, uniformObject_436214161))
 glNamedBufferSubData(p_436214159.uniformBufferHandle, 0, p_436214159.uniformBufferSize, p_436214159.uniformBufferData)
 glBindBufferBase(35345, 0, p_436214159.uniformBufferHandle)
 var buffers: array[2, GLuint] = [vertices.handle, colors.handle]

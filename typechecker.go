@@ -736,7 +736,11 @@ func SignatureApplyTypeSubstitution(sig *ProcSignature, substitutions []Substitu
 }
 
 func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected Type) TcExpr {
-	ident := call.Callee.(Ident)
+	ident, isIdent := call.Callee.(Ident)
+	if !isIdent {
+		ReportErrorf(tc, call.Callee, "expected identifier but got %T (%s)", call.Callee, AstFormat(call.Callee))
+		return newErrorNode(call.Callee)
+	}
 	// language level reserved calls
 	switch ident.Source {
 	case ".":
