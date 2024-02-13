@@ -859,7 +859,7 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 	}
 	name, isIdent := call.Callee.(Ident)
 	if !isIdent {
-		tokenizer.reportError(firstToken, "proc keyword must be followed by an identifier")
+		tokenizer.reportError(firstToken, "proc keyword must be followed by an identifier, but is followed by %T", call.Callee)
 		return
 	}
 

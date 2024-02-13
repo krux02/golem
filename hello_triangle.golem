@@ -143,6 +143,11 @@ type OffsetAlign = struct {
   align: i32
 }
 
+proc write[T](dst: pointer, offset: var int32, value: T): void = {
+  (cast[ptr T](cast[uint](dst) + cast[uint](offset)))[] = value
+  offset += int32(sizeof(value))
+}
+
 proc alignFunc(address, alignment: i32): i32 = bitand(address + (alignment - 1), bitnot(alignment - 1))
 
 proc std140AlignedWrite(dst: pointer, offset: i32, value: f32): OffsetAlign = {
