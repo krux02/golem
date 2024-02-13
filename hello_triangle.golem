@@ -8,6 +8,137 @@ static {
   addCFlags("-Werror-implicit-function-declaration")
 }
 
+emit "#include <string.h>"
+emit "void glCreateBuffers(GLsizei n, GLuint *buffers);\n"
+emit "void glNamedBufferStorage(GLuint buffer, GLsizeiptr size, const void *data, GLbitfield flags);\n"
+
+type VertexArrayObject = struct {
+  handle: u32
+}
+
+type VertexArrayObjectBinding = struct {
+  index: u32
+}
+
+type UniformBufType_436214163 = struct {
+  #mvp: Mat[4, 4, float32]
+  mvp: array(16,f32)
+}
+
+type Location = struct {
+  index: i32
+}
+
+
+type LineInfo = struct {
+  filename: str
+  line: int
+  column: int
+}
+
+type Program = struct {
+  handle: u32
+}
+
+type Shader  = struct {
+  handle: u32
+}
+
+
+type Pipeline = struct {
+  program: Program
+  vao: VertexArrayObject
+  uniformBufferHandle: u32 # GLuint
+  uniformBufferData: pointer
+  uniformBufferSize: i32 #GLint
+}
+
+
+proc "importc" strlen(str: cstring): uint;
+proc "importc" malloc(size: uint): pointer;
+
+proc makeString(cstr: cstring): str = {
+  # TODO not implemented
+  ""
+}
+
+proc shaderSource(shader: Shader, source: cstring) : void = {
+  var source: cstring = source
+  var length: i32 = i32(strlen(source))
+  glShaderSource(shader.handle, 1, addr(source), addr(length))
+}
+
+proc compileStatus(shader: Shader): bool = {
+  var status: i32
+  glGetShaderiv(shader.handle, GL_COMPILE_STATUS, addr(status))
+  status != 0
+}
+
+proc linkStatus(program: Program): bool = {
+  var status: i32 # GLint
+  glGetProgramiv(program.handle, GL_LINK_STATUS, addr(status))
+  status != 0
+}
+
+proc shaderInfoLog(shader: Shader): str = {
+  var length: i32 = 0
+  glGetShaderiv(shader.handle, GL_INFO_LOG_LENGTH, addr(length))
+  # let result = newString(length.int)
+  # glGetShaderInfoLog(shader.handle, length, nil, result)
+  "" # TODO implement this
+}
+
+# type GLenum = u32
+
+proc showError(a: str, b: cstring, d: LineInfo): void = {}
+
+proc compileShader(shaderType: u32, source: cstring, lineinfo: LineInfo): Shader = {
+  var result: Shader
+
+  result.handle = glCreateShader(shaderType)
+  shaderSource(result, source)
+  glCompileShader(result.handle)
+
+  if not(compileStatus(result)) do {
+    showError(shaderInfoLog(result), source, lineinfo)
+  }
+  result
+}
+
+proc attachAndDeleteShader(program: Program, shader: Shader): void = {
+  glAttachShader(program.handle, shader.handle)
+  glDeleteShader(shader.handle)
+}
+
+proc infoLog(program: Program): str = {
+  var length = 0:i32  #GLint = 0
+  glGetProgramiv(program.handle, GL_INFO_LOG_LENGTH, addr(length));
+  #result = newString(length.int)
+  #glGetProgramInfoLog(program.handle, length, nil, result);
+  "TODO *infoLog* not yet implemented"
+}
+
+proc linkOrDelete(program: Program): void = {
+  glLinkProgram(program.handle)
+  if not(linkStatus(program)) do {
+    printf("Log: %s\n", infoLog(program))
+    glDeleteProgram(program.handle)
+  }
+}
+
+## Typed wrapper around `glCreateVertexArrays`.
+proc createVertexArrayObject(label: str): VertexArrayObject = {
+  var result: VertexArrayObject
+  glCreateVertexArrays(1, addr(result.handle))
+  if len(label) > 0 do {
+    glObjectLabel(GL_VERTEX_ARRAY, result.handle, i32(len(label)), cstring(label))
+  }
+  result
+}
+
+proc attributeLocation(program: Program, name: str) : Location = [index = glGetAttribLocation(program.handle, cstring(name))]
+
+
 proc main(): i32 = {
   let window = SDL_CreateWindow("hello triangle", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_OPENGL)
   assert(window != nil)
@@ -19,12 +150,117 @@ proc main(): i32 = {
 
   var running: bool = true
 
-  var buffers : array(2, u32)
+  # var buffers : array(2, u32)
 
-  glCreateBuffers(2, addr(buffers[0]))
+  var vertexData = [-1:f32,-1,0,1, 1,-1,0,1, 0,1,0,1]
+  var colorData = [1:f32,0,0,0, 0,1,0,0, 0,0,1,0]
 
-  let vertexData = [-1:f32,-1,0,1, 1,-1,0,1, 0,1,0,1]
-  let colorData = [1:f32,0,0,0, 0,1,0,0, 0,0,1,0]
+  # glCreateBuffers(2, addr(buffers[0]))
+  # glNamedBufferStorage(buffers[0], len(vertexData) * sizeof(vertexData[0]), pointer(addr(vertexData[0])), 0)
+  # glNamedBufferStorage(buffers[1], len(colorData) * sizeof(colorData[0]), pointer(addr(colorData[0])), 0)
+  # let vertexData = [-1:f32,-1,0,1, 1,-1,0,1, 0,1,0,1]
+  # let colorData  = [ 1:f32, 0,0,0, 0, 1,0,0, 0,0,1,0]
+
+  var p_436214159: Pipeline
+  var vao_436214160: VertexArrayObject
+
+  if p_436214159.program.handle == 0 do {
+    p_436214159.program.handle = glCreateProgram()
+    attachAndDeleteShader(p_436214159.program, compileShader(GL_VERTEX_SHADER, "#version 440
+#extension GL_ARB_enhanced_layouts : enable
+#define M_PI 3.1415926535897932384626433832795
+layout(std140, binding=0) uniform dynamic_shader_data {
+    mat4x4 mvp;
+};
+in vec4 a_vertex;
+in vec4 a_color;
+out vec4 v_color;
+void main() {
+////////////////////////////////////////////////////////////////////////////////
+//                            user code begins here                           //
+      gl_Position = mvp * a_vertex;
+      v_color = a_color;
+
+//                            user code ends here                             //
+////////////////////////////////////////////////////////////////////////////////
+
+}
+", [filename= "hello_triangle.golem",  line= 124 , column= 6]))
+  attachAndDeleteShader(p_436214159.program, compileShader(GL_FRAGMENT_SHADER, "#version 440
+#extension GL_ARB_enhanced_layouts : enable
+#define M_PI 3.1415926535897932384626433832795
+layout(std140, binding=0) uniform dynamic_shader_data {
+    mat4x4 mvp;
+};
+in vec4 v_color;
+layout(location = 0) out vec4 color;
+void main() {
+////////////////////////////////////////////////////////////////////////////////
+//                            user code begins here                           //
+      color = v_color;
+
+//                            user code ends here                             //
+////////////////////////////////////////////////////////////////////////////////
+
+}
+", [filename= "hello_triangle.golem", line= 73, column= 6]))
+
+  linkOrDelete(p_436214159.program)
+  glUseProgram(p_436214159.program.handle)
+  vao_436214160 = createVertexArrayObject("")
+  let uniformBlockIndex = glGetUniformBlockIndex(p_436214159.program.handle, "dynamic_shader_data")
+
+  const loc: LineInfo = [filename= "nimgen.nim", line= 31, column= 15]
+
+  # bind(instantiationInfo)
+  # mixin(failedAssertImpl)
+  assert(uniformBlockIndex != GL_INVALID_INDEX)
+
+  var blockSize_436214162: i32 # GLint
+  glGetActiveUniformBlockiv(p_436214159.program.handle, uniformBlockIndex, 35392, addr(blockSize_436214162))
+
+  p_436214159.uniformBufferSize = blockSize_436214162
+  glCreateBuffers(1, addr(p_436214159.uniformBufferHandle))
+  glNamedBufferStorage(p_436214159.uniformBufferHandle, int(blockSize_436214162), nil, 256)
+  p_436214159.uniformBufferData =  malloc(u64(blockSize_436214162)) # allocImpl(blockSize_436214162)
+
+  glEnableVertexArrayAttrib(vao_436214160.handle, 0)
+  glVertexArrayBindingDivisor(vao_436214160.handle, 0, 0)
+  glVertexArrayAttribFormat(vao_436214160.handle, 0, 4, 5126, false, 0)
+
+  let location1 = attributeLocation(p_436214159.program, "a_vertex")
+  if location1.index < 0 do {
+    printf("unused attribute: a_vertex\n")
+  } else {
+    glVertexArrayAttribBinding(vao_436214160.handle, 0, u32(location1.index))
+  }
+  glEnableVertexArrayAttrib(vao_436214160.handle, 1)
+  glVertexArrayBindingDivisor(vao_436214160.handle, 1, 0)
+  glVertexArrayAttribFormat(vao_436214160.handle, 1, 4, 5126, false, 0)
+  let location2 = attributeLocation(p_436214159.program, "a_color")
+  if location2.index < 0 do {
+    printf("unused attribute: a_color\n")
+  } else {
+    glVertexArrayAttribBinding(vao_436214160.handle, 1, cast[u32](location2.index))
+  }
+}
+
+glUseProgram(p_436214159.program.handle)
+glBindVertexArray(vao_436214160.handle)
+var uniformObject_436214161: UniformBufType_436214163
+uniformObject_436214161.mvp = mvp
+discard std140AlignedWrite(p_436214159.uniformBufferData, 0, uniformObject_436214161)
+glNamedBufferSubData(p_436214159.uniformBufferHandle, 0, p_436214159.uniformBufferSize, p_436214159.uniformBufferData)
+glBindBufferBase(35345, 0, p_436214159.uniformBufferHandle)
+var buffers: array[2, GLuint] = [vertices.handle, colors.handle]
+var offsets: array[2, GLintptr] = [GLintptr(totalOffset(vertices)),  int(totalOffset(colors))]
+var strides: array[2, GLsizei] = [GLsizei(16), GLsizei(16)]
+glVertexArrayVertexBuffers(vao_436214160.handle, 0, GLsizei(2), addr(buffers[0]), addr(offsets[0]), addr(strides[0]))
+glDrawArrays(4, 0, GLsizei(3))
+  glBindVertexArray(0)
+  glUseProgram(0)
+
+
 
   while running do {
     var event: SDL_Event

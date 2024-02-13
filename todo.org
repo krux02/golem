@@ -1,4 +1,6 @@
-
+* TODO `not` as operator
+* TODO make addr a generic builtin. suggestions like `expected type 'array(16, f32) | array(1, cstring)' but got type 'str'` are not helpful
+* TODO test unmatched { ( [ situation
 * TODO allow newline in a function call.
 * TODO inversion of control in mutability inference. Instead of `GetMutable` do request mutability
 

@@ -192,6 +192,7 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 	// Printf("read token in:%s...\n", code[:20]);
 	if len(code) == 0 {
 		result.kind = TkEof
+		result.value = code
 		return result, newOffset
 	}
 
@@ -493,6 +494,7 @@ func (tokenizer *Tokenizer) reportError(token Token, msg string, args ...interfa
 
 	if !tokenizer.silentErrors {
 		line, columnStart, columnEnd := LineColumnStr(tokenizer.code, token.value)
+		// LineColumnStr(tokenizer.code, token.value)
 		fmt.Printf("%s(%d, %d-%d) Error: %s\n", tokenizer.filename, line, columnStart, columnEnd, newMsg)
 	}
 	return

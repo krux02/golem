@@ -672,7 +672,6 @@ func init() {
 	registerTypeGroup(TypeAnyNumber)
 
 	for _, typ := range TypeAnyNumber.Items {
-
 		registerBuiltin("+", "(", "+", ")", []Type{typ, typ}, typ, false)
 		registerBuiltin("-", "(", "-", ")", []Type{typ, typ}, typ, false)
 		registerBuiltin("*", "(", "*", ")", []Type{typ, typ}, typ, false)
@@ -687,10 +686,18 @@ func init() {
 			registerBuiltin(op, "(", op, ")", []Type{typ, typ}, TypeVoid, true)
 		}
 
+		// TODO this should be a generic with proper working type constraint on all builtin number types
 		registerBuiltin("i8", "(int8_t)(", "", ")", []Type{typ}, TypeInt8, false)
 		registerBuiltin("i16", "(int16_t)(", "", ")", []Type{typ}, TypeInt16, false)
 		registerBuiltin("i32", "(int32_t)(", "", ")", []Type{typ}, TypeInt32, false)
 		registerBuiltin("i64", "(int64_t)(", "", ")", []Type{typ}, TypeInt64, false)
+		registerBuiltin("int", "(int64_t)(", "", ")", []Type{typ}, TypeInt64, false)
+
+		registerBuiltin("u8", "(uint8_t)(", "", ")", []Type{typ}, TypeUInt8, false)
+		registerBuiltin("u16", "(uint16_t)(", "", ")", []Type{typ}, TypeUInt16, false)
+		registerBuiltin("u32", "(uint32_t)(", "", ")", []Type{typ}, TypeUInt32, false)
+		registerBuiltin("u64", "(uint64_t)(", "", ")", []Type{typ}, TypeUInt64, false)
+		registerBuiltin("uint", "(uint64_t)(", "", ")", []Type{typ}, TypeUInt64, false)
 
 		registerBuiltin("f32", "(float)(", "", ")", []Type{typ}, TypeFloat32, false)
 		registerBuiltin("f64", "(double)(", "", ")", []Type{typ}, TypeFloat64, false)
@@ -700,6 +707,9 @@ func init() {
 			registerSimpleTemplate("low", []Type{GetTypeType(typ)}, typ, IntLit{Value: intType.MinValue, Type: typ})
 		}
 	}
+
+	registerBuiltin("len", "", "", ".len", []Type{TypeStr}, TypeInt64, false)
+	registerBuiltin("cstring", "", "", ".data", []Type{TypeStr}, TypeCString, false)
 
 	// vector types
 	for _, typ := range []Type{TypeFloat32x4} {
@@ -732,6 +742,7 @@ func init() {
 
 	registerBuiltin("and", "(", "&&", ")", []Type{TypeBoolean, TypeBoolean}, TypeBoolean, false)
 	registerBuiltin("or", "(", "||", ")", []Type{TypeBoolean, TypeBoolean}, TypeBoolean, false)
+	registerBuiltin("not", "!(", "", ")", []Type{TypeBoolean}, TypeBoolean, false)
 
 	registerBuiltin("assert", "assert(", "", ")", []Type{TypeBoolean}, TypeVoid, false)
 

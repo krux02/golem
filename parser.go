@@ -459,7 +459,6 @@ func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
 	case TkWhile:
 		result = (Expr)(parseWhileLoop(tokenizer))
 	default:
-
 		result = parseExpr(tokenizer, false)
 	}
 	return result
