@@ -34,7 +34,9 @@ const (
 	TkLet
 	TkConst
 	TkPtr
+	TkAddr
 	TkReturn
+	TkDiscard
 	TkBreak
 	TkContinue
 	TkImport
@@ -44,9 +46,11 @@ const (
 	TkEnum
 	TkEmit
 
-	TkOr
 	TkAnd
+	TkOr
+	TkNot
 	TkIn
+	TkNotIn
 	TkIf
 	TkElse
 	TkFor
@@ -86,6 +90,7 @@ var TokenKindNames = [...]string{
 	TkConst:             "Const",
 	TkPtr:               "Ptr",
 	TkReturn:            "Return",
+	TkDiscard:           "Discard",
 	TkBreak:             "Break",
 	TkContinue:          "Continue",
 	TkImport:            "Import",
@@ -94,9 +99,11 @@ var TokenKindNames = [...]string{
 	TkUnion:             "Union",
 	TkEnum:              "Enum",
 	TkEmit:              "Emit",
-	TkOr:                "Or",
 	TkAnd:               "And",
+	TkOr:                "Or",
+	TkNot:               "Not",
 	TkIn:                "In",
+	TkNotIn:             "NotIn",
 	TkIf:                "If",
 	TkElse:              "Else",
 	TkFor:               "For",
@@ -314,6 +321,8 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			result.kind = TkPtr
 		case "return":
 			result.kind = TkReturn
+		case "discard":
+			result.kind = TkDiscard
 		case "break":
 			result.kind = TkBreak
 		case "continue":
@@ -330,12 +339,16 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			result.kind = TkEnum
 		case "emit":
 			result.kind = TkEmit
-		case "or":
-			result.kind = TkOr
 		case "and":
 			result.kind = TkAnd
+		case "or":
+			result.kind = TkOr
+		case "not":
+			result.kind = TkNot
 		case "in":
 			result.kind = TkIn
+		case "notin":
+			result.kind = TkNotIn
 		case "if":
 			result.kind = TkIf
 		case "else":
@@ -510,6 +523,7 @@ func (tokenizer *Tokenizer) reportWrongKind(token Token) {
 	if token.kind != TkInvalid {
 		// Skip reporting invalid tokens, as they should already be reported as an error on creating them.
 		tokenizer.reportError(token, "unexpected token: %s value: '%s'", TokenKindNames[token.kind], token.value)
+		panic("foobar")
 	}
 	return
 }

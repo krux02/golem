@@ -1318,6 +1318,7 @@ func GetArrayType(elem Type, len int64) (result *ArrayType) {
 		// does have a negative effect or error messages.
 		//
 		// TODO the array index operator needs mutability propagation of the first argument.
+		// TODO this should be generic for better error messages on missing overloads, listing all currently known array types is a bit much
 		registerBuiltin("[", "", ".arr[", "]", []Type{result, TypeInt64}, elem, false)
 		registerSimpleTemplate("len", []Type{result}, TypeInt64, IntLit{Type: TypeInt64, Value: len})
 	}
@@ -1329,6 +1330,7 @@ func GetEnumSetType(elem *EnumType) (result *EnumSetType) {
 	if !ok {
 		result = &EnumSetType{Elem: elem}
 		enumSetTypeMap[elem] = result
+
 	}
 	return result
 }

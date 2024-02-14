@@ -456,10 +456,14 @@ func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams [
 	return procDef.Signature
 }
 
-func registerBuiltinMacro(name string, varargs bool, args []Type, result Type, macroFunc BuiltinMacroFunc) {
+func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Type, firstArgMutable bool) *ProcSignature {
+	return registerGenericBuiltin(name, prefix, infix, postfix, nil, args, result, firstArgMutable)
+}
+
+func registerGenericBuiltinMacro(name string, varargs bool, genericParams []*GenericTypeSymbol, args []Type, result Type, macroFunc BuiltinMacroFunc) {
 	macroDef := &TcBuiltinMacroDef{
 		Name:      name,
-		Signature: makeGenericSignature(nil, args, result, false),
+		Signature: makeGenericSignature(genericParams, args, result, false),
 		MacroFunc: macroFunc,
 	}
 	macroDef.Signature.Varargs = varargs
@@ -467,8 +471,8 @@ func registerBuiltinMacro(name string, varargs bool, args []Type, result Type, m
 	builtinScope.Procedures[name] = append(builtinScope.Procedures[name], macroDef.Signature)
 }
 
-func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Type, firstArgMutable bool) *ProcSignature {
-	return registerGenericBuiltin(name, prefix, infix, postfix, nil, args, result, firstArgMutable)
+func registerBuiltinMacro(name string, varargs bool, args []Type, result Type, macroFunc BuiltinMacroFunc) {
+	registerGenericBuiltinMacro(name, varargs, nil, args, result, macroFunc)
 }
 
 func registerSimpleTemplate(name string, args []Type, result Type, substitution TcExpr) {
@@ -640,6 +644,7 @@ func init() {
 	registerBuiltinMacro("printf", true, []Type{TypeStr}, TypeVoid, ValidatePrintfCall)
 	registerBuiltinMacro("addCFlags", false, []Type{TypeStr}, TypeVoid, BuiltinAddCFlags)
 	registerBuiltinMacro("addLinkerFlags", false, []Type{TypeStr}, TypeVoid, BuiltinAddLinkerFlags)
+
 	// registerBuiltinMacro("sizeof", false, []Type{TypeUnspecified}, TypeInt64, BuiltinSizeOf)
 
 	registerBuiltinType(TypeBoolean)
@@ -746,6 +751,7 @@ func init() {
 
 		registerGenericBuiltin("pointer", "(void*)(", "", ")", []*GenericTypeSymbol{T}, []Type{GetPtrType(T)}, GetPtrType(TypeVoid), false)
 		registerGenericBuiltin("sizeof", "sizeof(", "", ")", []*GenericTypeSymbol{T}, []Type{T}, TypeInt64, false)
+		registerGenericBuiltin("discard", "", "", "", []*GenericTypeSymbol{T}, []Type{T}, TypeVoid, false)
 	}
 
 	registerBuiltin("and", "(", "&&", ")", []Type{TypeBoolean, TypeBoolean}, TypeBoolean, false)

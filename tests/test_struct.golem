@@ -45,7 +45,21 @@ proc main():i32 = {
   var myStruct2 = [12, 34.56, "def"]:MyStruct        # in order initialization, postfix type assertion
   var myStruct3 = [a=78, c="ghi"]:MyStruct           # default value for b
 
+  # TODO rename file to represent the enum set test here
+  # test enum set
+
   var myEnumSet : set(MyEnum) = [Option1, Option3]
+
+  # TODO the `:MyEnum` should not be necessary here
+
+  # assert(Option1:MyEnum in myEnumSet) # TODO enable this
+  # assert(Option2:MyEnum notin myEnumSet) # TODO enable this
+  # assert(Option3:MyEnum in myEnumSet) # TODO enable this
+
+  assert(contains(myEnumSet, Option1))
+  assert(not contains(myEnumSet, Option2))
+  assert(contains(myEnumSet, Option3))
+
 
   #var myEnum = Option2:MyEnum
   bar(123:i64, MyEnum(2:i64))

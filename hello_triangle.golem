@@ -280,7 +280,7 @@ glUseProgram(p_436214159.program.handle)
 glBindVertexArray(vao_436214160.handle)
 var uniformObject_436214161: UniformBufType_436214163
 uniformObject_436214161.mvp = mvp
-discard(std140AlignedWrite(p_436214159.uniformBufferData, 0, uniformObject_436214161))
+discard std140AlignedWrite(p_436214159.uniformBufferData, 0, uniformObject_436214161)
 glNamedBufferSubData(p_436214159.uniformBufferHandle, 0, p_436214159.uniformBufferSize, p_436214159.uniformBufferData)
 glBindBufferBase(35345, 0, p_436214159.uniformBufferHandle)
 var buffers: array[2, GLuint] = [vertices.handle, colors.handle]

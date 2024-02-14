@@ -22,8 +22,10 @@ func OperatorPrecedence(op string) int {
 		return 6
 	case ">", "<", ">=", "<=":
 		return 5
-	case "==", "!=":
+	case "in", "notin":
 		return 4
+	case "==", "!=":
+		return 3
 	case "and", "or":
 		return 2
 	case "=", "+=", "-=", "*=", "/=":
@@ -43,7 +45,7 @@ func parseIdent(tokenizer *Tokenizer) (result Ident) {
 func parseInfixOperator(tokenizer *Tokenizer) (result Ident) {
 	token := tokenizer.Next()
 	tk := token.kind
-	if tk != TkOperator && tk != TkAssign && tk != TkAnd && tk != TkOr {
+	if tk != TkOperator && tk != TkAssign && tk != TkAnd && tk != TkOr && tk != TkIn && tk != TkNotIn {
 		tokenizer.reportWrongKind(token)
 	}
 	// ensure operator precedence exists
@@ -464,12 +466,12 @@ func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
 	return result
 }
 
-func parsePrefixCall(tokenizer *Tokenizer) Expr {
+func parsePrefixCall(tokenizer *Tokenizer, preventInfixOperatorInArgument bool) Expr {
 	// Currently any token  is legal as prefix. I hope this won't fall on my head.
 	firstToken := tokenizer.Next()
 	op := Ident{Source: firstToken.value}
 	secondToken := tokenizer.lookAheadToken
-	arg := parseExpr(tokenizer, true)
+	arg := parseExpr(tokenizer, preventInfixOperatorInArgument)
 
 	// kind := tokenizer.lookAheadToken.kind
 	// Negation operator immediately followed by a number literal is collapsed into a negative literal.
@@ -628,7 +630,7 @@ func parseNilLit(tokenizer *Tokenizer) NilLit {
 	return NilLit{Source: token.value, Type: TypeNilPtr}
 }
 
-func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
+func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
 	switch tokenizer.lookAheadToken.kind {
 	case TkIdent:
 		result = (Expr)(parseIdent(tokenizer))
@@ -660,29 +662,24 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 			tokenizer.reportError(token, "braced expression must contain a single expression, but has %d", len(exprList.Items))
 			result = newErrorNode(exprList)
 		}
-	case TkOperator, TkPtr:
-		if prefixExpr {
-			// do not allow prefix prefix expression?
-			tokenizer.reportWrongKind(tokenizer.lookAheadToken)
-		}
-		result = (Expr)(parsePrefixCall(tokenizer))
+	case TkOperator, TkPtr, TkAddr, TkNot:
+		// tokenizer.reportWrongKind(tokenizer.lookAheadToken)
+		result = (Expr)(parsePrefixCall(tokenizer, true))
+	case TkReturn:
+		result = (Expr)(parseReturnExpr(tokenizer))
+	case TkDiscard:
+		result = (Expr)(parsePrefixCall(tokenizer, false))
+	case TkVar:
+		result = (Expr)(parseVarExpr(tokenizer))
 	case TkType:
 		result = (Expr)(parseTypeContext(tokenizer))
 	case TkNilLit:
 		result = (Expr)(parseNilLit(tokenizer))
-	case TkReturn:
-		result = (Expr)(parseReturnExpr(tokenizer))
-	case TkVar:
-		result = (Expr)(parseVarExpr(tokenizer))
 	default:
 		tokenizer.reportWrongKind(tokenizer.lookAheadToken)
 		result = (Expr)(InvalidTokenExpr{tokenizer.Next()})
 	}
 
-	if prefixExpr {
-		// used for -1:f32
-		return result
-	}
 	// any expression could be the start of a longer expression, this is
 	// explorerd here.
 
@@ -690,7 +687,14 @@ func parseExpr(tokenizer *Tokenizer, prefixExpr bool) (result Expr) {
 		lookAhead := tokenizer.lookAheadToken
 		switch lookAhead.kind {
 		// TkAnd, TkOr, TkAssign is an operator token?
-		case TkOperator, TkAnd, TkOr, TkAssign:
+		case TkOperator, TkAnd, TkOr, TkAssign, TkIn, TkNotIn:
+			// used for:
+			//   -1:f32
+			//   not a or b -> (not a) or b # stops at operator
+			//   discard a or b -> discard(a or b) # does not stop at operator
+			if stopAtOperator {
+				return result
+			}
 			result = (Expr)(parseInfixCall(tokenizer, result))
 		case TkOpenBrace:
 			result = (Expr)(parseCall(tokenizer, result))
