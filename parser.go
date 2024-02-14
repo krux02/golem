@@ -179,8 +179,14 @@ func parseIfStmt(tokenizer *Tokenizer) Expr {
 	return result
 }
 
-func (tokenizer *Tokenizer) eatSemicolon() {
-	for tokenizer.lookAheadToken.kind == TkSemicolon {
+func eatSemicolons(tokenizer *Tokenizer) {
+	for tokenizer.lookAheadToken.kind == TkSemicolon || tokenizer.lookAheadToken.kind == TkNewLine {
+		tokenizer.Next()
+	}
+}
+
+func eatNewLines(tokenizer *Tokenizer) {
+	for tokenizer.lookAheadToken.kind == TkNewLine {
 		tokenizer.Next()
 	}
 }
@@ -188,11 +194,11 @@ func (tokenizer *Tokenizer) eatSemicolon() {
 func parseCodeBlock(tokenizer *Tokenizer) (result CodeBlock) {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkOpenCurly)
-	tokenizer.eatSemicolon()
+	eatSemicolons(tokenizer)
 	for tokenizer.lookAheadToken.kind != TkCloseCurly {
 		item := parseStmtOrExpr(tokenizer)
 		result.Items = append(result.Items, item)
-		tokenizer.eatSemicolon()
+		eatSemicolons(tokenizer)
 	}
 	lastToken := tokenizer.Next()
 	tokenizer.expectKind(lastToken, TkCloseCurly)
@@ -410,6 +416,7 @@ func parseExprList(tokenizer *Tokenizer, tkOpen, tkClose TokenKind) (result Expr
 			result.Items = append(result.Items, parseExpr(tokenizer, false))
 		}
 	}
+	eatNewLines(tokenizer)
 	next = tokenizer.Next()
 	tokenizer.expectKind(next, tkClose)
 	result.Source = joinSubstr(tokenizer.code, firstToken.value, next.value)
@@ -632,6 +639,9 @@ func parseNilLit(tokenizer *Tokenizer) NilLit {
 
 func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
 	switch tokenizer.lookAheadToken.kind {
+	case TkNewLine:
+		tokenizer.Next()
+		result = parseExpr(tokenizer, stopAtOperator)
 	case TkIdent:
 		result = (Expr)(parseIdent(tokenizer))
 	case TkOpenCurly:
@@ -919,7 +929,7 @@ func parsePackage(tokenizer *Tokenizer) (result PackageDef, errors []ParseError)
 		switch tokenizer.lookAheadToken.kind {
 		//case TkLineComment:
 		//	continue
-		case TkSemicolon:
+		case TkSemicolon, TkNewLine:
 			tokenizer.Next()
 			continue
 		case TkEof:

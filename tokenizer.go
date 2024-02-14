@@ -14,6 +14,7 @@ type TokenKind int16
 const (
 	TkInvalid TokenKind = iota
 	TkIdent
+	TkNewLine
 	TkSemicolon
 	TkComma
 	TkAssign
@@ -72,6 +73,7 @@ const (
 var TokenKindNames = [...]string{
 	TkInvalid:           "Invalid",
 	TkIdent:             "Ident",
+	TkNewLine:           "NewLine",
 	TkSemicolon:         "Semicolon",
 	TkComma:             "Comma",
 	TkAssign:            "Assign",
@@ -233,11 +235,10 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			if gotNewLine || !gotComment {
 				goto eatWhiteSpace
 			}
-		case '\\':
+		case '\\': // very questionable implementation here
 			idx += length
 		newlineEscape:
 			rune, length := utf8.DecodeRuneInString(code[idx:])
-
 			switch rune {
 			case ' ', '\r':
 				idx += length
@@ -269,7 +270,7 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 
 		if gotNewLine {
 			newOffset += idx
-			result.kind = TkSemicolon
+			result.kind = TkNewLine
 			result.value = code[:idx]
 			return result, newOffset
 		}
@@ -529,7 +530,8 @@ func (tokenizer *Tokenizer) reportWrongKind(token Token) {
 
 func (tokenizer *Tokenizer) reportWrongIdent(token Token) {
 	tokenizer.reportError(token, "unexpected identifier: %s", token.value)
-	return
+	panic("foobar")
+	// return
 }
 
 func (tokenizer *Tokenizer) expectKind(token Token, kind TokenKind) bool {

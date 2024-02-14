@@ -1,9 +1,11 @@
 #proc assert(cond: Bool)
 
-proc mutableArgFunc((var arg): f32, somearg: f32):void = {
+proc mutableArgFunc(var arg: f32, somearg: f32):void = {
   arg += somearg
   arg *= somearg
 }
+
+proc foo(a,b,c,d: f32): f32 = a*b+c*d
 
 proc main():i32 = {
   {
@@ -63,11 +65,34 @@ proc main():i32 = {
     let myfloat2:f32 = 13
     mutableArgFunc(myfloat1, myfloat2)
     printf("myfloat1: %f\n", myfloat1)
-    assert(myfloat1 == 325) # TODO this should wolrk
+    assert(myfloat1 == 325)
+    # test infix call in discard argument
     discard myfloat1 * myfloat2
+    # test with newline after operator
+    discard myfloat1 *
+      myfloat2
+
+    # test newline escape
+    # TODO enable this
+    #discard myfloat1 \ # test newline escape with comment afterwards
+    #* 7
   }
 
+  {
+    # test call with argument on multiple lines
+    let londIdentifierThatIsLongForNoParticularReasonExceptForBeeingLong1 = 1.25:f32
+    let londIdentifierThatIsLongForNoParticularReasonExceptForBeeingLong2 = 3.375:f32
+    let londIdentifierThatIsLongForNoParticularReasonExceptForBeeingLong3 = 5.625:f32
+    let londIdentifierThatIsLongForNoParticularReasonExceptForBeeingLong4 = 7.875:f32
 
+    let theResult = foo(
+      londIdentifierThatIsLongForNoParticularReasonExceptForBeeingLong1,
+      londIdentifierThatIsLongForNoParticularReasonExceptForBeeingLong2,
+      londIdentifierThatIsLongForNoParticularReasonExceptForBeeingLong3,
+      londIdentifierThatIsLongForNoParticularReasonExceptForBeeingLong4
+    )
+    printf("theResult: %f\n", theResult)
+  }
 
   return 0
 }
