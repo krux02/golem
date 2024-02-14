@@ -99,7 +99,7 @@ proc compileShader(shaderType: u32, source: cstring, lineinfo: LineInfo): Shader
   shaderSource(result, source)
   glCompileShader(result.handle)
 
-  if not(compileStatus(result)) do {
+  if not compileStatus(result) do {
     showError(shaderInfoLog(result), source, lineinfo)
   }
   result
@@ -120,7 +120,7 @@ proc infoLog(program: Program): str = {
 
 proc linkOrDelete(program: Program): void = {
   glLinkProgram(program.handle)
-  if not(linkStatus(program)) do {
+  if not linkStatus(program) do {
     printf("Log: %s\n", infoLog(program))
     glDeleteProgram(program.handle)
   }

@@ -714,7 +714,10 @@ func init() {
 		}
 	}
 
-	// TODO test this and use a generic for this
+	// TODO
+	//   * test this
+	//   * use a generics for this
+	//   * allow varargs
 	for _, typ := range TypeAnyInt.Items {
 		registerBuiltin("bitand", "(", "&", ")", []Type{typ, typ}, typ, false)
 		registerBuiltin("bitor", "(", "|", ")", []Type{typ, typ}, typ, false)

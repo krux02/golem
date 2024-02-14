@@ -523,7 +523,6 @@ func (tokenizer *Tokenizer) reportWrongKind(token Token) {
 	if token.kind != TkInvalid {
 		// Skip reporting invalid tokens, as they should already be reported as an error on creating them.
 		tokenizer.reportError(token, "unexpected token: %s value: '%s'", TokenKindNames[token.kind], token.value)
-		panic("foobar")
 	}
 	return
 }
