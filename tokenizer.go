@@ -45,6 +45,7 @@ const (
 	TkStruct
 	TkUnion
 	TkEnum
+	TkTrait
 	TkEmit
 
 	TkAnd
@@ -100,6 +101,7 @@ var TokenKindNames = [...]string{
 	TkStruct:            "Struct",
 	TkUnion:             "Union",
 	TkEnum:              "Enum",
+	TkTrait:             "Trait",
 	TkEmit:              "Emit",
 	TkAnd:               "And",
 	TkOr:                "Or",
@@ -338,6 +340,8 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			result.kind = TkUnion
 		case "enum":
 			result.kind = TkEnum
+		case "trait":
+			result.kind = TkTrait
 		case "emit":
 			result.kind = TkEmit
 		case "and":

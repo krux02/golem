@@ -10,7 +10,7 @@
      (cons (rx (? "-") bow (1+ digit) (? "." (1+ digit)) eow) font-lock-constant-face)
      (cons (rx bow "0x" (1+ hex) eow) font-lock-constant-face)
      (cons (rx bow (or
-        "const" "for" "while" "do" "in" "notin" "return" "discard" "addr" "var" "let" "if" "proc" "emit" "and" "or" "not" "type" "else" "struct" "union" "static" "import" "enum") eow) font-lock-keyword-face)
+        "const" "for" "while" "do" "in" "notin" "return" "discard" "addr" "var" "let" "if" "proc" "emit" "and" "or" "not" "type" "else" "struct" "union" "trait" "static" "import" "enum") eow) font-lock-keyword-face)
      (cons (rx bow "`" ident "`") font-lock-variable-name-face)
      (cons (rx (+ "\t")) font-lock-warning-face)
      (list (rx bow (or "true" "false") eow) 0 font-lock-constant-face)

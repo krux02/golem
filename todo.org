@@ -1,4 +1,5 @@
-* TODO fix newline escape, curently it has many problems
+* TODO fix or remove newline escape, curently it has many problems
+* TODO trait system
 * TODO generic functions !!!
 * TODO make addr a generic builtin. suggestions like "expected type 'array(16, f32) | array(1, cstring)' but got type 'str'" are not helpful
 * TODO test unmatched { ( [ situation

@@ -902,7 +902,7 @@ conditional. A ~false~ value that isn't ~nil~ would be in conflict
 with the design of ~elisp~. The bool type must be implemented as
 ~Option[t]~ (Option[Unit]).
 
-** Implicit generic type requirements
+** REJECTED Implicit generic type requirements
 
 #+begin_src
 proc foo[T](a: T) {
@@ -912,6 +912,23 @@ proc foo[T](a: T) {
 
 this should implicitly put the constraint on T to be a type with an
 overload ~bar(T): void~
+
+*** rejection cause
+
+This turns out to me not compatible with how overloading works. Currently
+overloading continuously narrows down the selection of the function symbol and
+as soon as the function symbol is unique, types are injected into the function
+argument list. This step is not compatible with implicitly extracting function
+type just from the argument types, since the argument types are already
+influenced by currently existing overloads.
+
+** traits
+
+A trait is not a type on its own.
+Traits should just declare that some overloads will exist for some type T.
+So defining a trait, and stating that an object implements a trait has the
+simple side effect of forward declaring its functions.
+
 
 * Overload resolution and type check order
 

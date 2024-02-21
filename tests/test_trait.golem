@@ -1,0 +1,13 @@
+
+
+
+trait MyTrait(T) {
+  proc foo(T, str): void
+  proc foo(T, f32): void
+  proc foo(T, f64): void
+}
+
+trait MyMultiTrait(T,U) {
+  proc bar(T,U): int32
+  proc baz(V,W): int64
+}
