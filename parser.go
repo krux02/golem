@@ -962,6 +962,9 @@ func parsePackage(tokenizer *Tokenizer) (result PackageDef, errors []ParseError)
 			docComment := parseDocComment(tokenizer)
 			result.TopLevelStmts = append(result.TopLevelStmts, docComment)
 			continue
+		case TkTrait:
+			// TODO implement traits
+			panic("trait handling not implemented")
 		default:
 			tokenizer.reportWrongKind(tokenizer.Next())
 			continue

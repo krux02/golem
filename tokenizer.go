@@ -505,6 +505,8 @@ func (this *Tokenizer) AtEnd() bool {
 	return this.offset == len(this.code)
 }
 
+const fatalError = true
+
 func (tokenizer *Tokenizer) reportError(token Token, msg string, args ...interface{}) {
 	newMsg := fmt.Sprintf(msg, args...)
 	error := ParseError{token, newMsg}
@@ -514,6 +516,9 @@ func (tokenizer *Tokenizer) reportError(token Token, msg string, args ...interfa
 		line, columnStart, columnEnd := LineColumnStr(tokenizer.code, token.value)
 		// LineColumnStr(tokenizer.code, token.value)
 		fmt.Printf("%s(%d, %d-%d) Error: %s\n", tokenizer.filename, line, columnStart, columnEnd, newMsg)
+	}
+	if fatalError {
+		panic("error caused here")
 	}
 	return
 }
@@ -534,8 +539,6 @@ func (tokenizer *Tokenizer) reportWrongKind(token Token) {
 
 func (tokenizer *Tokenizer) reportWrongIdent(token Token) {
 	tokenizer.reportError(token, "unexpected identifier: %s", token.value)
-	panic("foobar")
-	// return
 }
 
 func (tokenizer *Tokenizer) expectKind(token Token, kind TokenKind) bool {
