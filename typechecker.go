@@ -304,7 +304,14 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def ProcDef) (result *
 		}
 		result.MangledName = mangledNameBuilder.String()
 	}
-	resultType := LookUpType(tc, procScope, def.ResultType)
+	var resultType Type
+	if def.ResultType == nil {
+		ReportErrorf(tc, def, "proc def needs result type specified")
+		resultType = TypeError
+	} else {
+		resultType = LookUpType(tc, procScope, def.ResultType)
+	}
+
 	result.Signature.ResultType = resultType
 	if result.Importc {
 		if def.Body != nil {

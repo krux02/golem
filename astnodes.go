@@ -115,6 +115,13 @@ type StructDef struct {
 	Annotations StrLit
 }
 
+type TraitDef struct {
+	Source         string
+	Name           Ident
+	DependentTypes []Ident
+	Signatures     []ProcSignature
+}
+
 type ProcArgument struct {
 	Source  string
 	Name    Ident
@@ -246,4 +253,5 @@ func (arg NilLit) GetSource() string           { return arg.Source }
 func (arg EmitStmt) GetSource() string         { return arg.Source }
 func (arg StaticExpr) GetSource() string       { return arg.Source }
 func (arg ImportStmt) GetSource() string       { return arg.Source }
+func (arg *TraitDef) GetSource() string        { return arg.Source }
 func (arg PackageDef) GetSource() string       { return arg.Source }

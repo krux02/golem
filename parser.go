@@ -486,7 +486,7 @@ func parsePrefixCall(tokenizer *Tokenizer, preventInfixOperatorInArgument bool) 
 		// check for spaces between the tokens
 		ptr1 := uintptr(unsafe.Pointer(unsafe.StringData(firstToken.value)))
 		ptr2 := uintptr(unsafe.Pointer(unsafe.StringData(secondToken.value)))
-		if ptr1+uintptr(len(op.Source)) == ptr2 {
+		if ptr1+uintptr(len(op.Source)) == ptr2 { // no space
 			if intLit, isIntLit := arg.(IntLit); isIntLit {
 				intLit.Source = joinSubstr(tokenizer.code, op.Source, intLit.Source)
 				intLit.Value = -intLit.Value
@@ -859,26 +859,24 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 		expr = lhs
 	}
 
-	colonExpr, isColonExpr := MatchColonExpr(expr)
-	if !isColonExpr {
-		tokenizer.reportError(firstToken, "proc def requres colon to specify return type")
-		return
-	}
-	result.ResultType = colonExpr.Rhs
-
-	call, isCall := colonExpr.Lhs.(Call)
-	if !isCall {
-		tokenizer.reportError(firstToken, "proc def requires an argument list")
-		return
-	}
-	name, isIdent := call.Callee.(Ident)
-	if !isIdent {
-		tokenizer.reportError(firstToken, "proc keyword must be followed by an identifier, but is followed by %T", call.Callee)
-		return
+	if colonExpr, isColonExpr := MatchColonExpr(expr); isColonExpr {
+		result.ResultType = colonExpr.Rhs
+		expr = colonExpr.Lhs
 	}
 
-	result.Name = name
-	argsRaw := call.Args
+	var argsRaw []Expr
+	if call, isCall := expr.(Call); isCall {
+		argsRaw = call.Args
+		expr = call.Callee
+	} else {
+		// tokenizer.reportError(firstToken, "proc def requires an argument list")
+	}
+
+	if name, isIdent := expr.(Ident); isIdent {
+		result.Name = name
+	} else {
+		// tokenizer.reportError(firstToken, "proc keyword must be followed by an identifier, but is followed by %T", call.Callee)
+	}
 
 	var newArgs []ProcArgument
 	for _, arg := range argsRaw {
@@ -919,6 +917,46 @@ func parseImportStmt(tokenizer *Tokenizer) ImportStmt {
 	tokenizer.expectKind(firstToken, TkImport)
 	strLit := parseStrLit(tokenizer)
 	return ImportStmt{Source: joinSubstr(tokenizer.code, firstToken.value, strLit.Source), StrLit: strLit}
+}
+
+func parseTrait(tokenizer *Tokenizer) *TraitDef {
+	firstToken := tokenizer.Next()
+	tokenizer.expectKind(firstToken, TkTrait)
+	result := &TraitDef{}
+
+	expr := parseExpr(tokenizer, true)
+	switch x := expr.(type) {
+	case Call:
+		switch name := x.Callee.(type) {
+		case Ident:
+			result.Name = name
+		default:
+			panic("TODO report error here")
+		}
+		for _, arg := range x.Args {
+			switch arg := arg.(type) {
+			case Ident:
+				result.DependentTypes = append(result.DependentTypes, arg)
+			default:
+				panic(fmt.Errorf("TODO: report error here %T %s", arg, arg.GetSource()))
+			}
+		}
+	default:
+		panic("report error here")
+	}
+
+	token := tokenizer.Next()
+
+	tokenizer.expectKind(token, TkOpenCurly)
+
+	for tokenizer.lookAheadToken.kind != TkCloseCurly {
+		parseProcDef(tokenizer)
+	}
+
+	lastToken := tokenizer.Next()
+
+	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
+	return result
 }
 
 func parsePackage(tokenizer *Tokenizer) (result PackageDef, errors []ParseError) {
@@ -964,7 +1002,9 @@ func parsePackage(tokenizer *Tokenizer) (result PackageDef, errors []ParseError)
 			continue
 		case TkTrait:
 			// TODO implement traits
-			panic("trait handling not implemented")
+			trait := parseTrait(tokenizer)
+			result.TopLevelStmts = append(result.TopLevelStmts, trait)
+			continue
 		default:
 			tokenizer.reportWrongKind(tokenizer.Next())
 			continue

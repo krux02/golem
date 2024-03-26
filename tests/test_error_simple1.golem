@@ -34,3 +34,10 @@ proc main():i64 = {
   let x__x : str = "abc" # Error: var identifier may not use __ (double underscore), reserved for internal usage
   return 0
 }
+
+proc foo() = {} # Error: proc def needs result type specified
+
+# TODO
+
+proc bar : i32 = {} # Error: "proc def requires an argument list")
+proc ???  # Error: proc keyword must be followed by an identifier, but is followed by %T", call.Callee)

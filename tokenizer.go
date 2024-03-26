@@ -505,7 +505,7 @@ func (this *Tokenizer) AtEnd() bool {
 	return this.offset == len(this.code)
 }
 
-const fatalError = true
+const fatalError = false
 
 func (tokenizer *Tokenizer) reportError(token Token, msg string, args ...interface{}) {
 	newMsg := fmt.Sprintf(msg, args...)
