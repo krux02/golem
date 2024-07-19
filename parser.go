@@ -980,7 +980,8 @@ func parseTrait(tokenizer *Tokenizer) *TraitDef {
 
 	eatNewLines(tokenizer)
 	for tokenizer.lookAheadToken.kind != TkCloseCurly {
-		parseProcDef(tokenizer)
+		def := parseProcDef(tokenizer)
+		result.Signatures = append(result.Signatures, def)
 		eatNewLines(tokenizer)
 	}
 

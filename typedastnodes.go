@@ -52,7 +52,7 @@ type TcStructDef struct {
 type TcTraitDef struct {
 	Source     string
 	Name       string
-	Signatures []ProcSignature
+	Signatures []*ProcSignature
 }
 
 type GenericTypeSymbol struct {

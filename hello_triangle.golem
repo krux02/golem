@@ -143,7 +143,11 @@ type OffsetAlign = struct {
   align: i32
 }
 
-proc write[T](dst: pointer, offset: var i32, value: T): void = {
+trait HasSizeOf(T) {
+  proc sizeof(_: T): i64
+}
+
+proc write[T : HasSizeOf](dst: pointer, offset: var i32, value: T): void = {
   (cast[ptr T](cast[uint](dst) + cast[uint](offset)))[] = value
   offset += int32(sizeof(value))
 }

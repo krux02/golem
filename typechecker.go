@@ -265,10 +265,16 @@ func TypeCheckStructDef(tc *TypeChecker, scope Scope, def StructDef) *TcStructDe
 
 func TypeCheckTraitDef(tc *TypeChecker, scope Scope, def *TraitDef) *TcTraitDef {
 	ValidNameCheck(tc, def.Name, "trait")
+	traitScope := NewSubScope(scope)
 	result := &TcTraitDef{}
 	result.Source = def.Source
 	result.Name = def.Name.Source
-	result.Signatures = def.Signatures
+
+	for _, procDef := range def.Signatures {
+		tcProcDef := TypeCheckProcDef(tc, traitScope, procDef)
+		result.Signatures = append(result.Signatures, tcProcDef.Signature)
+	}
+
 	RegisterTrait(tc, scope, result, def.Name)
 	return result
 }
