@@ -1,5 +1,5 @@
 
-# NumErrors:      13
+# NumErrors:      14
 
 proc foo(arg: i32): i64 = {
   printf("foo1: %d\n", i32(arg))
@@ -38,6 +38,4 @@ proc main():i64 = {
 proc foo() = {} # Error: proc def needs result type specified
 
 # TODO
-
-proc bar : i32 = {} # Error: "proc def requires an argument list")
-proc ???  # Error: proc keyword must be followed by an identifier, but is followed by %T", call.Callee)
+# proc bar : i32 = {0} # TODO Error: "proc def requires an argument list")

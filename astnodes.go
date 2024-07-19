@@ -122,6 +122,12 @@ type TraitDef struct {
 	Signatures     []ProcSignature
 }
 
+type GenericArgument struct {
+	Source    string
+	Name      Ident
+	TraitName Ident
+}
+
 type ProcArgument struct {
 	Source  string
 	Name    Ident
@@ -194,6 +200,7 @@ type ColonExpr struct {
 type ProcDef struct {
 	Source      string
 	Name        Ident
+	GenericArgs []GenericArgument
 	Args        []ProcArgument
 	ResultType  TypeExpr
 	Body        Expr

@@ -869,13 +869,43 @@ func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
 		argsRaw = call.Args
 		expr = call.Callee
 	} else {
-		// tokenizer.reportError(firstToken, "proc def requires an argument list")
+		tokenizer.reportError(firstToken, "proc def requires an argument list")
+	}
+
+	if lhs, args, isBracketCall := MatchBracketCall(expr); isBracketCall {
+		expr = lhs
+		result.GenericArgs = make([]GenericArgument, 0, len(args))
+		// TODO do something with args
+		for _, arg := range args {
+			colonExpr, isColonExpr := MatchColonExpr(arg)
+			if !isColonExpr {
+				// TODO firstToken is not the right code location
+				tokenizer.reportError(firstToken, "generic argument must be a colon expr")
+				continue
+			}
+			lhs, isIdent := colonExpr.Lhs.(Ident)
+			if !isIdent {
+				// TODO firstToken is not the right code location
+				tokenizer.reportError(firstToken, "generic argument name must be an Identifire, but it is %T", colonExpr.Lhs)
+				continue
+			}
+			rhs, isIdent := colonExpr.Rhs.(Ident)
+			if !isIdent {
+				// TODO firstToken is not the right code location
+				tokenizer.reportError(firstToken, "generic argument constraint must be an Identifire, but it is %T", colonExpr.Lhs)
+				continue
+			}
+
+			genericArg := GenericArgument{Source: colonExpr.Source, Name: lhs, TraitName: rhs}
+			result.GenericArgs = append(result.GenericArgs, genericArg)
+		}
 	}
 
 	if name, isIdent := expr.(Ident); isIdent {
 		result.Name = name
 	} else {
-		// tokenizer.reportError(firstToken, "proc keyword must be followed by an identifier, but is followed by %T", call.Callee)
+		// TODO firstToken is not the right code location
+		tokenizer.reportError(firstToken, "proc name be an identifier, but it is %T", expr)
 	}
 
 	var newArgs []ProcArgument
@@ -946,11 +976,12 @@ func parseTrait(tokenizer *Tokenizer) *TraitDef {
 	}
 
 	token := tokenizer.Next()
-
 	tokenizer.expectKind(token, TkOpenCurly)
 
+	eatNewLines(tokenizer)
 	for tokenizer.lookAheadToken.kind != TkCloseCurly {
 		parseProcDef(tokenizer)
+		eatNewLines(tokenizer)
 	}
 
 	lastToken := tokenizer.Next()
@@ -1001,7 +1032,6 @@ func parsePackage(tokenizer *Tokenizer) (result PackageDef, errors []ParseError)
 			result.TopLevelStmts = append(result.TopLevelStmts, docComment)
 			continue
 		case TkTrait:
-			// TODO implement traits
 			trait := parseTrait(tokenizer)
 			result.TopLevelStmts = append(result.TopLevelStmts, trait)
 			continue

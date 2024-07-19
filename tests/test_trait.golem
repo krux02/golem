@@ -2,12 +2,34 @@
 
 
 trait MyTrait(T) {
-  proc foo(T, str): void
-  proc foo(T, f32): void
-  proc foo(T, f64): void
+  proc foo(_:T, _:str): void
+  proc foo(_:T, _:f32): void
+  proc foo(_:T, _:f64): void
 }
 
-trait MyMultiTrait(T,U) : {
-  proc bar(T,U): int32
-  proc baz(V,W): int64
+trait MyMultiTrait(T,U) {
+  proc bar(_:T, _:U): int32
+  # proc baz(_:V, _:W): int64 # Error: V not declared
 }
+
+proc bar[T : MyTrait](a:  T): void = {
+  foo(a, "abc")
+  foo(a, 234:f32)
+}
+
+type MyStruct = struct {
+  a: i32
+  b: str
+}
+
+proc foo(self:MyStruct, arg:str): void = {}
+proc foo(self:MyStruct, arg:f32): void = {}
+proc foo(self:MyStruct, arg:f64): void = {}
+
+proc main(): void = {
+  var myStruct: MyStruct
+  # bar(myStruct)
+}
+
+# foo(myStruct)
+# bing(13:i32)

@@ -174,7 +174,8 @@ func LineColumnStr(str, substr string) (line, columnStart, columnEnd int) {
 	data1 := (uintptr)(unsafe.Pointer(unsafe.StringData(str)))
 	data2 := (uintptr)(unsafe.Pointer(unsafe.StringData(substr)))
 	if data2 < data1 {
-		panic(fmt.Sprintf("internal error, no substring, (%d %d) (%d %d)", data1, len(str), data2, len(substr)))
+		fmt.Printf("internal error, no substring, (%d %d) (%d %d). Cannot create line information\n", data1, len(str), data2, len(substr))
+		return -1, -1, -1
 	}
 	offset := int(data2 - data1)
 	line, columnStart = LineColumnOffset(str, offset)

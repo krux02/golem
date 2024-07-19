@@ -36,6 +36,7 @@ type ScopeImpl struct {
 	Variables      map[string]TcSymbol
 	Procedures     map[string][]*ProcSignature
 	Types          map[string]Type
+	Traits         map[string]*TcTraitDef
 }
 
 type Scope = *ScopeImpl
@@ -46,9 +47,11 @@ func NewSubScope(scope Scope) Scope {
 		CurrentProgram: scope.CurrentProgram,
 		CurrentPackage: scope.CurrentPackage,
 		CurrentProc:    scope.CurrentProc,
-		Variables:      make(map[string]TcSymbol),
-		Procedures:     make(map[string][]*ProcSignature),
-		Types:          make(map[string]Type),
+		// TODO maybe do lazy initialization of some of these? Traits are rarely addad.
+		Variables:  make(map[string]TcSymbol),
+		Procedures: make(map[string][]*ProcSignature),
+		Types:      make(map[string]Type),
+		Traits:     make(map[string]*TcTraitDef),
 	}
 }
 
@@ -59,6 +62,16 @@ func RegisterType(tc *TypeChecker, scope Scope, name string, typ Type, context A
 		return
 	}
 	scope.Types[name] = typ
+}
+
+func RegisterTrait(tc *TypeChecker, scope Scope, trait *TcTraitDef, context AstNode) {
+	name := trait.Name
+	if _, ok := scope.Traits[name]; ok {
+		ReportErrorf(tc, context, "double definition of trait '%s'", trait.Name)
+		// TODO previously defined at ...
+		return
+	}
+	scope.Traits[name] = trait
 }
 
 func (scope Scope) NewSymbol(tc *TypeChecker, name Ident, kind SymbolKind, typ Type) TcSymbol {
@@ -84,8 +97,24 @@ func (scope Scope) NewConstSymbol(tc *TypeChecker, name Ident, value TcExpr) TcS
 	return result
 }
 
+func LookUpTrait(tc *TypeChecker, scope Scope, ident Ident) *TcTraitDef {
+	name := ident.Source
+	if typ, ok := scope.Traits[name]; ok {
+		return typ
+	}
+	if scope.Parent != nil {
+		return LookUpTrait(tc, scope.Parent, ident)
+	}
+	ReportErrorf(tc, ident, "Trait not found: %s", name)
+	// TODO maybe return error trait to prevent nil error
+	return nil
+}
+
 func LookUpType(tc *TypeChecker, scope Scope, expr TypeExpr) Type {
 	switch x := expr.(type) {
+	case VarExpr:
+		typ := LookUpType(tc, scope, x.Expr)
+		panic(fmt.Errorf("var expr not handled for: %s", AstFormat(typ)))
 	case Call:
 		ident, ok := x.Callee.(Ident)
 		if !ok {
@@ -153,7 +182,7 @@ func LookUpType(tc *TypeChecker, scope Scope, expr TypeExpr) Type {
 		// case nil:
 		// 	return TypeError
 	}
-	panic(fmt.Sprintf("unexpected ast node in type expr: %v", expr))
+	panic(fmt.Sprintf("unexpected ast node in type expr: %s type: %T", AstFormat(expr), expr))
 }
 
 func LookUpProc(scope Scope, ident Ident, numArgs int, signatures []*ProcSignature) []*ProcSignature {
@@ -234,6 +263,16 @@ func TypeCheckStructDef(tc *TypeChecker, scope Scope, def StructDef) *TcStructDe
 	return result
 }
 
+func TypeCheckTraitDef(tc *TypeChecker, scope Scope, def *TraitDef) *TcTraitDef {
+	ValidNameCheck(tc, def.Name, "trait")
+	result := &TcTraitDef{}
+	result.Source = def.Source
+	result.Name = def.Name.Source
+	result.Signatures = def.Signatures
+	RegisterTrait(tc, scope, result, def.Name)
+	return result
+}
+
 func TypeCheckEnumDef(tc *TypeChecker, scope Scope, def EnumDef) *TcEnumDef {
 	ValidNameCheck(tc, def.Name, "type")
 	result := &TcEnumDef{}
@@ -268,6 +307,7 @@ func TypeCheckEnumDef(tc *TypeChecker, scope Scope, def EnumDef) *TcEnumDef {
 func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def ProcDef) (result *TcProcDef) {
 	ValidNameCheck(tc, def.Name, "proc")
 	procScope := NewSubScope(parentScope)
+
 	result = &TcProcDef{}
 	result.Signature = &ProcSignature{}
 	result.Signature.Impl = result
@@ -280,6 +320,21 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def ProcDef) (result *
 		} else {
 			ReportInvalidAnnotations(tc, def.Annotations)
 		}
+	}
+
+	for _, genericArg := range def.GenericArgs {
+		// result.Signature = result.Signature.GenericParams
+		constraint := LookUpTrait(tc, procScope, genericArg.TraitName)
+		if constraint == nil {
+			continue
+		}
+		name := genericArg.Name.Source
+		ReportWarningf(tc, genericArg.TraitName, "generic constraints/traits are currently not yet implemented and ignored from the compiler")
+		// TODO actually make trait usable as a type constraint, currently the trait/constraint is set to nil
+		genTypeSym := &GenericTypeSymbol{Source: name, Name: name, Constraint: nil}
+		result.Signature.GenericParams = append(result.Signature.GenericParams, genTypeSym)
+		// make the generic type symbol available to look up in its body
+		RegisterType(tc, procScope, name, genTypeSym, def)
 	}
 
 	for _, arg := range def.Args {
@@ -328,7 +383,7 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def ProcDef) (result *
 	return result
 }
 
-func ReportErrorf(tc *TypeChecker, node AstNode, msg string, args ...interface{}) {
+func ReportMessagef(tc *TypeChecker, node AstNode, kind string, msg string, args ...interface{}) {
 	newMsg := fmt.Sprintf(msg, args...)
 	tc.errors = append(tc.errors, CompileError{node: node, msg: newMsg})
 	if !tc.silentErrors {
@@ -336,9 +391,17 @@ func ReportErrorf(tc *TypeChecker, node AstNode, msg string, args ...interface{}
 			fmt.Println(msg)
 		} else {
 			line, columnStart, columnEnd := LineColumnStr(tc.code, node.GetSource())
-			fmt.Printf("%s(%d, %d-%d) Error: %s\n", tc.filename, line, columnStart, columnEnd, newMsg)
+			fmt.Printf("%s(%d, %d-%d) %s: %s\n", tc.filename, line, columnStart, columnEnd, kind, newMsg)
 		}
 	}
+}
+
+func ReportErrorf(tc *TypeChecker, node AstNode, msg string, args ...interface{}) {
+	ReportMessagef(tc, node, "Error", msg, args...)
+}
+
+func ReportWarningf(tc *TypeChecker, node AstNode, msg string, args ...interface{}) {
+	ReportMessagef(tc, node, "Warning", msg, args...)
 }
 
 func ReportUnexpectedType(tc *TypeChecker, context AstNode, expected, gotten Type) {
@@ -1010,6 +1073,10 @@ func IsValidIdentifier(name string) string {
 	// starting/ending identifiers with _ globally in the language. I think it is
 	// extremely ugly and should never be done for anything.
 
+	if len(name) == 0 {
+		return "identifier may not be empty"
+	}
+
 	if strings.HasPrefix(name, "_") || strings.HasSuffix(name, "_") {
 		return "identifier may not start or end with _ (underscore), reserved for internal usage"
 	}
@@ -1590,6 +1657,10 @@ func TypeCheckPackage(tc *TypeChecker, currentProgram *ProgramContext, arg Packa
 				}
 				result.Imports = append(result.Imports, pkg)
 			}
+		case *TraitDef:
+			traitDef := TypeCheckTraitDef(tc, pkgScope, stmt)
+			// stmt.Name
+			result.TraitDefs = append(result.TraitDefs, traitDef)
 		default:
 			panic(fmt.Errorf("internal error: %T", stmt))
 		}

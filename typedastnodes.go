@@ -49,6 +49,12 @@ type TcStructDef struct {
 	Importc bool
 }
 
+type TcTraitDef struct {
+	Source     string
+	Name       string
+	Signatures []ProcSignature
+}
+
 type GenericTypeSymbol struct {
 	// a symbol that needs later substitution on generic instantiation
 	Source     string
@@ -265,6 +271,7 @@ type TcPackageDef struct {
 	EmitStatements []EmitStmt
 	StructDefs     []*TcStructDef
 	EnumDefs       []*TcEnumDef
+	TraitDefs      []*TcTraitDef
 	VarDefs        []TcVariableDefStmt
 	ProcDefs       []*TcProcDef
 	ExportScope    *ScopeImpl

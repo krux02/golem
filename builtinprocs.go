@@ -174,7 +174,7 @@ func (typ *IntLitType) ManglePrint(builder *strings.Builder) {
 }
 
 func (typ *GenericTypeSymbol) ManglePrint(builder *strings.Builder) {
-	panic("illegal not a concrete type")
+	fmt.Fprintf(builder, "?%s?", typ.Name)
 }
 
 func (typ *OpenGenericType) ManglePrint(builder *strings.Builder) {
