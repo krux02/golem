@@ -270,6 +270,11 @@ func TypeCheckTraitDef(tc *TypeChecker, scope Scope, def *TraitDef) *TcTraitDef 
 	result.Source = def.Source
 	result.Name = def.Name.Source
 
+	for _, typ := range def.DependentTypes {
+		sym := &GenericTypeSymbol{Source: typ.Source, Name: typ.Source, Constraint: TypeUnspecified}
+		RegisterType(tc, traitScope, sym.Name, sym, typ)
+	}
+
 	for _, procDef := range def.Signatures {
 		tcProcDef := TypeCheckProcDef(tc, traitScope, procDef)
 		result.Signatures = append(result.Signatures, tcProcDef.Signature)
