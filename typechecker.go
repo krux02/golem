@@ -349,13 +349,27 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def ProcDef) (result *
 	}
 
 	for _, arg := range def.Args {
-		ValidNameCheck(tc, arg.Name, "proc arg")
-		typ := LookUpType(tc, procScope, arg.Type)
 		symKind := SkProcArg
 		if arg.Mutable {
 			symKind = SkVarProcArg
 		}
-		tcArg := procScope.NewSymbol(tc, arg.Name, symKind, typ)
+		typ := LookUpType(tc, procScope, arg.Type)
+
+		var tcArg TcSymbol
+		// TODO this is ugly. Refactoring `NewSymbol` to a simple `RegisterSymbol`
+		// might be a better solution.
+		if arg.Name.Source != "_" {
+			ValidNameCheck(tc, arg.Name, "proc arg")
+			tcArg = procScope.NewSymbol(tc, arg.Name, symKind, typ)
+		} else {
+			// parameters with the name "_" are explicity not put in the scope.
+			tcArg = TcSymbol{
+				Source: arg.Name.Source,
+				Kind:   symKind,
+				Value:  nil,
+				Type:   typ,
+			}
+		}
 		result.Signature.Params = append(result.Signature.Params, tcArg)
 	}
 	if result.Importc || def.Name.Source == "main" {
@@ -385,7 +399,7 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def ProcDef) (result *
 		}
 	} else {
 		if def.Body == nil {
-			ReportErrorf(tc, def, "proc def missas a body")
+			ReportErrorf(tc, def, "proc def misses a body")
 		} else {
 			result.Body = TypeCheckExpr(tc, procScope, def.Body, resultType)
 		}

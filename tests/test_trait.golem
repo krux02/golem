@@ -8,8 +8,7 @@ trait MyTrait(T) {
 }
 
 trait MyMultiTrait(T,U) {
-  proc bar(_:T, _:U): int32
-  # proc baz(_:V, _:W): int64 # Error: V not declared
+  proc bar(_:T, _:U): i32
 }
 
 proc bar[T : MyTrait](a:  T): void = {
