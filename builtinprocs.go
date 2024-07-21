@@ -76,7 +76,7 @@ type IntLitType struct {
 //	min(type int)
 //	alignof(type int)
 type TypeType struct {
-	Type Type
+	WrappedType Type
 }
 
 var _ Type = &BuiltinType{}
@@ -122,7 +122,7 @@ func (typ *TypeGroup) ManglePrint(builder *strings.Builder) {
 
 func (typ *TypeType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("type ")
-	builder.WriteNode(typ.Type)
+	builder.WriteNode(typ.WrappedType)
 }
 
 type EnumSetType struct {
@@ -380,7 +380,7 @@ func extractGenericTypeSymbols(typ Type) (result []*GenericTypeSymbol) {
 	case *ErrorType:
 		panic("internal error")
 	case *TypeType:
-		return extractGenericTypeSymbols(typ.Type)
+		return extractGenericTypeSymbols(typ.WrappedType)
 	case *PtrType:
 		return extractGenericTypeSymbols(typ.Target)
 	case *OpenGenericType:
@@ -755,6 +755,13 @@ func init() {
 		registerGenericBuiltin("pointer", "(void*)(", "", ")", []*GenericTypeSymbol{T}, []Type{GetPtrType(T)}, GetPtrType(TypeVoid), false)
 		registerGenericBuiltin("sizeof", "sizeof(", "", ")", []*GenericTypeSymbol{T}, []Type{T}, TypeInt64, false)
 		registerGenericBuiltin("discard", "", "", "", []*GenericTypeSymbol{T}, []Type{T}, TypeVoid, false)
+	}
+
+	{
+		// TODO: has no line information
+		T := &GenericTypeSymbol{Name: "T", Constraint: TypeUnspecified}
+		U := &GenericTypeSymbol{Name: "U", Constraint: TypeUnspecified}
+		registerGenericBuiltin("cast", "*((", "*)(&(", ")))", []*GenericTypeSymbol{T, U}, []Type{GetTypeType(T), U}, T, false)
 	}
 
 	registerBuiltin("and", "(", "&&", ")", []Type{TypeBoolean, TypeBoolean}, TypeBoolean, false)

@@ -112,9 +112,6 @@ func LookUpTrait(tc *TypeChecker, scope Scope, ident Ident) *TcTraitDef {
 
 func LookUpType(tc *TypeChecker, scope Scope, expr TypeExpr) Type {
 	switch x := expr.(type) {
-	case VarExpr:
-		typ := LookUpType(tc, scope, x.Expr)
-		panic(fmt.Errorf("var expr not handled for: %s", AstFormat(typ)))
 	case Call:
 		ident, ok := x.Callee.(Ident)
 		if !ok {
@@ -602,8 +599,6 @@ func AppendNoDuplicats(types []Type, typ Type) (result []Type) {
 	return append(types, typ)
 }
 
-// inversion of arguments, because go only has polymorphism on the self argument
-
 func AppendToGroup(builder *TypeGroupBuilder, typ Type) (result bool) {
 	switch typ := typ.(type) {
 	case *TypeGroup:
@@ -628,11 +623,6 @@ func AppendToGroup(builder *TypeGroupBuilder, typ Type) (result bool) {
 	//default
 	builder.Items = AppendNoDuplicats(builder.Items, typ)
 	return false
-}
-
-func (typ *UnspecifiedType) AppendToGroup(builder *TypeGroupBuilder) bool {
-	builder.Items = nil
-	return true
 }
 
 func argTypeGroupAtIndex(signatures []*ProcSignature, idx int) (result Type) {
@@ -702,14 +692,21 @@ func GenericParamSignatureMatch(exprType, paramType Type, substitutions []Substi
 
 	{
 		exprEnumSetType, exprIsEnumSetType := exprType.(*EnumSetType)
-		paramEnumSetType, paramIsEnumSetType := exprType.(*EnumSetType)
+		paramEnumSetType, paramIsEnumSetType := paramType.(*EnumSetType) // TODO, this line is untested
 		if exprIsEnumSetType && paramIsEnumSetType {
 			return GenericParamSignatureMatch(exprEnumSetType.Elem, paramEnumSetType.Elem, substitutions)
 		}
 	}
 
-	// TODO apply type substitutions to struct type
+	{
+		exprTypeType, exprIsTypeType := exprType.(*TypeType)
+		paramTypeType, paramIsTypeType := paramType.(*TypeType)
+		if exprIsTypeType && paramIsTypeType {
+			return GenericParamSignatureMatch(exprTypeType.WrappedType, paramTypeType.WrappedType, substitutions)
+		}
+	}
 
+	// TODO apply type substitutions to struct type
 	return false, nil
 }
 
@@ -744,7 +741,7 @@ func RecursiveTypeSubstitution(typ Type, substitutions []Substitution) Type {
 		// TODO: array length substitution is not possible right now
 		return GetArrayType(RecursiveTypeSubstitution(typ.Elem, substitutions), typ.Len)
 	case *TypeType:
-		return GetTypeType(RecursiveTypeSubstitution(typ.Type, substitutions))
+		return GetTypeType(RecursiveTypeSubstitution(typ.WrappedType, substitutions))
 	case *PtrType:
 		return GetPtrType(RecursiveTypeSubstitution(typ.Target, substitutions))
 	case *TypeGroup:
@@ -1272,7 +1269,7 @@ func (returnExpr TcReturnExpr) GetType() Type {
 }
 
 func (expr TcTypeContext) GetType() Type {
-	return expr.Type
+	return GetTypeType(expr.WrappedType)
 }
 
 func (expr TcDotExpr) GetType() Type {
@@ -1351,10 +1348,10 @@ func TypeCheckExpr(tc *TypeChecker, scope Scope, arg Expr, expected Type) TcExpr
 		// never evaluates to anything
 		return (TcExpr)(TypeCheckReturnExpr(tc, scope, arg))
 	case TypeContext:
-		var typ Type = GetTypeType(LookUpType(tc, scope, arg.Expr))
+		var typ Type = LookUpType(tc, scope, arg.Expr)
 		var tcExpr TcTypeContext
 		tcExpr.Source = arg.Source
-		tcExpr.Type = typ
+		tcExpr.WrappedType = typ
 		return (TcExpr)(tcExpr)
 	case VariableDefStmt:
 		ExpectType(tc, arg, TypeVoid, expected)
@@ -1456,9 +1453,8 @@ func GetTypeType(typ Type) (result *TypeType) {
 	result, ok := typeTypeMap[typ]
 	//result, ok := ptrTypeMap[typ]
 	if !ok {
-		result = &TypeType{Type: typ}
+		result = &TypeType{WrappedType: typ}
 		typeTypeMap[typ] = result
-
 	}
 	return result
 }

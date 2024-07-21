@@ -44,6 +44,9 @@ func (builder *AstPrettyPrinter) WriteNode(node PrettyPrintable) {
 }
 
 func AstFormat(node PrettyPrintable) string {
+	if node == nil {
+		return "<nil>" // this branch is a compiler bug. Crashing would be more helpful to fix it than this.
+	}
 	builder := &AstPrettyPrinter{}
 	node.PrettyPrint(builder)
 	result := builder.String()
@@ -696,7 +699,7 @@ func (returnExpr TcReturnExpr) PrettyPrint(builder *AstPrettyPrinter) {
 
 func (expr TcTypeContext) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("type ")
-	builder.WriteNode(expr.Type)
+	builder.WriteNode(expr.WrappedType)
 }
 
 func (expr TcDotExpr) PrettyPrint(builder *AstPrettyPrinter) {

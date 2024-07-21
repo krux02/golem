@@ -147,8 +147,8 @@ type TcReturnExpr struct {
 }
 
 type TcTypeContext struct {
-	Source string
-	Type   Type
+	Source      string
+	WrappedType Type
 }
 
 // TODO rename this, this is an OverloadableSignature

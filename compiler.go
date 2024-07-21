@@ -361,6 +361,8 @@ func (builder *CodeBuilder) CompileExprWithPrefix(context *PackageGeneratorConte
 		builder.CompileEnumSetLit(context, ex)
 	case TcStructField:
 		builder.WriteString(ex.Name)
+	case TcTypeContext:
+		builder.compileTypeExpr(context, ex.WrappedType)
 	case nil:
 		panic(fmt.Sprintf("invalid Ast, expression is nil %T", expr))
 	default:

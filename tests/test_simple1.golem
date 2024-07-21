@@ -38,7 +38,6 @@ proc main():i32 = {
   { # type assertions
     let tmp1: i8 = 123
     let tmp2 = 123:i8
-    # let tmp3 = i8(128) # TODO uncomment this, problem
   }
 
   {
@@ -92,6 +91,14 @@ proc main():i32 = {
       londIdentifierThatIsLongForNoParticularReasonExceptForBeeingLong4
     )
     printf("theResult: %f\n", theResult)
+  }
+
+  {
+    # test casting around
+    # TODO, test more here. This is absolute minimal effort test right now
+    let myFloat = 1.0:f64
+    var myInt = cast(type i64, myFloat)
+    assert(myInt == 0x3ff0000000000000)
   }
 
   return 0

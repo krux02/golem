@@ -147,17 +147,33 @@ trait HasSizeOf(T) {
   proc sizeof(_: T): i64
 }
 
-proc write[T : HasSizeOf](dst: pointer, offset: var i32, value: T): void = {
-  (cast[ptr T](cast[uint](dst) + cast[uint](offset)))[] = value
-  offset += int32(sizeof(value))
+proc write[T : HasSizeOf](dst: pointer, var offset: i32, value: T): void = {
+  (cast(type ptr T, cast(type uint, dst) + cast(type uint, offset)))[] = value
+  offset += i32(sizeof(value))
 }
 
 proc alignFunc(address, alignment: i32): i32 = bitand(address + (alignment - 1), bitnot(alignment - 1))
 
-proc std140AlignedWrite(dst: pointer, offset: i32, value: f32): OffsetAlign = {
-  var result: OffsetAlign = [offset = alignFunc(offset, 4), align = 4]
-  write(dst, result.offset, u32(value))
+# proc std140AlignedWrite(dst: pointer, offset: i32, value: f32): OffsetAlign = {
+#   var result: OffsetAlign = [offset = alignFunc(offset, 4), align = 4]
+#   write(dst, result.offset, u32(value))
+# }
+
+# proc std140AlignedWrite*(dst: pointer, offset: int32, value: SomeNumber): tuple[offset, align: int32] =
+#   result.align = max(sizeof(SomeNumber), 4)
+#   result.offset = alignFunc(offset, result.align)
+
+#   debug result
+#   dst.write(result.offset, value)
+
+
+proc std140AlignedWrite[T: SomeNumber](dst: pointer, offset: i32, value: T): OffsetAlign = {
+  var result: OffsetAlign
+  result.align = max(sizeof(type T), 4)
+  result.offset = alignFunc(offset, result.align)
+  write(dst, result.offset, value)
 }
+
 
 proc std140AlignedWrite(dst: pointer, offset: i32, uniformObject: UniformBufType_436214163): OffsetAlign = {
   var result: OffsetAlign
@@ -285,11 +301,11 @@ glBindVertexArray(vao_436214160.handle)
 var uniformObject_436214161: UniformBufType_436214163
 uniformObject_436214161.mvp = mvp
 discard std140AlignedWrite(p_436214159.uniformBufferData, 0, uniformObject_436214161)
-glNamedBufferSubData(p_436214159.uniformBufferHandle, 0, p_436214159.uniformBufferSize, p_436214159.uniformBufferData)
+glNamedBufferSubData(p_436214159.uniformBufferHandle, 0, i64(p_436214159.uniformBufferSize), p_436214159.uniformBufferData)
 glBindBufferBase(35345, 0, p_436214159.uniformBufferHandle)
-var buffers: array[2, GLuint] = [vertices.handle, colors.handle]
-var offsets: array[2, GLintptr] = [GLintptr(totalOffset(vertices)),  int(totalOffset(colors))]
-var strides: array[2, GLsizei] = [GLsizei(16), GLsizei(16)]
+var buffers: array(2, GLuint) = [vertices.handle, colors.handle]
+var offsets: array(2, GLintptr) = [GLintptr(totalOffset(vertices)),  int(totalOffset(colors))]
+var strides: array(2, GLsizei) = [GLsizei(16), GLsizei(16)]
 glVertexArrayVertexBuffers(vao_436214160.handle, 0, GLsizei(2), addr(buffers[0]), addr(offsets[0]), addr(strides[0]))
 glDrawArrays(4, 0, GLsizei(3))
   glBindVertexArray(0)
