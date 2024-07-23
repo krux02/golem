@@ -267,7 +267,7 @@ type TcPackageDef struct {
 	Source         string
 	Name           string
 	CFlags         []string
-	Imports        []*TcPackageDef
+	Imports        []TcImportStmt
 	EmitStatements []EmitStmt
 	StructDefs     []*TcStructDef
 	EnumDefs       []*TcEnumDef
@@ -275,6 +275,12 @@ type TcPackageDef struct {
 	VarDefs        []TcVariableDefStmt
 	ProcDefs       []*TcProcDef
 	ExportScope    *ScopeImpl
+}
+
+type TcImportStmt struct {
+	Source  string
+	Value   StrLit
+	Package *TcPackageDef
 }
 
 func (sym TcDotExpr) expression()          {}

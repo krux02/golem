@@ -1608,6 +1608,34 @@ func TypeCheckWhileLoopStmt(tc *TypeChecker, scope Scope, loopArg WhileLoopStmt)
 	return result
 }
 
+func TypeCheckImportStmt(tc *TypeChecker, importScope Scope, currentProgram *ProgramContext, workDir string, stmt ImportStmt) TcImportStmt {
+	pkg, err := GetPackage(currentProgram, workDir, stmt.Value.Value)
+	if err != nil {
+		ReportErrorf(tc, stmt.Value, "%s", err.Error())
+	} else {
+		for key, value := range pkg.ExportScope.Variables {
+			// TODO solution for conflicts and actually find out where the conflicting symbol comes from.
+			_, hasKey := importScope.Variables[key]
+			if hasKey {
+				panic(fmt.Errorf("name conflicts in imported variable not yet implemented: %s.%s conflicts with some other symbol", stmt.Value.Value, key))
+			}
+			importScope.Variables[key] = value
+		}
+		for key, value := range pkg.ExportScope.Types {
+			_, hasKey := importScope.Types[key]
+			if hasKey {
+				panic(fmt.Errorf("name conflicts in imported type not yet implemented: %s.%s conflicts with some other symbol", stmt.Value.Value, key))
+			}
+			importScope.Types[key] = value
+		}
+		for key, value := range pkg.ExportScope.Procedures {
+			procs, _ := importScope.Procedures[key]
+			importScope.Procedures[key] = append(procs, value...)
+		}
+	}
+	return TcImportStmt{Source: pkg.Source, Value: stmt.Value, Package: pkg}
+}
+
 func TypeCheckPackage(tc *TypeChecker, currentProgram *ProgramContext, arg PackageDef, mainPackage bool) (result *TcPackageDef) {
 	result = &TcPackageDef{}
 	importScope := NewSubScope(builtinScope)
@@ -1653,31 +1681,8 @@ func TypeCheckPackage(tc *TypeChecker, currentProgram *ProgramContext, arg Packa
 			tcExpr := TypeCheckExpr(tc, pkgScope, stmt.Expr, TypeVoid)
 			EvalExpr(tc, tcExpr, pkgScope)
 		case ImportStmt:
-			pkg, err := GetPackage(currentProgram, arg.WorkDir, stmt.Value.Value)
-			if err != nil {
-				ReportErrorf(tc, stmt.Value, "%s", err.Error())
-			} else {
-				for key, value := range pkg.ExportScope.Variables {
-					// TODO solution for conflicts and actually find out where the conflicting symbol comes from.
-					_, hasKey := importScope.Variables[key]
-					if hasKey {
-						panic(fmt.Errorf("name conflicts in imported variable not yet implemented: %s.%s conflicts with some other symbol", stmt.Value.Value, key))
-					}
-					importScope.Variables[key] = value
-				}
-				for key, value := range pkg.ExportScope.Types {
-					_, hasKey := importScope.Types[key]
-					if hasKey {
-						panic(fmt.Errorf("name conflicts in imported type not yet implemented: %s.%s conflicts with some other symbol", stmt.Value.Value, key))
-					}
-					importScope.Types[key] = value
-				}
-				for key, value := range pkg.ExportScope.Procedures {
-					procs, _ := importScope.Procedures[key]
-					importScope.Procedures[key] = append(procs, value...)
-				}
-				result.Imports = append(result.Imports, pkg)
-			}
+			tcImportStmt := TypeCheckImportStmt(tc, importScope, currentProgram, arg.WorkDir, stmt)
+			result.Imports = append(result.Imports, tcImportStmt)
 		case *TraitDef:
 			traitDef := TypeCheckTraitDef(tc, pkgScope, stmt)
 			// stmt.Name
