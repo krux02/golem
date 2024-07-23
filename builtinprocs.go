@@ -352,7 +352,7 @@ func registerBuiltinFloatType(typ *BuiltinFloatType) {
 	builtinScope.Types[typ.Name] = typ
 }
 
-func registerTypeGroup(typ *TypeGroup) {
+func registerBuiltinTypeGroup(typ *TypeGroup) {
 	builtinScope.Types[typ.Name] = typ
 }
 
@@ -671,11 +671,11 @@ func init() {
 	builtinScope.Types["int"] = TypeInt64
 	builtinScope.Types["uint"] = TypeUInt64
 
-	registerTypeGroup(TypeAnyFloat)
-	registerTypeGroup(TypeAnyInt)
-	registerTypeGroup(TypeAnyUInt)
-	registerTypeGroup(TypeAnySInt)
-	registerTypeGroup(TypeAnyNumber)
+	registerBuiltinTypeGroup(TypeAnyFloat)
+	registerBuiltinTypeGroup(TypeAnyInt)
+	registerBuiltinTypeGroup(TypeAnyUInt)
+	registerBuiltinTypeGroup(TypeAnySInt)
+	registerBuiltinTypeGroup(TypeAnyNumber)
 
 	for _, typ := range TypeAnyNumber.Items {
 		registerBuiltin("+", "(", "+", ")", []Type{typ, typ}, typ, false)
