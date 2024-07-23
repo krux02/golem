@@ -119,7 +119,7 @@ type TraitDef struct {
 	Source         string
 	Name           Ident
 	DependentTypes []Ident
-	Signatures     []ProcDef
+	Signatures     []*ProcDef
 }
 
 type GenericArgument struct {

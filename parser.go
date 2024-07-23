@@ -844,7 +844,8 @@ func parseProcArgumentNoType(arg Expr) ProcArgument {
 	panic(fmt.Errorf("expected identifier but got %T (%s)", arg, AstFormat(arg)))
 }
 
-func parseProcDef(tokenizer *Tokenizer) (result ProcDef) {
+func parseProcDef(tokenizer *Tokenizer) (result *ProcDef) {
+	result = &ProcDef{}
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkProc)
 

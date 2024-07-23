@@ -312,7 +312,7 @@ func TypeCheckEnumDef(tc *TypeChecker, scope Scope, def EnumDef) *TcEnumDef {
 	return result
 }
 
-func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def ProcDef) (result *TcProcDef) {
+func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result *TcProcDef) {
 	ValidNameCheck(tc, def.Name, "proc")
 	procScope := NewSubScope(parentScope)
 
@@ -994,7 +994,7 @@ func (tc *TypeChecker) ApplyDocComment(expr Expr, doc DocComment) Expr {
 			*commentRef = append(*commentRef, value...)
 		}
 		return expr2
-	case ProcDef:
+	case *ProcDef:
 		expr2.Name.Comment = append(expr2.Name.Comment, doc.BaseDoc...)
 
 	DOCSECTIONS1:
@@ -1634,7 +1634,7 @@ func TypeCheckPackage(tc *TypeChecker, currentProgram *ProgramContext, arg Packa
 		case StructDef:
 			td := TypeCheckStructDef(tc, pkgScope, stmt)
 			result.StructDefs = append(result.StructDefs, td)
-		case ProcDef:
+		case *ProcDef:
 			procDef := TypeCheckProcDef(tc, pkgScope, stmt)
 			result.ProcDefs = append(result.ProcDefs, procDef)
 			if mainPackage && procDef.Name == "main" {

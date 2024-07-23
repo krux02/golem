@@ -362,12 +362,12 @@ func (typeDef TraitDef) PrettyPrint(builder *AstPrettyPrinter) {
 	}
 	builder.WriteString(") {")
 	for _, sig := range typeDef.Signatures {
-		builder.WriteNode(&sig)
+		builder.WriteNode(sig)
 	}
 	builder.WriteString("}")
 }
 
-func (procDef ProcDef) PrettyPrint(builder *AstPrettyPrinter) {
+func (procDef *ProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("proc ")
 	if procDef.Annotations.Value != "" {
 		procDef.Annotations.PrettyPrint(builder)
