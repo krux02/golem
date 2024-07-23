@@ -367,6 +367,23 @@ func (typeDef TraitDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("}")
 }
 
+func (typeDef *TcTraitDef) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("trait ")
+	builder.WriteString(typeDef.Name)
+	builder.WriteString("(")
+	for i, typ := range typeDef.DependentTypes {
+		if i != 0 {
+			builder.WriteString(", ")
+		}
+		builder.WriteNode(typ)
+	}
+	builder.WriteString(") {")
+	for _, sig := range typeDef.Signatures {
+		builder.WriteNode(sig)
+	}
+	builder.WriteString("}")
+}
+
 func (procDef *ProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("proc ")
 	if procDef.Annotations.Value != "" {
@@ -802,13 +819,45 @@ func (procDef *TcErrorProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 func (pak TcPackageDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("# file: ")
 	builder.WriteString(pak.Name)
-	for _, typ := range pak.EnumDefs {
-		builder.NewlineAndIndent()
-		builder.WriteNode(typ)
+
+	if len(pak.CFlags) > 0 {
+		builder.WriteString("\n# Cflags:\n")
+		for _, flag := range pak.CFlags {
+			builder.WriteString("addCFlags(")
+			StrLit{Value: flag}.PrettyPrint(builder)
+			builder.WriteString(")")
+		}
+		builder.WriteString("\n")
 	}
-	for _, typ := range pak.StructDefs {
+
+	if len(pak.Imports) > 0 {
+		builder.WriteString("\n# imports:")
+	}
+
+	for _, importStmt := range pak.Imports {
 		builder.NewlineAndIndent()
-		builder.WriteNode(typ)
+		builder.WriteNode(importStmt)
+	}
+
+	for _, emitStmt := range pak.EmitStatements {
+		builder.NewlineAndIndent()
+		builder.WriteNode(emitStmt)
+	}
+	for _, traitDef := range pak.TraitDefs {
+		builder.NewlineAndIndent()
+		builder.WriteNode(traitDef)
+	}
+	for _, enumDef := range pak.EnumDefs {
+		builder.NewlineAndIndent()
+		builder.WriteNode(enumDef)
+	}
+	for _, structDef := range pak.StructDefs {
+		builder.NewlineAndIndent()
+		builder.WriteNode(structDef)
+	}
+	for _, varDef := range pak.VarDefs {
+		builder.NewlineAndIndent()
+		builder.WriteNode(varDef)
 	}
 	for _, proc := range pak.ProcDefs {
 		builder.NewlineAndIndent()

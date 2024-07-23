@@ -50,9 +50,10 @@ type TcStructDef struct {
 }
 
 type TcTraitDef struct {
-	Source     string
-	Name       string
-	Signatures []*ProcSignature
+	Source         string
+	Name           string
+	DependentTypes []*GenericTypeSymbol
+	Signatures     []*ProcSignature
 }
 
 type GenericTypeSymbol struct {
