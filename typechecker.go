@@ -71,8 +71,8 @@ func RegisterTrait(tc *TypeChecker, scope Scope, trait *TcTraitDef, context AstN
 		// TODO previously defined at ...
 		return
 	}
-	typ := &TypeTrait{Impl: trait}
-	scope.TypeConstraints[name] = typ
+	constraint := &TypeTrait{Impl: trait}
+	scope.TypeConstraints[name] = constraint
 }
 
 func (scope Scope) NewSymbol(tc *TypeChecker, name Ident, kind SymbolKind, typ Type) TcSymbol {
@@ -106,9 +106,9 @@ func LookUpTypeConstraint(tc *TypeChecker, scope Scope, ident Ident) TypeConstra
 	if scope.Parent != nil {
 		return LookUpTypeConstraint(tc, scope.Parent, ident)
 	}
-	ReportErrorf(tc, ident, "Trait not found: %s", name)
-	// TODO maybe return error trait to prevent nil error
-	return nil
+	ReportErrorf(tc, ident, "type constraint not found: %s", name)
+	// TODO add a test for this error message
+	return UniqueTypeConstraint{TypeError}
 }
 
 func LookUpType(tc *TypeChecker, scope Scope, expr TypeExpr) Type {
@@ -271,7 +271,9 @@ func TypeCheckTraitDef(tc *TypeChecker, scope Scope, def *TraitDef) *TcTraitDef 
 	result.Name = def.Name.Source
 
 	for _, typ := range def.DependentTypes {
+		// TODO, support setting the Constraint here
 		sym := &GenericTypeSymbol{Source: typ.Source, Name: typ.Source, Constraint: TypeUnspecified}
+		result.DependentTypes = append(result.DependentTypes, sym)
 		RegisterType(tc, traitScope, sym.Name, sym, typ)
 	}
 
@@ -401,7 +403,7 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result 
 		if def.Body == nil {
 			ReportErrorf(tc, def, "proc def misses a body")
 		} else {
-			result.Body = TypeCheckExpr(tc, procScope, def.Body, UniqueTypeConstraint{Typ: resultType})
+			result.Body = TypeCheckExpr(tc, procScope, def.Body, UniqueTypeConstraint{resultType})
 		}
 	}
 	parentScope.Procedures[result.Name] = append(parentScope.Procedures[result.Name], result.Signature)
@@ -796,7 +798,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected TypeConstr
 		}
 		typ := LookUpType(tc, scope, TypeExpr(call.Args[1]))
 		ExpectType(tc, call, typ, expected)
-		result := TypeCheckExpr(tc, scope, call.Args[0], UniqueTypeConstraint{Typ: typ})
+		result := TypeCheckExpr(tc, scope, call.Args[0], UniqueTypeConstraint{typ})
 		return result
 	}
 
@@ -1080,7 +1082,7 @@ func TypeCheckVariableDefStmt(tc *TypeChecker, scope Scope, arg VariableDefStmt)
 	} else {
 		var expected TypeConstraint = TypeUnspecified
 		if arg.TypeExpr != nil {
-			expected = UniqueTypeConstraint{Typ: LookUpType(tc, scope, arg.TypeExpr)}
+			expected = UniqueTypeConstraint{LookUpType(tc, scope, arg.TypeExpr)}
 		}
 		result.Value = TypeCheckExpr(tc, scope, arg.Value, expected)
 		if arg.Kind == SkConst {
@@ -1237,7 +1239,7 @@ func (field TcStructField) GetType() Type {
 func TypeCheckColonExpr(tc *TypeChecker, scope Scope, arg ColonExpr, expected TypeConstraint) TcExpr {
 	typ := LookUpType(tc, scope, arg.Rhs)
 	typ = ExpectType(tc, arg, typ, expected)
-	return TypeCheckExpr(tc, scope, arg.Lhs, UniqueTypeConstraint{Typ: typ})
+	return TypeCheckExpr(tc, scope, arg.Lhs, UniqueTypeConstraint{typ})
 }
 
 func TypeCheckIntLit(tc *TypeChecker, scope Scope, arg IntLit, expected TypeConstraint) TcExpr {

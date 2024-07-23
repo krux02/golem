@@ -534,7 +534,7 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 			formatStrC.WriteRune('%')
 			continue
 		case 's':
-			typeExpectation = UniqueTypeConstraint{Typ: TypeStr}
+			typeExpectation = UniqueTypeConstraint{TypeStr}
 		case 'd':
 			typeExpectation = TypeAnyInt
 		case 'f':
