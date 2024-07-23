@@ -1653,22 +1653,22 @@ func TypeCheckPackage(tc *TypeChecker, currentProgram *ProgramContext, arg Packa
 			tcExpr := TypeCheckExpr(tc, pkgScope, stmt.Expr, TypeVoid)
 			EvalExpr(tc, tcExpr, pkgScope)
 		case ImportStmt:
-			pkg, err := GetPackage(currentProgram, arg.WorkDir, stmt.StrLit.Value)
+			pkg, err := GetPackage(currentProgram, arg.WorkDir, stmt.Value.Value)
 			if err != nil {
-				ReportErrorf(tc, stmt.StrLit, "%s", err.Error())
+				ReportErrorf(tc, stmt.Value, "%s", err.Error())
 			} else {
 				for key, value := range pkg.ExportScope.Variables {
 					// TODO solution for conflicts and actually find out where the conflicting symbol comes from.
 					_, hasKey := importScope.Variables[key]
 					if hasKey {
-						panic(fmt.Errorf("name conflicts in imported variable not yet implemented: %s.%s conflicts with some other symbol", stmt.StrLit.Value, key))
+						panic(fmt.Errorf("name conflicts in imported variable not yet implemented: %s.%s conflicts with some other symbol", stmt.Value.Value, key))
 					}
 					importScope.Variables[key] = value
 				}
 				for key, value := range pkg.ExportScope.Types {
 					_, hasKey := importScope.Types[key]
 					if hasKey {
-						panic(fmt.Errorf("name conflicts in imported type not yet implemented: %s.%s conflicts with some other symbol", stmt.StrLit.Value, key))
+						panic(fmt.Errorf("name conflicts in imported type not yet implemented: %s.%s conflicts with some other symbol", stmt.Value.Value, key))
 					}
 					importScope.Types[key] = value
 				}

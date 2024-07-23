@@ -946,7 +946,7 @@ func parseImportStmt(tokenizer *Tokenizer) ImportStmt {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkImport)
 	strLit := parseStrLit(tokenizer)
-	return ImportStmt{Source: joinSubstr(tokenizer.code, firstToken.value, strLit.Source), StrLit: strLit}
+	return ImportStmt{Source: joinSubstr(tokenizer.code, firstToken.value, strLit.Source), Value: strLit}
 }
 
 func parseTrait(tokenizer *Tokenizer) *TraitDef {

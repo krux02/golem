@@ -221,7 +221,7 @@ type StaticExpr struct { // static <Expr>
 
 type ImportStmt struct {
 	Source string
-	StrLit StrLit
+	Value  StrLit
 }
 
 type EmitStmt struct {

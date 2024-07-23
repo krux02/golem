@@ -534,7 +534,7 @@ func (staticExpr StaticExpr) PrettyPrint(builder *AstPrettyPrinter) {
 
 func (importStmt ImportStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("import ")
-	importStmt.StrLit.PrettyPrint(builder)
+	importStmt.Value.PrettyPrint(builder)
 }
 
 // format type checked ast nodes
