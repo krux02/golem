@@ -33,6 +33,10 @@ type TypeGroup struct {
 	Items []Type
 }
 
+type TypeTrait struct {
+	Impl *TcTraitDef
+}
+
 type EnumType struct {
 	Impl *TcEnumDef
 

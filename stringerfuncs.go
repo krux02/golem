@@ -877,17 +877,21 @@ func (section NamedDocSection) PrettyPrint(builder *AstPrettyPrinter) {
 	}
 }
 
-func (typ *TypeGroup) PrettyPrint(builder *AstPrettyPrinter) {
-	if typ.Name != "" {
-		builder.WriteString(typ.Name)
+func (self *TypeGroup) PrettyPrint(builder *AstPrettyPrinter) {
+	if self.Name != "" {
+		builder.WriteString(self.Name)
 		return
 	}
-	for i, typ := range typ.Items {
+	for i, typ := range self.Items {
 		if i != 0 {
 			builder.WriteString(" | ")
 		}
 		typ.PrettyPrint(builder)
 	}
+}
+
+func (self *TypeTrait) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString(self.Impl.Name)
 }
 
 func (typ *OpenGenericType) PrettyPrint(builder *AstPrettyPrinter) {
