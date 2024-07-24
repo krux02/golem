@@ -1,3 +1,6 @@
+
+* TODO find a better syntax for Type : TypeConstraint as colon is already reserved for value : type separation
+* TODO allow to disable overloading for some functions
 * TODO fix or remove newline escape, curently it has many problems
 * TODO trait system
 * TODO generic functions !!!
