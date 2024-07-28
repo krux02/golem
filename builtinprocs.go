@@ -70,7 +70,12 @@ type ArrayType struct {
 
 // the type for integer literals. Each integer represented by a literal is its own type
 type IntLitType struct {
+	// TODO needs to be able to store all values from uint64 and int64, int640is not enough
 	Value int64
+}
+
+type FloatLitType struct {
+	Value float64
 }
 
 // the type that represets types as arguments. Example:
@@ -85,7 +90,6 @@ type TypeType struct {
 
 var _ Type = &BuiltinType{}
 var _ Type = &BuiltinIntType{}
-var _ Type = &TypeGroup{}
 var _ Type = &EnumType{}
 var _ Type = &EnumSetType{}
 var _ Type = &StructType{}
@@ -96,6 +100,10 @@ var _ Type = &TypeType{}
 var _ Type = &PtrType{}
 var _ Type = &OpenGenericType{}
 var _ Type = &GenericTypeSymbol{}
+
+var _ TypeConstraint = &TypeGroup{}
+var _ TypeConstraint = &TypeTrait{}
+var _ TypeConstraint = &UnspecifiedType{}
 
 func (typ *BuiltinType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune(typ.MangleChar)
@@ -109,19 +117,11 @@ func (typ *BuiltinFloatType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune(typ.MangleChar)
 }
 
-func (typ *UnspecifiedType) ManglePrint(builder *strings.Builder) {
-	panic("internal error, an unspecifed type should not be here")
-}
-
 func (typ *ErrorType) ManglePrint(builder *strings.Builder) {
 	// this should not fail, as it is used during type checking phase, when an
 	// error previously occured. It should not write anything that could actually
 	// be used in the C compilation backend.
 	builder.WriteString("?ErrorType?")
-}
-
-func (typ *TypeGroup) ManglePrint(builder *strings.Builder) {
-	panic("not a resolved type")
 }
 
 func (typ *TypeType) PrettyPrint(builder *AstPrettyPrinter) {
@@ -175,6 +175,10 @@ func (typ *PtrType) ManglePrint(builder *strings.Builder) {
 
 func (typ *IntLitType) ManglePrint(builder *strings.Builder) {
 	fmt.Fprintf(builder, "%d_", typ.Value)
+}
+
+func (typ *FloatLitType) ManglePrint(builder *strings.Builder) {
+	panic("not implemented")
 }
 
 func (typ *GenericTypeSymbol) ManglePrint(builder *strings.Builder) {
@@ -258,7 +262,10 @@ func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 		return CharLit{}
 	} else if typ == TypeBoolean {
 		// TODO this is weird
-		return LookUpLetSym(tc, builtinScope, Ident{Source: "false"}, TypeBoolean)
+		// no source location
+		sym := builtinScope.Variables["false"]
+		sym.Type = TypeBoolean
+		return sym
 	} else if typ == TypeVoid {
 		panic("not implemented void default value")
 	} else {
@@ -274,17 +281,8 @@ func (typ *BuiltinFloatType) DefaultValue(tc *TypeChecker, context AstNode) TcEx
 	return FloatLit{Type: typ}
 }
 
-func (typ *UnspecifiedType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
-	ReportErrorf(tc, context, "variable definitions statements must have at least one, a type or a value expression")
-	return newErrorNode(context)
-}
-
 func (typ *ErrorType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	return nil
-}
-
-func (typ *TypeGroup) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
-	panic(fmt.Errorf("no default value for abstract type group: %s", typ.Name))
 }
 
 func (typ *ArrayType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
@@ -311,6 +309,10 @@ func (typ *IntLitType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	return IntLit{Type: typ, Value: typ.Value}
 }
 
+func (typ *FloatLitType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+	return FloatLit{Type: typ, Value: typ.Value}
+}
+
 func (typ *TypeType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	panic("no default value for types")
 }
@@ -324,12 +326,13 @@ func (typ *OpenGenericType) DefaultValue(tc *TypeChecker, context AstNode) TcExp
 }
 
 var builtinScope Scope = &ScopeImpl{
-	Parent:         nil,
-	CurrentPackage: nil,
-	CurrentProc:    nil,
-	Types:          make(map[string]Type),
-	Procedures:     make(map[string][]*ProcSignature),
-	Variables:      make(map[string]TcSymbol),
+	Parent:          nil,
+	CurrentPackage:  nil,
+	CurrentProc:     nil,
+	Procedures:      make(map[string][]*ProcSignature),
+	Variables:       make(map[string]TcSymbol),
+	Types:           make(map[string]Type),
+	TypeConstraints: make(map[string]TypeConstraint),
 }
 
 func registerBuiltinType(typ *BuiltinType) {
@@ -357,15 +360,13 @@ func registerBuiltinFloatType(typ *BuiltinFloatType) {
 }
 
 func registerBuiltinTypeGroup(typ *TypeGroup) {
-	builtinScope.Types[typ.Name] = typ
+	builtinScope.TypeConstraints[typ.Name] = typ
 }
 
 func extractGenericTypeSymbols(typ Type) (result []*GenericTypeSymbol) {
 	switch typ := typ.(type) {
 	case *BuiltinType:
 		return nil
-	case *TypeGroup:
-		panic("internal error")
 	case *EnumType:
 		return nil
 	case *StructType:
@@ -527,13 +528,13 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 			break
 		}
 		c2 := formatStr[j]
-		var typeExpectation Type = TypeUnspecified
+		var typeExpectation TypeConstraint = TypeUnspecified
 		switch c2 {
 		case '%':
 			formatStrC.WriteRune('%')
 			continue
 		case 's':
-			typeExpectation = TypeStr
+			typeExpectation = UniqueTypeConstraint{Typ: TypeStr}
 		case 'd':
 			typeExpectation = TypeAnyInt
 		case 'f':
@@ -637,6 +638,7 @@ func init() {
 	typeTypeMap = make(map[Type]*TypeType)
 	packageMap = make(map[string]*TcPackageDef)
 	intLitTypeMap = make(map[int64]*IntLitType)
+	floatLitTypeMap = make(map[float64]*FloatLitType)
 
 	// Printf is literally the only use case for real varargs that I actually see as
 	// practical. Therefore the implementation for varargs will be strictly tied to

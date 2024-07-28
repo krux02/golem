@@ -877,6 +877,10 @@ func (section NamedDocSection) PrettyPrint(builder *AstPrettyPrinter) {
 	}
 }
 
+func (self UniqueTypeConstraint) PrettyPrint(builder *AstPrettyPrinter) {
+	self.Typ.PrettyPrint(builder)
+}
+
 func (self *TypeGroup) PrettyPrint(builder *AstPrettyPrinter) {
 	if self.Name != "" {
 		builder.WriteString(self.Name)
@@ -909,6 +913,10 @@ func (typ *PtrType) PrettyPrint(builder *AstPrettyPrinter) {
 
 func (lit *IntLitType) PrettyPrint(builder *AstPrettyPrinter) {
 	WriteIntLit(&builder.Builder, lit.Value)
+}
+
+func (lit *FloatLitType) PrettyPrint(builder *AstPrettyPrinter) {
+	fmt.Fprintf(builder, "%f", lit.Value)
 }
 
 func (doc DocComment) PrettyPrint(builder *AstPrettyPrinter) {

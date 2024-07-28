@@ -370,6 +370,7 @@ func parseFloatLit(tokenizer *Tokenizer) (result FloatLit) {
 		panic("internal error invalid float token")
 	}
 	result.Value = floatValue
+	result.Type = GetFloatLitType(floatValue)
 	return result
 }
 

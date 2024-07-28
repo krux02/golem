@@ -13,6 +13,26 @@ type Type interface {
 	DefaultValue(tc *TypeChecker, context AstNode) TcExpr
 }
 
+type TypeConstraint interface {
+	PrettyPrint(*AstPrettyPrinter)
+	typeconstraint()
+	// UniqueTypeConstraint
+	// TypeGroup
+	// TypeTrait
+	// UnspecifiedType
+	//
+	// or normal type if only that type is valid
+}
+
+func (UniqueTypeConstraint) typeconstraint() {}
+func (*TypeGroup) typeconstraint()           {}
+func (*TypeTrait) typeconstraint()           {}
+func (*UnspecifiedType) typeconstraint()     {}
+
+type UniqueTypeConstraint struct {
+	Typ Type
+}
+
 type TcExpr interface {
 	AstNode
 	GetType() Type
@@ -60,7 +80,7 @@ type GenericTypeSymbol struct {
 	// a symbol that needs later substitution on generic instantiation
 	Source     string
 	Name       string
-	Constraint Type // TypeGroup or TypeUnspecified
+	Constraint TypeConstraint // TypeGroup, TypeTrait, TypeUnspecified
 }
 
 type TcCodeBlock struct {
