@@ -33,6 +33,7 @@ type ScopeImpl struct {
 	CurrentProgram  *ProgramContext
 	CurrentPackage  *TcPackageDef
 	CurrentProc     *TcProcDef
+	CurrentTrait    *TcTraitDef
 	Variables       map[string]TcSymbol
 	Procedures      map[string][]*ProcSignature
 	Types           map[string]Type
@@ -265,10 +266,12 @@ func TypeCheckStructDef(tc *TypeChecker, scope Scope, def StructDef) *TcStructDe
 
 func TypeCheckTraitDef(tc *TypeChecker, scope Scope, def *TraitDef) *TcTraitDef {
 	ValidNameCheck(tc, def.Name, "trait")
-	traitScope := NewSubScope(scope)
+
 	result := &TcTraitDef{}
 	result.Source = def.Source
 	result.Name = def.Name.Source
+	traitScope := NewSubScope(scope)
+	traitScope.CurrentTrait = result
 
 	for _, typ := range def.DependentTypes {
 		// TODO, support setting the Constraint here
@@ -337,7 +340,7 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result 
 
 	for _, genericArg := range def.GenericArgs {
 		// result.Signature = result.Signature.GenericParams
-		constraint := LookUpTypeConstraint(tc, procScope, genericArg.TraitName)
+		constraint := LookUpTypeConstraint(tc, parentScope, genericArg.TraitName)
 		if constraint == nil {
 			continue
 		}
@@ -396,6 +399,10 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result 
 
 	result.Signature.ResultType = resultType
 	if result.Importc {
+		if def.Body != nil {
+			ReportErrorf(tc, def.Body, "proc is importc, it may not have a body")
+		}
+	} else if parentScope.CurrentTrait != nil {
 		if def.Body != nil {
 			ReportErrorf(tc, def.Body, "proc is importc, it may not have a body")
 		}

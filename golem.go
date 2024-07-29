@@ -159,7 +159,7 @@ func compile(filename string) (string, error) {
 		return "", fmt.Errorf("Input file name '%s' must end on .golem", filename)
 	}
 	if baseNameError := IsValidIdentifier(base); baseNameError != "" {
-		return "", fmt.Errorf("%s", baseNameError)
+		return "", fmt.Errorf("module name '%s' infered from file name '%s' is not valid: %s", base, filename, baseNameError)
 	}
 
 	currentProgram := &ProgramContext{}
