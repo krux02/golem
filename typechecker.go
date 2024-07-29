@@ -65,15 +65,22 @@ func RegisterType(tc *TypeChecker, scope Scope, name string, typ Type, context A
 	scope.Types[name] = typ
 }
 
-func RegisterTrait(tc *TypeChecker, scope Scope, trait *TcTraitDef, context AstNode) {
+func RegisterTrait(tc *TypeChecker, scope Scope, trait *TcTraitDef, context AstNode) TypeConstraint {
 	name := trait.Name
-	if _, ok := scope.TypeConstraints[name]; ok {
+	if oldTrait, ok := scope.TypeConstraints[name]; ok {
 		ReportErrorf(tc, context, "double definition of trait '%s'", trait.Name)
 		// TODO previously defined at ...
-		return
+		return oldTrait
 	}
 	constraint := &TypeTrait{Impl: trait}
 	scope.TypeConstraints[name] = constraint
+	return constraint
+}
+
+func RegisterProc(tc *TypeChecker, scope Scope, proc *TcProcDef, context AstNode) {
+	name := proc.Name
+	// TODO check for name collisions with the same signature
+	scope.Procedures[name] = append(scope.Procedures[name], proc.Signature)
 }
 
 func (scope Scope) NewSymbol(tc *TypeChecker, name Ident, kind SymbolKind, typ Type) TcSymbol {
@@ -272,20 +279,20 @@ func TypeCheckTraitDef(tc *TypeChecker, scope Scope, def *TraitDef) *TcTraitDef 
 	result.Name = def.Name.Source
 	traitScope := NewSubScope(scope)
 	traitScope.CurrentTrait = result
+	trait := RegisterTrait(tc, scope, result, def.Name)
 
 	for _, typ := range def.DependentTypes {
 		// TODO, support setting the Constraint here
-		sym := &GenericTypeSymbol{Source: typ.Source, Name: typ.Source, Constraint: TypeUnspecified}
+		sym := &GenericTypeSymbol{Source: typ.Source, Name: typ.Source, Constraint: trait}
 		result.DependentTypes = append(result.DependentTypes, sym)
 		RegisterType(tc, traitScope, sym.Name, sym, typ)
 	}
 
 	for _, procDef := range def.Signatures {
 		tcProcDef := TypeCheckProcDef(tc, traitScope, procDef)
-		result.Signatures = append(result.Signatures, tcProcDef.Signature)
+		result.Signatures = append(result.Signatures, tcProcDef)
 	}
 
-	RegisterTrait(tc, scope, result, def.Name)
 	return result
 }
 
@@ -341,16 +348,27 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result 
 	for _, genericArg := range def.GenericArgs {
 		// result.Signature = result.Signature.GenericParams
 		constraint := LookUpTypeConstraint(tc, parentScope, genericArg.TraitName)
-		if constraint == nil {
+		if (constraint == UniqueTypeConstraint{TypeError}) {
 			continue
 		}
-		name := genericArg.Name.Source
-		ReportWarningf(tc, genericArg.TraitName, "generic constraints/traits are currently not yet implemented and ignored from the compiler")
+		name := genericArg.Name
+		//
+
 		// TODO actually make trait usable as a type constraint, currently the trait/constraint is set to nil
-		genTypeSym := &GenericTypeSymbol{Source: name, Name: name, Constraint: nil}
+		genTypeSym := &GenericTypeSymbol{Source: name.Source, Name: name.Source, Constraint: constraint}
 		result.Signature.GenericParams = append(result.Signature.GenericParams, genTypeSym)
 		// make the generic type symbol available to look up in its body
-		RegisterType(tc, procScope, name, genTypeSym, def)
+		RegisterType(tc, procScope, name.Source, genTypeSym, def)
+
+		switch constraint := constraint.(type) {
+		case *TypeTrait:
+			for _, sig := range constraint.Impl.Signatures {
+				RegisterProc(tc, procScope, sig, genericArg.TraitName)
+			}
+		default:
+			ReportWarningf(tc, genericArg.TraitName, "currently only traits are supported in the compiler as type constraints")
+		}
+
 	}
 
 	for _, arg := range def.Args {
@@ -413,7 +431,8 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result 
 			result.Body = TypeCheckExpr(tc, procScope, def.Body, UniqueTypeConstraint{resultType})
 		}
 	}
-	parentScope.Procedures[result.Name] = append(parentScope.Procedures[result.Name], result.Signature)
+
+	RegisterProc(tc, parentScope, result, def.Name)
 	return result
 }
 

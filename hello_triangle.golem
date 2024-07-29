@@ -166,10 +166,12 @@ proc alignFunc(address, alignment: i32): i32 = bitand(address + (alignment - 1),
 #   debug result
 #   dst.write(result.offset, value)
 
+#proc max(a,b: i64): i64 = if a > b do a else b
+proc max(a,b: i32): i32 = if a > b do a else b
 
-proc std140AlignedWrite[T: SomeNumber](dst: pointer, offset: i32, value: T): OffsetAlign = {
+proc std140AlignedWrite[T: AnyNumber](dst: pointer, offset: i32, value: T): OffsetAlign = {
   var result: OffsetAlign
-  result.align = max(sizeof(type T), 4)
+  result.align = max(i32(sizeof(type T)), 4)
   result.offset = alignFunc(offset, result.align)
   write(dst, result.offset, value)
 }

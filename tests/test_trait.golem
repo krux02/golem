@@ -16,6 +16,8 @@ proc bar[T : MyTrait](a:  T): void = {
   foo(a, 234:f32)
 }
 
+# TODO multitrait isn't even figured out yet
+
 type MyStruct = struct {
   a: i32
   b: str

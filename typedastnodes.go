@@ -73,7 +73,7 @@ type TcTraitDef struct {
 	Source         string
 	Name           string
 	DependentTypes []*GenericTypeSymbol
-	Signatures     []*ProcSignature
+	Signatures     []*TcProcDef
 }
 
 type GenericTypeSymbol struct {
