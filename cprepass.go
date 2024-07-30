@@ -157,7 +157,6 @@ func cgenprepass(expr TcExpr) TcExpr {
 	case *TcProcDef:
 		return &TcProcDef{
 			Source:      expr.Source,
-			Name:        expr.Name,
 			MangledName: expr.MangledName,
 			Signature:   cgenprepassSignature(expr.Signature), // TODO maybe?
 			Body:        cgenprepass(expr.Body),

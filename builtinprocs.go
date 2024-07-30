@@ -411,7 +411,7 @@ OUTER:
 	return true
 }
 
-func makeGenericSignature(genericParams []*GenericTypeSymbol, args []Type, result Type, firstArgMutable bool) *ProcSignature {
+func makeGenericSignature(name string, genericParams []*GenericTypeSymbol, args []Type, result Type, firstArgMutable bool) *ProcSignature {
 	if len(genericParams) > 0 {
 		for i, arg := range args {
 			syms := extractGenericTypeSymbols(arg)
@@ -432,6 +432,7 @@ func makeGenericSignature(genericParams []*GenericTypeSymbol, args []Type, resul
 	}
 
 	signature := ProcSignature{
+		Name:          name,
 		GenericParams: genericParams,
 		Params:        make([]TcSymbol, len(args)),
 		ResultType:    result,
@@ -450,8 +451,7 @@ func makeGenericSignature(genericParams []*GenericTypeSymbol, args []Type, resul
 
 func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []*GenericTypeSymbol, args []Type, result Type, firstArgMutable bool) *ProcSignature {
 	procDef := &TcBuiltinGenericProcDef{
-		Name:      name,
-		Signature: makeGenericSignature(genericParams, args, result, firstArgMutable),
+		Signature: makeGenericSignature(name, genericParams, args, result, firstArgMutable),
 		Prefix:    prefix,
 		Infix:     infix,
 		Postfix:   postfix,
@@ -467,8 +467,7 @@ func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Ty
 
 func registerGenericBuiltinMacro(name string, varargs bool, genericParams []*GenericTypeSymbol, args []Type, result Type, macroFunc BuiltinMacroFunc) {
 	macroDef := &TcBuiltinMacroDef{
-		Name:      name,
-		Signature: makeGenericSignature(genericParams, args, result, false),
+		Signature: makeGenericSignature(name, genericParams, args, result, false),
 		MacroFunc: macroFunc,
 	}
 	macroDef.Signature.Varargs = varargs
@@ -483,8 +482,8 @@ func registerBuiltinMacro(name string, varargs bool, args []Type, result Type, m
 func registerSimpleTemplate(name string, args []Type, result Type, substitution TcExpr) {
 	templateDef := &TcTemplateDef{
 		// TODO set Source
-		Name: name,
 		Signature: &ProcSignature{
+			Name:       name,
 			Params:     make([]TcSymbol, len(args)),
 			ResultType: result,
 		},

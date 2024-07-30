@@ -73,7 +73,7 @@ type TcTraitDef struct {
 	Source         string
 	Name           string
 	DependentTypes []*GenericTypeSymbol
-	Signatures     []*TcProcDef
+	Signatures     []*ProcSignature
 }
 
 type GenericTypeSymbol struct {
@@ -174,9 +174,9 @@ type TcTypeContext struct {
 
 // TODO rename this, this is an OverloadableSignature
 type ProcSignature struct {
-
 	// type placeholders within this procedure that need to be substituted with
 	// real types in generic instantiations.
+	Name          string
 	GenericParams []*GenericTypeSymbol
 	Params        []TcSymbol
 	ResultType    Type
@@ -190,12 +190,10 @@ type ProcSignature struct {
 
 type Overloadable interface {
 	TcExpr
-	GetName() string
 	GetSignature() *ProcSignature
 }
 
 type TcBuiltinProcDef struct {
-	Name      string
 	Signature *ProcSignature
 	//Body      TcExpr
 
@@ -207,7 +205,6 @@ type TcBuiltinProcDef struct {
 }
 
 type TcBuiltinGenericProcDef struct {
-	Name      string
 	Signature *ProcSignature
 	//Body      TcExpr
 
@@ -229,7 +226,6 @@ type TcBuiltinStaticProcDef struct {
 
 type TcProcDef struct {
 	Source      string
-	Name        string
 	MangledName string
 	Signature   *ProcSignature
 	Body        TcExpr
@@ -243,21 +239,18 @@ type TcProcDef struct {
 
 type TcBuiltinMacroDef struct {
 	Source    string // TODO: this can't be correct, it's builtin there is no source
-	Name      string
 	Signature *ProcSignature
 	MacroFunc BuiltinMacroFunc // this function transforms the call, post function resolution
 }
 
 type TcTemplateDef struct {
 	Source    string
-	Name      string
 	Signature *ProcSignature
 	Body      TcExpr
 }
 
 type TcErrorProcDef struct {
 	// this is just a placeholder to set a TcProcSymbol to something
-	Name      string
 	Signature *ProcSignature
 }
 
@@ -350,13 +343,6 @@ func (arg *TcErrorProcDef) GetSource() string    { return "" }
 // func (arg TypeGroup) GetSource() string    { return arg.Source }
 // func (arg *BuiltinType) GetSource() string { return arg.Source }
 // func (arg *ArrayType) GetSource() string   { return arg.Source }
-
-func (arg *TcBuiltinProcDef) GetName() string        { return arg.Name }
-func (arg *TcBuiltinGenericProcDef) GetName() string { return arg.Name }
-func (arg *TcProcDef) GetName() string               { return arg.Name }
-func (arg *TcTemplateDef) GetName() string           { return arg.Name }
-func (arg *TcBuiltinMacroDef) GetName() string       { return arg.Name }
-func (arg *TcErrorProcDef) GetName() string          { return arg.Name }
 
 func (arg *TcBuiltinProcDef) GetSignature() *ProcSignature        { return arg.Signature }
 func (arg *TcBuiltinGenericProcDef) GetSignature() *ProcSignature { return arg.Signature }

@@ -77,10 +77,10 @@ func RegisterTrait(tc *TypeChecker, scope Scope, trait *TcTraitDef, context AstN
 	return constraint
 }
 
-func RegisterProc(tc *TypeChecker, scope Scope, proc *TcProcDef, context AstNode) {
+func RegisterProc(tc *TypeChecker, scope Scope, proc *ProcSignature, context AstNode) {
 	name := proc.Name
 	// TODO check for name collisions with the same signature
-	scope.Procedures[name] = append(scope.Procedures[name], proc.Signature)
+	scope.Procedures[name] = append(scope.Procedures[name], proc)
 }
 
 func (scope Scope) NewSymbol(tc *TypeChecker, name Ident, kind SymbolKind, typ Type) TcSymbol {
@@ -290,7 +290,7 @@ func TypeCheckTraitDef(tc *TypeChecker, scope Scope, def *TraitDef) *TcTraitDef 
 
 	for _, procDef := range def.Signatures {
 		tcProcDef := TypeCheckProcDef(tc, traitScope, procDef)
-		result.Signatures = append(result.Signatures, tcProcDef)
+		result.Signatures = append(result.Signatures, tcProcDef.Signature)
 	}
 
 	return result
@@ -333,9 +333,9 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result 
 
 	result = &TcProcDef{}
 	result.Signature = &ProcSignature{}
+	result.Signature.Name = def.Name.Source
 	result.Signature.Impl = result
 	procScope.CurrentProc = result
-	result.Name = def.Name.Source
 
 	if def.Annotations.Source != "" {
 		if def.Annotations.Value == "importc" {
@@ -432,7 +432,7 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result 
 		}
 	}
 
-	RegisterProc(tc, parentScope, result, def.Name)
+	RegisterProc(tc, parentScope, result.Signature, def.Name)
 	return result
 }
 
@@ -589,7 +589,7 @@ func TypeCheckDotExpr(tc *TypeChecker, scope Scope, call Call, expected TypeCons
 }
 
 func errorProcSym(ident Ident) TcProcSymbol {
-	Impl := &TcErrorProcDef{Name: ident.Source, Signature: &ProcSignature{ResultType: TypeError}}
+	Impl := &TcErrorProcDef{Signature: &ProcSignature{Name: ident.Source, ResultType: TypeError}}
 	Impl.Signature.Impl = Impl
 
 	return TcProcSymbol{
@@ -927,7 +927,6 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected TypeConstr
 			// currently replacing the signature alone is enough, but that is not a
 			// general solution.
 			implInstance := &TcBuiltinProcDef{
-				Name:      impl.Name,
 				Signature: sig,
 				Prefix:    impl.Prefix,
 				Infix:     impl.Infix,
@@ -1138,6 +1137,7 @@ func (block TcCodeBlock) GetType() Type {
 }
 
 func (call TcCall) GetType() Type {
+
 	return call.Sym.Impl.GetSignature().ResultType
 }
 
@@ -1671,7 +1671,7 @@ func TypeCheckPackage(tc *TypeChecker, currentProgram *ProgramContext, arg Packa
 		case *ProcDef:
 			procDef := TypeCheckProcDef(tc, pkgScope, stmt)
 			result.ProcDefs = append(result.ProcDefs, procDef)
-			if mainPackage && procDef.Name == "main" {
+			if mainPackage && procDef.Signature.Name == "main" {
 				currentProgram.Main = procDef
 			}
 		case VariableDefStmt:

@@ -777,7 +777,7 @@ func (procDef *TcProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 	if procDef.Importc {
 		builder.WriteString("\"importc\"")
 	}
-	builder.WriteString(procDef.Name)
+	builder.WriteString(procDef.Signature.Name)
 	procDef.Signature.PrettyPrint(builder)
 	if procDef.Body != nil {
 		builder.WriteString(" = ")
@@ -787,19 +787,19 @@ func (procDef *TcProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 
 func (procDef *TcBuiltinProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("proc \"builtin\" ")
-	builder.WriteString(procDef.Name)
+	builder.WriteString(procDef.Signature.Name)
 	procDef.Signature.PrettyPrint(builder)
 }
 
 func (procDef *TcBuiltinGenericProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("proc \"builtin\" ")
-	builder.WriteString(procDef.Name)
+	builder.WriteString(procDef.Signature.Name)
 	procDef.Signature.PrettyPrint(builder)
 }
 
 func (procDef *TcTemplateDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("template ")
-	builder.WriteString(procDef.Name)
+	builder.WriteString(procDef.Signature.Name)
 	procDef.Signature.PrettyPrint(builder)
 	builder.WriteString(" = ")
 	builder.WriteNode(procDef.Body)
@@ -807,13 +807,13 @@ func (procDef *TcTemplateDef) PrettyPrint(builder *AstPrettyPrinter) {
 
 func (procDef *TcBuiltinMacroDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("macro \"builtin\"")
-	builder.WriteString(procDef.Name)
+	builder.WriteString(procDef.Signature.Name)
 	procDef.Signature.PrettyPrint(builder)
 }
 
 func (procDef *TcErrorProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("# this implemantation does not exist: ")
-	builder.WriteString(procDef.Name)
+	builder.WriteString(procDef.Signature.Name)
 }
 
 func (pak TcPackageDef) PrettyPrint(builder *AstPrettyPrinter) {
