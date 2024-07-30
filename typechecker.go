@@ -35,7 +35,7 @@ type ScopeImpl struct {
 	CurrentProc     *TcProcDef
 	CurrentTrait    *TcTraitDef
 	Variables       map[string]TcSymbol
-	Procedures      map[string][]*ProcSignature
+	Signatures      map[string][]*Signature
 	Types           map[string]Type
 	TypeConstraints map[string]TypeConstraint
 }
@@ -50,7 +50,7 @@ func NewSubScope(scope Scope) Scope {
 		CurrentProc:    scope.CurrentProc,
 		// TODO maybe do lazy initialization of some of these? Traits are rarely addad.
 		Variables:       make(map[string]TcSymbol),
-		Procedures:      make(map[string][]*ProcSignature),
+		Signatures:      make(map[string][]*Signature),
 		Types:           make(map[string]Type),
 		TypeConstraints: make(map[string]TypeConstraint),
 	}
@@ -77,10 +77,10 @@ func RegisterTrait(tc *TypeChecker, scope Scope, trait *TcTraitDef, context AstN
 	return constraint
 }
 
-func RegisterProc(tc *TypeChecker, scope Scope, proc *ProcSignature, context AstNode) {
+func RegisterProc(tc *TypeChecker, scope Scope, proc *Signature, context AstNode) {
 	name := proc.Name
 	// TODO check for name collisions with the same signature
-	scope.Procedures[name] = append(scope.Procedures[name], proc)
+	scope.Signatures[name] = append(scope.Signatures[name], proc)
 }
 
 func (scope Scope) NewSymbol(tc *TypeChecker, name Ident, kind SymbolKind, typ Type) TcSymbol {
@@ -191,9 +191,9 @@ func LookUpType(tc *TypeChecker, scope Scope, expr TypeExpr) Type {
 	panic(fmt.Sprintf("unexpected ast node in type expr: %s type: %T", AstFormat(expr), expr))
 }
 
-func LookUpProc(scope Scope, ident Ident, numArgs int, signatures []*ProcSignature) []*ProcSignature {
+func LookUpProc(scope Scope, ident Ident, numArgs int, signatures []*Signature) []*Signature {
 	for scope != nil {
-		if localSignatures, ok := scope.Procedures[ident.Source]; ok {
+		if localSignatures, ok := scope.Signatures[ident.Source]; ok {
 			if numArgs >= 0 { // num args may be set to -1 to get all signatures
 				for _, sig := range localSignatures {
 					// TODO, the varargs logic herer needs a proper test
@@ -332,7 +332,7 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result 
 	procScope := NewSubScope(parentScope)
 
 	result = &TcProcDef{}
-	result.Signature = &ProcSignature{}
+	result.Signature = &Signature{}
 	result.Signature.Name = def.Name.Source
 	result.Signature.Impl = result
 	procScope.CurrentProc = result
@@ -590,7 +590,7 @@ func TypeCheckDotExpr(tc *TypeChecker, scope Scope, call Call, expected TypeCons
 
 func errorProcSym(ident Ident) TcProcSymbol {
 	procDef := &TcErrorProcDef{}
-	signature := &ProcSignature{Name: ident.Source, ResultType: TypeError, Impl: procDef}
+	signature := &Signature{Name: ident.Source, ResultType: TypeError, Impl: procDef}
 	procDef.Signature = signature
 
 	return TcProcSymbol{
@@ -611,7 +611,7 @@ func AppendNoDuplicats(types []Type, typ Type) (result []Type) {
 	return append(types, typ)
 }
 
-func argTypeGroupAtIndex(signatures []*ProcSignature, idx int) (result TypeConstraint) {
+func argTypeGroupAtIndex(signatures []*Signature, idx int) (result TypeConstraint) {
 	builder := &TypeGroupBuilder{}
 	for _, sig := range signatures {
 		if sig.Varargs && idx >= len(sig.Params) {
@@ -790,7 +790,7 @@ func ApplyTypeSubstitutions(argTyp Type, substitutions []Substitution) Type {
 
 }
 
-func SignatureApplyTypeSubstitution(sig *ProcSignature, substitutions []Substitution) *ProcSignature {
+func SignatureApplyTypeSubstitution(sig *Signature, substitutions []Substitution) *Signature {
 	if len(substitutions) == 0 {
 		return sig
 	}
@@ -800,7 +800,7 @@ func SignatureApplyTypeSubstitution(sig *ProcSignature, substitutions []Substitu
 		newParams[j] = param
 	}
 
-	result := &ProcSignature{}
+	result := &Signature{}
 	result.Params = newParams
 	result.ResultType = ApplyTypeSubstitutions(sig.ResultType, substitutions)
 	result.Substitutions = append(sig.Substitutions, substitutions...)
@@ -928,7 +928,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected TypeConstr
 			// currently replacing the signature alone is enough, but that is not a
 			// general solution.
 			//
-			sigInstance := &ProcSignature{
+			sigInstance := &Signature{
 				Name:          sig.Name,
 				GenericParams: sig.GenericParams,
 				Params:        sig.Params,
@@ -1645,9 +1645,9 @@ func TypeCheckImportStmt(tc *TypeChecker, importScope Scope, currentProgram *Pro
 			}
 			importScope.Types[key] = value
 		}
-		for key, value := range pkg.ExportScope.Procedures {
-			procs, _ := importScope.Procedures[key]
-			importScope.Procedures[key] = append(procs, value...)
+		for key, value := range pkg.ExportScope.Signatures {
+			procs, _ := importScope.Signatures[key]
+			importScope.Signatures[key] = append(procs, value...)
 		}
 	}
 	return TcImportStmt{Source: pkg.Source, Value: stmt.Value, Package: pkg}

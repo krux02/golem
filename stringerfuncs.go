@@ -734,7 +734,7 @@ func (expr TcStructField) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(expr.Name)
 }
 
-func (signature *ProcSignature) PrettyPrint(builder *AstPrettyPrinter) {
+func (signature *Signature) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("(")
 	if len(signature.Params) > 3 {
 		builder.Indentation += 2

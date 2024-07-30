@@ -250,9 +250,9 @@ var TypeAnyNumber = &TypeGroup{Name: "AnyNumber", Items: []Type{
 var TypeCString = &BuiltinType{"cstring", "char const*", 'x'}
 
 // builtin proc signatures
-var builtinCPrintf *ProcSignature
-var builtinAddr *ProcSignature
-var builtinDeref *ProcSignature
+var builtinCPrintf *Signature
+var builtinAddr *Signature
+var builtinDeref *Signature
 
 func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	if typ == TypeNoReturn {
@@ -329,7 +329,7 @@ var builtinScope Scope = &ScopeImpl{
 	Parent:          nil,
 	CurrentPackage:  nil,
 	CurrentProc:     nil,
-	Procedures:      make(map[string][]*ProcSignature),
+	Signatures:      make(map[string][]*Signature),
 	Variables:       make(map[string]TcSymbol),
 	Types:           make(map[string]Type),
 	TypeConstraints: make(map[string]TypeConstraint),
@@ -411,7 +411,7 @@ OUTER:
 	return true
 }
 
-func makeGenericSignature(name string, genericParams []*GenericTypeSymbol, args []Type, result Type, firstArgMutable bool) *ProcSignature {
+func makeGenericSignature(name string, genericParams []*GenericTypeSymbol, args []Type, result Type, firstArgMutable bool) *Signature {
 	if len(genericParams) > 0 {
 		for i, arg := range args {
 			syms := extractGenericTypeSymbols(arg)
@@ -431,7 +431,7 @@ func makeGenericSignature(name string, genericParams []*GenericTypeSymbol, args 
 		}
 	}
 
-	signature := ProcSignature{
+	signature := Signature{
 		Name:          name,
 		GenericParams: genericParams,
 		Params:        make([]TcSymbol, len(args)),
@@ -449,7 +449,7 @@ func makeGenericSignature(name string, genericParams []*GenericTypeSymbol, args 
 	return &signature
 }
 
-func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []*GenericTypeSymbol, args []Type, result Type, firstArgMutable bool) *ProcSignature {
+func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []*GenericTypeSymbol, args []Type, result Type, firstArgMutable bool) *Signature {
 	procDef := &TcBuiltinGenericProcDef{
 		Signature: makeGenericSignature(name, genericParams, args, result, firstArgMutable),
 		Prefix:    prefix,
@@ -457,11 +457,11 @@ func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams [
 		Postfix:   postfix,
 	}
 	procDef.Signature.Impl = procDef
-	builtinScope.Procedures[name] = append(builtinScope.Procedures[name], procDef.Signature)
+	builtinScope.Signatures[name] = append(builtinScope.Signatures[name], procDef.Signature)
 	return procDef.Signature
 }
 
-func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Type, firstArgMutable bool) *ProcSignature {
+func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Type, firstArgMutable bool) *Signature {
 	return registerGenericBuiltin(name, prefix, infix, postfix, nil, args, result, firstArgMutable)
 }
 
@@ -472,7 +472,7 @@ func registerGenericBuiltinMacro(name string, varargs bool, genericParams []*Gen
 	}
 	macroDef.Signature.Varargs = varargs
 	macroDef.Signature.Impl = macroDef
-	builtinScope.Procedures[name] = append(builtinScope.Procedures[name], macroDef.Signature)
+	builtinScope.Signatures[name] = append(builtinScope.Signatures[name], macroDef.Signature)
 }
 
 func registerBuiltinMacro(name string, varargs bool, args []Type, result Type, macroFunc BuiltinMacroFunc) {
@@ -482,7 +482,7 @@ func registerBuiltinMacro(name string, varargs bool, args []Type, result Type, m
 func registerSimpleTemplate(name string, args []Type, result Type, substitution TcExpr) {
 	templateDef := &TcTemplateDef{
 		// TODO set Source
-		Signature: &ProcSignature{
+		Signature: &Signature{
 			Name:       name,
 			Params:     make([]TcSymbol, len(args)),
 			ResultType: result,
@@ -494,7 +494,7 @@ func registerSimpleTemplate(name string, args []Type, result Type, substitution 
 		templateDef.Signature.Params[i].Kind = SkProcArg
 	}
 	templateDef.Signature.Impl = templateDef
-	builtinScope.Procedures[name] = append(builtinScope.Procedures[name], templateDef.Signature)
+	builtinScope.Signatures[name] = append(builtinScope.Signatures[name], templateDef.Signature)
 }
 
 type BuiltinMacroFunc func(tc *TypeChecker, scope Scope, call TcCall) TcExpr
