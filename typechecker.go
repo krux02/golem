@@ -332,9 +332,6 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result 
 	procScope := NewSubScope(parentScope)
 
 	result = &TcProcDef{}
-	result.Signature = &Signature{}
-	result.Signature.Name = def.Name.Source
-	result.Signature.Impl = result
 	procScope.CurrentProc = result
 
 	if def.Annotations.Source != "" {
@@ -345,6 +342,7 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result 
 		}
 	}
 
+	var genericParams []*GenericTypeSymbol
 	for _, genericArg := range def.GenericArgs {
 		constraint := LookUpTypeConstraint(tc, parentScope, genericArg.TraitName)
 		if (constraint == UniqueTypeConstraint{TypeError}) {
@@ -355,7 +353,7 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result 
 
 		// TODO actually make trait usable as a type constraint, currently the trait/constraint is set to nil
 		genTypeSym := &GenericTypeSymbol{Source: name.Source, Name: name.Source, Constraint: constraint}
-		result.Signature.GenericParams = append(result.Signature.GenericParams, genTypeSym)
+		genericParams = append(genericParams, genTypeSym)
 		// make the generic type symbol available to look up in its body
 		RegisterType(tc, procScope, name.Source, genTypeSym, def)
 
@@ -370,6 +368,7 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result 
 
 	}
 
+	var params []TcSymbol
 	for _, arg := range def.Args {
 		symKind := SkProcArg
 		if arg.Mutable {
@@ -392,8 +391,26 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result 
 				Type:   typ,
 			}
 		}
-		result.Signature.Params = append(result.Signature.Params, tcArg)
+		params = append(params, tcArg)
 	}
+	var resultType Type
+	if def.ResultType == nil {
+		ReportErrorf(tc, def, "proc def needs result type specified")
+		resultType = TypeError
+	} else {
+		resultType = LookUpType(tc, procScope, def.ResultType)
+	}
+
+	// makeGenericSignature(def.Name.Source, genericParams, params, resultType, 0)
+	signature := &Signature{
+		Name:          def.Name.Source,
+		GenericParams: genericParams,
+		Params:        params,
+		ResultType:    resultType,
+		Impl:          result,
+	}
+	result.Signature = signature
+
 	if result.Importc || def.Name.Source == "main" {
 		// TODO, don't special case `main` like this here
 		result.MangledName = def.Name.Source
@@ -406,15 +423,10 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result 
 		}
 		result.MangledName = mangledNameBuilder.String()
 	}
-	var resultType Type
-	if def.ResultType == nil {
-		ReportErrorf(tc, def, "proc def needs result type specified")
-		resultType = TypeError
-	} else {
-		resultType = LookUpType(tc, procScope, def.ResultType)
-	}
 
-	result.Signature.ResultType = resultType
+	// register proc before type checking the body to allow recursion. (TODO needs a test)
+	RegisterProc(tc, parentScope, signature, def.Name)
+
 	if result.Importc {
 		if def.Body != nil {
 			ReportErrorf(tc, def.Body, "proc is importc, it may not have a body")
@@ -431,7 +443,6 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result 
 		}
 	}
 
-	RegisterProc(tc, parentScope, result.Signature, def.Name)
 	return result
 }
 
