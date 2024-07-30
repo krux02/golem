@@ -317,13 +317,13 @@ func TypeCheckEnumDef(tc *TypeChecker, scope Scope, def EnumDef) *TcEnumDef {
 		result.Values = append(result.Values, sym)
 	}
 	RegisterType(tc, scope, enumType.Impl.Name, enumType, def.Name)
-	registerBuiltin("string", fmt.Sprintf("%s_names_array[", result.Name), "", "]", []Type{enumType}, TypeStr, false)
+	registerBuiltin("string", fmt.Sprintf("%s_names_array[", result.Name), "", "]", []Type{enumType}, TypeStr, 0)
 	for _, intType := range TypeAnyInt.Items {
 		builtinType := intType.(*BuiltinIntType)
-		registerBuiltin(builtinType.Name, fmt.Sprintf("(%s)", builtinType.InternalName), "", "", []Type{enumType}, intType, false)
-		registerBuiltin(result.Name, fmt.Sprintf("(%s)", result.Name), "", "", []Type{intType}, enumType, false)
+		registerBuiltin(builtinType.Name, fmt.Sprintf("(%s)", builtinType.InternalName), "", "", []Type{enumType}, intType, 0)
+		registerBuiltin(result.Name, fmt.Sprintf("(%s)", result.Name), "", "", []Type{intType}, enumType, 0)
 	}
-	registerBuiltin("contains", "(((", ") & (1 << (", "))) != 0)", []Type{GetEnumSetType(enumType), enumType}, TypeBoolean, false)
+	registerBuiltin("contains", "(((", ") & (1 << (", "))) != 0)", []Type{GetEnumSetType(enumType), enumType}, TypeBoolean, 0)
 	return result
 }
 
@@ -346,7 +346,6 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result 
 	}
 
 	for _, genericArg := range def.GenericArgs {
-		// result.Signature = result.Signature.GenericParams
 		constraint := LookUpTypeConstraint(tc, parentScope, genericArg.TraitName)
 		if (constraint == UniqueTypeConstraint{TypeError}) {
 			continue
@@ -1413,7 +1412,7 @@ func GetArrayType(elem Type, len int64) (result *ArrayType) {
 		//
 		// TODO the array index operator needs mutability propagation of the first argument.
 		// TODO this should be generic for better error messages on missing overloads, listing all currently known array types is a bit much
-		registerBuiltin("[", "", ".arr[", "]", []Type{result, TypeInt64}, elem, false)
+		registerBuiltin("[", "", ".arr[", "]", []Type{result, TypeInt64}, elem, 0)
 		registerSimpleTemplate("len", []Type{result}, TypeInt64, IntLit{Type: TypeInt64, Value: len})
 	}
 	return result
