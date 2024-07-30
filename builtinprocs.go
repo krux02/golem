@@ -582,8 +582,8 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 	result := call
 
 	result.Sym = TcProcSymbol{
-		Source: call.Sym.Source,
-		Impl:   builtinCPrintf.Impl,
+		Source:    call.Sym.Source,
+		Signature: builtinCPrintf,
 	}
 	result.Args[0] = CStrLit{Source: formatStrLit.Source, Value: formatStrC.String()}
 	return result

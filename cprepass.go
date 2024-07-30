@@ -4,8 +4,8 @@ import "fmt"
 
 func newAddrExpr(arg TcExpr) TcExpr {
 	sym := TcProcSymbol{
-		Source: "", // no source possible, hidden
-		Impl:   builtinAddr.Impl,
+		Source:    "", // no source possible, hidden
+		Signature: builtinAddr,
 	}
 	call := TcCall{
 		Source: "", // no source possible, hidden
@@ -31,8 +31,8 @@ func maybeUnrefParamSym(sym TcSymbol) TcExpr {
 		switch sym.Type.(type) {
 		case *StructType:
 			hiddenSym := TcProcSymbol{
-				Source: "",
-				Impl:   builtinDeref.Impl,
+				Source:    "",
+				Signature: builtinDeref,
 			}
 			call := TcCall{
 				Source: "", // no source possible, hidden
@@ -68,10 +68,10 @@ func cgenprepassSignature(sig *ProcSignature) *ProcSignature {
 func cgenprepass(expr TcExpr) TcExpr {
 	switch expr := expr.(type) {
 	case TcCall:
-		if _, isBuiltin := expr.Sym.Impl.(*TcBuiltinProcDef); isBuiltin {
+		if _, isBuiltin := expr.Sym.Signature.Impl.(*TcBuiltinProcDef); isBuiltin {
 			return expr
 		}
-		sig := expr.Sym.Impl.GetSignature()
+		sig := expr.Sym.Signature
 		newArgs := make([]TcExpr, len(expr.Args))
 		for i, arg := range expr.Args {
 			newArg := cgenprepass(arg)

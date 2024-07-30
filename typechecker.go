@@ -589,13 +589,14 @@ func TypeCheckDotExpr(tc *TypeChecker, scope Scope, call Call, expected TypeCons
 }
 
 func errorProcSym(ident Ident) TcProcSymbol {
-	Impl := &TcErrorProcDef{Signature: &ProcSignature{Name: ident.Source, ResultType: TypeError}}
-	Impl.Signature.Impl = Impl
+	procDef := &TcErrorProcDef{}
+	signature := &ProcSignature{Name: ident.Source, ResultType: TypeError, Impl: procDef}
+	procDef.Signature = signature
 
 	return TcProcSymbol{
 		Source: ident.GetSource(),
 		// maybe add some debug information here
-		Impl: Impl,
+		Signature: signature,
 	}
 }
 
@@ -916,7 +917,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected TypeConstr
 
 		switch impl := sig.Impl.(type) {
 		case *TcBuiltinProcDef, *TcProcDef:
-			result.Sym = TcProcSymbol{Source: ident.Source, Impl: impl}
+			result.Sym = TcProcSymbol{Source: ident.Source, Signature: sig}
 			result.Args = checkedArgs
 			ExpectType(tc, call, sig.ResultType, expected)
 		case *TcBuiltinGenericProcDef:
@@ -926,13 +927,24 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected TypeConstr
 			//
 			// currently replacing the signature alone is enough, but that is not a
 			// general solution.
+			//
+			sigInstance := &ProcSignature{
+				Name:          sig.Name,
+				GenericParams: sig.GenericParams,
+				Params:        sig.Params,
+				ResultType:    sig.ResultType,
+			}
+
 			implInstance := &TcBuiltinProcDef{
-				Signature: sig,
+				Signature: sigInstance,
 				Prefix:    impl.Prefix,
 				Infix:     impl.Infix,
 				Postfix:   impl.Postfix,
 			}
-			result.Sym = TcProcSymbol{Source: ident.Source, Impl: implInstance}
+
+			sigInstance.Impl = implInstance
+
+			result.Sym = TcProcSymbol{Source: ident.Source, Signature: sigInstance}
 			result.Args = checkedArgs
 			ExpectType(tc, call, sig.ResultType, expected)
 		case *TcTemplateDef:
@@ -940,7 +952,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected TypeConstr
 			ExpectType(tc, call, substitution.GetType(), expected)
 			return substitution
 		case *TcBuiltinMacroDef:
-			result.Sym = TcProcSymbol{Source: ident.Source, Impl: impl}
+			result.Sym = TcProcSymbol{Source: ident.Source, Signature: sig}
 			result.Args = checkedArgs
 			newResult := impl.MacroFunc(tc, scope, result)
 			ExpectType(tc, call, newResult.GetType(), expected)
@@ -1137,8 +1149,7 @@ func (block TcCodeBlock) GetType() Type {
 }
 
 func (call TcCall) GetType() Type {
-
-	return call.Sym.Impl.GetSignature().ResultType
+	return call.Sym.Signature.ResultType
 }
 
 func (lit StrLit) GetType() Type {

@@ -90,8 +90,8 @@ type TcCodeBlock struct {
 
 // TODO maybe unify TcProcSym with the othe symbol types
 type TcProcSymbol struct {
-	Source string
-	Impl   Overloadable // TcProcDef, TcBuiltinProcDef
+	Source    string
+	Signature *ProcSignature
 }
 
 type SymbolKind int
@@ -216,10 +216,7 @@ type TcBuiltinGenericProcDef struct {
 }
 
 type TcBuiltinStaticProcDef struct {
-	Source    string // TODO: this can't be correct, it's builtin there is no source
-	Name      string
 	Signature *ProcSignature
-	//Body      TcExpr
 
 	ApplyFunc func(context *TcPackageDef, args []TcExpr) TcExpr
 }
@@ -238,7 +235,6 @@ type TcProcDef struct {
 }
 
 type TcBuiltinMacroDef struct {
-	Source    string // TODO: this can't be correct, it's builtin there is no source
 	Signature *ProcSignature
 	MacroFunc BuiltinMacroFunc // this function transforms the call, post function resolution
 }
@@ -336,8 +332,8 @@ func (arg TcPackageDef) GetSource() string             { return arg.Source }
 func (arg *TcStructDef) GetSource() string       { return arg.Source }
 func (arg *TcEnumDef) GetSource() string         { return arg.Source }
 func (arg *GenericTypeSymbol) GetSource() string { return arg.Source }
-func (arg *TcBuiltinMacroDef) GetSource() string { return arg.Source }
-func (arg *TcErrorProcDef) GetSource() string    { return "" }
+func (arg *TcBuiltinMacroDef) GetSource() string { return "" } // builtins have no source
+func (arg *TcErrorProcDef) GetSource() string    { return "" } // non existing proc def has no source
 
 // func (arg *EnumSetType) GetSource() string { return arg.Source }
 // func (arg TypeGroup) GetSource() string    { return arg.Source }

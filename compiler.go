@@ -58,7 +58,7 @@ func (builder *CodeBuilder) compileTypeExpr(context *PackageGeneratorContext, ty
 }
 
 func (builder *CodeBuilder) compileCall(context *PackageGeneratorContext, call TcCall) {
-	switch impl := call.Sym.Impl.(type) {
+	switch impl := call.Sym.Signature.Impl.(type) {
 	case *TcBuiltinProcDef:
 		builder.WriteString(impl.Prefix)
 		builder.CompileSeparatedExprList(context, call.Args, impl.Infix)
