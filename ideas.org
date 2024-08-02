@@ -2,6 +2,9 @@ This is simply a concept for a new programming language at this point
 in time. This Document should serve as guideline and collection of
 ideas worth following. It is work in progress.
 
+The most important property of a program written in a programming language, is
+the ability to make changes.
+
 * The scientific approach to language design
 
 Making a new programming language that just works how I want it. Just
@@ -118,14 +121,13 @@ responsibility for this.
 
 * No Cursed Weapons
 
-In Dungeons and Dragons and many inspired games, there is the concept
-of a cursed weapon, that when equipped, the hero can't take off
-anymore. A cursed weapon can in fact be a good weapon, but not being
-able to remove it anymore is just not good. The metaphor of a cursed
-weapon applies to many patterns in programming as well. Garbage
-collection is usually implemented as such a cursed weapon. If a
-language provides garbage collection, it is everywhere and the developer
-can't decide not to use it.
+In Dungeons and Dragons and many inspired games, there is the concept of a
+cursed weapon, that when equipped, the hero can't take off anymore. A cursed
+weapon can in fact be a good weapon, but not being able to remove it anymore is
+just not good. The metaphor of a cursed weapon applies to many patterns in
+programming as well. To name one of many examples, garbage collection is usually
+implemented as such a cursed weapon. If a language provides garbage collection,
+it is everywhere and the developer can't decide not to use it.
 
 Rust provides borrow checking to solve the memory safety problem
 without the need of a garbage collector. But this is just yet another
@@ -978,10 +980,29 @@ preprocessor".
 * exceptions
 
   There are heated discussions if it is better to use exceptions for errors, or
-  to wrap errors in an Either[Value,Exception] type. I think it is not only
+  to wrap errors in an ~Either[Value, Exception]~ type. I think it is not only
   important to support both styles, but to provide help to easily convert
   between the two styles.
 
   The inspiration here comes from go type assertions. ~value := expr.(*MyType)~
   raises an exception, where ~value, ok := expr.(*MyType)~ allows to write a
   branch.
+
+* process top level scope backwards
+
+  Documents like scientific papers usually start with the most important part,
+  the summary/abstract at the beginning, and related work and references ant the
+  very end. This helps to see the most important things first, and then dive
+  deeper when necessary. For programming in languages like ~C~ or ~Nim~, where
+  forward references are necessary, a reverse pattern has been established. All
+  files start with imports, forward references, then all the utility functions
+  and eventually the most important function, the main function, at the end of
+  the file. Since I plan on keeping forward references necessary for this
+  language, I think it *could* be a good idea to reverse the order in which top
+  level statements in a file are processed. This is first of all a weird
+  language design, as nobody does it and therefore I am not convinced that I
+  should really do it. But it has positive effect on the code. All files would
+  naturally be ordered my importance. Main function is the first thing of every
+  file that has a main function. Imports and forward declarations (things nobody
+  really cares about) are at the very end of the file, where they are only seen
+  when explicitly searched for.

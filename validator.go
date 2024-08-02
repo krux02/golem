@@ -83,5 +83,4 @@ func validateSourceSetInternal(code string, node reflect.Value) {
 	default:
 		panic(fmt.Errorf("not implemented: %s: %s", typ.Name(), node.Kind()))
 	}
-
 }

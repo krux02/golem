@@ -186,7 +186,9 @@ func (typ *GenericTypeSymbol) ManglePrint(builder *strings.Builder) {
 }
 
 func (typ *OpenGenericType) ManglePrint(builder *strings.Builder) {
-	panic("illegal not a concrete type")
+	// TODO this mangled named may never actually be used. A good code
+	// architecture should not use this and error instead.
+	typ.Type.ManglePrint(builder)
 }
 
 func (typ *TypeGroup) GetSource() string {
@@ -388,6 +390,8 @@ func extractGenericTypeSymbols(typ Type) (result []*GenericTypeSymbol) {
 		return extractGenericTypeSymbols(typ.WrappedType)
 	case *PtrType:
 		return extractGenericTypeSymbols(typ.Target)
+	case *EnumSetType:
+		return extractGenericTypeSymbols(typ.Elem)
 	case *OpenGenericType:
 		panic("interanl error, OpenGenericType should not be created around another OpenGenericType")
 	case *GenericTypeSymbol:
@@ -411,16 +415,44 @@ OUTER:
 	return true
 }
 
+func AstListFormat[T PrettyPrintable](syms []T) string {
+	builder := &AstPrettyPrinter{}
+	builder.WriteString("{")
+	for i, sym := range syms {
+		if i != 0 {
+			builder.WriteString(", ")
+		}
+		sym.PrettyPrint(builder)
+	}
+	builder.WriteString("}")
+	return builder.String()
+}
+
+func maybeWrapWithOpenGenericType(arg Type, genericParams []*GenericTypeSymbol) Type {
+	// wraps a Type that contains generic type symbols with `OpenGenericType`.
+	// This wrapping of `OpenGenericType` is important as it tells the type
+	// checker that this type is an incomplete generic type that needs proper deep
+	// type matching logic. Fully resolved types can be be compared with simple
+	// type equality.
+
+	syms := extractGenericTypeSymbols(arg)
+	// if a type contains generic type symbols, it must be wrapped.
+	if len(syms) > 0 {
+		if !SymSubset(syms, genericParams) {
+			panic(fmt.Errorf("internal error: generic type symbols %s ⊆ %s",
+				AstListFormat(syms),
+				AstListFormat(genericParams),
+			))
+		}
+		return &OpenGenericType{arg, syms}
+	}
+	return arg
+}
+
 func makeGenericSignature(name string, genericParams []*GenericTypeSymbol, args []Type, result Type, argMutableBitmask uint64) *Signature {
 	if len(genericParams) > 0 {
 		for i, arg := range args {
-			syms := extractGenericTypeSymbols(arg)
-			if len(syms) > 0 {
-				if !SymSubset(syms, genericParams) {
-					panic("not a true subset")
-				}
-				args[i] = &OpenGenericType{arg, syms}
-			}
+			args[i] = maybeWrapWithOpenGenericType(arg, genericParams)
 		}
 		syms := extractGenericTypeSymbols(result)
 		if len(syms) > 0 {
@@ -431,22 +463,22 @@ func makeGenericSignature(name string, genericParams []*GenericTypeSymbol, args 
 		}
 	}
 
-	signature := Signature{
-		Name:          name,
-		GenericParams: genericParams,
-		Params:        make([]TcSymbol, len(args)),
-		ResultType:    result,
-	}
+	params := make([]TcSymbol, len(args))
 	for i, arg := range args {
-		signature.Params[i].Type = arg
+		params[i].Type = arg
 		if (argMutableBitmask & (1 << i)) != 0 {
-			signature.Params[i].Kind = SkVarProcArg
+			params[i].Kind = SkVarProcArg
 		} else {
-			signature.Params[i].Kind = SkProcArg
+			params[i].Kind = SkProcArg
 		}
 	}
 
-	return &signature
+	return &Signature{
+		Name:          name,
+		GenericParams: genericParams,
+		Params:        params,
+		ResultType:    result,
+	}
 }
 
 func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []*GenericTypeSymbol, args []Type, result Type, argMutableBitmask uint64) *Signature {

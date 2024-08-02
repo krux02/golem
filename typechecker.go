@@ -343,15 +343,17 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result 
 	}
 
 	var genericParams []*GenericTypeSymbol
+	if parentScope.CurrentTrait != nil {
+		genericParams = append(genericParams, parentScope.CurrentTrait.DependentTypes...)
+	}
+
 	for _, genericArg := range def.GenericArgs {
 		constraint := LookUpTypeConstraint(tc, parentScope, genericArg.TraitName)
 		if (constraint == UniqueTypeConstraint{TypeError}) {
 			continue
 		}
 		name := genericArg.Name
-		//
 
-		// TODO actually make trait usable as a type constraint, currently the trait/constraint is set to nil
 		genTypeSym := &GenericTypeSymbol{Source: name.Source, Name: name.Source, Constraint: constraint}
 		genericParams = append(genericParams, genTypeSym)
 		// make the generic type symbol available to look up in its body
@@ -365,7 +367,6 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result 
 		default:
 			ReportWarningf(tc, genericArg.TraitName, "currently only traits are supported in the compiler as type constraints")
 		}
-
 	}
 
 	var params []TcSymbol
@@ -374,7 +375,13 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result 
 		if arg.Mutable {
 			symKind = SkVarProcArg
 		}
-		typ := LookUpType(tc, procScope, arg.Type)
+
+		paramType := LookUpType(tc, procScope, arg.Type)
+
+		typ := maybeWrapWithOpenGenericType(
+			paramType,
+			genericParams,
+		)
 
 		var tcArg TcSymbol
 		// TODO this is ugly. Refactoring `NewSymbol` to a simple `RegisterSymbol`
@@ -914,7 +921,12 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected TypeConstr
 
 		for i, arg := range sig.Params {
 			if _, isGeneric := arg.Type.(*OpenGenericType); isGeneric {
-				panic("internal error")
+				panic(
+					fmt.Sprintf(
+						"internal error: generics arguments are expected to instanciated\n%s\n",
+						DebugAstFormat(call),
+					),
+				)
 			}
 
 			if arg.Kind == SkVarProcArg && !checkedArgs[i].GetMutable() {
@@ -922,7 +934,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected TypeConstr
 			}
 		}
 		if _, isGeneric := sig.ResultType.(*OpenGenericType); isGeneric {
-			panic("internal error")
+			panic("internal error: generics are expected to instanciated")
 		}
 
 		switch impl := sig.Impl.(type) {

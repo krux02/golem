@@ -247,6 +247,7 @@ func (lit TcEnumSetLit) PrettyPrint(builder *AstPrettyPrinter) {
 }
 
 func WriteIntLit(builder *strings.Builder, value int64) {
+	// TODO split this up in "WriteNumber" that just prints the number, and "WriteCIntLit" that has the special case for the smallest number
 	//fmt.Fprintf(builder, "%d", value)
 	if value == 0 {
 		builder.WriteByte('0')
