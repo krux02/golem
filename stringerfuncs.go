@@ -10,6 +10,7 @@ import (
 
 type AstPrettyPrinter struct {
 	strings.Builder
+	LineIdx     int
 	Indentation int
 }
 
@@ -29,6 +30,7 @@ func (builder *AstPrettyPrinter) NewlineAndIndent() {
 	for i := 0; i < N; i++ {
 		builder.WriteString("  ")
 	}
+	builder.LineIdx += 1
 }
 
 type PrettyPrintable interface {

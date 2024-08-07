@@ -923,7 +923,8 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected TypeConstr
 			if _, isGeneric := arg.Type.(*OpenGenericType); isGeneric {
 				panic(
 					fmt.Sprintf(
-						"internal error: generics arguments are expected to instanciated\n%s\n",
+						"internal error: generics arguments are expected to instanciated\n%s\n%s\n",
+						DebugAstFormat(sig.Impl),
 						DebugAstFormat(call),
 					),
 				)
