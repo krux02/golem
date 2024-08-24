@@ -92,7 +92,7 @@ proc main():i64 = {
   printf("max(i1,i2) = %d\n", max(i1,i2))
 
   ## exprStr: a string containing an expression to count parenthesis depth
-  let exprStr = "(1+(2*3)+((8)/4))+1"
+  let exprStr:str = "(1+(2*3)+((8)/4))+1"
   let depth = maxParenDepth(exprStr)
   printf("max paren depth: %d\n", i32(depth))
   testBooleanOpsWithBlockExpr()
@@ -114,7 +114,7 @@ proc main():i64 = {
   ff1 += 8
   printf("ff1: %f ff2: %f\n", ff1, ff2);
   printf("max test: max(fx,f2): %f\n", max(ff1, ff2))
-  printf("printftest %d %d %s\n", 1:i32, 2:i32, "mystring")
+  printf("printftest %d %d %s\n", 1:i32, 2:i32, "mystring":str)
   printf("myArray[3]: %d\n", myArray[3])
 
   0

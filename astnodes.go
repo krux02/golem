@@ -142,11 +142,7 @@ type CodeBlock struct {
 
 type StrLit struct {
 	Source string
-	Value  string
-}
-
-type CStrLit struct {
-	Source string
+	Type   Type
 	Value  string
 }
 
@@ -239,7 +235,6 @@ func (arg NamedDocSection) GetSource() string  { return arg.Source }
 func (arg Ident) GetSource() string            { return arg.Source }
 func (arg CodeBlock) GetSource() string        { return arg.Source }
 func (arg StrLit) GetSource() string           { return arg.Source }
-func (arg CStrLit) GetSource() string          { return arg.Source }
 func (arg IntLit) GetSource() string           { return arg.Source }
 func (arg FloatLit) GetSource() string         { return arg.Source }
 func (arg ArrayLit) GetSource() string         { return arg.Source }

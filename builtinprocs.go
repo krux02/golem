@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 )
 
@@ -12,6 +13,12 @@ type BuiltinType struct {
 }
 
 type BuiltinFloatType struct {
+	Name         string
+	InternalName string
+	MangleChar   rune
+}
+
+type BuiltinStringType struct {
 	Name         string
 	InternalName string
 	MangleChar   rune
@@ -68,7 +75,8 @@ type ArrayType struct {
 	scheduledforgeneration bool
 }
 
-// the type for integer literals. Each integer represented by a literal is its own type
+// types for literals
+
 type IntLitType struct {
 	// TODO needs to be able to store all values from uint64 and int64, int640is not enough
 	Value int64
@@ -76,6 +84,10 @@ type IntLitType struct {
 
 type FloatLitType struct {
 	Value float64
+}
+
+type StringLitType struct {
+	Value string
 }
 
 // the type that represets types as arguments. Example:
@@ -114,6 +126,10 @@ func (typ *BuiltinIntType) ManglePrint(builder *strings.Builder) {
 }
 
 func (typ *BuiltinFloatType) ManglePrint(builder *strings.Builder) {
+	builder.WriteRune(typ.MangleChar)
+}
+
+func (typ *BuiltinStringType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune(typ.MangleChar)
 }
 
@@ -181,6 +197,10 @@ func (typ *FloatLitType) ManglePrint(builder *strings.Builder) {
 	panic("not implemented")
 }
 
+func (typ *StringLitType) ManglePrint(builder *strings.Builder) {
+	panic("not implemented")
+}
+
 func (typ *GenericTypeSymbol) ManglePrint(builder *strings.Builder) {
 	fmt.Fprintf(builder, "?%s?", typ.Name)
 }
@@ -218,7 +238,9 @@ var TypeFloat32 = &BuiltinFloatType{"f32", "float", 'f'}
 var TypeFloat64 = &BuiltinFloatType{"f64", "double", 'd'}
 
 var TypeBoolean = &BuiltinType{"bool", "bool", 'b'}
-var TypeStr = &BuiltinType{"str", "string", 'R'}
+
+var TypeStr = &BuiltinStringType{"str", "string", 'R'}
+
 var TypeChar = &BuiltinType{"char", "char", 'c'}
 var TypeVoid = &BuiltinType{"void", "void", 'v'}
 var TypeNilPtr = &BuiltinType{"nilptr", "void*", 'n'}
@@ -249,7 +271,7 @@ var TypeAnyNumber = &TypeGroup{Name: "AnyNumber", Items: []Type{
 }}
 
 // types for C wrappers
-var TypeCString = &BuiltinType{"cstring", "char const*", 'x'}
+var TypeCString = &BuiltinStringType{"cstring", "char const*", 'x'}
 
 // builtin proc signatures
 var builtinCPrintf *Signature
@@ -281,6 +303,10 @@ func (typ *BuiltinIntType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr
 
 func (typ *BuiltinFloatType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	return FloatLit{Type: typ}
+}
+
+func (typ *BuiltinStringType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+	return StrLit{Type: typ}
 }
 
 func (typ *ErrorType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
@@ -315,6 +341,10 @@ func (typ *FloatLitType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	return FloatLit{Type: typ, Value: typ.Value}
 }
 
+func (typ *StringLitType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+	return StrLit{Type: typ, Value: typ.Value}
+}
+
 func (typ *TypeType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	panic("no default value for types")
 }
@@ -337,31 +367,25 @@ var builtinScope Scope = &ScopeImpl{
 	TypeConstraints: make(map[string]TypeConstraint),
 }
 
-func registerBuiltinType(typ *BuiltinType) {
-	_, ok := builtinScope.Types[typ.Name]
-	if ok {
-		panic("internal error double definition of builtin type")
-	}
-	builtinScope.Types[typ.Name] = typ
-}
+func registerBuiltinType(typ Type) {
 
-func registerBuiltinIntType(typ *BuiltinIntType) {
-	_, ok := builtinScope.Types[typ.Name]
-	if ok {
-		panic("internal error double definition of builtin type")
-	}
-	builtinScope.Types[typ.Name] = typ
-}
+	rValue := reflect.ValueOf(typ).Elem()
 
-func registerBuiltinFloatType(typ *BuiltinFloatType) {
-	_, ok := builtinScope.Types[typ.Name]
-	if ok {
+	nameField := rValue.FieldByName("Name")
+	if nameField.Kind() != reflect.String {
+		panic(fmt.Errorf("internal error type %s needs Name Field of type string", rValue.Type().Name()))
+	}
+	name := nameField.String()
+	if _, ok := builtinScope.Types[name]; ok {
 		panic("internal error double definition of builtin type")
 	}
-	builtinScope.Types[typ.Name] = typ
+	builtinScope.Types[name] = typ
 }
 
 func registerBuiltinTypeGroup(typ *TypeGroup) {
+	if _, ok := builtinScope.TypeConstraints[typ.Name]; ok {
+		panic("internal error double definition of builtin type group")
+	}
 	builtinScope.TypeConstraints[typ.Name] = typ
 }
 
@@ -383,6 +407,8 @@ func extractGenericTypeSymbols(typ Type) (result []*GenericTypeSymbol) {
 	case *BuiltinIntType:
 		return nil
 	case *BuiltinFloatType:
+		return nil
+	case *BuiltinStringType:
 		return nil
 	case *ErrorType:
 		panic("internal error")
@@ -617,7 +643,7 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 		Source:    call.Sym.Source,
 		Signature: builtinCPrintf,
 	}
-	result.Args[0] = CStrLit{Source: formatStrLit.Source, Value: formatStrC.String()}
+	result.Args[0] = StrLit{Source: formatStrLit.Source, Type: TypeCString, Value: formatStrC.String()}
 	return result
 }
 
@@ -670,6 +696,7 @@ func init() {
 	packageMap = make(map[string]*TcPackageDef)
 	intLitTypeMap = make(map[int64]*IntLitType)
 	floatLitTypeMap = make(map[float64]*FloatLitType)
+	stringLitTypeMap = make(map[string]*StringLitType)
 
 	// Printf is literally the only use case for real varargs that I actually see as
 	// practical. Therefore the implementation for varargs will be strictly tied to
@@ -685,16 +712,16 @@ func init() {
 	// registerBuiltinMacro("sizeof", false, []Type{TypeUnspecified}, TypeInt64, BuiltinSizeOf)
 
 	registerBuiltinType(TypeBoolean)
-	registerBuiltinIntType(TypeInt8)
-	registerBuiltinIntType(TypeInt16)
-	registerBuiltinIntType(TypeInt32)
-	registerBuiltinIntType(TypeInt64)
-	registerBuiltinIntType(TypeUInt8)
-	registerBuiltinIntType(TypeUInt16)
-	registerBuiltinIntType(TypeUInt32)
-	registerBuiltinIntType(TypeUInt64)
-	registerBuiltinFloatType(TypeFloat32)
-	registerBuiltinFloatType(TypeFloat64)
+	registerBuiltinType(TypeInt8)
+	registerBuiltinType(TypeInt16)
+	registerBuiltinType(TypeInt32)
+	registerBuiltinType(TypeInt64)
+	registerBuiltinType(TypeUInt8)
+	registerBuiltinType(TypeUInt16)
+	registerBuiltinType(TypeUInt32)
+	registerBuiltinType(TypeUInt64)
+	registerBuiltinType(TypeFloat32)
+	registerBuiltinType(TypeFloat64)
 	registerBuiltinType(TypeStr)
 	registerBuiltinType(TypeCString)
 	registerBuiltinType(TypeVoid)

@@ -300,6 +300,7 @@ func parseStrLit(tokenizer *Tokenizer) (result StrLit) {
 	}
 
 	result.Value = b.String()
+	result.Type = GetStringLitType(result.Value)
 	return result
 }
 

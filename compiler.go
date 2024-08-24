@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"strings"
 )
 
@@ -38,6 +39,8 @@ func (builder *CodeBuilder) compileTypeExpr(context *PackageGeneratorContext, ty
 	case *BuiltinIntType:
 		builder.WriteString(typ.InternalName)
 	case *BuiltinFloatType:
+		builder.WriteString(typ.InternalName)
+	case *BuiltinStringType:
 		builder.WriteString(typ.InternalName)
 	case *ArrayType:
 		typ.ManglePrint(&builder.Builder)
@@ -156,12 +159,16 @@ func (builder *CodeBuilder) compileStrLit(value string, boxed bool) {
 }
 
 func (builder *CodeBuilder) CompileIntLit(lit IntLit) {
-	WriteIntLit(&builder.Builder, lit.Value)
+	// C doesn't allow -9223372036854775808 as a singed integer literal
+	if lit.Value == math.MinInt64 {
+		builder.WriteString("-9223372036854775807 - 1")
+	} else {
+		WriteIntLit(&builder.Builder, lit.Value)
+	}
 }
 
 func (builder *CodeBuilder) CompileFloatLit(lit FloatLit) {
-	str := fmt.Sprintf("%f", lit.Value)
-	builder.Builder.WriteString(str)
+	fmt.Fprintf(builder, "%f", lit.Value)
 }
 
 func (builder *CodeBuilder) CompileSymbol(sym TcSymbol) {
@@ -326,9 +333,7 @@ func (builder *CodeBuilder) CompileExprWithPrefix(context *PackageGeneratorConte
 	case TcDotExpr:
 		builder.CompileDotExpr(context, ex)
 	case StrLit:
-		builder.compileStrLit(ex.Value, true)
-	case CStrLit:
-		builder.compileStrLit(ex.Value, false)
+		builder.compileStrLit(ex.Value, ex.Type == TypeStr)
 	case CharLit:
 		builder.compileCharLit(ex)
 	case IntLit:
@@ -532,7 +537,7 @@ func markTypeForGeneration(context *PackageGeneratorContext, typ Type) {
 		markEnumTypeForGeneration(context, typ.Elem)
 	case *PtrType:
 		markTypeForGeneration(context, typ.Target)
-	case *BuiltinType, *BuiltinIntType, *BuiltinFloatType:
+	case *BuiltinType, *BuiltinIntType, *BuiltinFloatType, *BuiltinStringType:
 		return
 	default:
 		panic(fmt.Errorf("internal error: %T", typ))

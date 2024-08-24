@@ -392,7 +392,6 @@ func (arg TcArrayLit) GetMutable() bool   { return false }
 func (arg TcEnumSetLit) GetMutable() bool { return false }
 func (arg IntLit) GetMutable() bool       { return false }
 func (arg FloatLit) GetMutable() bool     { return false }
-func (arg CStrLit) GetMutable() bool      { return false }
 func (arg StrLit) GetMutable() bool       { return false }
 func (arg CharLit) GetMutable() bool      { return false }
 func (arg NilLit) GetMutable() bool       { return false }

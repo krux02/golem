@@ -529,12 +529,26 @@ func ExpectType(tc *TypeChecker, node AstNode, gotten Type, expected TypeConstra
 					return TypeError
 				}
 				if floatType, isFloatType := expected.(*BuiltinFloatType); isFloatType {
+					if floatType == TypeFloat32 {
+						if int64(float32(theIntLitType.Value)) != theIntLitType.Value {
+							ReportErrorf(tc, node, "can't represent %d as float32 precisely", theIntLitType.Value)
+						}
+					} else if floatType == TypeFloat64 {
+						if int64(theIntLitType.Value) != theIntLitType.Value {
+							ReportErrorf(tc, node, "can't represent %d as float64 precisely", theIntLitType.Value)
+						}
+					}
 					return floatType
 				}
 			}
 			if _, gotFloatLitType := gotten.(*FloatLitType); gotFloatLitType {
 				if floatType, isFloatType := expected.(*BuiltinFloatType); isFloatType {
 					return floatType
+				}
+			}
+			if _, gotStringLitType := gotten.(*StringLitType); gotStringLitType {
+				if stringType, isStringType := expected.(*BuiltinStringType); isStringType {
+					return stringType
 				}
 			}
 		}
@@ -1176,11 +1190,7 @@ func (call TcCall) GetType() Type {
 }
 
 func (lit StrLit) GetType() Type {
-	return TypeStr
-}
-
-func (lit CStrLit) GetType() Type {
-	return TypeCString
+	return lit.Type
 }
 
 func (lit CharLit) GetType() Type {
@@ -1315,17 +1325,7 @@ func TypeCheckIntLit(tc *TypeChecker, scope Scope, arg IntLit, expected TypeCons
 		var lit FloatLit
 		lit.Source = arg.Source
 		lit.Value = float64(arg.Value)
-		if typ == TypeFloat32 {
-			lit.Type = TypeFloat32
-			if int64(float32(lit.Value)) != arg.Value {
-				ReportErrorf(tc, arg, "can't represent %d as float32 precisely", arg.Value)
-			}
-		} else if typ == TypeFloat64 {
-			lit.Type = TypeFloat64
-			if int64(lit.Value) != arg.Value {
-				ReportErrorf(tc, arg, "can't represent %d as float64 precisely", arg.Value)
-			}
-		}
+		lit.Type = typ
 		return lit
 	default:
 		panic(fmt.Errorf("internal error: %T", typ))
@@ -1333,15 +1333,14 @@ func TypeCheckIntLit(tc *TypeChecker, scope Scope, arg IntLit, expected TypeCons
 }
 
 func TypeCheckFloatLit(tc *TypeChecker, scope Scope, arg FloatLit, expected TypeConstraint) TcExpr {
+	// TODO: this mutates in input AST, this should not be
 	arg.Type = ExpectType(tc, arg, arg.Type, expected)
 	return (TcExpr)(arg)
 }
 
 func (tc *TypeChecker) TypeCheckStrLit(scope Scope, arg StrLit, expected TypeConstraint) TcExpr {
-	if (expected == UniqueTypeConstraint{TypeCString}) {
-		return CStrLit{arg.Source, arg.Value}
-	}
-	ExpectType(tc, arg, TypeStr, expected)
+	// TODO: this mutates in input AST, this should not be
+	arg.Type = ExpectType(tc, arg, arg.Type, expected)
 	return (TcExpr)(arg)
 }
 
@@ -1411,6 +1410,7 @@ var typeTypeMap map[Type]*TypeType
 var packageMap map[string]*TcPackageDef
 var intLitTypeMap map[int64]*IntLitType
 var floatLitTypeMap map[float64]*FloatLitType
+var stringLitTypeMap map[string]*StringLitType
 
 func GetPackage(currentProgram *ProgramContext, workDir string, importPath string) (result *TcPackageDef, err error) {
 	if !filepath.IsAbs(workDir) {
@@ -1476,6 +1476,15 @@ func GetFloatLitType(value float64) (result *FloatLitType) {
 	if !ok {
 		result = &FloatLitType{Value: value}
 		floatLitTypeMap[value] = result
+	}
+	return result
+}
+
+func GetStringLitType(value string) (result *StringLitType) {
+	result, ok := stringLitTypeMap[value]
+	if !ok {
+		result = &StringLitType{Value: value}
+		stringLitTypeMap[value] = result
 	}
 	return result
 }
@@ -1620,7 +1629,7 @@ func (tc *TypeChecker) ElementType(expr TcExpr) Type {
 		return typ.Elem
 	case *EnumSetType:
 		return typ.Elem
-	case *BuiltinType:
+	case *BuiltinStringType:
 		if typ == TypeStr {
 			return TypeChar
 		}

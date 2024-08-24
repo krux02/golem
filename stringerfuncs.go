@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 )
@@ -146,9 +147,9 @@ func (lit CharLit) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteRune('\'')
 }
 
-func (lit StrLit) PrettyPrint(builder *AstPrettyPrinter) {
+func WriteStringLit(builder *AstPrettyPrinter, value string) {
 	builder.WriteRune('"')
-	for _, rune := range lit.Value {
+	for _, rune := range value {
 		switch rune {
 		case '\a':
 			builder.WriteString("\\a")
@@ -178,9 +179,8 @@ func (lit StrLit) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteRune('"')
 }
 
-func (lit CStrLit) PrettyPrint(builder *AstPrettyPrinter) {
-	// TODO, this isn't correct, it is indestinguishable from StrLit
-	StrLit{Value: lit.Value}.PrettyPrint(builder)
+func (lit StrLit) PrettyPrint(builder *AstPrettyPrinter) {
+	WriteStringLit(builder, lit.Value)
 }
 
 func (list ExprList) PrettyPrint(builder *AstPrettyPrinter) {
@@ -248,35 +248,33 @@ func (lit TcEnumSetLit) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteRune(']')
 }
 
-func WriteIntLit(builder *strings.Builder, value int64) {
-	// TODO split this up in "WriteNumber" that just prints the number, and "WriteCIntLit" that has the special case for the smallest number
-	//fmt.Fprintf(builder, "%d", value)
+func WriteUIntLit(builder *strings.Builder, value uint64) {
 	if value == 0 {
 		builder.WriteByte('0')
 		return
 	}
-	if value < 0 {
-		builder.WriteRune('-')
-		value = -value
+	const N = 32
+	var buffer [N]byte
+	i := 0
+	for ; value > 0; i++ {
+		buffer[i] = "0123456789"[value%10]
+		value = value / 10
 	}
-	if value >= 0 {
-		const N = 32
-		var buffer [N]byte
-		i := 0
-		for ; value > 0; i++ {
-			buffer[i] = "0123456789"[value%10]
-			value = value / 10
-		}
-		for ; i > 0; i-- {
-			builder.WriteByte(buffer[i-1])
+	for ; i > 0; i-- {
+		builder.WriteByte(buffer[i-1])
+	}
+}
+
+func WriteIntLit(builder *strings.Builder, value int64) {
+	if value < 0 {
+		builder.WriteString("-")
+		if value == math.MinInt64 {
+			WriteUIntLit(builder, -math.MinInt64)
+		} else {
+			WriteUIntLit(builder, uint64(-value))
 		}
 	} else {
-		// value = -value had no effect
-		if value != -9223372036854775808 {
-			panic("assert fail")
-		}
-		// C doesn't allow -9223372036854775808 as a singed integer literal
-		builder.WriteString("9223372036854775807 - 1")
+		WriteUIntLit(builder, uint64(value))
 	}
 }
 
@@ -572,6 +570,10 @@ func (typ *BuiltinIntType) PrettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (typ *BuiltinFloatType) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString(typ.Name)
+}
+
+func (typ *BuiltinStringType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(typ.Name)
 }
 
@@ -920,6 +922,10 @@ func (lit *IntLitType) PrettyPrint(builder *AstPrettyPrinter) {
 
 func (lit *FloatLitType) PrettyPrint(builder *AstPrettyPrinter) {
 	fmt.Fprintf(builder, "%f", lit.Value)
+}
+
+func (lit *StringLitType) PrettyPrint(builder *AstPrettyPrinter) {
+	WriteStringLit(builder, lit.Value)
 }
 
 func (doc DocComment) PrettyPrint(builder *AstPrettyPrinter) {

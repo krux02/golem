@@ -138,8 +138,6 @@ func cgenprepass(expr TcExpr) TcExpr {
 		return expr
 	case StrLit:
 		return expr
-	case CStrLit:
-		return expr
 	case NilLit:
 		return expr
 	case TcArrayLit:
