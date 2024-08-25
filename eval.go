@@ -14,11 +14,11 @@ func EvalExpr(tc *TypeChecker, expr TcExpr, scope Scope) TcExpr {
 			lit.Items[i] = EvalExpr(tc, lit.Items[i], scope)
 		}
 		return lit
-	case StrLit:
+	case TcStrLit:
 		return lit
-	case IntLit:
+	case TcIntLit:
 		return lit
-	case FloatLit:
+	case TcFloatLit:
 		return lit
 	case TcCodeBlock:
 		// TODO: this should be implemented, with a bytecode compiler or something.

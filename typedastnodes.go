@@ -250,6 +250,24 @@ type TcErrorProcDef struct {
 	Signature *Signature
 }
 
+type TcStrLit struct {
+	Source string
+	Type   Type
+	Value  string
+}
+
+type TcIntLit struct {
+	Source string
+	Type   Type
+	Value  int64
+}
+
+type TcFloatLit struct {
+	Source string
+	Type   Type
+	Value  float64
+}
+
 type TcArrayLit struct {
 	Source   string
 	Items    []TcExpr
@@ -320,6 +338,9 @@ func (arg TcIfStmt) GetSource() string                 { return arg.Source }
 func (arg TcIfElseExpr) GetSource() string             { return arg.Source }
 func (arg TcCodeBlock) GetSource() string              { return arg.Source }
 func (arg TcCall) GetSource() string                   { return arg.Source }
+func (arg TcIntLit) GetSource() string                 { return arg.Source }
+func (arg TcFloatLit) GetSource() string               { return arg.Source }
+func (arg TcStrLit) GetSource() string                 { return arg.Source }
 func (arg TcArrayLit) GetSource() string               { return arg.Source }
 func (arg TcEnumSetLit) GetSource() string             { return arg.Source }
 func (arg *TcProcDef) GetSource() string               { return arg.Source }
@@ -390,9 +411,9 @@ func (arg TcIfStmt) GetMutable() bool          { return false }
 
 func (arg TcArrayLit) GetMutable() bool   { return false }
 func (arg TcEnumSetLit) GetMutable() bool { return false }
-func (arg IntLit) GetMutable() bool       { return false }
-func (arg FloatLit) GetMutable() bool     { return false }
-func (arg StrLit) GetMutable() bool       { return false }
+func (arg TcIntLit) GetMutable() bool     { return false }
+func (arg TcFloatLit) GetMutable() bool   { return false }
+func (arg TcStrLit) GetMutable() bool     { return false }
 func (arg CharLit) GetMutable() bool      { return false }
 func (arg NilLit) GetMutable() bool       { return false }
 

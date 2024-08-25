@@ -183,6 +183,10 @@ func (lit StrLit) PrettyPrint(builder *AstPrettyPrinter) {
 	WriteStringLit(builder, lit.Value)
 }
 
+func (lit TcStrLit) PrettyPrint(builder *AstPrettyPrinter) {
+	WriteStringLit(builder, lit.Value)
+}
+
 func (list ExprList) PrettyPrint(builder *AstPrettyPrinter) {
 	// TODO this is almost identical to `ArrayLit` maybe the node can me merged?
 	builder.WriteRune('(')
@@ -195,6 +199,10 @@ func (list ExprList) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteRune(')')
 }
 
+func (node TcErrorNode) PrettyPrint(builder *AstPrettyPrinter) {
+	node.SourceNode.PrettyPrint(builder)
+}
+
 func (lit ArrayLit) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteRune('[')
 	for i, expr := range lit.Items {
@@ -204,10 +212,6 @@ func (lit ArrayLit) PrettyPrint(builder *AstPrettyPrinter) {
 		builder.WriteNode(expr)
 	}
 	builder.WriteRune(']')
-}
-
-func (node TcErrorNode) PrettyPrint(builder *AstPrettyPrinter) {
-	node.SourceNode.PrettyPrint(builder)
 }
 
 func (lit TcArrayLit) PrettyPrint(builder *AstPrettyPrinter) {
@@ -280,6 +284,10 @@ func WriteIntLit(builder *strings.Builder, value int64) {
 
 func (lit IntLit) PrettyPrint(builder *AstPrettyPrinter) {
 	WriteIntLit(&builder.Builder, lit.Value)
+}
+
+func (lit TcIntLit) PrettyPrint(builder *AstPrettyPrinter) {
+	WriteIntLit(&builder.Builder, lit.Value)
 	if lit.Type != nil && lit.Type != (Type)(GetIntLitType(lit.Value)) {
 		builder.WriteString(":")
 		lit.Type.PrettyPrint(builder)
@@ -289,7 +297,12 @@ func (lit IntLit) PrettyPrint(builder *AstPrettyPrinter) {
 func (lit FloatLit) PrettyPrint(builder *AstPrettyPrinter) {
 	str := fmt.Sprintf("%f", lit.Value)
 	builder.WriteString(str)
-	if lit.Type != nil {
+}
+
+func (lit TcFloatLit) PrettyPrint(builder *AstPrettyPrinter) {
+	str := fmt.Sprintf("%f", lit.Value)
+	builder.WriteString(str)
+	if lit.Type != (Type)(GetFloatLitType(lit.Value)) {
 		builder.WriteString(":")
 		lit.Type.PrettyPrint(builder)
 	}

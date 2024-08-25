@@ -298,15 +298,15 @@ func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 }
 
 func (typ *BuiltinIntType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
-	return IntLit{Type: typ, Value: 0} // TODO no Source set
+	return TcIntLit{Type: typ, Value: 0} // TODO no Source set
 }
 
 func (typ *BuiltinFloatType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
-	return FloatLit{Type: typ}
+	return TcFloatLit{Type: typ}
 }
 
 func (typ *BuiltinStringType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
-	return StrLit{Type: typ}
+	return TcStrLit{Type: typ}
 }
 
 func (typ *ErrorType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
@@ -334,15 +334,15 @@ func (typ *EnumSetType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 }
 
 func (typ *IntLitType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
-	return IntLit{Type: typ, Value: typ.Value}
+	return TcIntLit{Type: typ, Value: typ.Value}
 }
 
 func (typ *FloatLitType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
-	return FloatLit{Type: typ, Value: typ.Value}
+	return TcFloatLit{Type: typ, Value: typ.Value}
 }
 
 func (typ *StringLitType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
-	return StrLit{Type: typ, Value: typ.Value}
+	return TcStrLit{Type: typ, Value: typ.Value}
 }
 
 func (typ *TypeType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
@@ -565,7 +565,7 @@ func registerConstant(name string, value TcExpr) {
 
 func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 	formatExpr := call.Args[0]
-	formatStrLit, ok := formatExpr.(StrLit)
+	formatStrLit, ok := formatExpr.(TcStrLit)
 	if !ok {
 		ReportErrorf(tc, formatExpr, "format string must be a string literal")
 		return call
@@ -643,7 +643,7 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 		Source:    call.Sym.Source,
 		Signature: builtinCPrintf,
 	}
-	result.Args[0] = StrLit{Source: formatStrLit.Source, Type: TypeCString, Value: formatStrC.String()}
+	result.Args[0] = TcStrLit{Source: formatStrLit.Source, Type: TypeCString, Value: formatStrC.String()}
 	return result
 }
 
@@ -653,7 +653,7 @@ func BuiltinAddLinkerFlags(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 		return newErrorNode(call)
 	}
 	switch arg0 := call.Args[0].(type) {
-	case StrLit:
+	case TcStrLit:
 		program := scope.CurrentProgram
 		program.LinkerFlags = append(program.LinkerFlags, arg0.Value)
 	default:
@@ -669,7 +669,7 @@ func BuiltinAddCFlags(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 		return newErrorNode(call)
 	}
 	switch arg0 := call.Args[0].(type) {
-	case StrLit:
+	case TcStrLit:
 		scope.CurrentPackage.CFlags = append(scope.CurrentPackage.CFlags, arg0.Value)
 	default:
 		ReportErrorf(tc, call, "expect single string literal as argument")
@@ -773,8 +773,8 @@ func init() {
 		registerBuiltin("f64", "(double)(", "", ")", []Type{typ}, TypeFloat64, 0)
 
 		if intType, isIntType := typ.(*BuiltinIntType); isIntType {
-			registerSimpleTemplate("high", []Type{GetTypeType(typ)}, typ, IntLit{Value: int64(intType.MaxValue), Type: typ})
-			registerSimpleTemplate("low", []Type{GetTypeType(typ)}, typ, IntLit{Value: intType.MinValue, Type: typ})
+			registerSimpleTemplate("high", []Type{GetTypeType(typ)}, typ, TcIntLit{Value: int64(intType.MaxValue), Type: typ})
+			registerSimpleTemplate("low", []Type{GetTypeType(typ)}, typ, TcIntLit{Value: intType.MinValue, Type: typ})
 		}
 	}
 
@@ -834,7 +834,7 @@ func init() {
 
 	registerBuiltin("assert", "assert(", "", ")", []Type{TypeBoolean}, TypeVoid, 0)
 
-	registerConstant("true", IntLit{Type: TypeBoolean, Value: 1})
-	registerConstant("false", IntLit{Type: TypeBoolean, Value: 0})
+	registerConstant("true", TcIntLit{Type: TypeBoolean, Value: 1})
+	registerConstant("false", TcIntLit{Type: TypeBoolean, Value: 0})
 
 }

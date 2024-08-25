@@ -140,26 +140,23 @@ type CodeBlock struct {
 	Items  []Expr
 }
 
-type StrLit struct {
-	Source string
-	Type   Type
-	Value  string
-}
-
 type CharLit struct {
 	Source string
 	Rune   rune
 }
 
+type StrLit struct {
+	Source string
+	Value  string
+}
+
 type IntLit struct {
 	Source string
-	Type   Type
 	Value  int64
 }
 
 type FloatLit struct {
 	Source string
-	Type   Type
 	Value  float64
 }
 

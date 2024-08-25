@@ -1,4 +1,3 @@
-
 # NumErrors:      15
 
 proc foo(arg: i32): i64 = {

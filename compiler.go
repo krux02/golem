@@ -158,7 +158,7 @@ func (builder *CodeBuilder) compileStrLit(value string, boxed bool) {
 	}
 }
 
-func (builder *CodeBuilder) CompileIntLit(lit IntLit) {
+func (builder *CodeBuilder) CompileIntLit(lit TcIntLit) {
 	// C doesn't allow -9223372036854775808 as a singed integer literal
 	if lit.Value == math.MinInt64 {
 		builder.WriteString("-9223372036854775807 - 1")
@@ -167,7 +167,7 @@ func (builder *CodeBuilder) CompileIntLit(lit IntLit) {
 	}
 }
 
-func (builder *CodeBuilder) CompileFloatLit(lit FloatLit) {
+func (builder *CodeBuilder) CompileFloatLit(lit TcFloatLit) {
 	fmt.Fprintf(builder, "%f", lit.Value)
 }
 
@@ -332,13 +332,13 @@ func (builder *CodeBuilder) CompileExprWithPrefix(context *PackageGeneratorConte
 		builder.compileCall(context, ex)
 	case TcDotExpr:
 		builder.CompileDotExpr(context, ex)
-	case StrLit:
+	case TcStrLit:
 		builder.compileStrLit(ex.Value, ex.Type == TypeStr)
 	case CharLit:
 		builder.compileCharLit(ex)
-	case IntLit:
+	case TcIntLit:
 		builder.CompileIntLit(ex)
-	case FloatLit:
+	case TcFloatLit:
 		builder.CompileFloatLit(ex)
 	case NilLit:
 		builder.WriteString("NULL")

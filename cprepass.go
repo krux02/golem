@@ -132,11 +132,11 @@ func cgenprepass(expr TcExpr) TcExpr {
 			Source: expr.Source,
 			Items:  cgenprepassSlice(expr.Items),
 		}
-	case IntLit:
+	case TcIntLit:
 		return expr
-	case FloatLit:
+	case TcFloatLit:
 		return expr
-	case StrLit:
+	case TcStrLit:
 		return expr
 	case NilLit:
 		return expr

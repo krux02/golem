@@ -1189,22 +1189,22 @@ func (call TcCall) GetType() Type {
 	return call.Sym.Signature.ResultType
 }
 
-func (lit StrLit) GetType() Type {
-	return lit.Type
-}
-
 func (lit CharLit) GetType() Type {
 	return TypeChar
 }
 
-func (lit IntLit) GetType() Type {
+func (lit TcStrLit) GetType() Type {
+	return lit.Type
+}
+
+func (lit TcIntLit) GetType() Type {
 	if lit.Type == nil {
 		panic(fmt.Errorf("internal error: type of IntLit not set"))
 	}
 	return lit.Type
 }
 
-func (lit FloatLit) GetType() Type {
+func (lit TcFloatLit) GetType() Type {
 	if lit.Type == nil {
 		panic(fmt.Errorf("internal error: type of FloatLit %s not set", lit.Source))
 	}
@@ -1313,35 +1313,39 @@ func TypeCheckColonExpr(tc *TypeChecker, scope Scope, arg ColonExpr, expected Ty
 }
 
 func TypeCheckIntLit(tc *TypeChecker, scope Scope, arg IntLit, expected TypeConstraint) TcExpr {
-	switch typ := ExpectType(tc, arg, arg.Type, expected).(type) {
+	switch typ := ExpectType(tc, arg, GetIntLitType(arg.Value), expected).(type) {
 	case *ErrorType, *IntLitType, *BuiltinIntType:
-		result := IntLit{
+		return TcIntLit{
 			Source: arg.Source,
 			Type:   typ,
 			Value:  arg.Value,
 		}
-		return result
 	case *BuiltinFloatType:
-		var lit FloatLit
-		lit.Source = arg.Source
-		lit.Value = float64(arg.Value)
-		lit.Type = typ
-		return lit
+		return TcFloatLit{
+			Source: arg.Source,
+			Type:   typ,
+			Value:  float64(arg.Value),
+		}
 	default:
 		panic(fmt.Errorf("internal error: %T", typ))
 	}
 }
 
 func TypeCheckFloatLit(tc *TypeChecker, scope Scope, arg FloatLit, expected TypeConstraint) TcExpr {
-	// TODO: this mutates in input AST, this should not be
-	arg.Type = ExpectType(tc, arg, arg.Type, expected)
-	return (TcExpr)(arg)
+	return TcFloatLit{
+		Source: arg.Source,
+		Type:   ExpectType(tc, arg, GetFloatLitType(arg.Value), expected),
+		Value:  arg.Value,
+	}
 }
 
 func (tc *TypeChecker) TypeCheckStrLit(scope Scope, arg StrLit, expected TypeConstraint) TcExpr {
 	// TODO: this mutates in input AST, this should not be
-	arg.Type = ExpectType(tc, arg, arg.Type, expected)
-	return (TcExpr)(arg)
+	return TcStrLit{
+		Source: arg.Source,
+		Type:   ExpectType(tc, arg, GetStringLitType(arg.Value), expected),
+		Value:  arg.Value,
+	}
 }
 
 func TypeCheckExpr(tc *TypeChecker, scope Scope, arg Expr, expected TypeConstraint) TcExpr {
@@ -1437,7 +1441,7 @@ func GetArrayType(elem Type, len int64) (result *ArrayType) {
 		// TODO the array index operator needs mutability propagation of the first argument.
 		// TODO this should be generic for better error messages on missing overloads, listing all currently known array types is a bit much
 		registerBuiltin("[", "", ".arr[", "]", []Type{result, TypeInt64}, elem, 0)
-		registerSimpleTemplate("len", []Type{result}, TypeInt64, IntLit{Type: TypeInt64, Value: len})
+		registerSimpleTemplate("len", []Type{result}, TypeInt64, TcIntLit{Type: TypeInt64, Value: len})
 	}
 	return result
 }

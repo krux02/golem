@@ -300,7 +300,6 @@ func parseStrLit(tokenizer *Tokenizer) (result StrLit) {
 	}
 
 	result.Value = b.String()
-	result.Type = GetStringLitType(result.Value)
 	return result
 }
 
@@ -358,7 +357,6 @@ func parseIntLit(tokenizer *Tokenizer) (result IntLit) {
 		result.Value = int64(intValue)
 	}
 
-	result.Type = GetIntLitType(result.Value)
 	return result
 }
 
@@ -371,7 +369,6 @@ func parseFloatLit(tokenizer *Tokenizer) (result FloatLit) {
 		panic("internal error invalid float token")
 	}
 	result.Value = floatValue
-	result.Type = GetFloatLitType(floatValue)
 	return result
 }
 
@@ -492,7 +489,6 @@ func parsePrefixCall(tokenizer *Tokenizer, preventInfixOperatorInArgument bool) 
 			if intLit, isIntLit := arg.(IntLit); isIntLit {
 				intLit.Source = joinSubstr(tokenizer.code, op.Source, intLit.Source)
 				intLit.Value = -intLit.Value
-				intLit.Type = GetIntLitType(intLit.Value)
 				return intLit
 			}
 			if floatLit, isFloatLit := arg.(FloatLit); isFloatLit {
