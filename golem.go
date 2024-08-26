@@ -101,7 +101,8 @@ func errorTest(t *testing.T, filename string) {
 			t.Fatalf("unexpected error at line %d:\n  %s", line, error.msg)
 		}
 		if expectedError != error.msg {
-			t.Fatalf("errormessage does not match, got '%s' but expected '%s'\n", error.msg, expectedError)
+
+			t.Fatalf("errormessage at line %d does not match\n  got \"%s\" but expected \"%s\"\n", line, error.msg, expectedError)
 		}
 		delete(expectedErrors, line)
 	}

@@ -492,14 +492,12 @@ func ReportIllegalDocComment(tc *TypeChecker, doc DocComment) {
 
 func ExpectType(tc *TypeChecker, node AstNode, gotten Type, expected TypeConstraint) Type {
 	// TODO this doesn't work for partial types (e.g. array[<unspecified>])
-	// TODO this should have some cleanup, it has redundant code and seems to be error prone
 	if gotten == TypeError {
 		return TypeError
 	}
 	if expected == TypeUnspecified {
 		return gotten
 	}
-
 	switch expected := expected.(type) {
 	case *UnspecifiedType:
 		return gotten
@@ -510,47 +508,11 @@ func ExpectType(tc *TypeChecker, node AstNode, gotten Type, expected TypeConstra
 			}
 		}
 	case UniqueTypeConstraint:
-		{
-			expected := expected.Typ
-			if expected == gotten {
-				return gotten
-			}
-			if expected == TypeError {
-				return TypeError
-			}
-			if theIntLitType, gotIntLitType := gotten.(*IntLitType); gotIntLitType {
-				if theBuiltinType, expectBuiltinType := expected.(*BuiltinIntType); expectBuiltinType {
-					if theBuiltinType.MinValue <= theIntLitType.Value &&
-						(theIntLitType.Value < 0 || uint64(theIntLitType.Value) <= theBuiltinType.MaxValue) {
-						return theBuiltinType
-					}
-					ReportErrorf(tc, node, "integer literal %d out of range for type '%s' [%d..%d]",
-						theIntLitType.Value, theBuiltinType.Name, theBuiltinType.MinValue, theBuiltinType.MaxValue)
-					return TypeError
-				}
-				if floatType, isFloatType := expected.(*BuiltinFloatType); isFloatType {
-					if floatType == TypeFloat32 {
-						if int64(float32(theIntLitType.Value)) != theIntLitType.Value {
-							ReportErrorf(tc, node, "can't represent %d as float32 precisely", theIntLitType.Value)
-						}
-					} else if floatType == TypeFloat64 {
-						if int64(theIntLitType.Value) != theIntLitType.Value {
-							ReportErrorf(tc, node, "can't represent %d as float64 precisely", theIntLitType.Value)
-						}
-					}
-					return floatType
-				}
-			}
-			if _, gotFloatLitType := gotten.(*FloatLitType); gotFloatLitType {
-				if floatType, isFloatType := expected.(*BuiltinFloatType); isFloatType {
-					return floatType
-				}
-			}
-			if _, gotStringLitType := gotten.(*StringLitType); gotStringLitType {
-				if stringType, isStringType := expected.(*BuiltinStringType); isStringType {
-					return stringType
-				}
-			}
+		if expected.Typ == gotten {
+			return gotten
+		}
+		if expected.Typ == TypeError {
+			return TypeError
 		}
 	}
 
@@ -855,7 +817,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected TypeConstr
 			return newErrorNode(call)
 		}
 		typ := LookUpType(tc, scope, TypeExpr(call.Args[1]))
-		ExpectType(tc, call, typ, expected)
+		typ = ExpectType(tc, call, typ, expected)
 		result := TypeCheckExpr(tc, scope, call.Args[0], UniqueTypeConstraint{typ})
 		return result
 	}
@@ -1313,37 +1275,125 @@ func TypeCheckColonExpr(tc *TypeChecker, scope Scope, arg ColonExpr, expected Ty
 }
 
 func TypeCheckIntLit(tc *TypeChecker, scope Scope, arg IntLit, expected TypeConstraint) TcExpr {
-	switch typ := ExpectType(tc, arg, GetIntLitType(arg.Value), expected).(type) {
-	case *ErrorType, *IntLitType, *BuiltinIntType:
+	uniqueConstraint, isUniqueConstraint := expected.(UniqueTypeConstraint)
+	if !isUniqueConstraint {
+		ReportErrorf(tc, arg, "int literal needs to have a unique type constraint, but got '%s'", AstFormat(expected))
 		return TcIntLit{
 			Source: arg.Source,
-			Type:   typ,
+			Type:   TypeError,
 			Value:  arg.Value,
 		}
+	}
+
+	switch typ := uniqueConstraint.Typ.(type) {
 	case *BuiltinFloatType:
+		if typ == TypeFloat32 {
+			if int64(float32(arg.Value)) != arg.Value {
+				ReportErrorf(tc, arg, "can't represent %d as float32 precisely", arg.Value)
+				goto error
+			}
+		} else if typ == TypeFloat64 {
+			if int64(arg.Value) != arg.Value {
+				ReportErrorf(tc, arg, "can't represent %d as float64 precisely", arg.Value)
+				goto error
+			}
+		}
 		return TcFloatLit{
 			Source: arg.Source,
 			Type:   typ,
 			Value:  float64(arg.Value),
 		}
-	default:
-		panic(fmt.Errorf("internal error: %T", typ))
+	case *BuiltinIntType:
+		if (arg.Value < typ.MinValue) || (0 <= arg.Value && typ.MaxValue < uint64(arg.Value)) {
+			ReportErrorf(tc, arg, "integer literal %d out of range for type '%s' [%d..%d]",
+				arg.Value, typ.Name, typ.MinValue, typ.MaxValue)
+			goto error
+		}
+		return TcIntLit{
+			Source: arg.Source,
+			Type:   typ,
+			Value:  arg.Value,
+		}
+	case *IntLitType:
+		if arg.Value != typ.Value {
+			ReportUnexpectedType(tc, arg, expected, typ)
+			goto error
+		}
+		return TcIntLit{
+			Source: arg.Source,
+			Type:   typ,
+			Value:  arg.Value,
+		}
+	case *ErrorType:
+		// skipping rereporting here
+		goto error
+	}
+
+	ReportUnexpectedType(tc, arg, expected, GetIntLitType(arg.Value))
+error:
+	return TcIntLit{
+		Source: arg.Source,
+		Type:   TypeError,
+		Value:  arg.Value,
 	}
 }
 
 func TypeCheckFloatLit(tc *TypeChecker, scope Scope, arg FloatLit, expected TypeConstraint) TcExpr {
+	uniqueConstraint, isUniqueConstraint := expected.(UniqueTypeConstraint)
+	if !isUniqueConstraint {
+		ReportErrorf(tc, arg, "float literal needs to have a unique type constraint, but got '%s'", AstFormat(expected))
+		return TcFloatLit{
+			Source: arg.Source,
+			Type:   TypeError,
+			Value:  arg.Value,
+		}
+	}
+	switch typ := uniqueConstraint.Typ.(type) {
+	case *BuiltinFloatType:
+		return TcFloatLit{
+			Source: arg.Source,
+			Type:   typ,
+			Value:  arg.Value,
+		}
+	case *ErrorType:
+		// skipping rereporting here
+		goto error
+	}
+	ReportUnexpectedType(tc, arg, expected, GetFloatLitType(arg.Value))
+error:
 	return TcFloatLit{
 		Source: arg.Source,
-		Type:   ExpectType(tc, arg, GetFloatLitType(arg.Value), expected),
+		Type:   TypeError,
 		Value:  arg.Value,
 	}
 }
 
 func (tc *TypeChecker) TypeCheckStrLit(scope Scope, arg StrLit, expected TypeConstraint) TcExpr {
-	// TODO: this mutates in input AST, this should not be
+	uniqueConstraint, isUniqueConstraint := expected.(UniqueTypeConstraint)
+	if !isUniqueConstraint {
+		ReportErrorf(tc, arg, "string literal needs to have a unique type constraint, but got '%s'", AstFormat(expected))
+		return TcStrLit{
+			Source: arg.Source,
+			Type:   TypeError,
+			Value:  arg.Value,
+		}
+	}
+
+	switch typ := uniqueConstraint.Typ.(type) {
+	case *BuiltinStringType:
+		return TcStrLit{
+			Source: arg.Source,
+			Type:   typ,
+			Value:  arg.Value,
+		}
+	case *ErrorType:
+		goto error
+	}
+	ReportUnexpectedType(tc, arg, expected, GetStringLitType(arg.Value))
+error:
 	return TcStrLit{
 		Source: arg.Source,
-		Type:   ExpectType(tc, arg, GetStringLitType(arg.Value), expected),
+		Type:   TypeError,
 		Value:  arg.Value,
 	}
 }

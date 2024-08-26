@@ -1,4 +1,4 @@
-# NumErrors:      15
+# NumErrors:      18
 
 proc foo(arg: i32): i64 = {
   printf("foo1: %d\n", i32(arg))
@@ -22,6 +22,9 @@ proc bar2(arg_: i64): i64 = 0     # Error: proc arg identifier may not start or 
 proc bar3(arg__0: i64): i64 = 0   # Error: proc arg identifier may not use __ (double underscore), reserved for internal usage
 
 proc main():i64 = {
+  let tmp0 = 321 # Error: int literal needs to have a unique type constraint, but got 'no constraint'
+  let tmp1 = 45.67 # Error: float literal needs to have a unique type constraint, but got 'no constraint'
+  let tmp2 = "abcdef" # Error: string literal needs to have a unique type constraint, but got 'no constraint'
   let tmp: i8 = 123
   foo(tmp) # Error: expected type 'i32 | i64' but got type 'i8'
   tmp -= 8 # Error: argument must be mutable
@@ -31,7 +34,7 @@ proc main():i64 = {
   let x_ : i32 = 123 # Error: var identifier may not start or end with _ (underscore), reserved for internal usage
   let _x : i32 = 321 # Error: var identifier may not start or end with _ (underscore), reserved for internal usage
   let x__x : str = "abc" # Error: var identifier may not use __ (double underscore), reserved for internal usage
-  let tmp3 = i8(128) # Error: expected type 'f32 | f64 | i8 | i16 | i32 | i64 | u8 | u16 | u32 | u64' but got type '128'
+  let tmp3 = i8(128:128) # Error: expected type 'f32 | f64 | i8 | i16 | i32 | i64 | u8 | u16 | u32 | u64' but got type '128'
   return 0
 }
 

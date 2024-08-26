@@ -591,7 +591,11 @@ func (typ *BuiltinStringType) PrettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (typ *UnspecifiedType) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("?unspecified?")
+	// TODO, currently this function is used for both printing the ast as source
+	// and as message. The Unspecified should not be used for ast printing
+	// therefore this function is just optimized for message printing. This is
+	// weird and should probably have a cleaner solution.
+	builder.WriteString("no constraint")
 }
 
 func (typ *ErrorType) PrettyPrint(builder *AstPrettyPrinter) {
