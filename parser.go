@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
+	"math/big"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"unicode/utf8"
 	"unsafe"
@@ -308,53 +308,14 @@ func parseIntLit(tokenizer *Tokenizer) (result IntLit) {
 	tokenizer.expectKind2(token, TkIntLit, TkHexLit)
 	result = IntLit{Source: token.value}
 
+	var ok bool
 	if token.kind == TkIntLit {
-		intValue := Must(strconv.Atoi(token.value))
-		result.Value = int64(intValue)
+		result.Value, ok = big.NewInt(0).SetString(token.value, 10)
 	} else {
-		str := token.value[2:]
-		var intValue uint64
-		for _, c := range str {
-			var nibble uint64
-			switch c {
-			case '0':
-				nibble = 0
-			case '1':
-				nibble = 1
-			case '2':
-				nibble = 2
-			case '3':
-				nibble = 3
-			case '4':
-				nibble = 4
-			case '5':
-				nibble = 5
-			case '6':
-				nibble = 6
-			case '7':
-				nibble = 7
-			case '8':
-				nibble = 8
-			case '9':
-				nibble = 9
-			case 'a', 'A':
-				nibble = 10
-			case 'b', 'B':
-				nibble = 11
-			case 'c', 'C':
-				nibble = 12
-			case 'd', 'D':
-				nibble = 13
-			case 'e', 'E':
-				nibble = 14
-			case 'f', 'F':
-				nibble = 15
-			default:
-				panic(fmt.Errorf("internal error, %c token.value: %s", c, token.value))
-			}
-			intValue = (intValue << 4) | nibble
-		}
-		result.Value = int64(intValue)
+		result.Value, ok = big.NewInt(0).SetString(token.value[2:], 16)
+	}
+	if !ok {
+		panic(fmt.Errorf("internal error, token.value: %s", token.value))
 	}
 
 	return result
@@ -364,7 +325,8 @@ func parseFloatLit(tokenizer *Tokenizer) (result FloatLit) {
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkFloatLit)
 	result.Source = token.value
-	floatValue, err := strconv.ParseFloat(token.value, 64)
+
+	floatValue, _, err := big.ParseFloat(token.value, 10, 64, big.ToNearestEven)
 	if err != nil {
 		panic("internal error invalid float token")
 	}
@@ -488,12 +450,12 @@ func parsePrefixCall(tokenizer *Tokenizer, preventInfixOperatorInArgument bool) 
 		if ptr1+uintptr(len(op.Source)) == ptr2 { // no space
 			if intLit, isIntLit := arg.(IntLit); isIntLit {
 				intLit.Source = joinSubstr(tokenizer.code, op.Source, intLit.Source)
-				intLit.Value = -intLit.Value
+				intLit.Value.Neg(intLit.Value)
 				return intLit
 			}
 			if floatLit, isFloatLit := arg.(FloatLit); isFloatLit {
 				floatLit.Source = joinSubstr(tokenizer.code, op.Source, floatLit.Source)
-				floatLit.Value = -floatLit.Value
+				floatLit.Value.Neg(floatLit.Value)
 				return floatLit
 			}
 		}

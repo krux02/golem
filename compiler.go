@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math"
+	"math/big"
 	"strings"
 )
 
@@ -119,7 +120,7 @@ func (builder *CodeBuilder) compileCharLit(lit CharLit) {
 func (builder *CodeBuilder) compileStrLit(value string, boxed bool) {
 	if boxed {
 		builder.WriteString(`(string){.len=`)
-		WriteIntLit(&builder.Builder, int64(len(value)))
+		WriteUIntLit(&builder.Builder, false, uint64(len(value)))
 		builder.WriteString(`, .data="`)
 	} else {
 		builder.WriteString(`"`)
@@ -158,9 +159,11 @@ func (builder *CodeBuilder) compileStrLit(value string, boxed bool) {
 	}
 }
 
+var BigMinInt64 = big.NewInt(math.MinInt64)
+
 func (builder *CodeBuilder) CompileIntLit(lit TcIntLit) {
 	// C doesn't allow -9223372036854775808 as a singed integer literal
-	if lit.Value == math.MinInt64 {
+	if lit.Value.Cmp(BigMinInt64) == 0 {
 		builder.WriteString("-9223372036854775807 - 1")
 	} else {
 		WriteIntLit(&builder.Builder, lit.Value)
@@ -271,7 +274,7 @@ func (builder *CodeBuilder) CompileForLoopStmt(context *PackageGeneratorContext,
 		builder.WriteString("_END = ")
 		builder.WriteString(stmt.LoopSym.Source)
 		builder.WriteString(" + ")
-		WriteIntLit(&builder.Builder, arrayType.Len)
+		WriteUIntLit(&builder.Builder, false, uint64(arrayType.Len))
 		builder.WriteString("; ")
 		builder.WriteString(stmt.LoopSym.Source)
 		builder.WriteString(" != ")

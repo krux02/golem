@@ -1,5 +1,7 @@
 package main
 
+import "math/big"
+
 // an overview all all nods that are allowed in an untyped AST emitted directly from the parser
 
 type AstNode interface {
@@ -152,12 +154,12 @@ type StrLit struct {
 
 type IntLit struct {
 	Source string
-	Value  int64
+	Value  *big.Int
 }
 
 type FloatLit struct {
 	Source string
-	Value  float64
+	Value  *big.Float
 }
 
 type NilLit struct {

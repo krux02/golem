@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"math"
+	"math/big"
 	"slices"
 	"strings"
 )
@@ -252,7 +252,10 @@ func (lit TcEnumSetLit) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteRune(']')
 }
 
-func WriteUIntLit(builder *strings.Builder, value uint64) {
+func WriteUIntLit(builder *strings.Builder, negative bool, value uint64) {
+	if negative {
+		builder.WriteString("-")
+	}
 	if value == 0 {
 		builder.WriteByte('0')
 		return
@@ -269,17 +272,9 @@ func WriteUIntLit(builder *strings.Builder, value uint64) {
 	}
 }
 
-func WriteIntLit(builder *strings.Builder, value int64) {
-	if value < 0 {
-		builder.WriteString("-")
-		if value == math.MinInt64 {
-			WriteUIntLit(builder, -math.MinInt64)
-		} else {
-			WriteUIntLit(builder, uint64(-value))
-		}
-	} else {
-		WriteUIntLit(builder, uint64(value))
-	}
+func WriteIntLit(builder *strings.Builder, value *big.Int) {
+	builder.WriteString(value.String())
+	// fmt.Fprintf(builder, "%d", value)
 }
 
 func (lit IntLit) PrettyPrint(builder *AstPrettyPrinter) {
@@ -605,7 +600,7 @@ func (typ *ErrorType) PrettyPrint(builder *AstPrettyPrinter) {
 
 func (typ *ArrayType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("array(")
-	WriteIntLit(&builder.Builder, typ.Len)
+	WriteUIntLit(&builder.Builder, false, uint64(typ.Len))
 	builder.WriteString(", ")
 	builder.WriteNode(typ.Elem)
 	builder.WriteString(")")

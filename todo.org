@@ -1,4 +1,3 @@
-* TODO ensure naked literals are conveted to an actual type
 * TODO find a better syntax for Type : TypeConstraint as colon is already reserved for value : type separation
 * TODO allow to disable overloading for some functions
 * TODO fix or remove newline escape, curently it has many problems
@@ -74,3 +73,4 @@ Currently, ~GetMutable~ returns, if an expression is mutable. I
 ** package linker flags for gl and sdl2
 ** allow addr, ptr, var, not, discard, return as general prefix expression/operator and test it.
 ** allow newline in a function call.
+** ensure naked literals are conveted to an actual type

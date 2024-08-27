@@ -10,7 +10,7 @@
      (cons (rx (? "-") bow (1+ digit) (? "." (1+ digit)) eow) font-lock-constant-face)
      (cons (rx bow "0x" (1+ hex) eow) font-lock-constant-face)
      (cons (rx bow (or
-        "const" "for" "while" "do" "in" "notin" "return" "discard" "addr" "var" "let" "if" "proc" "emit" "and" "or" "not" "type" "else" "struct" "union" "trait" "static" "import" "enum") eow) font-lock-keyword-face)
+                    "const" "for" "while" "do" "in" "notin" "return" "discard" "addr" "var" "let" "if" "proc" "emit" "and" "or" "not" "type" "else" "struct" "union" "trait" "static" "import" "enum") eow) font-lock-keyword-face)
      (cons (rx bow "`" ident "`") font-lock-variable-name-face)
      (cons (rx (+ "\t")) font-lock-warning-face)
      (list (rx bow (or "true" "false") eow) 0 font-lock-constant-face)
@@ -73,15 +73,15 @@
   (setq-local comment-start "#")
   (setq-local comment-start-skip "#+ *")
   (setq-local font-lock-defaults '(golem-highlights))
+
+  (setq-local compilation-directory (projectile-project-root))
   (setq-local
    compile-command
    (let* ((project-root (projectile-project-root))
           (project-relative-file-name (file-relative-name  buffer-file-name project-root))
           (raw-file-name (file-name-nondirectory buffer-file-name)))
      (concat
-      "cd "
-      (file-relative-name  project-root)
-      " && go build && ./golem "
+      "go build && ./golem "
       project-relative-file-name))))
 
 (provide 'golem-mode)

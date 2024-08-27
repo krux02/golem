@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/big"
 	"path/filepath"
 	"strings"
 )
@@ -144,7 +145,7 @@ func LookUpType(tc *TypeChecker, scope Scope, expr TypeExpr) Type {
 				return TypeError
 			}
 			elem := LookUpType(tc, scope, x.Args[1])
-			return GetArrayType(elem, intLit.Value)
+			return GetArrayType(elem, intLit.Value.Int64())
 		case "set":
 			if !ExpectArgsLen(tc, expr, len(x.Args), 1) {
 				return TypeError
@@ -1287,24 +1288,30 @@ func TypeCheckIntLit(tc *TypeChecker, scope Scope, arg IntLit, expected TypeCons
 
 	switch typ := uniqueConstraint.Typ.(type) {
 	case *BuiltinFloatType:
+
+		if !arg.Value.IsInt64() {
+			ReportErrorf(tc, arg, "can't represent %d as %s precisely", arg.Value, typ.Name)
+			goto error
+		}
+		int64Value := arg.Value.Int64()
 		if typ == TypeFloat32 {
-			if int64(float32(arg.Value)) != arg.Value {
-				ReportErrorf(tc, arg, "can't represent %d as float32 precisely", arg.Value)
+			if int64(float32(int64Value)) != int64Value {
+				ReportErrorf(tc, arg, "can't represent %d as %s precisely", arg.Value, typ.Name)
 				goto error
 			}
 		} else if typ == TypeFloat64 {
-			if int64(arg.Value) != arg.Value {
-				ReportErrorf(tc, arg, "can't represent %d as float64 precisely", arg.Value)
+			if int64(float64(int64Value)) != int64Value {
+				ReportErrorf(tc, arg, "can't represent %d as %s precisely", arg.Value, typ.Name)
 				goto error
 			}
 		}
 		return TcFloatLit{
 			Source: arg.Source,
 			Type:   typ,
-			Value:  float64(arg.Value),
+			Value:  big.NewFloat(0).SetInt64(int64Value),
 		}
 	case *BuiltinIntType:
-		if (arg.Value < typ.MinValue) || (0 <= arg.Value && typ.MaxValue < uint64(arg.Value)) {
+		if (arg.Value.Cmp(typ.MinValue) < 0) || (typ.MaxValue.Cmp(arg.Value) < 0) {
 			ReportErrorf(tc, arg, "integer literal %d out of range for type '%s' [%d..%d]",
 				arg.Value, typ.Name, typ.MinValue, typ.MaxValue)
 			goto error
@@ -1462,8 +1469,10 @@ var enumSetTypeMap map[*EnumType]*EnumSetType
 var ptrTypeMap map[Type]*PtrType
 var typeTypeMap map[Type]*TypeType
 var packageMap map[string]*TcPackageDef
-var intLitTypeMap map[int64]*IntLitType
-var floatLitTypeMap map[float64]*FloatLitType
+
+// TODO test that this actually work big big number types
+var intLitTypeMap map[string]*IntLitType
+var floatLitTypeMap map[string]*FloatLitType
 var stringLitTypeMap map[string]*StringLitType
 
 func GetPackage(currentProgram *ProgramContext, workDir string, importPath string) (result *TcPackageDef, err error) {
@@ -1491,7 +1500,7 @@ func GetArrayType(elem Type, len int64) (result *ArrayType) {
 		// TODO the array index operator needs mutability propagation of the first argument.
 		// TODO this should be generic for better error messages on missing overloads, listing all currently known array types is a bit much
 		registerBuiltin("[", "", ".arr[", "]", []Type{result, TypeInt64}, elem, 0)
-		registerSimpleTemplate("len", []Type{result}, TypeInt64, TcIntLit{Type: TypeInt64, Value: len})
+		registerSimpleTemplate("len", []Type{result}, TypeInt64, TcIntLit{Type: TypeInt64, Value: big.NewInt(len)})
 	}
 	return result
 }
@@ -1515,21 +1524,25 @@ func GetPtrType(target Type) (result *PtrType) {
 	return result
 }
 
-func GetIntLitType(value int64) (result *IntLitType) {
-	result, ok := intLitTypeMap[value]
+func GetIntLitType(value *big.Int) (result *IntLitType) {
+	// TODO test this
+	strValue := value.String()
+	result, ok := intLitTypeMap[strValue]
 	if !ok {
-		result = &IntLitType{Value: value}
-		intLitTypeMap[value] = result
+		result = &IntLitType{Value: big.NewInt(0).Set(value)}
+		intLitTypeMap[strValue] = result
 	}
 	return result
 }
 
-func GetFloatLitType(value float64) (result *FloatLitType) {
+func GetFloatLitType(value *big.Float) (result *FloatLitType) {
 	// TODO test this with nan values
-	result, ok := floatLitTypeMap[value]
+	// TODO WARNING IMPORTANT CRITICAL this really needs to be tested if it actually works. I doubt it
+	strValue := value.String()
+	result, ok := floatLitTypeMap[strValue]
 	if !ok {
-		result = &FloatLitType{Value: value}
-		floatLitTypeMap[value] = result
+		result = &FloatLitType{Value: big.NewFloat(0).Set(value)}
+		floatLitTypeMap[strValue] = result
 	}
 	return result
 }

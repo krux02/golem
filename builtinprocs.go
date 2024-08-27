@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/big"
 	"reflect"
 	"strings"
 )
@@ -28,8 +29,8 @@ type BuiltinIntType struct {
 	Name         string
 	InternalName string
 	MangleChar   rune
-	MinValue     int64
-	MaxValue     uint64
+	MinValue     *big.Int
+	MaxValue     *big.Int
 }
 
 type ErrorType struct{}
@@ -78,12 +79,11 @@ type ArrayType struct {
 // types for literals
 
 type IntLitType struct {
-	// TODO needs to be able to store all values from uint64 and int64, int640is not enough
-	Value int64
+	Value *big.Int
 }
 
 type FloatLitType struct {
-	Value float64
+	Value *big.Float
 }
 
 type StringLitType struct {
@@ -222,17 +222,17 @@ func (typ *TypeType) ManglePrint(builder *strings.Builder) {
 
 // **** Constants ****
 // These type names are by no means final, there are just to get
-// something working.
+// something working
 
-var TypeInt8 = &BuiltinIntType{"i8", "int8_t", 'm', -0x80, 0x7f}
-var TypeInt16 = &BuiltinIntType{"i16", "int16_t", 's', -0x8000, 0x7fff}
-var TypeInt32 = &BuiltinIntType{"i32", "int32_t", 'i', -0x80000000, 0x7fffffff}
-var TypeInt64 = &BuiltinIntType{"i64", "int64_t", 'l', -0x8000000000000000, 0x7fffffffffffffff}
+var TypeInt8 = &BuiltinIntType{"i8", "int8_t", 'm', big.NewInt(-0x80), big.NewInt(0x7f)}
+var TypeInt16 = &BuiltinIntType{"i16", "int16_t", 's', big.NewInt(-0x8000), big.NewInt(0x7fff)}
+var TypeInt32 = &BuiltinIntType{"i32", "int32_t", 'i', big.NewInt(-0x80000000), big.NewInt(0x7fffffff)}
+var TypeInt64 = &BuiltinIntType{"i64", "int64_t", 'l', big.NewInt(-0x8000000000000000), big.NewInt(0x7fffffffffffffff)}
 
-var TypeUInt8 = &BuiltinIntType{"u8", "uint8_t", 'M', 0, 0xff}
-var TypeUInt16 = &BuiltinIntType{"u16", "uint16_t", 'S', 0, 0xffff}
-var TypeUInt32 = &BuiltinIntType{"u32", "uint32_t", 'I', 0, 0xffffffff}
-var TypeUInt64 = &BuiltinIntType{"u64", "uint64_t", 'L', 0, 0xffffffffffffffff}
+var TypeUInt8 = &BuiltinIntType{"u8", "uint8_t", 'M', big.NewInt(0), big.NewInt(0xff)}
+var TypeUInt16 = &BuiltinIntType{"u16", "uint16_t", 'S', big.NewInt(0), big.NewInt(0xffff)}
+var TypeUInt32 = &BuiltinIntType{"u32", "uint32_t", 'I', big.NewInt(0), big.NewInt(0xffffffff)}
+var TypeUInt64 = &BuiltinIntType{"u64", "uint64_t", 'L', big.NewInt(0), big.NewInt(0).SetUint64(0xffffffffffffffff)}
 
 var TypeFloat32 = &BuiltinFloatType{"f32", "float", 'f'}
 var TypeFloat64 = &BuiltinFloatType{"f64", "double", 'd'}
@@ -298,11 +298,11 @@ func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 }
 
 func (typ *BuiltinIntType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
-	return TcIntLit{Type: typ, Value: 0} // TODO no Source set
+	return TcIntLit{Type: typ, Value: big.NewInt(0)} // TODO no Source set
 }
 
 func (typ *BuiltinFloatType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
-	return TcFloatLit{Type: typ}
+	return TcFloatLit{Type: typ, Value: big.NewFloat(0)}
 }
 
 func (typ *BuiltinStringType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
@@ -694,8 +694,8 @@ func init() {
 	ptrTypeMap = make(map[Type]*PtrType)
 	typeTypeMap = make(map[Type]*TypeType)
 	packageMap = make(map[string]*TcPackageDef)
-	intLitTypeMap = make(map[int64]*IntLitType)
-	floatLitTypeMap = make(map[float64]*FloatLitType)
+	intLitTypeMap = make(map[string]*IntLitType)
+	floatLitTypeMap = make(map[string]*FloatLitType)
 	stringLitTypeMap = make(map[string]*StringLitType)
 
 	// Printf is literally the only use case for real varargs that I actually see as
@@ -773,8 +773,8 @@ func init() {
 		registerBuiltin("f64", "(double)(", "", ")", []Type{typ}, TypeFloat64, 0)
 
 		if intType, isIntType := typ.(*BuiltinIntType); isIntType {
-			registerSimpleTemplate("high", []Type{GetTypeType(typ)}, typ, TcIntLit{Value: int64(intType.MaxValue), Type: typ})
-			registerSimpleTemplate("low", []Type{GetTypeType(typ)}, typ, TcIntLit{Value: intType.MinValue, Type: typ})
+			registerSimpleTemplate("high", []Type{GetTypeType(typ)}, typ, TcIntLit{Value: big.NewInt(0).Set(intType.MaxValue), Type: typ})
+			registerSimpleTemplate("low", []Type{GetTypeType(typ)}, typ, TcIntLit{Value: big.NewInt(0).Set(intType.MinValue), Type: typ})
 		}
 	}
 
@@ -785,6 +785,7 @@ func init() {
 	for _, typ := range TypeAnyInt.Items {
 		registerBuiltin("bitand", "(", "&", ")", []Type{typ, typ}, typ, 0)
 		registerBuiltin("bitor", "(", "|", ")", []Type{typ, typ}, typ, 0)
+		registerBuiltin("bitxor", "(", "^", ")", []Type{typ, typ}, typ, 0)
 		registerBuiltin("bitnot", "~(", "", ")", []Type{typ}, typ, 0)
 	}
 
@@ -834,7 +835,7 @@ func init() {
 
 	registerBuiltin("assert", "assert(", "", ")", []Type{TypeBoolean}, TypeVoid, 0)
 
-	registerConstant("true", TcIntLit{Type: TypeBoolean, Value: 1})
-	registerConstant("false", TcIntLit{Type: TypeBoolean, Value: 0})
+	registerConstant("true", TcIntLit{Type: TypeBoolean, Value: big.NewInt(1)})
+	registerConstant("false", TcIntLit{Type: TypeBoolean, Value: big.NewInt(0)})
 
 }

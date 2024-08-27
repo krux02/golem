@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math/big"
 	"strings"
 )
 
@@ -259,13 +260,13 @@ type TcStrLit struct {
 type TcIntLit struct {
 	Source string
 	Type   Type
-	Value  int64
+	Value  *big.Int
 }
 
 type TcFloatLit struct {
 	Source string
 	Type   Type
-	Value  float64
+	Value  *big.Float
 }
 
 type TcArrayLit struct {

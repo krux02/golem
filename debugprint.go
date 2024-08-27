@@ -24,9 +24,9 @@ func (builder *AstPrettyPrinter) DebugNodeFormat(visitedNodes map[uintptr]int, n
 	case reflect.String:
 		builder.WriteString(node.String())
 	case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int:
-		WriteIntLit(&builder.Builder, node.Int())
+		fmt.Fprintf(&builder.Builder, "%d", node.Int())
 	case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint:
-		WriteUIntLit(&builder.Builder, node.Uint())
+		fmt.Fprintf(&builder.Builder, "%d", node.Uint())
 	case reflect.Float32, reflect.Float64:
 		fmt.Fprintf(&builder.Builder, "%f", node.Float())
 	case reflect.Bool:
