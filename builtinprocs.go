@@ -240,8 +240,14 @@ var TypeFloat64 = &BuiltinFloatType{"f64", "double", 'd'}
 var TypeBoolean = &BuiltinType{"bool", "bool", 'b'}
 
 var TypeStr = &BuiltinStringType{"str", "string", 'R'}
+var TypeCString = &BuiltinStringType{"cstring", "char const*", 'x'}
 
-var TypeChar = &BuiltinType{"char", "char", 'c'}
+// TODO is this really best as a subtype of BuiltinStringType
+var TypeChar = &BuiltinStringType{"char", "int32_t", 'c'}
+
+// TODO maybe have something like this cchar type
+//var TypeCChar = &BuiltinIntType{"cchar", "char", 'm', big.NewInt(-0x80), big.NewInt(0x7f)}
+
 var TypeVoid = &BuiltinType{"void", "void", 'v'}
 var TypeNilPtr = &BuiltinType{"nilptr", "void*", 'n'}
 
@@ -270,8 +276,9 @@ var TypeAnyNumber = &TypeGroup{Name: "AnyNumber", Items: []Type{
 	TypeUInt8, TypeUInt16, TypeUInt32, TypeUInt64,
 }}
 
-// types for C wrappers
-var TypeCString = &BuiltinStringType{"cstring", "char const*", 'x'}
+// TODO: The char type is not included in there, even though it is implemented
+// as a BuiltinStringType. This is an ugly code smell.
+var TypeAnyString = &TypeGroup{Name: "AnyString", Items: []Type{TypeStr, TypeCString}}
 
 // builtin proc signatures
 var builtinCPrintf *Signature
@@ -282,8 +289,6 @@ func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	if typ == TypeNoReturn {
 		ReportErrorf(tc, context, "a default value of no retrun does not exist")
 		return newErrorNode(context)
-	} else if typ == TypeChar {
-		return CharLit{}
 	} else if typ == TypeBoolean {
 		// TODO this is weird
 		// no source location
@@ -306,7 +311,11 @@ func (typ *BuiltinFloatType) DefaultValue(tc *TypeChecker, context AstNode) TcEx
 }
 
 func (typ *BuiltinStringType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+	if typ == TypeChar {
+		return TcStrLit{Type: typ, Value: "\000"}
+	}
 	return TcStrLit{Type: typ}
+
 }
 
 func (typ *ErrorType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
@@ -584,47 +593,73 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 			ReportErrorf(tc, formatExpr, "incomplete format expr at end of format string")
 			break
 		}
+
+		if i == len(call.Args) {
+			ReportErrorf(tc, formatExpr, "not enough arguments for %s", AstFormat(formatExpr))
+			return call
+		}
+		argType := call.Args[i].GetType()
 		c2 := formatStr[j]
+
+		if c2 == 'v' {
+			switch argType {
+			case TypeInt8, TypeUInt8, TypeInt16, TypeUInt16, TypeInt32, TypeUInt32, TypeInt64, TypeUInt64:
+				c2 = 'd'
+			case TypeCString, TypeStr:
+				c2 = 's'
+			case TypeChar:
+				c2 = 'c'
+			case TypeFloat32, TypeFloat64:
+				c2 = 'f'
+			default:
+				// TODO test error message
+				ReportErrorf(tc, formatExpr, "type not supported for %%v: %s", AstFormat(argType))
+				return call
+			}
+		}
+
 		var typeExpectation TypeConstraint = TypeUnspecified
+
 		switch c2 {
 		case '%':
 			formatStrC.WriteRune('%')
 			continue
 		case 's':
-			typeExpectation = UniqueTypeConstraint{TypeStr}
+			typeExpectation = TypeAnyString
 		case 'd':
 			typeExpectation = TypeAnyInt
+		case 'x', 'X':
+			typeExpectation = TypeAnyUInt
 		case 'f':
 			typeExpectation = TypeAnyFloat
-		case 'v':
-			typeExpectation = TypeUnspecified
+		case 'c':
+			typeExpectation = UniqueTypeConstraint{TypeChar}
 		default:
 			ReportErrorf(tc, formatExpr, "invalid format expr %%%c in %s", c2, AstFormat(formatExpr))
 			return call
 		}
-		if i == len(call.Args) {
-			ReportErrorf(tc, formatExpr, "not enough arguments for %s", AstFormat(formatExpr))
-			return call
-		}
 
-		argType := call.Args[i].GetType()
 		ExpectType(tc, call.Args[i], argType, typeExpectation)
 		switch argType {
-		case TypeInt8:
-			formatStrC.WriteString("hhd")
-		case TypeInt16:
-			formatStrC.WriteString("hd")
-		case TypeInt32:
-			formatStrC.WriteString("d")
-		case TypeInt64:
-			formatStrC.WriteString("ld")
+		case TypeInt8, TypeUInt8:
+			formatStrC.WriteString("hh")
+			formatStrC.WriteRune(rune(c2))
+		case TypeInt16, TypeUInt16:
+			formatStrC.WriteString("h")
+			formatStrC.WriteRune(rune(c2))
+		case TypeInt32, TypeUInt32:
+			formatStrC.WriteRune(rune(c2))
+		case TypeInt64, TypeUInt64:
+			formatStrC.WriteString("l")
+			formatStrC.WriteRune(rune(c2))
 		case TypeCString:
 			formatStrC.WriteString("s")
 		case TypeStr:
 			formatStrC.WriteString("*s")
-		case TypeFloat32:
-			formatStrC.WriteString("f")
-		case TypeFloat64:
+		case TypeChar:
+			// TODO: add support to print unicode runes as well
+			formatStrC.WriteString("c")
+		case TypeFloat32, TypeFloat64:
 			formatStrC.WriteString("f")
 		default:
 			panic(fmt.Errorf("internal error: %s", AstFormat(argType)))
@@ -637,13 +672,14 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 		return call
 	}
 
-	result := call
-
+	result := TcCall{Source: call.Source, Braced: call.Braced}
 	result.Sym = TcProcSymbol{
 		Source:    call.Sym.Source,
 		Signature: builtinCPrintf,
 	}
+	result.Args = make([]TcExpr, len(call.Args))
 	result.Args[0] = TcStrLit{Source: formatStrLit.Source, Type: TypeCString, Value: formatStrC.String()}
+	copy(result.Args[1:], call.Args[1:])
 	return result
 }
 
@@ -724,6 +760,7 @@ func init() {
 	registerBuiltinType(TypeFloat64)
 	registerBuiltinType(TypeStr)
 	registerBuiltinType(TypeCString)
+	registerBuiltinType(TypeChar)
 	registerBuiltinType(TypeVoid)
 	registerBuiltinType(TypeNoReturn)
 	registerBuiltinType(TypeNilPtr)
@@ -740,6 +777,7 @@ func init() {
 	registerBuiltinTypeGroup(TypeAnyUInt)
 	registerBuiltinTypeGroup(TypeAnySInt)
 	registerBuiltinTypeGroup(TypeAnyNumber)
+	registerBuiltinTypeGroup(TypeAnyString)
 
 	for _, typ := range TypeAnyNumber.Items {
 		registerBuiltin("+", "(", "+", ")", []Type{typ, typ}, typ, 0)
@@ -778,15 +816,16 @@ func init() {
 		}
 	}
 
-	// TODO
-	//   * test this
-	//   * use a generics for this
+	// TODO test these bitops
+	// TODO put all bitops in their own module
 	//   * allow varargs
 	for _, typ := range TypeAnyInt.Items {
 		registerBuiltin("bitand", "(", "&", ")", []Type{typ, typ}, typ, 0)
 		registerBuiltin("bitor", "(", "|", ")", []Type{typ, typ}, typ, 0)
 		registerBuiltin("bitxor", "(", "^", ")", []Type{typ, typ}, typ, 0)
 		registerBuiltin("bitnot", "~(", "", ")", []Type{typ}, typ, 0)
+		registerBuiltin("shiftleft", "(", "<<", ")", []Type{typ, typ}, typ, 0)
+		registerBuiltin("shiftright", "(", ">>", ")", []Type{typ, typ}, typ, 0)
 	}
 
 	registerBuiltin("len", "", "", ".len", []Type{TypeStr}, TypeInt64, 0)

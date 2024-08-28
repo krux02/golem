@@ -65,8 +65,8 @@ proc maxParenDepth(expr: str): i64 = {
   var depth: i64 = 0
   var maxDepth: i64 = 0
   for c in expr do {
-    if c == '(' do depth += 1
-    if c == ')' do depth -= 1
+    if c == "(" do depth += 1
+    if c == ")" do depth -= 1
     maxDepth = max(depth, maxDepth)
   }
   maxDepth

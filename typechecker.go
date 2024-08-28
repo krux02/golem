@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
 )
 
 type CompileError struct {
@@ -1152,10 +1153,6 @@ func (call TcCall) GetType() Type {
 	return call.Sym.Signature.ResultType
 }
 
-func (lit CharLit) GetType() Type {
-	return TypeChar
-}
-
 func (lit TcStrLit) GetType() Type {
 	return lit.Type
 }
@@ -1388,6 +1385,13 @@ func (tc *TypeChecker) TypeCheckStrLit(scope Scope, arg StrLit, expected TypeCon
 
 	switch typ := uniqueConstraint.Typ.(type) {
 	case *BuiltinStringType:
+		if typ == TypeChar {
+			runeCount := utf8.RuneCountInString(arg.Value)
+			if runeCount != 1 {
+				ReportErrorf(tc, arg, "char lit must have exactly one rune, but it has %d runes", runeCount)
+				goto error
+			}
+		}
 		return TcStrLit{
 			Source: arg.Source,
 			Type:   typ,
@@ -1416,9 +1420,6 @@ func TypeCheckExpr(tc *TypeChecker, scope Scope, arg Expr, expected TypeConstrai
 		return (TcExpr)(sym)
 	case StrLit:
 		return tc.TypeCheckStrLit(scope, arg, expected)
-	case CharLit:
-		ExpectType(tc, arg, TypeChar, expected)
-		return (TcExpr)(arg)
 	case IntLit:
 		return (TcExpr)(TypeCheckIntLit(tc, scope, arg, expected))
 	case FloatLit:

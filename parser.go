@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"unicode/utf8"
 	"unsafe"
 )
 
@@ -203,54 +202,6 @@ func parseCodeBlock(tokenizer *Tokenizer) (result CodeBlock) {
 	lastToken := tokenizer.Next()
 	tokenizer.expectKind(lastToken, TkCloseCurly)
 	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
-	return result
-}
-
-func parseCharLit(tokenizer *Tokenizer) (result CharLit) {
-	token := tokenizer.Next()
-	tokenizer.expectKind(token, TkCharLit)
-	quotelessValue := token.value[1 : len(token.value)-1]
-	if len(quotelessValue) == 0 {
-		tokenizer.reportError(token, "char token must not be empty")
-	}
-	result.Source = token.value
-	rune1, rune1Len := utf8.DecodeRuneInString(quotelessValue)
-	if rune1 == '\\' {
-		rune2, rune2Len := utf8.DecodeRuneInString(quotelessValue[rune1Len:])
-		if len(quotelessValue) != rune1Len+rune2Len {
-			tokenizer.reportError(token, "char token with escape sequence must contain exactly two characters")
-		}
-		switch rune2 {
-		case 'a':
-			result.Rune = '\a'
-		case 'b':
-			result.Rune = '\b'
-		case 'f':
-			result.Rune = '\f'
-		case 'n':
-			result.Rune = '\n'
-		case 'r':
-			result.Rune = '\r'
-		case 't':
-			result.Rune = '\t'
-		case 'v':
-			result.Rune = '\v'
-		case '\\':
-			result.Rune = '\\'
-		case '\'':
-			result.Rune = '\''
-		case '"':
-			result.Rune = '"'
-		default:
-			tokenizer.reportError(token, "invalid escape \\%c in char literal", rune2)
-			result.Rune = '\u29EF'
-		}
-		return result
-	}
-	if len(quotelessValue) != rune1Len {
-		tokenizer.reportError(token, "char token too long")
-	}
-	result.Rune = rune1
 	return result
 }
 
@@ -560,8 +511,6 @@ func attachDocComment(expr Expr, target string, value string) bool {
 		return false
 	case ArrayLit:
 		return false
-	case CharLit:
-		return false
 	case Call:
 		result := attachDocComment(ex.Callee, target, value)
 		for _, arg := range ex.Args {
@@ -606,8 +555,6 @@ func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
 		result = (Expr)(parseIdent(tokenizer))
 	case TkOpenCurly:
 		result = (Expr)(parseCodeBlock(tokenizer))
-	case TkCharLit:
-		result = (Expr)(parseCharLit(tokenizer))
 	case TkIf:
 		result = (Expr)(parseIfStmt(tokenizer))
 	case TkStrLit:

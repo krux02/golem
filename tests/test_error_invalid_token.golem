@@ -1,4 +1,4 @@
-# NumErrors: 10
+# NumErrors: 7
 
 äöü # Error: currently only 7 bit ASCII is supported
 \x # Error: invalid escape sequence \x
@@ -6,10 +6,7 @@
 
 proc main() : int = {
   let a = "a\yb" # Error: invalid escape \y in string literal
-  let b = '\z'   # Error: invalid escape \z in char literal
-  let c = 'abc' # Error: char token too long
-  let d = ''    # Error: char token must not be empty
-  let e = '\nx' # Error: char token with escape sequence must contain exactly two characters
+  let b = "\z"   # Error: invalid escape \z in string literal
   a $$ b # Error: invalid operator '$$'
   a + (b, c) # Error: braced expression must contain a single expression, but has 2
 }

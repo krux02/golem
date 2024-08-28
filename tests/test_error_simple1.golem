@@ -1,4 +1,4 @@
-# NumErrors:      18
+# NumErrors:      21
 
 proc foo(arg: i32): i64 = {
   printf("foo1: %d\n", i32(arg))
@@ -35,10 +35,14 @@ proc main():i64 = {
   let _x : i32 = 321 # Error: var identifier may not start or end with _ (underscore), reserved for internal usage
   let x__x : str = "abc" # Error: var identifier may not use __ (double underscore), reserved for internal usage
   let tmp3 = i8(128:128) # Error: expected type 'f32 | f64 | i8 | i16 | i32 | i64 | u8 | u16 | u32 | u64' but got type '128'
+  # char
+  let c: char = "abc" # Error: char lit must have exactly one rune, but it has 3 runes
+  let d: char = ""    # Error: char lit must have exactly one rune, but it has 0 runes
+  let e: char = "\nx" # Error: char lit must have exactly one rune, but it has 2 runes
+
   return 0
 }
 
 proc foo() = {} # Error: proc def needs result type specified
 
-# TODO
 # proc bar : i32 = {0} # TODO Error: "proc def requires an argument list")

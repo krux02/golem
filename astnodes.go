@@ -142,11 +142,6 @@ type CodeBlock struct {
 	Items  []Expr
 }
 
-type CharLit struct {
-	Source string
-	Rune   rune
-}
-
 type StrLit struct {
 	Source string
 	Value  string
@@ -237,7 +232,6 @@ func (arg StrLit) GetSource() string           { return arg.Source }
 func (arg IntLit) GetSource() string           { return arg.Source }
 func (arg FloatLit) GetSource() string         { return arg.Source }
 func (arg ArrayLit) GetSource() string         { return arg.Source }
-func (arg CharLit) GetSource() string          { return arg.Source }
 func (arg Call) GetSource() string             { return arg.Source }
 func (arg ColonExpr) GetSource() string        { return arg.Source }
 func (arg VariableDefStmt) GetSource() string  { return arg.Source }

@@ -99,5 +99,11 @@ proc main():i32 = {
     assert(myInt == 0x3ff0000000000000)
   }
 
+  {
+  let t1: u64 = 0xabcdef1234567890
+  let t2: u64 = 0xdeadbeefdeadbeef
+  printf("%x %x %x %x\n", bitand(t1,t2), bitor(t1,t2), bitxor(t1,t2), bitnot(t2))
+}
+
   return 0
 }

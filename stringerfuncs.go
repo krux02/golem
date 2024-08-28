@@ -116,37 +116,6 @@ func (codeBlock CodeBlock) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("}")
 }
 
-func (lit CharLit) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteRune('\'')
-	switch lit.Rune {
-	case '\a':
-		builder.WriteString("\\a")
-	case '\b':
-		builder.WriteString("\\b")
-	case '\f':
-		builder.WriteString("\\f")
-	case '\n':
-		builder.WriteString("\\n")
-	case '\r':
-		builder.WriteString("\\r")
-	case '\t':
-		builder.WriteString("\\t")
-	case '\v':
-		builder.WriteString("\\v")
-	case '\\':
-		builder.WriteString("\\\\")
-	case '\'':
-		builder.WriteString("\\'")
-	case '"':
-		builder.WriteString("\\\"")
-	default:
-		builder.WriteRune(lit.Rune)
-	}
-
-	//builder.WriteString(lit.Val)
-	builder.WriteRune('\'')
-}
-
 func WriteStringLit(builder *AstPrettyPrinter, value string) {
 	builder.WriteRune('"')
 	for _, rune := range value {

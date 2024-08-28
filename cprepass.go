@@ -166,7 +166,8 @@ func cgenprepass(expr TcExpr) TcExpr {
 		panic("i don't know what to do?")
 		// return expr
 	case *TcTemplateDef:
-		// TODO maybe error? templates shuold all be resolved at this point in compilation
+		// template should be inlined at this point in time. Their definitions are therefore superflous.
+		// Technically they should just be removed, but taking them in verbatim shouldn't cause harm either.
 		return expr
 	case TcStructLit:
 		return TcStructLit{

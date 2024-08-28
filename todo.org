@@ -1,3 +1,11 @@
+* TODO fix problems with printf
+ 1. test %v for all supported types
+ 2. test %c for chars, especially non ASCII
+
+* TODO make char literals a variant ot string literals
+* TODO add infix operators ~in~ and ~notin~ for enum sets
+enable lines in [[file:tests/test_struct_enum.golem][test struct enum]]
+
 * TODO find a better syntax for Type : TypeConstraint as colon is already reserved for value : type separation
 * TODO allow to disable overloading for some functions
 * TODO fix or remove newline escape, curently it has many problems

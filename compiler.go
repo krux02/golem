@@ -86,45 +86,13 @@ func (builder *CodeBuilder) compileCall(context *PackageGeneratorContext, call T
 	}
 }
 
-func (builder *CodeBuilder) compileCharLit(lit CharLit) {
-	builder.WriteRune('\'')
-	switch lit.Rune {
-	case '\a':
-		builder.WriteString("\\a")
-	case '\b':
-		builder.WriteString("\\b")
-	case '\f':
-		builder.WriteString("\\f")
-	case '\n':
-		builder.WriteString("\\n")
-	case '\r':
-		builder.WriteString("\\r")
-	case '\t':
-		builder.WriteString("\\t")
-	case '\v':
-		builder.WriteString("\\v")
-	case '\\':
-		builder.WriteString("\\\\")
-	case '\'':
-		builder.WriteString("\\'")
-	case '"':
-		builder.WriteString("\\\"")
-	default:
-		builder.WriteRune(lit.Rune)
-	}
-
-	//builder.WriteString(lit.Val)
-	builder.WriteRune('\'')
-}
-
-func (builder *CodeBuilder) compileStrLit(value string, boxed bool) {
+func (builder *CodeBuilder) compileStrLit(value string, boxed bool, quote rune) {
 	if boxed {
 		builder.WriteString(`(string){.len=`)
 		WriteUIntLit(&builder.Builder, false, uint64(len(value)))
-		builder.WriteString(`, .data="`)
-	} else {
-		builder.WriteString(`"`)
+		builder.WriteString(`, .data=`)
 	}
+	builder.WriteRune(quote)
 	for _, rune := range value {
 		switch rune {
 		case '\a':
@@ -151,11 +119,9 @@ func (builder *CodeBuilder) compileStrLit(value string, boxed bool) {
 			builder.WriteRune(rune)
 		}
 	}
-	//builder.WriteString(lit.Val)
+	builder.WriteRune(quote)
 	if boxed {
-		builder.WriteString(`"}`)
-	} else {
-		builder.WriteString(`"`)
+		builder.WriteRune('}')
 	}
 }
 
@@ -167,6 +133,9 @@ func (builder *CodeBuilder) CompileIntLit(lit TcIntLit) {
 		builder.WriteString("-9223372036854775807 - 1")
 	} else {
 		WriteIntLit(&builder.Builder, lit.Value)
+		if lit.Type == TypeUInt64 {
+			builder.WriteString("u")
+		}
 	}
 }
 
@@ -336,9 +305,17 @@ func (builder *CodeBuilder) CompileExprWithPrefix(context *PackageGeneratorConte
 	case TcDotExpr:
 		builder.CompileDotExpr(context, ex)
 	case TcStrLit:
-		builder.compileStrLit(ex.Value, ex.Type == TypeStr)
-	case CharLit:
-		builder.compileCharLit(ex)
+
+		switch ex.Type {
+		case TypeStr:
+			builder.compileStrLit(ex.Value, true, '"')
+		case TypeCString:
+			builder.compileStrLit(ex.Value, false, '"')
+		case TypeChar:
+			builder.compileStrLit(ex.Value, false, '\'')
+		default:
+			panic("internal error")
+		}
 	case TcIntLit:
 		builder.CompileIntLit(ex)
 	case TcFloatLit:
@@ -438,7 +415,7 @@ func compileEnumDef(context *PackageGeneratorContext, enumDef *TcEnumDef) {
 		if i != 0 {
 			builder.WriteString(", ")
 		}
-		builder.compileStrLit(sym.Source, true)
+		builder.compileStrLit(sym.Source, true, '"')
 	}
 	builder.WriteString("};")
 }
@@ -612,13 +589,14 @@ func compilePackageToC(program *ProgramContext, pak *TcPackageDef, mainPackage b
 	}
 
 	// TODO this should depend on the usage of `assert`
-	context.includes.WriteString("#include <assert.h>")
-	context.typeDecl.NewlineAndIndent()
-	context.typeDecl.WriteString("typedef struct string {size_t len; char const* data;} string;")
-	context.typeDecl.NewlineAndIndent()
-	context.typeDecl.WriteString("typedef unsigned char bool;")
-	context.typeDecl.NewlineAndIndent()
-	context.typeDecl.WriteString("typedef float f32x4 __attribute__ ((vector_size(16), aligned(16)));")
+	context.includes.WriteString(`
+#include <assert.h>
+typedef struct string {size_t len; char const* data;} string;
+typedef unsigned char bool;
+
+// TODO actually use this f32x4 vector type
+typedef float f32x4 __attribute__ ((vector_size(16), aligned(16)));
+`)
 
 	// program.Main
 	if mainPackage {

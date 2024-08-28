@@ -415,7 +415,6 @@ func (arg TcEnumSetLit) GetMutable() bool { return false }
 func (arg TcIntLit) GetMutable() bool     { return false }
 func (arg TcFloatLit) GetMutable() bool   { return false }
 func (arg TcStrLit) GetMutable() bool     { return false }
-func (arg CharLit) GetMutable() bool      { return false }
 func (arg NilLit) GetMutable() bool       { return false }
 
 func (arg *TcProcDef) GetMutable() bool               { return false }

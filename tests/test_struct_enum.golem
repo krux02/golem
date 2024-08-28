@@ -40,6 +40,72 @@ proc bar(arg1: i64, arg2: MyEnum): void = {
 
 proc bar(arg1: i64, arg2: str): void = {}
 
+# original code
+# CodePointStr codepoint2utf8(int codepoint) {
+#   CodePointStr result = {.utf8 = {0, 0, 0, 0, 0}};
+#   if (codepoint <= 0x7F) {
+#     result.utf8[0] = codepoint;
+#     return result;
+#   }
+#   if (codepoint <= 0x7FF) {
+#     result.utf8[0] = 0xC0 | (codepoint >> 6);
+#     result.utf8[1] = 0x80 | (codepoint & 0x3F);
+#     return result;
+#   }
+#   if (codepoint <= 0xFFFF) {
+#     // detect surrogates
+#     if (codepoint >= 0xD800 && codepoint <= 0xDFFF) {
+#       return result;
+#     }
+#     result.utf8[0] = 0xE0 | (codepoint >> 12);
+#     result.utf8[1] = 0x80 | ((codepoint >> 6) & 0x3F);
+#     result.utf8[2] = 0x80 | (codepoint & 0x3F);
+#     return result;
+#   }
+#   if (codepoint <= 0x10FFFF) {
+#     result.utf8[0] = 0xF0 | (codepoint >> 18);
+#     result.utf8[1] = 0x80 | ((codepoint >> 12) & 0x3F);
+#     result.utf8[2] = 0x80 | ((codepoint >> 6) & 0x3F);
+#     result.utf8[3] = 0x80 | (codepoint & 0x3F);
+#     return result;
+#   }
+#   return result;
+# }
+
+# TODO make this somehow available to call from printf
+proc codepoint2utf8(codepoint: u32): array(5, u8) = {
+  # CodePointStr result = { = {0, 0, 0, 0, 0}};
+  var result: array(5, u8)
+  if codepoint <= 0x7F do {
+    result[0] = u8(codepoint);
+    return result;
+  }
+  if codepoint <= 0x7FF do {
+    result[0] = u8(bitor(shiftright(codepoint,6), 0xC0));
+    result[1] = u8(bitor(bitand(codepoint, 0x3F), 0x80));
+    return result;
+  }
+  if codepoint <= 0xFFFF do {
+    # detect surrogates
+    if codepoint >= 0xD800 and codepoint <= 0xDFFF do {
+      return result;
+    }
+    result[0] = u8(bitor(shiftright(codepoint, 12), 0xE0));
+    result[1] = u8(bitor(bitand(shiftright(codepoint, 6), 0x3F), 0x80));
+    result[2] = u8(bitor(bitand(codepoint, 0x3F), 0x80));
+    return result;
+  }
+  if codepoint <= 0x10FFFF do {
+    result[0] = u8(bitor(shiftright(codepoint, 18), 0xF0));
+    result[1] = u8(bitor(bitand(shiftright(codepoint, 12), 0x3F), 0x80));
+    result[2] = u8(bitor(bitand(shiftright(codepoint, 6), 0x3F), 0x80));
+    result[3] = u8(bitor(bitand(codepoint, 0x3F), 0x80));
+    return result;
+  }
+  return result;
+}
+
+
 proc main():i32 = {
   var myStruct1: MyStruct = [a=12, b=34.56, c="def"] # type at variable def, all fields assigned
   var myStruct2 = [12, 34.56, "def"]:MyStruct        # in order initialization, postfix type assertion
@@ -51,7 +117,6 @@ proc main():i32 = {
   var myEnumSet : set(MyEnum) = [Option1, Option3]
 
   # TODO the `:MyEnum` should not be necessary here
-
   # assert(Option1:MyEnum in myEnumSet) # TODO enable this
   # assert(Option2:MyEnum notin myEnumSet) # TODO enable this
   # assert(Option3:MyEnum in myEnumSet) # TODO enable this
@@ -75,5 +140,8 @@ proc main():i32 = {
   var myNestedStruct: StructNest3
   myNestedStruct.nest3.nest2.nest1.a = 123
   printf("a: %d\n", myNestedStruct.nest3.nest2.nest1.a)
+
+
+
   0
 }
