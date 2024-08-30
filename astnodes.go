@@ -124,19 +124,6 @@ type TraitDef struct {
 	Signatures     []*ProcDef
 }
 
-type GenericArgument struct {
-	Source    string
-	Name      Ident
-	TraitName Ident
-}
-
-type ProcArgument struct {
-	Source  string
-	Name    Ident
-	Mutable bool
-	Type    TypeExpr
-}
-
 type CodeBlock struct {
 	Source string
 	Items  []Expr
@@ -189,12 +176,9 @@ type ColonExpr struct {
 
 type ProcDef struct {
 	Source      string
-	Name        Ident
-	GenericArgs []GenericArgument
-	Args        []ProcArgument
-	ResultType  TypeExpr
-	Body        Expr
+	Expr        Expr
 	Annotations StrLit
+	DocComment  DocComment
 }
 
 type PackageDef struct {

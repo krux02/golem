@@ -368,36 +368,7 @@ func (procDef *ProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 		procDef.Annotations.PrettyPrint(builder)
 		builder.WriteString(" ")
 	}
-	builder.WriteNode(procDef.Name)
-	builder.WriteString("(")
-	if len(procDef.Args) > 3 {
-		for i, arg := range procDef.Args {
-			if i != 0 {
-				builder.WriteString(", ")
-			}
-			builder.NewlineAndIndent()
-			builder.WriteNode(arg.Name)
-			builder.WriteString(": ")
-			builder.WriteNode(arg.Type)
-		}
-		builder.NewlineAndIndent()
-
-	} else {
-		for i, arg := range procDef.Args {
-			if i != 0 {
-				builder.WriteString(", ")
-			}
-			builder.WriteNode(arg.Name)
-			builder.WriteString(": ")
-			builder.WriteNode(arg.Type)
-		}
-	}
-	builder.WriteString("): ")
-	builder.WriteNode(procDef.ResultType)
-	if procDef.Body != nil {
-		builder.WriteString(" = ")
-		builder.WriteNode(procDef.Body)
-	}
+	builder.WriteNode(procDef.Expr)
 }
 
 func (returnExpr ReturnExpr) PrettyPrint(builder *AstPrettyPrinter) {

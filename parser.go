@@ -739,18 +739,6 @@ func MatchBracketCall(expr Expr) (lhs Expr, args []Expr, ok bool) {
 	return lhs, args, true
 }
 
-func parseProcArgumentNoType(arg Expr) ProcArgument {
-	var mutable = false
-	if varExpr, ok := arg.(VarExpr); ok {
-		mutable = true
-		arg = varExpr.Expr
-	}
-	if ident, isIdent := arg.(Ident); isIdent {
-		return ProcArgument{Source: ident.Source, Name: ident, Mutable: mutable}
-	}
-	panic(fmt.Errorf("expected identifier but got %T (%s)", arg, AstFormat(arg)))
-}
-
 func parseProcDef(tokenizer *Tokenizer) (result *ProcDef) {
 	result = &ProcDef{}
 	firstToken := tokenizer.Next()
@@ -760,78 +748,7 @@ func parseProcDef(tokenizer *Tokenizer) (result *ProcDef) {
 		result.Annotations = parseStrLit(tokenizer)
 	}
 
-	expr := parseExpr(tokenizer, false)
-
-	if lhs, rhs, isAssign := MatchAssign(expr); isAssign {
-		result.Body = rhs
-		expr = lhs
-	}
-
-	if colonExpr, isColonExpr := MatchColonExpr(expr); isColonExpr {
-		result.ResultType = colonExpr.Rhs
-		expr = colonExpr.Lhs
-	}
-
-	var argsRaw []Expr
-	if call, isCall := expr.(Call); isCall {
-		argsRaw = call.Args
-		expr = call.Callee
-	} else {
-		tokenizer.reportError(firstToken, "proc def requires an argument list")
-	}
-
-	if lhs, args, isBracketCall := MatchBracketCall(expr); isBracketCall {
-		expr = lhs
-		result.GenericArgs = make([]GenericArgument, 0, len(args))
-		// TODO do something with args
-		for _, arg := range args {
-			colonExpr, isColonExpr := MatchColonExpr(arg)
-			if !isColonExpr {
-				// TODO firstToken is not the right code location
-				tokenizer.reportError(firstToken, "generic argument must be a colon expr")
-				continue
-			}
-			lhs, isIdent := colonExpr.Lhs.(Ident)
-			if !isIdent {
-				// TODO firstToken is not the right code location
-				tokenizer.reportError(firstToken, "generic argument name must be an Identifire, but it is %T", colonExpr.Lhs)
-				continue
-			}
-			rhs, isIdent := colonExpr.Rhs.(Ident)
-			if !isIdent {
-				// TODO firstToken is not the right code location
-				tokenizer.reportError(firstToken, "generic argument constraint must be an Identifire, but it is %T", colonExpr.Lhs)
-				continue
-			}
-
-			genericArg := GenericArgument{Source: colonExpr.Source, Name: lhs, TraitName: rhs}
-			result.GenericArgs = append(result.GenericArgs, genericArg)
-		}
-	}
-
-	if name, isIdent := expr.(Ident); isIdent {
-		result.Name = name
-	} else {
-		// TODO firstToken is not the right code location
-		tokenizer.reportError(firstToken, "proc name be an identifier, but it is %T", expr)
-	}
-
-	var newArgs []ProcArgument
-	for _, arg := range argsRaw {
-		if colonExpr, ok := MatchColonExpr(arg); ok {
-			newArgs = append(newArgs, parseProcArgumentNoType(colonExpr.Lhs))
-			for i := range newArgs {
-				newArgs[i].Type = colonExpr.Rhs
-			}
-			result.Args = append(result.Args, newArgs...)
-			newArgs = newArgs[:0]
-		} else {
-			newArgs = append(newArgs, parseProcArgumentNoType(arg))
-		}
-	}
-	if len(newArgs) > 0 {
-		panic(fmt.Errorf("arguments have no type: %+v", newArgs))
-	}
+	result.Expr = parseExpr(tokenizer, false)
 	result.Source = joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value)
 	return result
 }

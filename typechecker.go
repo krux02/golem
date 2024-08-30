@@ -330,8 +330,144 @@ func TypeCheckEnumDef(tc *TypeChecker, scope Scope, def EnumDef) *TcEnumDef {
 }
 
 func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result *TcProcDef) {
-	ValidNameCheck(tc, def.Name, "proc")
+
+	var body Expr
+	var expr = def.Expr
+
+	// validate syntax
+
+	if lhs, rhs, isAssign := MatchAssign(expr); isAssign {
+		body = rhs
+		expr = lhs
+	}
+
+	var resultType TypeExpr
+	if colonExpr, isColonExpr := MatchColonExpr(expr); isColonExpr {
+		resultType = colonExpr.Rhs
+		expr = colonExpr.Lhs
+	}
+
+	var argsRaw []Expr
+	if call, isCall := expr.(Call); isCall {
+		argsRaw = call.Args
+		expr = call.Callee
+	} else {
+		// TODO, test this
+		ReportErrorf(tc, expr, "proc def requires an argument list")
+	}
+
+	type GenericArgument struct {
+		Source    string
+		Name      Ident
+		TraitName Ident
+	}
+
+	type ProcArgument struct {
+		Source  string
+		Name    Ident
+		Mutable bool
+		Type    TypeExpr
+	}
+
+	var genericArgs []GenericArgument
+	if lhs, args, isBracketCall := MatchBracketCall(expr); isBracketCall {
+		expr = lhs
+		genericArgs = make([]GenericArgument, 0, len(args))
+		// TODO do something with args
+		for _, arg := range args {
+			colonExpr, isColonExpr := MatchColonExpr(arg)
+			if !isColonExpr {
+				// TODO test error message
+				ReportErrorf(tc, arg, "generic argument must be a colon expr")
+				continue
+			}
+			lhs, isIdent := colonExpr.Lhs.(Ident)
+			if !isIdent {
+				// TODO test error message
+				ReportErrorf(tc, colonExpr.Lhs, "generic argument name must be an Identifire, but it is %T", colonExpr.Lhs)
+				continue
+			}
+			rhs, isIdent := colonExpr.Rhs.(Ident)
+			if !isIdent {
+				// TODO firstToken is not the right code location
+				ReportErrorf(tc, colonExpr.Rhs, "generic argument constraint must be an Identifire, but it is %T", colonExpr.Lhs)
+				continue
+			}
+
+			genericArg := GenericArgument{Source: colonExpr.Source, Name: lhs, TraitName: rhs}
+			genericArgs = append(genericArgs, genericArg)
+		}
+	}
+
+	var name Ident
+	if ident, isIdent := expr.(Ident); isIdent {
+		name = ident
+	} else {
+		// TODO firstToken is not the right code location
+		ReportErrorf(tc, expr, "proc name be an identifier, but it is %T", expr)
+	}
+
+	var args []ProcArgument
+	var newArgs []ProcArgument
+	for _, arg := range argsRaw {
+
+		var typeExpr TypeExpr
+		var gotTypeExpr bool = false
+
+		if colonExpr, ok := MatchColonExpr(arg); ok {
+			arg, typeExpr = colonExpr.Lhs, colonExpr.Rhs
+			gotTypeExpr = true
+		}
+
+		var mutable = false
+		if varExpr, ok := arg.(VarExpr); ok {
+			mutable = true
+			arg = varExpr.Expr
+		}
+		if ident, isIdent := arg.(Ident); isIdent {
+			newArgs = append(newArgs, ProcArgument{Source: ident.Source, Name: ident, Mutable: mutable})
+		} else {
+			ReportErrorf(tc, arg, "expected identifier but got %T (%s)", arg, AstFormat(arg))
+			// TODO decide if this should be an error node or something in the arguments list
+			newArgs = append(newArgs, ProcArgument{Source: ident.Source, Name: Ident{Source: "_"}})
+		}
+
+		if gotTypeExpr {
+			for i := range newArgs {
+				newArgs[i].Type = typeExpr
+			}
+			args = append(args, newArgs...)
+
+			newArgs = newArgs[:0]
+		}
+	}
+	if len(newArgs) > 0 {
+		// TODO test this error
+		ReportErrorf(tc, newArgs[0].Name, "arguments have no type: %+v", newArgs)
+	}
+
+	ValidNameCheck(tc, name, "proc")
+
+	// apply doc section
+	name.Comment = append(name.Comment, def.DocComment.BaseDoc...)
+
+DOCSECTIONS1:
+	for _, it := range def.DocComment.NamedDocSections {
+		key := it.Name
+		value := it.Lines
+
+		for i := range args {
+			if args[i].Name.Source == key {
+				commentRef := &args[i].Name.Comment
+				*commentRef = append(*commentRef, value...)
+				continue DOCSECTIONS1
+			}
+		}
+		ReportInvalidDocCommentKey(tc, it)
+	}
+
 	procScope := NewSubScope(parentScope)
+	// from here on old school type checking
 
 	result = &TcProcDef{}
 	procScope.CurrentProc = result
@@ -349,7 +485,7 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result 
 		genericParams = append(genericParams, parentScope.CurrentTrait.DependentTypes...)
 	}
 
-	for _, genericArg := range def.GenericArgs {
+	for _, genericArg := range genericArgs {
 		constraint := LookUpTypeConstraint(tc, parentScope, genericArg.TraitName)
 		if (constraint == UniqueTypeConstraint{TypeError}) {
 			continue
@@ -372,7 +508,7 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result 
 	}
 
 	var params []TcSymbol
-	for _, arg := range def.Args {
+	for _, arg := range args {
 		symKind := SkProcArg
 		if arg.Mutable {
 			symKind = SkVarProcArg
@@ -402,30 +538,29 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result 
 		}
 		params = append(params, tcArg)
 	}
-	var resultType Type
-	if def.ResultType == nil {
-		ReportErrorf(tc, def, "proc def needs result type specified")
-		resultType = TypeError
-	} else {
-		resultType = LookUpType(tc, procScope, def.ResultType)
-	}
 
 	// makeGenericSignature(def.Name.Source, genericParams, params, resultType, 0)
 	signature := &Signature{
-		Name:          def.Name.Source,
+		Name:          name.Source,
 		GenericParams: genericParams,
 		Params:        params,
-		ResultType:    resultType,
 		Impl:          result,
 	}
 	result.Signature = signature
 
-	if result.Importc || def.Name.Source == "main" {
+	if resultType == nil {
+		ReportErrorf(tc, def, "proc def needs result type specified")
+		signature.ResultType = TypeError
+	} else {
+		signature.ResultType = LookUpType(tc, procScope, resultType)
+	}
+
+	if result.Importc || name.Source == "main" {
 		// TODO, don't special case `main` like this here
-		result.MangledName = def.Name.Source
+		result.MangledName = name.Source
 	} else {
 		mangledNameBuilder := &strings.Builder{}
-		mangledNameBuilder.WriteString(def.Name.Source)
+		mangledNameBuilder.WriteString(name.Source)
 		mangledNameBuilder.WriteRune('_')
 		for _, arg := range result.Signature.Params {
 			arg.Type.ManglePrint(mangledNameBuilder)
@@ -434,21 +569,21 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result 
 	}
 
 	// register proc before type checking the body to allow recursion. (TODO needs a test)
-	RegisterProc(tc, parentScope, signature, def.Name)
+	RegisterProc(tc, parentScope, signature, name)
 
 	if result.Importc {
-		if def.Body != nil {
-			ReportErrorf(tc, def.Body, "proc is importc, it may not have a body")
+		if body != nil {
+			ReportErrorf(tc, body, "proc is importc, it may not have a body")
 		}
 	} else if parentScope.CurrentTrait != nil {
-		if def.Body != nil {
-			ReportErrorf(tc, def.Body, "proc is importc, it may not have a body")
+		if body != nil {
+			ReportErrorf(tc, body, "proc is importc, it may not have a body")
 		}
 	} else {
-		if def.Body == nil {
+		if body == nil {
 			ReportErrorf(tc, def, "proc def misses a body")
 		} else {
-			result.Body = TypeCheckExpr(tc, procScope, def.Body, UniqueTypeConstraint{resultType})
+			result.Body = TypeCheckExpr(tc, procScope, body, UniqueTypeConstraint{signature.ResultType})
 		}
 	}
 
@@ -988,22 +1123,7 @@ func (tc *TypeChecker) ApplyDocComment(expr Expr, doc DocComment) Expr {
 		}
 		return expr2
 	case *ProcDef:
-		expr2.Name.Comment = append(expr2.Name.Comment, doc.BaseDoc...)
-
-	DOCSECTIONS1:
-		for _, it := range doc.NamedDocSections {
-			key := it.Name
-			value := it.Lines
-
-			for i := range expr2.Args {
-				if expr2.Args[i].Name.Source == key {
-					commentRef := &expr2.Args[i].Name.Comment
-					*commentRef = append(*commentRef, value...)
-					continue DOCSECTIONS1
-				}
-			}
-			ReportInvalidDocCommentKey(tc, it)
-		}
+		expr2.DocComment = doc
 		return expr2
 	case StructDef:
 		expr2.Name.Comment = append(expr2.Name.Comment, doc.BaseDoc...)
@@ -1782,6 +1902,7 @@ func TypeCheckPackage(tc *TypeChecker, currentProgram *ProgramContext, arg Packa
 		case *ProcDef:
 			procDef := TypeCheckProcDef(tc, pkgScope, stmt)
 			result.ProcDefs = append(result.ProcDefs, procDef)
+			// TODO, verify compatible signature for main
 			if mainPackage && procDef.Signature.Name == "main" {
 				currentProgram.Main = procDef
 			}

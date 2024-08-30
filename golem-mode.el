@@ -63,8 +63,6 @@
          (not (nth 3 (syntax-ppss)))))
     res))
 
-(require 'projectile)
-
 ;;;###autoload
 (define-derived-mode golem-mode prog-mode "golem"
   "Major mode for editing golem language code."
@@ -74,10 +72,10 @@
   (setq-local comment-start-skip "#+ *")
   (setq-local font-lock-defaults '(golem-highlights))
 
-  (setq-local compilation-directory (projectile-project-root))
+  (setq-local compilation-directory (project-root (project-current)))
   (setq-local
    compile-command
-   (let* ((project-root (projectile-project-root))
+   (let* ((project-root (project-root (project-current)))
           (project-relative-file-name (file-relative-name  buffer-file-name project-root))
           (raw-file-name (file-name-nondirectory buffer-file-name)))
      (concat
