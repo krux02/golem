@@ -168,6 +168,12 @@ type Call struct {
 	Prefix bool // true for -a ++x etc, false for everything else
 }
 
+type BracketExpr struct {
+	Source string
+	Callee Expr
+	Args   []Expr
+}
+
 type ColonExpr struct {
 	Source string
 	Lhs    Expr
@@ -217,6 +223,7 @@ func (arg IntLit) GetSource() string           { return arg.Source }
 func (arg FloatLit) GetSource() string         { return arg.Source }
 func (arg ArrayLit) GetSource() string         { return arg.Source }
 func (arg Call) GetSource() string             { return arg.Source }
+func (arg BracketExpr) GetSource() string      { return arg.Source }
 func (arg ColonExpr) GetSource() string        { return arg.Source }
 func (arg VariableDefStmt) GetSource() string  { return arg.Source }
 func (arg ForLoopStmt) GetSource() string      { return arg.Source }

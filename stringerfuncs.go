@@ -73,26 +73,31 @@ func (ident Ident) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(ident.Source)
 }
 
+func mkstring(items []Expr, prefix, infix, postfix string, builder *AstPrettyPrinter) {
+	builder.WriteString(prefix)
+	for i, it := range items {
+		if i != 0 {
+			builder.WriteString(infix)
+		}
+		builder.WriteNode(it)
+	}
+	builder.WriteString(postfix)
+}
+
 func (call Call) PrettyPrint(builder *AstPrettyPrinter) {
 	ident, isIdent := call.Callee.(Ident)
 	isOperator := isIdent && slices.Contains([]string{".", ":"}, ident.Source)
-
-	// maybe operator should be its own syntax token
-	if !isOperator {
+	if isOperator {
+		mkstring(call.Args, "(", ident.Source, ")", builder)
+	} else {
 		builder.WriteNode(call.Callee)
+		mkstring(call.Args, "(", ", ", ")", builder)
 	}
-	builder.WriteString("(")
-	for i, arg := range call.Args {
-		if i != 0 {
-			if isOperator {
-				builder.WriteString(ident.Source)
-			} else {
-				builder.WriteString(", ")
-			}
-		}
-		builder.WriteNode(arg)
-	}
-	builder.WriteString(")")
+}
+
+func (expr BracketExpr) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteNode(expr.Callee)
+	mkstring(expr.Args, "[", ", ", "]", builder)
 }
 
 func (expr ColonExpr) PrettyPrint(builder *AstPrettyPrinter) {
@@ -157,15 +162,7 @@ func (lit TcStrLit) PrettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (list ExprList) PrettyPrint(builder *AstPrettyPrinter) {
-	// TODO this is almost identical to `ArrayLit` maybe the node can me merged?
-	builder.WriteRune('(')
-	for i, expr := range list.Items {
-		if i != 0 {
-			builder.WriteString(", ")
-		}
-		builder.WriteNode(expr)
-	}
-	builder.WriteRune(')')
+	mkstring(list.Items, "(", ", ", ")", builder)
 }
 
 func (node TcErrorNode) PrettyPrint(builder *AstPrettyPrinter) {
@@ -173,14 +170,7 @@ func (node TcErrorNode) PrettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (lit ArrayLit) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteRune('[')
-	for i, expr := range lit.Items {
-		if i != 0 {
-			builder.WriteString(", ")
-		}
-		builder.WriteNode(expr)
-	}
-	builder.WriteRune(']')
+	mkstring(lit.Items, "[", ", ", "]", builder)
 }
 
 func (lit TcArrayLit) PrettyPrint(builder *AstPrettyPrinter) {

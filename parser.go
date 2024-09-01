@@ -345,14 +345,10 @@ func parseCall(tokenizer *Tokenizer, callee Expr) (result Call) {
 	return result
 }
 
-func parseBracketCall(tokenizer *Tokenizer, callee Expr) (result Call) {
+func parseBracketExpr(tokenizer *Tokenizer, callee Expr) (result BracketExpr) {
 	// parse call expr
-	var ident Ident
-	ident.Source = tokenizer.lookAheadToken.value
-	result.Callee = ident
-	result.Args = append(result.Args, callee)
-	result.Args = append(result.Args, parseExprList(tokenizer, TkOpenBracket, TkCloseBracket).Items...)
-	result.Braced = true
+	result.Callee = callee
+	result.Args = parseExprList(tokenizer, TkOpenBracket, TkCloseBracket).Items
 	lastToken := tokenizer.token
 	result.Source = joinSubstr(tokenizer.code, callee.GetSource(), lastToken.value)
 	return result
@@ -616,7 +612,7 @@ func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
 		case TkOpenBrace:
 			result = (Expr)(parseCall(tokenizer, result))
 		case TkOpenBracket:
-			result = (Expr)(parseBracketCall(tokenizer, result))
+			result = (Expr)(parseBracketExpr(tokenizer, result))
 		case TkPostfixDocComment:
 			comment := tokenizer.Next().value
 			commentScanner := &DocCommentScanner{comment}
@@ -725,29 +721,13 @@ func MatchAssign(expr Expr) (lhs, rhs Expr, ok bool) {
 	return lhs, rhs, true
 }
 
-func MatchBracketCall(expr Expr) (lhs Expr, args []Expr, ok bool) {
-	call, ok := expr.(Call)
-	if !ok {
-		return lhs, args, false
-	}
-	op, ok := call.Callee.(Ident)
-	if !ok || op.Source != "[" {
-		return lhs, args, false
-	}
-	lhs = call.Args[0]
-	args = call.Args[1:]
-	return lhs, args, true
-}
-
 func parseProcDef(tokenizer *Tokenizer) (result *ProcDef) {
 	result = &ProcDef{}
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkProc)
-
 	if tokenizer.lookAheadToken.kind == TkStrLit {
 		result.Annotations = parseStrLit(tokenizer)
 	}
-
 	result.Expr = parseExpr(tokenizer, false)
 	result.Source = joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value)
 	return result

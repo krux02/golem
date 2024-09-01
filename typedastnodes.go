@@ -377,7 +377,7 @@ func (arg TcSymbol) GetMutable() bool {
 }
 func (call TcCall) GetMutable() bool {
 	// TODO, actually do the mutability inference, this is a real hack
-	if call.Sym.Source == "[" {
+	if call.Sym.Source == "indexOp" {
 		switch len(call.Args) {
 		case 1:
 			// pointer deref
@@ -387,7 +387,6 @@ func (call TcCall) GetMutable() bool {
 			return call.Args[0].GetMutable()
 		}
 	}
-
 	return false
 }
 
@@ -398,10 +397,8 @@ func (arg TcCodeBlock) GetMutable() bool {
 	return false
 }
 
-func (arg TcIfElseExpr) GetMutable() bool { return arg.Body.GetMutable() && arg.Else.GetMutable() }
-
-func (arg TcStructField) GetMutable() bool { return false }
-
+func (arg TcIfElseExpr) GetMutable() bool      { return arg.Body.GetMutable() && arg.Else.GetMutable() }
+func (arg TcStructField) GetMutable() bool     { return false }
 func (arg TcProcSymbol) GetMutable() bool      { return false }
 func (arg TcVariableDefStmt) GetMutable() bool { return false }
 func (arg TcReturnExpr) GetMutable() bool      { return false }

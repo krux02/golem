@@ -370,11 +370,11 @@ func TypeCheckProcDef(tc *TypeChecker, parentScope Scope, def *ProcDef) (result 
 	}
 
 	var genericArgs []GenericArgument
-	if lhs, args, isBracketCall := MatchBracketCall(expr); isBracketCall {
-		expr = lhs
-		genericArgs = make([]GenericArgument, 0, len(args))
+	if bracketExpr, isBracketExpr := expr.(BracketExpr); isBracketExpr {
+		expr = bracketExpr.Callee
+		genericArgs = make([]GenericArgument, 0, len(bracketExpr.Args))
 		// TODO do something with args
-		for _, arg := range args {
+		for _, arg := range bracketExpr.Args {
 			colonExpr, isColonExpr := MatchColonExpr(arg)
 			if !isColonExpr {
 				// TODO test error message
@@ -1024,7 +1024,7 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected TypeConstr
 				}
 			}
 
-			ReportErrorf(tc, ident, "%s", builder.String())
+			ReportErrorf(tc, call, "%s", builder.String())
 		}
 		result.Sym = errorProcSym(ident)
 		result.Args = checkedArgs
@@ -1533,6 +1533,12 @@ func TypeCheckExpr(tc *TypeChecker, scope Scope, arg Expr, expected TypeConstrai
 	switch arg := arg.(type) {
 	case Call:
 		return (TcExpr)(tc.TypeCheckCall(scope, arg, expected))
+	case BracketExpr:
+		newArgs := make([]Expr, 0, len(arg.Args)+1)
+		newArgs = append(newArgs, arg.Callee)
+		newArgs = append(newArgs, arg.Args...)
+		call := Call{Source: arg.Source, Callee: Ident{Source: "indexOp"}, Args: newArgs}
+		return (TcExpr)(tc.TypeCheckCall(scope, call, expected))
 	case CodeBlock:
 		return (TcExpr)(tc.TypeCheckCodeBlock(scope, arg, expected))
 	case Ident:
@@ -1620,7 +1626,7 @@ func GetArrayType(elem Type, len int64) (result *ArrayType) {
 		//
 		// TODO the array index operator needs mutability propagation of the first argument.
 		// TODO this should be generic for better error messages on missing overloads, listing all currently known array types is a bit much
-		registerBuiltin("[", "", ".arr[", "]", []Type{result, TypeInt64}, elem, 0)
+		registerBuiltin("indexOp", "", ".arr[", "]", []Type{result, TypeInt64}, elem, 0)
 		registerSimpleTemplate("len", []Type{result}, TypeInt64, TcIntLit{Type: TypeInt64, Value: big.NewInt(len)})
 	}
 	return result

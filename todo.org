@@ -1,3 +1,5 @@
+* TODO rename typechecker to semchecker
+* TODO move all complexity from parsing to semchecking and make the untyped AST as trivial as possible.
 * TODO fix problems with printf
  1. test %v for all supported types
  2. test %c for chars, especially non ASCII
@@ -15,7 +17,18 @@ enable lines in [[file:tests/test_struct_enum.golem][test struct enum]]
 * TODO test unmatched { ( [ situation
 * TODO inversion of control in mutability inference. Instead of `GetMutable` do request mutability
 
-Currently, ~GetMutable~ returns, if an expression is mutable. I
+#+begin_src golem
+arr[i] = abc
+#+end_src
+
+In the example above, the assignment operator requires ~arr[i]~ to be mutable.
+~GetMutable~ requests mutability on the full expression, so the error location
+will the entire expression ~arr[i]~ needs to be mutable, when it reallity, only
+~arr~ needs to be mutable.
+
+With with a ~RequireMutable~ on ~arr[i]~ the algorithm would recurse down
+through mutablility propagation to ~arr~ and the error message would actually
+just say that ~arr~ needs to be mutable.
 
 * TODO templates
 * TODO type substitution/generic instancing after overload resolution
