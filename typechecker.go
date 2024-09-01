@@ -627,6 +627,10 @@ func ReportIllegalDocComment(tc *TypeChecker, doc DocComment) {
 	ReportErrorf(tc, doc, "doc comment is illegal here, use normal comment instead")
 }
 
+func ReportMustBeMutable(tc *TypeChecker, doc Expr) {
+	ReportErrorf(tc, doc, "expression must be mutable")
+}
+
 func ExpectType(tc *TypeChecker, node AstNode, gotten Type, expected TypeConstraint) Type {
 	// TODO this doesn't work for partial types (e.g. array[<unspecified>])
 	if gotten == TypeError {
@@ -1043,8 +1047,8 @@ func (tc *TypeChecker) TypeCheckCall(scope Scope, call Call, expected TypeConstr
 				)
 			}
 
-			if arg.Kind == SkVarProcArg && !checkedArgs[i].GetMutable() {
-				ReportErrorf(tc, checkedArgs[i], "argument must be mutable")
+			if arg.Kind == SkVarProcArg {
+				checkedArgs[i].RequireMutable(tc)
 			}
 		}
 		if _, isGeneric := sig.ResultType.(*OpenGenericType); isGeneric {

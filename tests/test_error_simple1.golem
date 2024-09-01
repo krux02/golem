@@ -27,7 +27,7 @@ proc main():i64 = {
   let tmp2 = "abcdef" # Error: string literal needs to have a unique type constraint, but got 'no constraint'
   let tmp: i8 = 123
   foo(tmp) # Error: expected type 'i32 | i64' but got type 'i8'
-  tmp -= 8 # Error: argument must be mutable
+  tmp -= 8 # Error: expression must be mutable
   let str: str = "abcdef"
   baz(str, tmp) # Error: proc not found: baz(str, i8)
   let x : i32 = "somestring" # Error: expected type 'i32' but got type '"somestring"'
