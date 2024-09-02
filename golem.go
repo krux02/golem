@@ -90,9 +90,9 @@ func errorTest(t *testing.T, filename string) {
 		return
 	}
 
-	tc := NewTypeChecker(source, filename)
+	tc := NewSemChecker(source, filename)
 	tc.silentErrors = true
-	_ = TypeCheckPackage(tc, &ProgramContext{}, pak, true)
+	_ = SemCheckPackage(tc, &ProgramContext{}, pak, true)
 
 	for _, error := range tc.errors {
 		line, _, _ := LineColumnStr(source, error.node.GetSource())
@@ -142,8 +142,8 @@ func compileFileToPackage(currentProgram *ProgramContext, filename string, mainP
 	if len(parseErrors) > 0 {
 		return nil, fmt.Errorf("file '%s' has parsing errors", filename)
 	}
-	tc := NewTypeChecker(source, filename)
-	packageDef = TypeCheckPackage(tc, currentProgram, pak, mainPackage)
+	tc := NewSemChecker(source, filename)
+	packageDef = SemCheckPackage(tc, currentProgram, pak, mainPackage)
 	if len(tc.errors) > 0 {
 		err = fmt.Errorf("package %s has errors", packageDef.Name)
 	}

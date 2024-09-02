@@ -285,9 +285,9 @@ var builtinCPrintf *Signature
 var builtinAddr *Signature
 var builtinDeref *Signature
 
-func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+func (typ *BuiltinType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 	if typ == TypeNoReturn {
-		ReportErrorf(tc, context, "a default value of no retrun does not exist")
+		ReportErrorf(sc, context, "a default value of no retrun does not exist")
 		return newErrorNode(context)
 	} else if typ == TypeBoolean {
 		// TODO this is weird
@@ -302,15 +302,15 @@ func (typ *BuiltinType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
 	}
 }
 
-func (typ *BuiltinIntType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+func (typ *BuiltinIntType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 	return TcIntLit{Type: typ, Value: big.NewInt(0)} // TODO no Source set
 }
 
-func (typ *BuiltinFloatType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+func (typ *BuiltinFloatType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 	return TcFloatLit{Type: typ, Value: big.NewFloat(0)}
 }
 
-func (typ *BuiltinStringType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+func (typ *BuiltinStringType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 	if typ == TypeChar {
 		return TcStrLit{Type: typ, Value: "\000"}
 	}
@@ -318,51 +318,51 @@ func (typ *BuiltinStringType) DefaultValue(tc *TypeChecker, context AstNode) TcE
 
 }
 
-func (typ *ErrorType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+func (typ *ErrorType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 	return nil
 }
 
-func (typ *ArrayType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+func (typ *ArrayType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 	return TcArrayLit{ElemType: typ.Elem}
 }
 
-func (typ *StructType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+func (typ *StructType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 	return TcStructLit{Type: typ}
 }
 
-func (typ *EnumType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+func (typ *EnumType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 	return typ.Impl.Values[0]
 }
 
-func (typ *PtrType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+func (typ *PtrType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 	return NilLit{Type: typ}
 }
 
-func (typ *EnumSetType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+func (typ *EnumSetType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 	return TcEnumSetLit{ElemType: typ.Elem}
 }
 
-func (typ *IntLitType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+func (typ *IntLitType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 	return TcIntLit{Type: typ, Value: typ.Value}
 }
 
-func (typ *FloatLitType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+func (typ *FloatLitType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 	return TcFloatLit{Type: typ, Value: typ.Value}
 }
 
-func (typ *StringLitType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+func (typ *StringLitType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 	return TcStrLit{Type: typ, Value: typ.Value}
 }
 
-func (typ *TypeType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+func (typ *TypeType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 	panic("no default value for types")
 }
 
-func (typ *GenericTypeSymbol) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+func (typ *GenericTypeSymbol) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 	panic("not implemented")
 }
 
-func (typ *OpenGenericType) DefaultValue(tc *TypeChecker, context AstNode) TcExpr {
+func (typ *OpenGenericType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 	panic("not implemented")
 }
 
@@ -564,7 +564,7 @@ func registerSimpleTemplate(name string, args []Type, result Type, substitution 
 	builtinScope.Signatures[name] = append(builtinScope.Signatures[name], templateDef.Signature)
 }
 
-type BuiltinMacroFunc func(tc *TypeChecker, scope Scope, call TcCall) TcExpr
+type BuiltinMacroFunc func(sc *SemChecker, scope Scope, call TcCall) TcExpr
 
 func registerConstant(name string, value TcExpr) {
 	var ident Ident
@@ -572,11 +572,11 @@ func registerConstant(name string, value TcExpr) {
 	_ = builtinScope.NewConstSymbol(nil, ident, value)
 }
 
-func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
+func ValidatePrintfCall(sc *SemChecker, scope Scope, call TcCall) TcExpr {
 	formatExpr := call.Args[0]
 	formatStrLit, ok := formatExpr.(TcStrLit)
 	if !ok {
-		ReportErrorf(tc, formatExpr, "format string must be a string literal")
+		ReportErrorf(sc, formatExpr, "format string must be a string literal")
 		return call
 	}
 	formatStr := formatStrLit.Value
@@ -590,12 +590,12 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 		}
 		j++
 		if j == len(formatStr) {
-			ReportErrorf(tc, formatExpr, "incomplete format expr at end of format string")
+			ReportErrorf(sc, formatExpr, "incomplete format expr at end of format string")
 			break
 		}
 
 		if i == len(call.Args) {
-			ReportErrorf(tc, formatExpr, "not enough arguments for %s", AstFormat(formatExpr))
+			ReportErrorf(sc, formatExpr, "not enough arguments for %s", AstFormat(formatExpr))
 			return call
 		}
 		argType := call.Args[i].GetType()
@@ -613,7 +613,7 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 				c2 = 'f'
 			default:
 				// TODO test error message
-				ReportErrorf(tc, formatExpr, "type not supported for %%v: %s", AstFormat(argType))
+				ReportErrorf(sc, formatExpr, "type not supported for %%v: %s", AstFormat(argType))
 				return call
 			}
 		}
@@ -635,11 +635,11 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 		case 'c':
 			typeExpectation = UniqueTypeConstraint{TypeChar}
 		default:
-			ReportErrorf(tc, formatExpr, "invalid format expr %%%c in %s", c2, AstFormat(formatExpr))
+			ReportErrorf(sc, formatExpr, "invalid format expr %%%c in %s", c2, AstFormat(formatExpr))
 			return call
 		}
 
-		ExpectType(tc, call.Args[i], argType, typeExpectation)
+		ExpectType(sc, call.Args[i], argType, typeExpectation)
 		switch argType {
 		case TypeInt8, TypeUInt8:
 			formatStrC.WriteString("hh")
@@ -668,7 +668,7 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 	}
 
 	if i != len(call.Args) {
-		ReportErrorf(tc, call.Args[i], "too many arguments for %s", AstFormat(formatExpr))
+		ReportErrorf(sc, call.Args[i], "too many arguments for %s", AstFormat(formatExpr))
 		return call
 	}
 
@@ -683,9 +683,9 @@ func ValidatePrintfCall(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 	return result
 }
 
-func BuiltinAddLinkerFlags(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
+func BuiltinAddLinkerFlags(sc *SemChecker, scope Scope, call TcCall) TcExpr {
 	if len(call.Args) != 1 {
-		ReportErrorf(tc, call, "expect single string literal as argument")
+		ReportErrorf(sc, call, "expect single string literal as argument")
 		return newErrorNode(call)
 	}
 	switch arg0 := call.Args[0].(type) {
@@ -693,36 +693,26 @@ func BuiltinAddLinkerFlags(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
 		program := scope.CurrentProgram
 		program.LinkerFlags = append(program.LinkerFlags, arg0.Value)
 	default:
-		ReportErrorf(tc, call, "expect single string literal as argument")
+		ReportErrorf(sc, call, "expect single string literal as argument")
 		return newErrorNode(call)
 	}
 	return TcCodeBlock{Source: call.Source}
 }
 
-func BuiltinAddCFlags(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
+func BuiltinAddCFlags(sc *SemChecker, scope Scope, call TcCall) TcExpr {
 	if len(call.Args) != 1 {
-		ReportErrorf(tc, call, "expect single string literal as argument")
+		ReportErrorf(sc, call, "expect single string literal as argument")
 		return newErrorNode(call)
 	}
 	switch arg0 := call.Args[0].(type) {
 	case TcStrLit:
 		scope.CurrentPackage.CFlags = append(scope.CurrentPackage.CFlags, arg0.Value)
 	default:
-		ReportErrorf(tc, call, "expect single string literal as argument")
+		ReportErrorf(sc, call, "expect single string literal as argument")
 		return newErrorNode(call)
 	}
 	return TcCodeBlock{Source: call.Source}
 }
-
-// func BuiltinSizeOf(tc *TypeChecker, scope Scope, call TcCall) TcExpr {
-// 	if len(call.Args) != 1 {
-// 		ReportErrorf(tc, call, "expect single string literal as argument")
-// 		return newErrorNode(call)
-// 	}
-// 	typ := call.Args[0].GetType()
-// 	size := GetTypeSize(typ)
-// 	return IntLit{Source: call.Source, Type: TypeInt64, Value: size}
-// }
 
 func init() {
 	arrayTypeMap = make(map[ArrayTypeMapKey]*ArrayType)

@@ -1,4 +1,4 @@
-# NumErrors:      21
+# NumErrors:      23
 
 proc foo(arg: i32): i64 = {
   printf("foo1: %d\n", i32(arg))
@@ -39,6 +39,11 @@ proc main():i64 = {
   let c: char = "abc" # Error: char lit must have exactly one rune, but it has 3 runes
   let d: char = ""    # Error: char lit must have exactly one rune, but it has 0 runes
   let e: char = "\nx" # Error: char lit must have exactly one rune, but it has 2 runes
+  #
+  let myarr1 = [1:i32,2,3,4]
+  var myarr2 = [4:i32,3,2,1]
+  myarr1[2] = 321 # Error: expression must be mutable
+  (if tmp > 120 do myarr1 else myarr2)[1] = 123 # Error: expression must be mutable
 
   return 0
 }

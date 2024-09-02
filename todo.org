@@ -4,6 +4,7 @@
  1. test %v for all supported types
  2. test %c for chars, especially non ASCII
 
+* TODO templates
 * TODO make char literals a variant ot string literals
 * TODO add infix operators ~in~ and ~notin~ for enum sets
 enable lines in [[file:tests/test_struct_enum.golem][test struct enum]]
@@ -15,22 +16,6 @@ enable lines in [[file:tests/test_struct_enum.golem][test struct enum]]
 * TODO generic functions !!!
 * TODO make addr a generic builtin. suggestions like "expected type 'array(16, f32) | array(1, cstring)' but got type 'str'" are not helpful
 * TODO test unmatched { ( [ situation
-* TODO inversion of control in mutability inference. Instead of `GetMutable` do request mutability
-
-#+begin_src golem
-arr[i] = abc
-#+end_src
-
-In the example above, the assignment operator requires ~arr[i]~ to be mutable.
-~GetMutable~ requests mutability on the full expression, so the error location
-will the entire expression ~arr[i]~ needs to be mutable, when it reallity, only
-~arr~ needs to be mutable.
-
-With with a ~RequireMutable~ on ~arr[i]~ the algorithm would recurse down
-through mutablility propagation to ~arr~ and the error message would actually
-just say that ~arr~ needs to be mutable.
-
-* TODO templates
 * TODO type substitution/generic instancing after overload resolution
 * TODO integer division with two return values
 * TODO restrict operator precedence to common knowledge cases (+-*/) require explicit braces everywhere else.
@@ -60,10 +45,22 @@ just say that ~arr~ needs to be mutable.
 * TODO potential ambiguous syntax between type definition and type context
 * TODO have macros
 ** TODO virtual machine for compile time code execution
+* Bugs
+** assignment to an ifelse does not work
+
+#+begin_src golem
+  var arr1 = [1:i32,2,3,4]
+  var arr2 = [5:i32,4,3,2]
+
+  (if t1 < t2 do arr1 else arr2)[0] = 555
+  printf("%d\n", arr1[0])
+  printf("%d\n", arr2[0])
+#+end_src
+
 * done
 ** ensure that int lit types are actually instantiated only once
 ** implement type checking on 'return'
-** implement ~context~ type and parameter for ~TypeCheck~ functions
+** implement ~context~ type and parameter for ~SemCheck~ functions
 ** provide proper error messages or error instead of panic
 ** negative literals
 ** error reporting instead of compiler crashing
@@ -95,3 +92,17 @@ just say that ~arr~ needs to be mutable.
 ** allow addr, ptr, var, not, discard, return as general prefix expression/operator and test it.
 ** allow newline in a function call.
 ** ensure naked literals are conveted to an actual type
+** TODO inversion of control in mutability inference. Instead of `GetMutable` do request mutability
+
+#+begin_src golem
+arr[i] = abc
+#+end_src
+
+In the example above, the assignment operator requires ~arr[i]~ to be mutable.
+~GetMutable~ requests mutability on the full expression, so the error location
+will the entire expression ~arr[i]~ needs to be mutable, when it reallity, only
+~arr~ needs to be mutable.
+
+With with a ~RequireMutable~ on ~arr[i]~ the algorithm would recurse down
+through mutablility propagation to ~arr~ and the error message would actually
+just say that ~arr~ needs to be mutable.

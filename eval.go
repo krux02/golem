@@ -1,17 +1,17 @@
 package main
 
-func EvalExpr(tc *TypeChecker, expr TcExpr, scope Scope) TcExpr {
+func EvalExpr(sc *SemChecker, expr TcExpr, scope Scope) TcExpr {
 	// TODO actually do something
 	//
 	switch lit := expr.(type) {
 	case TcArrayLit:
 		for i := range lit.Items {
-			lit.Items[i] = EvalExpr(tc, lit.Items[i], scope)
+			lit.Items[i] = EvalExpr(sc, lit.Items[i], scope)
 		}
 		return lit
 	case TcStructLit:
 		for i := range lit.Items {
-			lit.Items[i] = EvalExpr(tc, lit.Items[i], scope)
+			lit.Items[i] = EvalExpr(sc, lit.Items[i], scope)
 		}
 		return lit
 	case TcStrLit:
@@ -25,6 +25,6 @@ func EvalExpr(tc *TypeChecker, expr TcExpr, scope Scope) TcExpr {
 		// Note: this is wrong, this is not a value that actually can be used.
 		return lit
 	}
-	ReportErrorf(tc, expr, "eval for %T node not implemented", expr)
+	ReportErrorf(sc, expr, "eval for %T node not implemented", expr)
 	return expr
 }
