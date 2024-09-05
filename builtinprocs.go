@@ -601,10 +601,13 @@ func ValidatePrintfCall(sc *SemChecker, scope Scope, call TcCall) TcExpr {
 		argType := call.Args[i].GetType()
 		c2 := formatStr[j]
 
-		if c2 == 'v' {
+		switch c2 {
+		case 'v':
 			switch argType {
-			case TypeInt8, TypeUInt8, TypeInt16, TypeUInt16, TypeInt32, TypeUInt32, TypeInt64, TypeUInt64:
+			case TypeInt8, TypeInt16, TypeInt32, TypeInt64:
 				c2 = 'd'
+			case TypeUInt8, TypeUInt16, TypeUInt32, TypeUInt64:
+				c2 = 'u'
 			case TypeCString, TypeStr:
 				c2 = 's'
 			case TypeChar:
@@ -615,6 +618,11 @@ func ValidatePrintfCall(sc *SemChecker, scope Scope, call TcCall) TcExpr {
 				// TODO test error message
 				ReportErrorf(sc, formatExpr, "type not supported for %%v: %s", AstFormat(argType))
 				return call
+			}
+		case 'd':
+			switch argType {
+			case TypeUInt8, TypeUInt16, TypeUInt32, TypeUInt64:
+				c2 = 'u'
 			}
 		}
 
@@ -628,7 +636,7 @@ func ValidatePrintfCall(sc *SemChecker, scope Scope, call TcCall) TcExpr {
 			typeExpectation = TypeAnyString
 		case 'd':
 			typeExpectation = TypeAnyInt
-		case 'x', 'X':
+		case 'x', 'X', 'u':
 			typeExpectation = TypeAnyUInt
 		case 'f':
 			typeExpectation = TypeAnyFloat

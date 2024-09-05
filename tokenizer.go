@@ -153,26 +153,30 @@ func NewTokenizer(code string, filename string) (result *Tokenizer) {
 }
 
 func LineColumnOffset(code string, offset int) (line, column int) {
+	if offset > len(code) {
+		return -1, -1
+	}
+
 	line = 1
 	lineStart := 0
 	for pos, rune := range code {
 		if offset <= pos {
+			// TODO, this only works for ASCII not for multibyte runes
 			column = pos - lineStart
-			return line, column
+			break
 		}
 		if rune == '\n' {
 			line++
 			lineStart = pos + 1
 		}
 	}
-	return -1, -1
+	return line, column
 }
 
 func LineColumnStr(str, substr string) (line, columnStart, columnEnd int) {
 	data1 := (uintptr)(unsafe.Pointer(unsafe.StringData(str)))
 	data2 := (uintptr)(unsafe.Pointer(unsafe.StringData(substr)))
 	if data2 < data1 {
-		fmt.Printf("internal error, no substring, (%d %d) (%d %d). Cannot create line information\n", data1, len(str), data2, len(substr))
 		return -1, -1, -1
 	}
 	offset := int(data2 - data1)
@@ -190,6 +194,10 @@ func (this *Tokenizer) LineColumnToken(token Token) (line, columnStart, columnEn
 }
 
 func (this *Tokenizer) Next() Token {
+	if this.token.kind == TkEof {
+		// prevent an endless token stream of <EOF> tokens where parsing never stops
+		panic("no token beyond <EOF>")
+	}
 	this.token, this.offset = this.lookAheadToken, this.lookAheadOffset
 	this.lookAheadToken, this.lookAheadOffset = this.ScanTokenAt(this.lookAheadOffset)
 	return this.token
@@ -202,7 +210,11 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 	// Printf("read token in:%s...\n", code[:20]);
 	if len(code) == 0 {
 		result.kind = TkEof
-		result.value = code
+		// technically this is ``result.value := code``, but go optimizes the empty
+		// string to have a null pointer. This breaks the line information that is
+		// encoded in the pointer value.
+		newPtr := uintptr(unsafe.Pointer(unsafe.StringData(this.code))) + uintptr(offset)
+		result.value = unsafe.String((*byte)(unsafe.Pointer(newPtr)), 0)
 		return result, newOffset
 	}
 
@@ -223,7 +235,6 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			gotNewLine = true
 			goto eatWhiteSpace
 		case '#': // eat comment as part of whitespace
-			//idx += length
 			if rune2, _ := utf8.DecodeRuneInString(code[idx+length:]); rune2 == '#' {
 				gotComment = true
 			}

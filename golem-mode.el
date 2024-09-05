@@ -1,8 +1,8 @@
 ;;; package --- Summary
 ;;; Commentary:
 ;;; Code:
-
 (require 'compile)
+(require 'project)
 
 (defconst golem-highlights
   (rx-let ((ident (seq (any alpha "_") (* (any alnum "_")))))
@@ -54,7 +54,7 @@
   "Highlight matcher escape sequence in string within LIMIT."
   (let ((string-escape-regexp
          (rx (or (and "\\" (any "abfnrtv\\'\""))
-                 (and "%" (any "%dfs")))))
+                 (and "%" (any "%duxXfscv")))))
         res)
     (while
         (and
@@ -62,6 +62,8 @@
                     string-escape-regexp limit t))
          (not (nth 3 (syntax-ppss)))))
     res))
+
+
 
 ;;;###autoload
 (define-derived-mode golem-mode prog-mode "golem"
