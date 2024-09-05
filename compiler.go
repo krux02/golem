@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/big"
 	"strings"
+	"unicode/utf8"
 )
 
 type CodeBuilder struct {
@@ -312,7 +313,12 @@ func (builder *CodeBuilder) CompileExprWithPrefix(context *PackageGeneratorConte
 		case TypeCString:
 			builder.compileStrLit(ex.Value, false, '"')
 		case TypeChar:
-			builder.compileStrLit(ex.Value, false, '\'')
+			rune, _ := utf8.DecodeRuneInString(ex.Value)
+			if rune < 128 {
+				builder.compileStrLit(ex.Value, false, '\'')
+			} else {
+				fmt.Fprintf(builder, "%d", rune)
+			}
 		default:
 			panic("internal error")
 		}

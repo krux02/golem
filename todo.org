@@ -6,10 +6,8 @@
  2. test %c for chars, especially non ASCII
 
 * TODO templates
-* TODO make char literals a variant ot string literals
 * TODO add infix operators ~in~ and ~notin~ for enum sets
 enable lines in [[file:tests/test_struct_enum.golem][test struct enum]]
-
 * TODO find a better syntax for Type : TypeConstraint as colon is already reserved for value : type separation
 * TODO allow to disable overloading for some functions
 * TODO fix or remove newline escape, curently it has many problems
@@ -46,6 +44,7 @@ enable lines in [[file:tests/test_struct_enum.golem][test struct enum]]
 * TODO potential ambiguous syntax between type definition and type context
 * TODO have macros
 ** TODO virtual machine for compile time code execution
+* TkAddr still exists, but isn't used. Make a clear decision on what should be a token/keyword and what should not be it.
 * Bugs
 ** assignment to an ifelse does not work
 
@@ -108,3 +107,4 @@ With with a ~RequireMutable~ on ~arr[i]~ the algorithm would recurse down
 through mutablility propagation to ~arr~ and the error message would actually
 just say that ~arr~ needs to be mutable.
 ** rename typechecker to semchecker
+** make char literals a variant ot string literals

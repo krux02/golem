@@ -125,7 +125,6 @@ proc main():i32 = {
   assert(not contains(myEnumSet, Option2))
   assert(contains(myEnumSet, Option3))
 
-
   #var myEnum = Option2:MyEnum
   bar(123:i64, MyEnum(2:i64))
   bar(654:i64, Option1:MyEnum)

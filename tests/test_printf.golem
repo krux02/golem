@@ -1,0 +1,29 @@
+
+# TODO technically this ist still a manual test since the output of printf ist not tested against anything
+
+proc main(): i32 = {
+  var i1 : i8 = low(type i8)
+  var i2 : i16 = low(type i16)
+  var i3 : i32 = low(type i32)
+  var i4 : i64 = low(type i64)
+
+  var i5 : u8 = high(type u8)
+  var i6 : u16 = high(type u16)
+  var i7 : u32 = high(type u32)
+  var i8 : u64 = high(type u64)
+
+  var c1 : char = "c"
+  # TODO these chars still don't work
+  var c2 : char = "ä"
+  var c3 : char = "ß"
+  var c4 : char = "ẞ"
+
+  printf("%v %v %v %v\n", i1,i2,i3,i4)
+  printf("%v %v %v %v\n", i5,i6,i7,i8)
+  printf("%x %x %x %x\n", i5,i6,i7,i8)
+  printf("%X %X %X %X\n", i5,i6,i7,i8)
+  printf("%d %d %d %d\n", i5,i6,i7,i8)
+  printf("%v %v %v %v\n", c1,c2,c3,c4)
+  printf("%c %c %c %c\n", c1,c2,c3,c4)
+  0
+}
