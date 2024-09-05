@@ -37,7 +37,6 @@ type UniqueTypeConstraint struct {
 type TcExpr interface {
 	AstNode
 	GetType() Type
-	RequireMutable(sc *SemChecker)
 }
 
 // node to wrap code that can't be typechecked
@@ -369,71 +368,39 @@ func (arg *TcTemplateDef) GetSignature() *Signature           { return arg.Signa
 func (arg *TcBuiltinMacroDef) GetSignature() *Signature       { return arg.Signature }
 func (arg *TcErrorProcDef) GetSignature() *Signature          { return arg.Signature }
 
-func (arg TcDotExpr) RequireMutable(sc *SemChecker) {
-	arg.Lhs.RequireMutable(sc)
-}
+func RequireMutable(sc *SemChecker, expr TcExpr) {
+	switch arg := expr.(type) {
 
-func (arg TcErrorNode) RequireMutable(sc *SemChecker) {} // just to prevent noice from error nodes
-func (arg TcSymbol) RequireMutable(sc *SemChecker) {
-	switch arg.Kind {
-	case SkInvalid, SkVar, SkVarProcArg, SkLoopIterator, SkEnum:
-	case SkConst, SkLet, SkProcArg, SkVarLoopIterator:
+	case TcDotExpr:
+		RequireMutable(sc, arg.Lhs)
+	case TcSymbol:
+		switch arg.Kind {
+		case SkInvalid, SkVar, SkVarProcArg, SkLoopIterator, SkEnum:
+		case SkConst, SkLet, SkProcArg, SkVarLoopIterator:
+			ReportMustBeMutable(sc, arg)
+		}
+	case TcCall:
+		// TODO, actually do the mutability inference, this is a real hack
+		if arg.Sym.Source == "indexOp" {
+			switch len(arg.Args) {
+			case 1:
+				// pointer deref
+			case 2:
+				// index operator
+				RequireMutable(sc, arg.Args[0])
+			}
+		}
+	case TcCodeBlock:
+		N := len(arg.Items)
+		if N > 0 {
+			RequireMutable(sc, arg.Items[N-1])
+		}
+	case TcErrorNode:
+		// To prevent noise from error nodes do not report here
+	case TcIfElseExpr:
+		RequireMutable(sc, arg.Body)
+		RequireMutable(sc, arg.Else)
+	default:
 		ReportMustBeMutable(sc, arg)
 	}
 }
-
-func (call TcCall) RequireMutable(sc *SemChecker) {
-	// TODO, actually do the mutability inference, this is a real hack
-	if call.Sym.Source == "indexOp" {
-		switch len(call.Args) {
-		case 1:
-			// pointer deref
-		case 2:
-			// index operator
-			call.Args[0].RequireMutable(sc)
-		}
-	}
-}
-
-func (arg TcCodeBlock) RequireMutable(sc *SemChecker) {
-	N := len(arg.Items)
-	if N > 0 {
-		arg.Items[N-1].RequireMutable(sc)
-	}
-}
-
-func (arg TcIfElseExpr) RequireMutable(sc *SemChecker) {
-	arg.Body.RequireMutable(sc)
-	arg.Else.RequireMutable(sc)
-}
-
-// maybe a switch case implementation with a default to Report would be a nicer implementaiton
-
-func (arg TcStructField) RequireMutable(sc *SemChecker)     { ReportMustBeMutable(sc, arg) }
-func (arg TcProcSymbol) RequestMutable(sc *SemChecker)      { ReportMustBeMutable(sc, arg) }
-func (arg TcVariableDefStmt) RequireMutable(sc *SemChecker) { ReportMustBeMutable(sc, arg) }
-func (arg TcReturnExpr) RequireMutable(sc *SemChecker)      { ReportMustBeMutable(sc, arg) }
-func (arg TcTypeContext) RequireMutable(sc *SemChecker)     { ReportMustBeMutable(sc, arg) }
-func (arg TcForLoopStmt) RequireMutable(sc *SemChecker)     { ReportMustBeMutable(sc, arg) }
-func (arg TcWhileLoopStmt) RequireMutable(sc *SemChecker)   { ReportMustBeMutable(sc, arg) }
-func (arg TcIfStmt) RequireMutable(sc *SemChecker)          { ReportMustBeMutable(sc, arg) }
-
-func (arg TcArrayLit) RequireMutable(sc *SemChecker)   { ReportMustBeMutable(sc, arg) }
-func (arg TcEnumSetLit) RequireMutable(sc *SemChecker) { ReportMustBeMutable(sc, arg) }
-func (arg TcIntLit) RequireMutable(sc *SemChecker)     { ReportMustBeMutable(sc, arg) }
-func (arg TcFloatLit) RequireMutable(sc *SemChecker)   { ReportMustBeMutable(sc, arg) }
-func (arg TcStrLit) RequireMutable(sc *SemChecker)     { ReportMustBeMutable(sc, arg) }
-func (arg NilLit) RequireMutable(sc *SemChecker)       { ReportMustBeMutable(sc, arg) }
-
-func (arg *TcProcDef) RequireMutable(sc *SemChecker)               { ReportMustBeMutable(sc, arg) }
-func (arg *TcBuiltinProcDef) RequireMutable(sc *SemChecker)        { ReportMustBeMutable(sc, arg) }
-func (arg *TcBuiltinGenericProcDef) RequireMutable(sc *SemChecker) { ReportMustBeMutable(sc, arg) }
-func (arg *TcTemplateDef) RequireMutable(sc *SemChecker)           { ReportMustBeMutable(sc, arg) }
-func (arg TcStructLit) RequireMutable(sc *SemChecker)              { ReportMustBeMutable(sc, arg) }
-func (arg TcPackageDef) RequireMutable(sc *SemChecker)             { ReportMustBeMutable(sc, arg) }
-
-func (arg *TcStructDef) RequestMutable(sc *SemChecker)       { ReportMustBeMutable(sc, arg) }
-func (arg *TcEnumDef) RequestMutable(sc *SemChecker)         { ReportMustBeMutable(sc, arg) }
-func (arg *GenericTypeSymbol) RequestMutable(sc *SemChecker) { ReportMustBeMutable(sc, arg) }
-func (arg *TcBuiltinMacroDef) RequireMutable(sc *SemChecker) { ReportMustBeMutable(sc, arg) }
-func (arg *TcErrorProcDef) RequireMutable(sc *SemChecker)    { ReportMustBeMutable(sc, arg) }

@@ -1048,7 +1048,7 @@ func SemCheckCall(sc *SemChecker, scope Scope, call Call, expected TypeConstrain
 			}
 
 			if arg.Kind == SkVarProcArg {
-				checkedArgs[i].RequireMutable(sc)
+				RequireMutable(sc, checkedArgs[i])
 			}
 		}
 		if _, isGeneric := sig.ResultType.(*OpenGenericType); isGeneric {
