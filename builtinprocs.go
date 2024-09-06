@@ -666,7 +666,7 @@ func ValidatePrintfCall(sc *SemChecker, scope Scope, call TcCall) TcExpr {
 			formatStrC.WriteString("*s")
 		case TypeChar:
 			// TODO: add support to print unicode runes as well
-			formatStrC.WriteString("c")
+			formatStrC.WriteString("lc")
 		case TypeFloat32, TypeFloat64:
 			formatStrC.WriteString("f")
 		default:

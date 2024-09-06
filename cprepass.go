@@ -187,6 +187,9 @@ func cgenprepass(expr TcExpr) TcExpr {
 		panic("cgenprepass should not have a type context anymore")
 	case TcStructField:
 		return expr
+	case nil:
+		// body of "importc" procs is nil and should stay that way
+		return nil
 	default:
 		panic(fmt.Errorf("not implemented %T", expr))
 	}

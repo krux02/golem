@@ -3,6 +3,7 @@
 * TODO move all complexity from parsing to semchecking and make the untyped AST as trivial as possible.
 * TODO fix problems with printf
  1. test %v for all supported types
+    # calling printf on chars requires `setlocale` to be executed. It should just work.
  2. test %c for non ASCII chars
 
 * TODO templates
