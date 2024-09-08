@@ -17,7 +17,6 @@ const (
 	TkNewLine
 	TkSemicolon
 	TkComma
-	TkAssign
 	TkOperator
 	TkStrLit
 	TkIntLit
@@ -76,7 +75,6 @@ var TokenKindNames = [...]string{
 	TkNewLine:           "NewLine",
 	TkSemicolon:         "Semicolon",
 	TkComma:             "Comma",
-	TkAssign:            "Assign",
 	TkOperator:          "Operator",
 	TkStrLit:            "StrLit",
 	TkIntLit:            "IntLit",
@@ -496,9 +494,6 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 
 		result.kind = TkOperator
 		result.value = code[:idx2]
-		if result.value == "=" {
-			result.kind = TkAssign
-		}
 	default:
 		this.reportError(result, "unexpected input: %c %d", c, c)
 	}

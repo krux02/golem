@@ -60,6 +60,7 @@ proc main():i32 = {
   {
     var myfloat1 = 12:f32
     let myfloat2:f32 = 13
+
     mutableArgFunc(myfloat1, myfloat2)
     printf("myfloat1: %f\n", myfloat1)
     assert(myfloat1 == 325)
@@ -68,6 +69,10 @@ proc main():i32 = {
     # test with newline after operator
     discard myfloat1 *
       myfloat2
+
+    var myfloat3 = myfloat1 * myfloat2
+    printf("myfloat3: %f\n", myfloat3)
+    assert(myfloat3 == 4225)
 
     # test newline escape
     # TODO enable this

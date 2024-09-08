@@ -44,7 +44,7 @@ func parseIdent(tokenizer *Tokenizer) (result Ident) {
 func parseInfixOperator(tokenizer *Tokenizer) (result Ident) {
 	token := tokenizer.Next()
 	tk := token.kind
-	if tk != TkOperator && tk != TkAssign && tk != TkAnd && tk != TkOr && tk != TkIn && tk != TkNotIn {
+	if tk != TkOperator && tk != TkAnd && tk != TkOr && tk != TkIn && tk != TkNotIn {
 		tokenizer.reportWrongKind(token)
 	}
 	// ensure operator precedence exists
@@ -81,6 +81,7 @@ func parseVarExpr(tokenizer *Tokenizer) (result VarExpr) {
 	result.Expr = parseExpr(tokenizer, true)
 	lastToken := tokenizer.token
 	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
+	fmt.Printf("var expr: %s\n", AstFormat(result))
 	return result
 }
 
@@ -375,6 +376,8 @@ func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
 		result = (Expr)(parseForLoop(tokenizer))
 	case TkWhile:
 		result = (Expr)(parseWhileLoop(tokenizer))
+	case TkProc:
+		result = (Expr)(parseProcDef(tokenizer))
 	default:
 		result = parseExpr(tokenizer, false)
 	}
@@ -600,7 +603,7 @@ func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
 		lookAhead := tokenizer.lookAheadToken
 		switch lookAhead.kind {
 		// TkAnd, TkOr, TkAssign is an operator token?
-		case TkOperator, TkAnd, TkOr, TkAssign, TkIn, TkNotIn:
+		case TkOperator, TkAnd, TkOr, TkIn, TkNotIn:
 			// used for:
 			//   -1:f32
 			//   not a or b -> (not a) or b # stops at operator
@@ -658,7 +661,7 @@ func parseTypeDef(tokenizer *Tokenizer) Expr {
 	}
 	name := parseIdent(tokenizer)
 	token := tokenizer.Next()
-	tokenizer.expectKind(token, TkAssign)
+	tokenizer.expectOperator(token, "=")
 	kindToken := tokenizer.Next()
 	body := parseCodeBlock(tokenizer)
 	source := joinSubstr(tokenizer.code, firstToken.value, body.Source)
@@ -758,41 +761,8 @@ func parseTrait(tokenizer *Tokenizer) *TraitDef {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkTrait)
 	result := &TraitDef{}
-
-	expr := parseExpr(tokenizer, true)
-	switch x := expr.(type) {
-	case Call:
-		switch name := x.Callee.(type) {
-		case Ident:
-			result.Name = name
-		default:
-			panic("TODO report error here")
-		}
-		for _, arg := range x.Args {
-			switch arg := arg.(type) {
-			case Ident:
-				result.DependentTypes = append(result.DependentTypes, arg)
-			default:
-				panic(fmt.Errorf("TODO: report error here %T %s", arg, arg.GetSource()))
-			}
-		}
-	default:
-		panic("report error here")
-	}
-
-	token := tokenizer.Next()
-	tokenizer.expectKind(token, TkOpenCurly)
-
-	eatNewLines(tokenizer)
-	for tokenizer.lookAheadToken.kind != TkCloseCurly {
-		def := parseProcDef(tokenizer)
-		result.Signatures = append(result.Signatures, def)
-		eatNewLines(tokenizer)
-	}
-
-	lastToken := tokenizer.Next()
-
-	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
+	result.Expr = parseExpr(tokenizer, false)
+	result.Source = joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value)
 	return result
 }
 

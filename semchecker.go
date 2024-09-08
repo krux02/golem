@@ -273,24 +273,66 @@ func SemCheckStructDef(sc *SemChecker, scope Scope, def StructDef) *TcStructDef 
 	return result
 }
 
+func ParseTraitDef(sc *SemChecker, def *TraitDef) (name Ident, dependentTypes []Ident, signatures []*ProcDef) {
+	if lhs, rhs, isAssign := MatchAssign(def.Expr); isAssign {
+		switch x := lhs.(type) {
+		case Call:
+			switch n := x.Callee.(type) {
+			case Ident:
+				name = n
+			default:
+				ReportErrorf(sc, n, "expected identifier here")
+			}
+			for _, arg := range x.Args {
+				switch arg := arg.(type) {
+				case Ident:
+					dependentTypes = append(dependentTypes, arg)
+				default:
+					ReportErrorf(sc, arg, "expected identifier here")
+				}
+			}
+		default:
+			ReportErrorf(sc, x, "expected call exper here")
+		}
+
+		if block, isBlock := rhs.(CodeBlock); isBlock {
+			for _, it := range block.Items {
+				if procDef, isProcDef := it.(*ProcDef); isProcDef {
+					signatures = append(signatures, procDef)
+				} else {
+					ReportErrorf(sc, it, "expect proc def here")
+				}
+			}
+		} else {
+			ReportErrorf(sc, rhs, "expect code block here")
+		}
+	} else {
+		ReportErrorf(sc, def.Expr, "expect assignment")
+	}
+
+	return
+}
+
 func SemCheckTraitDef(sc *SemChecker, scope Scope, def *TraitDef) *TcTraitDef {
-	ValidNameCheck(sc, def.Name, "trait")
+	name, dependentTypes, signatures := ParseTraitDef(sc, def)
+
+	ValidNameCheck(sc, name, "trait")
 
 	result := &TcTraitDef{}
 	result.Source = def.Source
-	result.Name = def.Name.Source
+	result.Name = name.Source
 	traitScope := NewSubScope(scope)
 	traitScope.CurrentTrait = result
-	trait := RegisterTrait(sc, scope, result, def.Name)
+	trait := RegisterTrait(sc, scope, result, name)
 
-	for _, typ := range def.DependentTypes {
+	for _, typ := range dependentTypes {
 		// TODO, support setting the Constraint here
 		sym := &GenericTypeSymbol{Source: typ.Source, Name: typ.Source, Constraint: trait}
 		result.DependentTypes = append(result.DependentTypes, sym)
 		RegisterType(sc, traitScope, sym.Name, sym, typ)
 	}
 
-	for _, procDef := range def.Signatures {
+	for _, procDef := range signatures {
 		tcProcDef := SemCheckProcDef(sc, traitScope, procDef)
 		result.Signatures = append(result.Signatures, tcProcDef.Signature)
 	}

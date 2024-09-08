@@ -320,19 +320,7 @@ func (typeDef EnumDef) PrettyPrint(builder *AstPrettyPrinter) {
 
 func (typeDef TraitDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("trait ")
-	builder.WriteNode(typeDef.Name)
-	builder.WriteString("(")
-	for i, typ := range typeDef.DependentTypes {
-		if i != 0 {
-			builder.WriteString(", ")
-		}
-		builder.WriteNode(typ)
-	}
-	builder.WriteString(") {")
-	for _, sig := range typeDef.Signatures {
-		builder.WriteNode(sig)
-	}
-	builder.WriteString("}")
+	builder.WriteNode(typeDef.Expr)
 }
 
 func (typeDef *TcTraitDef) PrettyPrint(builder *AstPrettyPrinter) {

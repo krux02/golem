@@ -1,15 +1,15 @@
 
 
-trait HasFoo(T) {
-  bar(T, i32)
-  baz(str, f32, T)
+trait HasFoo(T) = {
+  proc bar(T, i32)
+  proc baz(str, f32, T)
 }
 
-trait CombineTrait(T,V) {
+trait CombineTrait(T,V) = {
   bar(T,V): int
 }
 
-trait Ord(T) {
+trait Ord(T) = {
   compare(x: T, y: T): int
 }
 
@@ -23,7 +23,7 @@ type MyStruct = struct {
 
 proc compare(x,y: MyStruct): int
 
-proc foo[HasFoo(T), CombinaTrait(T,V)](arg1,arg2: T) {
+proc foo[HasFoo(T), CombinaTrait(T,V)](arg1,arg2: T) = {
   bar(arg1, 13)
   bar(arg2, 14)
 
@@ -44,7 +44,7 @@ proc foo[HasFoo(T), CombinaTrait(T,V)](arg1,arg2: T) {
 }
 
 
-proc main() {
+proc main() = {
    var a: int = 1337
    var b: int = 4711
 

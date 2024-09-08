@@ -118,10 +118,8 @@ type StructDef struct {
 }
 
 type TraitDef struct {
-	Source         string
-	Name           Ident
-	DependentTypes []Ident
-	Signatures     []*ProcDef
+	Source string
+	Expr   Expr
 }
 
 type CodeBlock struct {

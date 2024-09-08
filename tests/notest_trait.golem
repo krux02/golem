@@ -1,18 +1,18 @@
 
 
 
-trait MyTrait(T) {
+trait MyTrait(T) = {
   proc foo(_:T, _:str): void
   proc foo(_:T, _:f32): void
   proc foo(_:T, _:f64): void
 }
 
-trait MyMultiTrait(T,U) {
+trait MyMultiTrait(T,U) = {
   proc bar(_:T, _:U): i32
 }
 
 proc bar[T : MyTrait](a:  T): void = {
-  foo(a, "abc")
+  foo(a, "abc":str)
   foo(a, 234:f32)
 }
 

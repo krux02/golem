@@ -1,6 +1,9 @@
 
 * TODO rename ArrayLit to something else as it is universal for arrays and structs
 * TODO move all complexity from parsing to semchecking and make the untyped AST as trivial as possible.
+
+move all top level statemets to normal statements
+
 * TODO fix problems with printf
  1. test %v for all supported types
     # calling printf on chars requires `setlocale` to be executed. It should just work.
