@@ -1,4 +1,8 @@
+* TODO distinguish between sym usage and sym definition in typed ast
 
+this should be implemented in LookUpLetSymRecursive
+
+* TODO move `applyDocComment` to a later phase of semcheck, when type checking is already done.
 * TODO rename ArrayLit to something else as it is universal for arrays and structs
 * TODO move all complexity from parsing to semchecking and make the untyped AST as trivial as possible.
 

@@ -4,23 +4,23 @@ func EvalExpr(sc *SemChecker, expr TcExpr, scope Scope) TcExpr {
 	// TODO actually do something
 	//
 	switch lit := expr.(type) {
-	case TcArrayLit:
+	case *TcArrayLit:
 		for i := range lit.Items {
 			lit.Items[i] = EvalExpr(sc, lit.Items[i], scope)
 		}
 		return lit
-	case TcStructLit:
+	case *TcStructLit:
 		for i := range lit.Items {
 			lit.Items[i] = EvalExpr(sc, lit.Items[i], scope)
 		}
 		return lit
-	case TcStrLit:
+	case *TcStrLit:
 		return lit
-	case TcIntLit:
+	case *TcIntLit:
 		return lit
-	case TcFloatLit:
+	case *TcFloatLit:
 		return lit
-	case TcCodeBlock:
+	case *TcCodeBlock:
 		// TODO: this should be implemented, with a bytecode compiler or something.
 		// Note: this is wrong, this is not a value that actually can be used.
 		return lit

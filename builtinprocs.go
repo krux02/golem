@@ -292,9 +292,7 @@ func (typ *BuiltinType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 	} else if typ == TypeBoolean {
 		// TODO this is weird
 		// no source location
-		sym := builtinScope.Variables["false"]
-		sym.Type = TypeBoolean
-		return sym
+		return builtinScope.Variables["false"]
 	} else if typ == TypeVoid {
 		panic("not implemented void default value")
 	} else {
@@ -303,18 +301,18 @@ func (typ *BuiltinType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 }
 
 func (typ *BuiltinIntType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
-	return TcIntLit{Type: typ, Value: big.NewInt(0)} // TODO no Source set
+	return &TcIntLit{Type: typ, Value: big.NewInt(0)} // TODO no Source set
 }
 
 func (typ *BuiltinFloatType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
-	return TcFloatLit{Type: typ, Value: big.NewFloat(0)}
+	return &TcFloatLit{Type: typ, Value: big.NewFloat(0)}
 }
 
 func (typ *BuiltinStringType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 	if typ == TypeChar {
-		return TcStrLit{Type: typ, Value: "\000"}
+		return &TcStrLit{Type: typ, Value: "\000"}
 	}
-	return TcStrLit{Type: typ}
+	return &TcStrLit{Type: typ}
 
 }
 
@@ -323,11 +321,11 @@ func (typ *ErrorType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 }
 
 func (typ *ArrayType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
-	return TcArrayLit{ElemType: typ.Elem}
+	return &TcArrayLit{ElemType: typ.Elem}
 }
 
 func (typ *StructType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
-	return TcStructLit{Type: typ}
+	return &TcStructLit{Type: typ}
 }
 
 func (typ *EnumType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
@@ -339,19 +337,19 @@ func (typ *PtrType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 }
 
 func (typ *EnumSetType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
-	return TcEnumSetLit{ElemType: typ.Elem}
+	return &TcEnumSetLit{ElemType: typ.Elem}
 }
 
 func (typ *IntLitType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
-	return TcIntLit{Type: typ, Value: typ.Value}
+	return &TcIntLit{Type: typ, Value: typ.Value}
 }
 
 func (typ *FloatLitType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
-	return TcFloatLit{Type: typ, Value: typ.Value}
+	return &TcFloatLit{Type: typ, Value: typ.Value}
 }
 
 func (typ *StringLitType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
-	return TcStrLit{Type: typ, Value: typ.Value}
+	return &TcStrLit{Type: typ, Value: typ.Value}
 }
 
 func (typ *TypeType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
@@ -371,7 +369,7 @@ var builtinScope Scope = &ScopeImpl{
 	CurrentPackage:  nil,
 	CurrentProc:     nil,
 	Signatures:      make(map[string][]*Signature),
-	Variables:       make(map[string]TcSymbol),
+	Variables:       make(map[string]*TcSymbol),
 	Types:           make(map[string]Type),
 	TypeConstraints: make(map[string]TypeConstraint),
 }
@@ -498,9 +496,9 @@ func makeGenericSignature(name string, genericParams []*GenericTypeSymbol, args 
 		}
 	}
 
-	params := make([]TcSymbol, len(args))
+	params := make([]*TcSymbol, len(args))
 	for i, arg := range args {
-		params[i].Type = arg
+		params[i] = &TcSymbol{Type: arg}
 		if (argMutableBitmask & (1 << i)) != 0 {
 			params[i].Kind = SkVarProcArg
 		} else {
@@ -551,29 +549,28 @@ func registerSimpleTemplate(name string, args []Type, result Type, substitution 
 		// TODO set Source
 		Signature: &Signature{
 			Name:       name,
-			Params:     make([]TcSymbol, len(args)),
+			Params:     make([]*TcSymbol, len(args)),
 			ResultType: result,
 		},
 		Body: substitution,
 	}
 	for i, arg := range args {
-		templateDef.Signature.Params[i].Type = arg
-		templateDef.Signature.Params[i].Kind = SkProcArg
+		templateDef.Signature.Params[i] = &TcSymbol{Type: arg, Kind: SkProcArg}
 	}
 	templateDef.Signature.Impl = templateDef
 	builtinScope.Signatures[name] = append(builtinScope.Signatures[name], templateDef.Signature)
 }
 
-type BuiltinMacroFunc func(sc *SemChecker, scope Scope, call TcCall) TcExpr
+type BuiltinMacroFunc func(sc *SemChecker, scope Scope, call *TcCall) TcExpr
 
 func registerConstant(name string, value TcExpr) {
 	ident := &Ident{Source: name}
 	_ = builtinScope.NewConstSymbol(nil, ident, value)
 }
 
-func ValidatePrintfCall(sc *SemChecker, scope Scope, call TcCall) TcExpr {
+func ValidatePrintfCall(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	formatExpr := call.Args[0]
-	formatStrLit, ok := formatExpr.(TcStrLit)
+	formatStrLit, ok := formatExpr.(*TcStrLit)
 	if !ok {
 		ReportErrorf(sc, formatExpr, "format string must be a string literal")
 		return call
@@ -679,46 +676,48 @@ func ValidatePrintfCall(sc *SemChecker, scope Scope, call TcCall) TcExpr {
 		return call
 	}
 
-	result := TcCall{Source: call.Source, Braced: call.Braced}
+	result := &TcCall{Source: call.Source, Braced: call.Braced}
 	result.Sym = TcProcSymbol{
 		Source:    call.Sym.Source,
 		Signature: builtinCPrintf,
 	}
 	result.Args = make([]TcExpr, len(call.Args))
-	result.Args[0] = TcStrLit{Source: formatStrLit.Source, Type: TypeCString, Value: formatStrC.String()}
+	result.Args[0] = &TcStrLit{Source: formatStrLit.Source, Type: TypeCString, Value: formatStrC.String()}
 	copy(result.Args[1:], call.Args[1:])
 	return result
 }
 
-func BuiltinAddLinkerFlags(sc *SemChecker, scope Scope, call TcCall) TcExpr {
+func BuiltinAddLinkerFlags(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	if len(call.Args) != 1 {
 		ReportErrorf(sc, call, "expect single string literal as argument")
 		return newErrorNode(call)
 	}
 	switch arg0 := call.Args[0].(type) {
-	case TcStrLit:
+	case *TcStrLit:
 		program := scope.CurrentProgram
 		program.LinkerFlags = append(program.LinkerFlags, arg0.Value)
 	default:
 		ReportErrorf(sc, call, "expect single string literal as argument")
 		return newErrorNode(call)
 	}
-	return TcCodeBlock{Source: call.Source}
+	// return empty code block as a substitude for not returning anything
+	return &TcCodeBlock{Source: call.Source}
 }
 
-func BuiltinAddCFlags(sc *SemChecker, scope Scope, call TcCall) TcExpr {
+func BuiltinAddCFlags(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	if len(call.Args) != 1 {
 		ReportErrorf(sc, call, "expect single string literal as argument")
 		return newErrorNode(call)
 	}
 	switch arg0 := call.Args[0].(type) {
-	case TcStrLit:
+	case *TcStrLit:
 		scope.CurrentPackage.CFlags = append(scope.CurrentPackage.CFlags, arg0.Value)
 	default:
 		ReportErrorf(sc, call, "expect single string literal as argument")
 		return newErrorNode(call)
 	}
-	return TcCodeBlock{Source: call.Source}
+	// return empty code block as a substitude for not returning anything
+	return &TcCodeBlock{Source: call.Source}
 }
 
 func init() {
@@ -808,8 +807,8 @@ func init() {
 		registerBuiltin("f64", "(double)(", "", ")", []Type{typ}, TypeFloat64, 0)
 
 		if intType, isIntType := typ.(*BuiltinIntType); isIntType {
-			registerSimpleTemplate("high", []Type{GetTypeType(typ)}, typ, TcIntLit{Value: big.NewInt(0).Set(intType.MaxValue), Type: typ})
-			registerSimpleTemplate("low", []Type{GetTypeType(typ)}, typ, TcIntLit{Value: big.NewInt(0).Set(intType.MinValue), Type: typ})
+			registerSimpleTemplate("high", []Type{GetTypeType(typ)}, typ, &TcIntLit{Value: big.NewInt(0).Set(intType.MaxValue), Type: typ})
+			registerSimpleTemplate("low", []Type{GetTypeType(typ)}, typ, &TcIntLit{Value: big.NewInt(0).Set(intType.MinValue), Type: typ})
 		}
 	}
 
@@ -839,7 +838,6 @@ func init() {
 		registerBuiltin("<=", "(", "<=", ")", []Type{typ, typ}, TypeBoolean, 0)
 		registerBuiltin(">", "(", ">", ")", []Type{typ, typ}, TypeBoolean, 0)
 		registerBuiltin(">=", "(", ">=", ")", []Type{typ, typ}, TypeBoolean, 0)
-
 	}
 
 	{
@@ -871,7 +869,7 @@ func init() {
 
 	registerBuiltin("assert", "assert(", "", ")", []Type{TypeBoolean}, TypeVoid, 0)
 
-	registerConstant("true", TcIntLit{Type: TypeBoolean, Value: big.NewInt(1)})
-	registerConstant("false", TcIntLit{Type: TypeBoolean, Value: big.NewInt(0)})
+	registerConstant("true", &TcIntLit{Type: TypeBoolean, Value: big.NewInt(1)})
+	registerConstant("false", &TcIntLit{Type: TypeBoolean, Value: big.NewInt(0)})
 
 }

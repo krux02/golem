@@ -58,14 +58,14 @@ type TcStructField struct {
 type TcEnumDef struct {
 	Source  string
 	Name    string
-	Values  []TcSymbol
+	Values  []*TcSymbol
 	Importc bool
 }
 
 type TcStructDef struct {
 	Source  string
 	Name    string
-	Fields  []TcStructField
+	Fields  []*TcStructField
 	Importc bool
 }
 
@@ -88,7 +88,7 @@ type TcCodeBlock struct {
 	Items  []TcExpr
 }
 
-// TODO maybe unify TcProcSym with the othe symbol types
+// TODO maybe unify TcProcSym with SymRef
 type TcProcSymbol struct {
 	Source    string
 	Signature *Signature
@@ -112,13 +112,20 @@ const (
 type TcSymbol struct {
 	Source string
 	Kind   SymbolKind
-	Value  TcExpr // only set when symbol in `const`
+	Value  TcExpr // only set when symbol is `const`
+	Type   Type
+}
+
+// whenever a variable is used
+type TcSymRef struct {
+	Source string
+	Sym    *TcSymbol
 	Type   Type
 }
 
 type TcForLoopStmt struct {
 	Source     string
-	LoopSym    TcSymbol
+	LoopSym    *TcSymbol
 	Collection TcExpr
 	Body       TcExpr
 }
@@ -145,7 +152,7 @@ type TcIfElseExpr struct {
 type TcDotExpr struct {
 	Source string
 	Lhs    TcExpr
-	Rhs    TcStructField
+	Rhs    *TcStructField
 }
 
 type TcCall struct {
@@ -158,10 +165,11 @@ type TcCall struct {
 
 type TcVariableDefStmt struct {
 	Source string
-	Sym    TcSymbol
+	Sym    *TcSymbol
 	Value  TcExpr
 }
 
+// TODO this is a stmt
 type TcReturnExpr struct {
 	Source string
 	Value  TcExpr
@@ -178,7 +186,7 @@ type Signature struct {
 	// real types in generic instantiations.
 	Name          string
 	GenericParams []*GenericTypeSymbol
-	Params        []TcSymbol
+	Params        []*TcSymbol
 	ResultType    Type
 
 	// NOTE: Varargs currently only used for printf.
@@ -300,7 +308,7 @@ type TcPackageDef struct {
 	StructDefs     []*TcStructDef
 	EnumDefs       []*TcEnumDef
 	TraitDefs      []*TcTraitDef
-	VarDefs        []TcVariableDefStmt
+	VarDefs        []*TcVariableDefStmt
 	ProcDefs       []*TcProcDef
 	ExportScope    *ScopeImpl
 }
@@ -311,44 +319,46 @@ type TcImportStmt struct {
 	Package *TcPackageDef
 }
 
-func (sym TcDotExpr) expression()          {}
-func (sym TcSymbol) expression()           {}
-func (stmt TcVariableDefStmt) expression() {}
-func (stmt TcReturnExpr) expression()      {}
-func (stmt TcForLoopStmt) expression()     {}
-func (stmt TcIfStmt) expression()          {}
-func (stmt TcIfElseExpr) expression()      {}
-func (block TcCodeBlock) expression()      {}
-func (call TcCall) expression()            {}
-func (call TcArrayLit) expression()        {}
-func (call TcEnumSetLit) expression()      {}
-func (expr TcStructLit) expression()       {}
+func (sym *TcDotExpr) expression()          {}
+func (sym *TcSymbol) expression()           {}
+func (sym *TcSymRef) expression()           {}
+func (stmt *TcVariableDefStmt) expression() {}
+func (stmt *TcReturnExpr) expression()      {}
+func (stmt *TcForLoopStmt) expression()     {}
+func (stmt *TcIfStmt) expression()          {}
+func (stmt *TcIfElseExpr) expression()      {}
+func (block *TcCodeBlock) expression()      {}
+func (call *TcCall) expression()            {}
+func (call *TcArrayLit) expression()        {}
+func (call *TcEnumSetLit) expression()      {}
+func (expr *TcStructLit) expression()       {}
 
-func (arg TcErrorNode) GetSource() string              { return arg.Source }
-func (arg TcDotExpr) GetSource() string                { return arg.Source }
-func (arg TcStructField) GetSource() string            { return arg.Source }
-func (arg TcSymbol) GetSource() string                 { return arg.Source }
-func (arg TcProcSymbol) GetSource() string             { return arg.Source }
-func (arg TcVariableDefStmt) GetSource() string        { return arg.Source }
-func (arg TcReturnExpr) GetSource() string             { return arg.Source }
-func (arg TcTypeContext) GetSource() string            { return arg.Source }
-func (arg TcForLoopStmt) GetSource() string            { return arg.Source }
-func (arg TcWhileLoopStmt) GetSource() string          { return arg.Source }
-func (arg TcIfStmt) GetSource() string                 { return arg.Source }
-func (arg TcIfElseExpr) GetSource() string             { return arg.Source }
-func (arg TcCodeBlock) GetSource() string              { return arg.Source }
-func (arg TcCall) GetSource() string                   { return arg.Source }
-func (arg TcIntLit) GetSource() string                 { return arg.Source }
-func (arg TcFloatLit) GetSource() string               { return arg.Source }
-func (arg TcStrLit) GetSource() string                 { return arg.Source }
-func (arg TcArrayLit) GetSource() string               { return arg.Source }
-func (arg TcEnumSetLit) GetSource() string             { return arg.Source }
+func (arg *TcErrorNode) GetSource() string             { return arg.Source }
+func (arg *TcDotExpr) GetSource() string               { return arg.Source }
+func (arg *TcStructField) GetSource() string           { return arg.Source }
+func (arg *TcSymbol) GetSource() string                { return arg.Source }
+func (arg *TcSymRef) GetSource() string                { return arg.Source }
+func (arg *TcProcSymbol) GetSource() string            { return arg.Source }
+func (arg *TcVariableDefStmt) GetSource() string       { return arg.Source }
+func (arg *TcReturnExpr) GetSource() string            { return arg.Source }
+func (arg *TcTypeContext) GetSource() string           { return arg.Source }
+func (arg *TcForLoopStmt) GetSource() string           { return arg.Source }
+func (arg *TcWhileLoopStmt) GetSource() string         { return arg.Source }
+func (arg *TcIfStmt) GetSource() string                { return arg.Source }
+func (arg *TcIfElseExpr) GetSource() string            { return arg.Source }
+func (arg *TcCodeBlock) GetSource() string             { return arg.Source }
+func (arg *TcCall) GetSource() string                  { return arg.Source }
+func (arg *TcIntLit) GetSource() string                { return arg.Source }
+func (arg *TcFloatLit) GetSource() string              { return arg.Source }
+func (arg *TcStrLit) GetSource() string                { return arg.Source }
+func (arg *TcArrayLit) GetSource() string              { return arg.Source }
+func (arg *TcEnumSetLit) GetSource() string            { return arg.Source }
 func (arg *TcProcDef) GetSource() string               { return arg.Source }
 func (arg *TcBuiltinProcDef) GetSource() string        { return "" } // builtins have no source location
 func (arg *TcBuiltinGenericProcDef) GetSource() string { return "" } // builtins have no source location
 func (arg *TcTemplateDef) GetSource() string           { return arg.Source }
-func (arg TcStructLit) GetSource() string              { return arg.Source }
-func (arg TcPackageDef) GetSource() string             { return arg.Source }
+func (arg *TcStructLit) GetSource() string             { return arg.Source }
+func (arg *TcPackageDef) GetSource() string            { return arg.Source }
 
 func (arg *TcStructDef) GetSource() string       { return arg.Source }
 func (arg *TcEnumDef) GetSource() string         { return arg.Source }
@@ -371,15 +381,15 @@ func (arg *TcErrorProcDef) GetSignature() *Signature          { return arg.Signa
 func RequireMutable(sc *SemChecker, expr TcExpr) {
 	switch arg := expr.(type) {
 
-	case TcDotExpr:
+	case *TcDotExpr:
 		RequireMutable(sc, arg.Lhs)
-	case TcSymbol:
-		switch arg.Kind {
+	case *TcSymRef:
+		switch arg.Sym.Kind {
 		case SkInvalid, SkVar, SkVarProcArg, SkLoopIterator, SkEnum:
 		case SkConst, SkLet, SkProcArg, SkVarLoopIterator:
 			ReportMustBeMutable(sc, arg)
 		}
-	case TcCall:
+	case *TcCall:
 		// TODO, actually do the mutability inference, this is a real hack
 		if arg.Sym.Source == "indexOp" {
 			switch len(arg.Args) {
@@ -390,14 +400,14 @@ func RequireMutable(sc *SemChecker, expr TcExpr) {
 				RequireMutable(sc, arg.Args[0])
 			}
 		}
-	case TcCodeBlock:
+	case *TcCodeBlock:
 		N := len(arg.Items)
 		if N > 0 {
 			RequireMutable(sc, arg.Items[N-1])
 		}
-	case TcErrorNode:
+	case *TcErrorNode:
 		// To prevent noise from error nodes do not report here
-	case TcIfElseExpr:
+	case *TcIfElseExpr:
 		RequireMutable(sc, arg.Body)
 		RequireMutable(sc, arg.Else)
 	default:

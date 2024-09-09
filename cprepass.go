@@ -7,7 +7,7 @@ func newAddrExpr(arg TcExpr) TcExpr {
 		Source:    "", // no source possible, hidden
 		Signature: builtinAddr,
 	}
-	call := TcCall{
+	call := &TcCall{
 		Source: "", // no source possible, hidden
 		Sym:    sym,
 		Args:   []TcExpr{arg},
@@ -25,8 +25,8 @@ func maybeDerefParam(expr TcExpr, isVarParam bool) TcExpr {
 	return expr
 }
 
-func maybeUnrefParamSym(sym TcSymbol) TcExpr {
-	switch sym.Kind {
+func maybeUnrefParamSym(sym *TcSymRef) TcExpr {
+	switch sym.Sym.Kind {
 	case SkProcArg:
 		switch sym.Type.(type) {
 		case *StructType:
@@ -34,7 +34,7 @@ func maybeUnrefParamSym(sym TcSymbol) TcExpr {
 				Source:    "",
 				Signature: builtinDeref,
 			}
-			call := TcCall{
+			call := &TcCall{
 				Source: "", // no source possible, hidden
 				Sym:    hiddenSym,
 				Args:   []TcExpr{sym},
@@ -67,7 +67,7 @@ func cgenprepassSignature(sig *Signature) *Signature {
 // down to functions, so that they are passed down by reference.
 func cgenprepass(expr TcExpr) TcExpr {
 	switch expr := expr.(type) {
-	case TcCall:
+	case *TcCall:
 		if _, isBuiltin := expr.Sym.Signature.Impl.(*TcBuiltinProcDef); isBuiltin {
 			return expr
 		}
@@ -83,71 +83,73 @@ func cgenprepass(expr TcExpr) TcExpr {
 		}
 		expr.Args = newArgs
 		return expr
-	case TcSymbol:
+	case *TcSymbol:
+		return expr
+	case *TcSymRef:
 		return maybeUnrefParamSym(expr)
-	case TcDotExpr:
-		return TcDotExpr{Source: expr.Source,
+	case *TcDotExpr:
+		return &TcDotExpr{Source: expr.Source,
 			Lhs: cgenprepass(expr.Lhs),
-			Rhs: cgenprepass(expr.Rhs).(TcStructField),
+			Rhs: cgenprepass(expr.Rhs).(*TcStructField),
 		}
-	case TcVariableDefStmt:
-		return TcVariableDefStmt{
+	case *TcVariableDefStmt:
+		return &TcVariableDefStmt{
 			Source: expr.Source,
 			Sym:    expr.Sym,
 			Value:  cgenprepass(expr.Value),
 		}
-	case TcReturnExpr:
-		return TcReturnExpr{
+	case *TcReturnExpr:
+		return &TcReturnExpr{
 			Source: expr.Source,
 			Value:  cgenprepass(expr.Value),
 		}
-	case TcForLoopStmt:
-		return TcForLoopStmt{
+	case *TcForLoopStmt:
+		return &TcForLoopStmt{
 			Source:     expr.Source,
 			LoopSym:    expr.LoopSym,
 			Collection: cgenprepass(expr.Collection),
 			Body:       cgenprepass(expr.Body),
 		}
-	case TcWhileLoopStmt:
-		return TcWhileLoopStmt{
+	case *TcWhileLoopStmt:
+		return &TcWhileLoopStmt{
 			Source:    expr.Source,
 			Condition: cgenprepass(expr.Condition),
 			Body:      cgenprepass(expr.Body),
 		}
-	case TcIfStmt:
-		return TcIfStmt{
+	case *TcIfStmt:
+		return &TcIfStmt{
 			Source:    expr.Source,
 			Condition: cgenprepass(expr.Condition),
 			Body:      cgenprepass(expr.Body),
 		}
-	case TcIfElseExpr:
-		return TcIfElseExpr{
+	case *TcIfElseExpr:
+		return &TcIfElseExpr{
 			Source:    expr.Source,
 			Condition: cgenprepass(expr.Condition),
 			Body:      cgenprepass(expr.Body),
 			Else:      cgenprepass(expr.Else),
 		}
-	case TcCodeBlock:
-		return TcCodeBlock{
+	case *TcCodeBlock:
+		return &TcCodeBlock{
 			Source: expr.Source,
 			Items:  cgenprepassSlice(expr.Items),
 		}
-	case TcIntLit:
+	case *TcIntLit:
 		return expr
-	case TcFloatLit:
+	case *TcFloatLit:
 		return expr
-	case TcStrLit:
+	case *TcStrLit:
 		return expr
 	case *NilLit:
 		return expr
-	case TcArrayLit:
-		return TcArrayLit{
+	case *TcArrayLit:
+		return &TcArrayLit{
 			Source:   expr.Source,
 			Items:    cgenprepassSlice(expr.Items),
 			ElemType: expr.ElemType,
 		}
-	case TcEnumSetLit:
-		return TcEnumSetLit{
+	case *TcEnumSetLit:
+		return &TcEnumSetLit{
 			Source:   expr.Source,
 			Items:    cgenprepassSlice(expr.Items),
 			ElemType: expr.ElemType,
@@ -169,8 +171,8 @@ func cgenprepass(expr TcExpr) TcExpr {
 		// template should be inlined at this point in time. Their definitions are therefore superflous.
 		// Technically they should just be removed, but taking them in verbatim shouldn't cause harm either.
 		return expr
-	case TcStructLit:
-		return TcStructLit{
+	case *TcStructLit:
+		return &TcStructLit{
 			Source: expr.Source,
 			Items:  cgenprepassSlice(expr.Items),
 			Type:   expr.Type,
@@ -181,11 +183,11 @@ func cgenprepass(expr TcExpr) TcExpr {
 			expr.ProcDefs[i] = cgenprepass(procDef).(*TcProcDef)
 		}
 		return expr
-	case TcErrorNode:
+	case *TcErrorNode:
 		panic("error nodes should not be passed down to a cgenprepass, compilation should already have ended")
-	case TcTypeContext:
+	case *TcTypeContext:
 		panic("cgenprepass should not have a type context anymore")
-	case TcStructField:
+	case *TcStructField:
 		return expr
 	case nil:
 		// body of "importc" procs is nil and should stay that way

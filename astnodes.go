@@ -20,7 +20,8 @@ type NamedDocSection struct {
 	Lines  DocLines
 }
 
-type DocComment struct {
+// the type of doc comment that precedes a statement.
+type PrefixDocComment struct {
 	Source           string
 	BaseDoc          DocLines
 	NamedDocSections []*NamedDocSection
@@ -111,7 +112,7 @@ type EnumDef struct { // type MyEnum enum <Expr>
 type StructDef struct {
 	Source      string
 	Name        *Ident
-	Fields      []ColonExpr
+	Fields      []Expr
 	Annotations *StrLit
 }
 
@@ -170,17 +171,11 @@ type BracketExpr struct {
 	Args   []Expr
 }
 
-type ColonExpr struct {
-	Source string
-	Lhs    Expr
-	Rhs    TypeExpr
-}
-
 type ProcDef struct {
 	Source      string
 	Expr        Expr
 	Annotations *StrLit
-	DocComment  *DocComment
+	DocComment  *PrefixDocComment
 }
 
 type PackageDef struct {
@@ -210,7 +205,7 @@ func (arg *ExprList) GetSource() string         { return arg.Source }
 func (arg *ProcDef) GetSource() string          { return arg.Source }
 func (arg *StructDef) GetSource() string        { return arg.Source }
 func (arg *EnumDef) GetSource() string          { return arg.Source }
-func (arg *DocComment) GetSource() string       { return arg.Source }
+func (arg *PrefixDocComment) GetSource() string { return arg.Source }
 func (arg *NamedDocSection) GetSource() string  { return arg.Source }
 func (arg *Ident) GetSource() string            { return arg.Source }
 func (arg *CodeBlock) GetSource() string        { return arg.Source }
@@ -220,7 +215,6 @@ func (arg *FloatLit) GetSource() string         { return arg.Source }
 func (arg *ArrayLit) GetSource() string         { return arg.Source }
 func (arg *Call) GetSource() string             { return arg.Source }
 func (arg *BracketExpr) GetSource() string      { return arg.Source }
-func (arg *ColonExpr) GetSource() string        { return arg.Source }
 func (arg *VariableDefStmt) GetSource() string  { return arg.Source }
 func (arg *ForLoopStmt) GetSource() string      { return arg.Source }
 func (arg *WhileLoopStmt) GetSource() string    { return arg.Source }

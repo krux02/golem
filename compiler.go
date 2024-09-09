@@ -62,7 +62,7 @@ func (builder *CodeBuilder) compileTypeExpr(context *PackageGeneratorContext, ty
 	}
 }
 
-func (builder *CodeBuilder) compileCall(context *PackageGeneratorContext, call TcCall) {
+func (builder *CodeBuilder) compileCall(context *PackageGeneratorContext, call *TcCall) {
 	switch impl := call.Sym.Signature.Impl.(type) {
 	case *TcBuiltinProcDef:
 		builder.WriteString(impl.Prefix)
@@ -128,7 +128,7 @@ func (builder *CodeBuilder) compileStrLit(value string, boxed bool, quote rune) 
 
 var BigMinInt64 = big.NewInt(math.MinInt64)
 
-func (builder *CodeBuilder) CompileIntLit(lit TcIntLit) {
+func (builder *CodeBuilder) CompileIntLit(lit *TcIntLit) {
 	// C doesn't allow -9223372036854775808 as a singed integer literal
 	if lit.Value.Cmp(BigMinInt64) == 0 {
 		builder.WriteString("-9223372036854775807 - 1")
@@ -140,11 +140,11 @@ func (builder *CodeBuilder) CompileIntLit(lit TcIntLit) {
 	}
 }
 
-func (builder *CodeBuilder) CompileFloatLit(lit TcFloatLit) {
+func (builder *CodeBuilder) CompileFloatLit(lit *TcFloatLit) {
 	fmt.Fprintf(builder, "%f", lit.Value)
 }
 
-func (builder *CodeBuilder) CompileSymbol(sym TcSymbol) {
+func (builder *CodeBuilder) CompileSymbol(sym *TcSymbol) {
 	switch sym.Kind {
 	case SkLoopIterator, SkVarProcArg:
 		builder.WriteString("*")
@@ -162,11 +162,15 @@ func (builder *CodeBuilder) CompileSymbol(sym TcSymbol) {
 	}
 }
 
+func (builder *CodeBuilder) CompileSymRef(sym *TcSymRef) {
+	builder.CompileSymbol(sym.Sym)
+}
+
 func (builder *CodeBuilder) CompileExpr(context *PackageGeneratorContext, expr TcExpr) {
 	builder.CompileExprWithPrefix(context, expr)
 }
 
-func (builder *CodeBuilder) CompileVariableDefStmt(context *PackageGeneratorContext, stmt TcVariableDefStmt) {
+func (builder *CodeBuilder) CompileVariableDefStmt(context *PackageGeneratorContext, stmt *TcVariableDefStmt) {
 	builder.compileTypeExpr(context, stmt.Sym.GetType())
 	builder.WriteString(" ")
 	builder.WriteString(stmt.Sym.Source)
@@ -174,7 +178,7 @@ func (builder *CodeBuilder) CompileVariableDefStmt(context *PackageGeneratorCont
 	builder.CompileExpr(context, stmt.Value)
 }
 
-func (builder *CodeBuilder) CompileIfStmt(context *PackageGeneratorContext, stmt TcIfStmt) {
+func (builder *CodeBuilder) CompileIfStmt(context *PackageGeneratorContext, stmt *TcIfStmt) {
 	builder.WriteString("if (")
 	builder.CompileExpr(context, stmt.Condition)
 	builder.WriteString(") ")
@@ -186,7 +190,7 @@ func ExprHasValue(expr TcExpr) bool {
 	return typ != TypeNoReturn && typ != TypeVoid
 }
 
-func (builder *CodeBuilder) CompileIfElseExpr(context *PackageGeneratorContext, stmt TcIfElseExpr) {
+func (builder *CodeBuilder) CompileIfElseExpr(context *PackageGeneratorContext, stmt *TcIfElseExpr) {
 	if ExprHasValue(stmt) {
 		builder.WriteString("(")
 		builder.CompileExpr(context, stmt.Condition)
@@ -205,14 +209,14 @@ func (builder *CodeBuilder) CompileIfElseExpr(context *PackageGeneratorContext, 
 	}
 }
 
-func (builder *CodeBuilder) CompileDotExpr(context *PackageGeneratorContext, dotExpr TcDotExpr) {
+func (builder *CodeBuilder) CompileDotExpr(context *PackageGeneratorContext, dotExpr *TcDotExpr) {
 	builder.WriteString("(")
 	builder.CompileExpr(context, dotExpr.Lhs)
 	builder.WriteString(").")
 	builder.CompileExpr(context, dotExpr.Rhs)
 }
 
-func (builder *CodeBuilder) CompileForLoopStmt(context *PackageGeneratorContext, stmt TcForLoopStmt) {
+func (builder *CodeBuilder) CompileForLoopStmt(context *PackageGeneratorContext, stmt *TcForLoopStmt) {
 	if stmt.Collection.GetType() == TypeStr {
 		// for(char const *it = collection.data, *it_END = collection.data + collection.len; it != it_END; ++it)
 		builder.WriteString("for(char const")
@@ -258,7 +262,7 @@ func (builder *CodeBuilder) CompileForLoopStmt(context *PackageGeneratorContext,
 	builder.CompileExpr(context, stmt.Body)
 }
 
-func (builder *CodeBuilder) CompileWhileLoopStmt(context *PackageGeneratorContext, stmt TcWhileLoopStmt) {
+func (builder *CodeBuilder) CompileWhileLoopStmt(context *PackageGeneratorContext, stmt *TcWhileLoopStmt) {
 	builder.WriteString("while(")
 	builder.CompileExpr(context, stmt.Condition)
 	builder.WriteString(") ")
@@ -274,14 +278,14 @@ func (builder *CodeBuilder) CompileSeparatedExprList(context *PackageGeneratorCo
 	}
 }
 
-func (builder *CodeBuilder) CompileArrayLit(context *PackageGeneratorContext, lit TcArrayLit) {
+func (builder *CodeBuilder) CompileArrayLit(context *PackageGeneratorContext, lit *TcArrayLit) {
 	builder.WriteString("{")
 	builder.CompileSeparatedExprList(context, lit.Items, ", ")
 	builder.WriteString("}")
 
 }
 
-func (builder *CodeBuilder) CompileStructLit(context *PackageGeneratorContext, lit TcStructLit) {
+func (builder *CodeBuilder) CompileStructLit(context *PackageGeneratorContext, lit *TcStructLit) {
 	builder.WriteString("(")
 	builder.compileTypeExpr(context, lit.Type)
 	builder.WriteString("){")
@@ -289,7 +293,7 @@ func (builder *CodeBuilder) CompileStructLit(context *PackageGeneratorContext, l
 	builder.WriteString("}")
 }
 
-func (builder *CodeBuilder) CompileEnumSetLit(context *PackageGeneratorContext, lit TcEnumSetLit) {
+func (builder *CodeBuilder) CompileEnumSetLit(context *PackageGeneratorContext, lit *TcEnumSetLit) {
 	builder.WriteString("((1 << ")
 	builder.CompileSeparatedExprList(context, lit.Items, ") | (1 << ")
 	builder.WriteString("))")
@@ -299,13 +303,13 @@ func (builder *CodeBuilder) CompileEnumSetLit(context *PackageGeneratorContext, 
 // flow end in procedures, as in C code
 func (builder *CodeBuilder) CompileExprWithPrefix(context *PackageGeneratorContext, expr TcExpr) {
 	switch ex := expr.(type) {
-	case TcCodeBlock:
+	case *TcCodeBlock:
 		builder.CompileCodeBlock(context, ex)
-	case TcCall:
+	case *TcCall:
 		builder.compileCall(context, ex)
-	case TcDotExpr:
+	case *TcDotExpr:
 		builder.CompileDotExpr(context, ex)
-	case TcStrLit:
+	case *TcStrLit:
 
 		switch ex.Type {
 		case TypeStr:
@@ -322,37 +326,39 @@ func (builder *CodeBuilder) CompileExprWithPrefix(context *PackageGeneratorConte
 		default:
 			panic("internal error")
 		}
-	case TcIntLit:
+	case *TcIntLit:
 		builder.CompileIntLit(ex)
-	case TcFloatLit:
+	case *TcFloatLit:
 		builder.CompileFloatLit(ex)
 	case *NilLit:
 		builder.WriteString("NULL")
-	case TcArrayLit:
+	case *TcArrayLit:
 		builder.CompileArrayLit(context, ex)
-	case TcSymbol:
+	case *TcSymbol:
 		builder.CompileSymbol(ex)
-	case TcVariableDefStmt:
+	case *TcSymRef:
+		builder.CompileSymRef(ex)
+	case *TcVariableDefStmt:
 		builder.CompileVariableDefStmt(context, ex)
-	case TcReturnExpr:
+	case *TcReturnExpr:
 		// ignore the value of injectReturn here
 		builder.WriteString("return ")
 		builder.CompileExpr(context, ex.Value)
-	case TcIfStmt:
+	case *TcIfStmt:
 		builder.CompileIfStmt(context, ex)
-	case TcIfElseExpr:
+	case *TcIfElseExpr:
 		builder.CompileIfElseExpr(context, ex)
-	case TcForLoopStmt:
+	case *TcForLoopStmt:
 		builder.CompileForLoopStmt(context, ex)
-	case TcWhileLoopStmt:
+	case *TcWhileLoopStmt:
 		builder.CompileWhileLoopStmt(context, ex)
-	case TcStructLit:
+	case *TcStructLit:
 		builder.CompileStructLit(context, ex)
-	case TcEnumSetLit:
+	case *TcEnumSetLit:
 		builder.CompileEnumSetLit(context, ex)
-	case TcStructField:
+	case *TcStructField:
 		builder.WriteString(ex.Name)
-	case TcTypeContext:
+	case *TcTypeContext:
 		builder.compileTypeExpr(context, ex.WrappedType)
 	case nil:
 		panic(fmt.Sprintf("invalid Ast, expression is nil %T", expr))
@@ -361,7 +367,7 @@ func (builder *CodeBuilder) CompileExprWithPrefix(context *PackageGeneratorConte
 	}
 }
 
-func (builder *CodeBuilder) CompileCodeBlock(context *PackageGeneratorContext, block TcCodeBlock) {
+func (builder *CodeBuilder) CompileCodeBlock(context *PackageGeneratorContext, block *TcCodeBlock) {
 	N := len(block.Items)
 	isExpr := ExprHasValue(block)
 	if isExpr {
@@ -483,13 +489,12 @@ func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 
 	injectReturn := ExprHasValue(procDef.Body)
 	// code generation needs to have a code block here, otherwise it is not valid C
-	var body TcCodeBlock
-	body.Source = procDef.Body.GetSource()
+	body := &TcCodeBlock{Source: procDef.Body.GetSource()}
 
 	if injectReturn {
-		body.Items = append(body.Items, TcReturnExpr{Value: procDef.Body})
+		body.Items = append(body.Items, &TcReturnExpr{Value: procDef.Body})
 	} else {
-		codeBlockBody, ok := procDef.Body.(TcCodeBlock)
+		codeBlockBody, ok := procDef.Body.(*TcCodeBlock)
 		if ok {
 			body = codeBlockBody
 		} else {

@@ -448,12 +448,12 @@ func init() {
 	docCommentSectionRegex = regexp.MustCompile(`^\s*([_[:alpha:]][_[:alnum:]]*)\s*:(.*)$`)
 }
 
-func parseDocComment(tokenizer *Tokenizer) *DocComment {
+func parseDocComment(tokenizer *Tokenizer) *PrefixDocComment {
 	if !tokenizer.expectKind(tokenizer.lookAheadToken, TkPrefixDocComment) {
 		return nil
 	}
 	token := tokenizer.Next()
-	result := &DocComment{Source: token.value}
+	result := &PrefixDocComment{Source: token.value}
 	commentScanner := &DocCommentScanner{token.value}
 	for commentScanner.HasNext() {
 		line := commentScanner.Next()
@@ -664,12 +664,7 @@ func parseTypeDef(tokenizer *Tokenizer) Expr {
 		result := &StructDef{Name: name, Source: source, Annotations: annotations}
 		result.Name = name
 		for _, it := range body.Items {
-			colonExpr, ok := MatchColonExpr(it)
-			if !ok {
-				// TODO, this is the wrong location, it should be `it`
-				tokenizer.reportError(firstToken, "expect colon expr")
-			}
-			result.Fields = append(result.Fields, colonExpr)
+			result.Fields = append(result.Fields, it)
 		}
 		return result
 	case TkEnum:
@@ -689,19 +684,16 @@ func parseTypeDef(tokenizer *Tokenizer) Expr {
 	}
 }
 
-func MatchColonExpr(expr Expr) (colonExpr ColonExpr, ok bool) {
+func MatchColonExpr(expr Expr) (lhs Expr, rhs TypeExpr, ok bool) {
 	call, ok := expr.(*Call)
 	if !ok {
-		return colonExpr, false
+		return nil, nil, false
 	}
 	op, ok := call.Callee.(*Ident)
 	if !ok || op.Source != ":" || len(call.Args) != 2 {
-		return colonExpr, false
+		return nil, nil, false
 	}
-	colonExpr.Lhs = call.Args[0]
-	colonExpr.Rhs = TypeExpr(call.Args[1])
-	colonExpr.Source = call.Source
-	return colonExpr, true
+	return call.Args[0], TypeExpr(call.Args[1]), true
 }
 
 func MatchAssign(expr Expr) (lhs, rhs Expr, ok bool) {

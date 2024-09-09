@@ -100,12 +100,6 @@ func (expr BracketExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	mkstring(expr.Args, "[", ", ", "]", builder)
 }
 
-func (expr ColonExpr) PrettyPrint(builder *AstPrettyPrinter) {
-	expr.Lhs.PrettyPrint(builder)
-	builder.WriteString(": ")
-	expr.Rhs.PrettyPrint(builder)
-}
-
 func (codeBlock CodeBlock) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("{")
 	builder.Indentation++
@@ -604,15 +598,19 @@ func (codeBlock TcCodeBlock) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("}")
 }
 
-func (sym TcSymbol) PrettyPrint(printer *AstPrettyPrinter) {
+func (sym *TcSymbol) PrettyPrint(printer *AstPrettyPrinter) {
 	printer.WriteString(sym.Source)
 }
 
-func (sym TcProcSymbol) PrettyPrint(printer *AstPrettyPrinter) {
+func (sym *TcSymRef) PrettyPrint(printer *AstPrettyPrinter) {
 	printer.WriteString(sym.Source)
 }
 
-func (stmt TcVariableDefStmt) PrettyPrint(builder *AstPrettyPrinter) {
+func (sym *TcProcSymbol) PrettyPrint(printer *AstPrettyPrinter) {
+	printer.WriteString(sym.Source)
+}
+
+func (stmt *TcVariableDefStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	switch stmt.Sym.Kind {
 	case SkLet:
 		builder.WriteString("let ")
@@ -633,23 +631,23 @@ func (stmt TcVariableDefStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	}
 }
 
-func (returnExpr TcReturnExpr) PrettyPrint(builder *AstPrettyPrinter) {
+func (returnExpr *TcReturnExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("return ")
 	builder.WriteNode(returnExpr.Value)
 }
 
-func (expr TcTypeContext) PrettyPrint(builder *AstPrettyPrinter) {
+func (expr *TcTypeContext) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("type ")
 	builder.WriteNode(expr.WrappedType)
 }
 
-func (expr TcDotExpr) PrettyPrint(builder *AstPrettyPrinter) {
+func (expr *TcDotExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteNode(expr.Lhs)
 	builder.WriteByte('.')
 	builder.WriteNode(expr.Rhs)
 }
 
-func (expr TcStructField) PrettyPrint(builder *AstPrettyPrinter) {
+func (expr *TcStructField) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(expr.Name)
 }
 
@@ -842,7 +840,7 @@ func (lit *StringLitType) PrettyPrint(builder *AstPrettyPrinter) {
 	WriteStringLit(builder, lit.Value)
 }
 
-func (doc DocComment) PrettyPrint(builder *AstPrettyPrinter) {
+func (doc PrefixDocComment) PrettyPrint(builder *AstPrettyPrinter) {
 	for _, line := range doc.BaseDoc {
 		builder.NewlineAndIndent()
 		builder.WriteString("## ")
