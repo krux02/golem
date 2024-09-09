@@ -85,7 +85,7 @@ func RegisterProc(sc *SemChecker, scope Scope, proc *Signature, context AstNode)
 	scope.Signatures[name] = append(scope.Signatures[name], proc)
 }
 
-func (scope Scope) NewSymbol(sc *SemChecker, name Ident, kind SymbolKind, typ Type) TcSymbol {
+func (scope Scope) NewSymbol(sc *SemChecker, name *Ident, kind SymbolKind, typ Type) TcSymbol {
 	//result := TcSymbol{Name: name.source, Kind: kind, Typ: typ}
 	rawName := name.Source
 	result := TcSymbol{Source: rawName, Kind: kind, Value: nil, Type: typ}
@@ -97,7 +97,7 @@ func (scope Scope) NewSymbol(sc *SemChecker, name Ident, kind SymbolKind, typ Ty
 	return result
 }
 
-func (scope Scope) NewConstSymbol(sc *SemChecker, name Ident, value TcExpr) TcSymbol {
+func (scope Scope) NewConstSymbol(sc *SemChecker, name *Ident, value TcExpr) TcSymbol {
 	rawName := name.Source
 	result := TcSymbol{Source: name.Source, Kind: SkConst, Value: value, Type: value.GetType()}
 	_, alreadyExists := scope.Variables[rawName]
@@ -108,7 +108,7 @@ func (scope Scope) NewConstSymbol(sc *SemChecker, name Ident, value TcExpr) TcSy
 	return result
 }
 
-func LookUpTypeConstraint(sc *SemChecker, scope Scope, ident Ident) TypeConstraint {
+func LookUpTypeConstraint(sc *SemChecker, scope Scope, ident *Ident) TypeConstraint {
 	name := ident.Source
 	if typ, ok := scope.TypeConstraints[name]; ok {
 		return typ
@@ -123,8 +123,8 @@ func LookUpTypeConstraint(sc *SemChecker, scope Scope, ident Ident) TypeConstrai
 
 func LookUpType(sc *SemChecker, scope Scope, expr TypeExpr) Type {
 	switch x := expr.(type) {
-	case Call:
-		ident, ok := x.Callee.(Ident)
+	case *Call:
+		ident, ok := x.Callee.(*Ident)
 		if !ok {
 			ReportErrorf(sc, x.Callee, "identifier expected but got %T", x.Callee)
 			return TypeError
@@ -175,7 +175,7 @@ func LookUpType(sc *SemChecker, scope Scope, expr TypeExpr) Type {
 			ReportErrorf(sc, ident, "expected 'array', 'set' or 'ptr' here, but got '%s'", ident.Source)
 			return TypeError
 		}
-	case Ident:
+	case *Ident:
 		name := x.Source
 		if typ, ok := scope.Types[name]; ok {
 			return typ
@@ -185,7 +185,7 @@ func LookUpType(sc *SemChecker, scope Scope, expr TypeExpr) Type {
 		}
 		ReportErrorf(sc, expr, "Type not found: %s", name)
 		return TypeError
-	case IntLit:
+	case *IntLit:
 		return GetIntLitType(x.Value)
 		// case nil:
 		// 	return TypeError
@@ -193,7 +193,7 @@ func LookUpType(sc *SemChecker, scope Scope, expr TypeExpr) Type {
 	panic(fmt.Sprintf("unexpected ast node in type expr: %s type: %T", AstFormat(expr), expr))
 }
 
-func LookUpProc(scope Scope, ident Ident, numArgs int, signatures []*Signature) []*Signature {
+func LookUpProc(scope Scope, ident *Ident, numArgs int, signatures []*Signature) []*Signature {
 	for scope != nil {
 		if localSignatures, ok := scope.Signatures[ident.Source]; ok {
 			if numArgs >= 0 { // num args may be set to -1 to get all signatures
@@ -213,7 +213,7 @@ func LookUpProc(scope Scope, ident Ident, numArgs int, signatures []*Signature) 
 	return signatures
 }
 
-func LookUpLetSymRecursive(sc *SemChecker, scope Scope, ident Ident) TcSymbol {
+func LookUpLetSymRecursive(sc *SemChecker, scope Scope, ident *Ident) TcSymbol {
 	if scope == nil {
 		ReportErrorf(sc, ident, "let sym not found: %s", ident.Source)
 		var result TcSymbol
@@ -230,7 +230,7 @@ func LookUpLetSymRecursive(sc *SemChecker, scope Scope, ident Ident) TcSymbol {
 	return LookUpLetSymRecursive(sc, scope.Parent, ident)
 }
 
-func LookUpLetSym(sc *SemChecker, scope Scope, ident Ident, expected TypeConstraint) (result TcSymbol) {
+func LookUpLetSym(sc *SemChecker, scope Scope, ident *Ident, expected TypeConstraint) (result TcSymbol) {
 
 	if uniqueType, isUniqueType := expected.(UniqueTypeConstraint); isUniqueType {
 		if enumDef, ok := uniqueType.Typ.(*EnumType); ok {
@@ -248,18 +248,18 @@ func LookUpLetSym(sc *SemChecker, scope Scope, ident Ident, expected TypeConstra
 	return
 }
 
-func SemCheckStructDef(sc *SemChecker, scope Scope, def StructDef) *TcStructDef {
+func SemCheckStructDef(sc *SemChecker, scope Scope, def *StructDef) *TcStructDef {
 	ValidNameCheck(sc, def.Name, "type")
 	result := &TcStructDef{}
 	structType := &StructType{Impl: result}
 	result.Source = def.Source
 	result.Name = def.Name.Source
-	result.Importc = def.Annotations.Value == "importc"
+	result.Importc = def.Annotations != nil && def.Annotations.Value == "importc"
 
 	// TODO: test when Importc that all fields are also Importc (or importc compatible, like builtin integer types)
 
 	for _, colonExpr := range def.Fields {
-		if nameIdent, ok := colonExpr.Lhs.(Ident); !ok {
+		if nameIdent, ok := colonExpr.Lhs.(*Ident); !ok {
 			ReportErrorf(sc, colonExpr.Lhs, "expect Ident, but got %T", colonExpr.Lhs)
 		} else {
 			ValidNameCheck(sc, nameIdent, "struct field")
@@ -273,19 +273,19 @@ func SemCheckStructDef(sc *SemChecker, scope Scope, def StructDef) *TcStructDef 
 	return result
 }
 
-func ParseTraitDef(sc *SemChecker, def *TraitDef) (name Ident, dependentTypes []Ident, signatures []*ProcDef) {
+func ParseTraitDef(sc *SemChecker, def *TraitDef) (name *Ident, dependentTypes []*Ident, signatures []*ProcDef) {
 	if lhs, rhs, isAssign := MatchAssign(def.Expr); isAssign {
 		switch x := lhs.(type) {
-		case Call:
+		case *Call:
 			switch n := x.Callee.(type) {
-			case Ident:
+			case *Ident:
 				name = n
 			default:
 				ReportErrorf(sc, n, "expected identifier here")
 			}
 			for _, arg := range x.Args {
 				switch arg := arg.(type) {
-				case Ident:
+				case *Ident:
 					dependentTypes = append(dependentTypes, arg)
 				default:
 					ReportErrorf(sc, arg, "expected identifier here")
@@ -295,7 +295,7 @@ func ParseTraitDef(sc *SemChecker, def *TraitDef) (name Ident, dependentTypes []
 			ReportErrorf(sc, x, "expected call exper here")
 		}
 
-		if block, isBlock := rhs.(CodeBlock); isBlock {
+		if block, isBlock := rhs.(*CodeBlock); isBlock {
 			for _, it := range block.Items {
 				if procDef, isProcDef := it.(*ProcDef); isProcDef {
 					signatures = append(signatures, procDef)
@@ -340,12 +340,12 @@ func SemCheckTraitDef(sc *SemChecker, scope Scope, def *TraitDef) *TcTraitDef {
 	return result
 }
 
-func SemCheckEnumDef(sc *SemChecker, scope Scope, def EnumDef) *TcEnumDef {
+func SemCheckEnumDef(sc *SemChecker, scope Scope, def *EnumDef) *TcEnumDef {
 	ValidNameCheck(sc, def.Name, "type")
 	result := &TcEnumDef{}
 	enumType := &EnumType{Impl: result}
 	result.Name = def.Name.Source
-	if def.Annotations.Value != "" {
+	if def.Annotations != nil {
 		if def.Annotations.Value == "importc" {
 			result.Importc = true
 		} else {
@@ -390,7 +390,7 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result *T
 	}
 
 	var argsRaw []Expr
-	if call, isCall := expr.(Call); isCall {
+	if call, isCall := expr.(*Call); isCall {
 		argsRaw = call.Args
 		expr = call.Callee
 	} else {
@@ -400,19 +400,19 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result *T
 
 	type GenericArgument struct {
 		Source    string
-		Name      Ident
-		TraitName Ident
+		Name      *Ident
+		TraitName *Ident
 	}
 
 	type ProcArgument struct {
 		Source  string
-		Name    Ident
+		Name    *Ident
 		Mutable bool
 		Type    TypeExpr
 	}
 
 	var genericArgs []GenericArgument
-	if bracketExpr, isBracketExpr := expr.(BracketExpr); isBracketExpr {
+	if bracketExpr, isBracketExpr := expr.(*BracketExpr); isBracketExpr {
 		expr = bracketExpr.Callee
 		genericArgs = make([]GenericArgument, 0, len(bracketExpr.Args))
 		// TODO do something with args
@@ -423,13 +423,13 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result *T
 				ReportErrorf(sc, arg, "generic argument must be a colon expr")
 				continue
 			}
-			lhs, isIdent := colonExpr.Lhs.(Ident)
+			lhs, isIdent := colonExpr.Lhs.(*Ident)
 			if !isIdent {
 				// TODO test error message
 				ReportErrorf(sc, colonExpr.Lhs, "generic argument name must be an Identifire, but it is %T", colonExpr.Lhs)
 				continue
 			}
-			rhs, isIdent := colonExpr.Rhs.(Ident)
+			rhs, isIdent := colonExpr.Rhs.(*Ident)
 			if !isIdent {
 				// TODO firstToken is not the right code location
 				ReportErrorf(sc, colonExpr.Rhs, "generic argument constraint must be an Identifire, but it is %T", colonExpr.Lhs)
@@ -441,8 +441,8 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result *T
 		}
 	}
 
-	var name Ident
-	if ident, isIdent := expr.(Ident); isIdent {
+	var name *Ident
+	if ident, isIdent := expr.(*Ident); isIdent {
 		name = ident
 	} else {
 		// TODO firstToken is not the right code location
@@ -462,16 +462,16 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result *T
 		}
 
 		var mutable = false
-		if varExpr, ok := arg.(VarExpr); ok {
+		if varExpr, ok := arg.(*VarExpr); ok {
 			mutable = true
 			arg = varExpr.Expr
 		}
-		if ident, isIdent := arg.(Ident); isIdent {
+		if ident, isIdent := arg.(*Ident); isIdent {
 			newArgs = append(newArgs, ProcArgument{Source: ident.Source, Name: ident, Mutable: mutable})
 		} else {
 			ReportErrorf(sc, arg, "expected identifier but got %T (%s)", arg, AstFormat(arg))
 			// TODO decide if this should be an error node or something in the arguments list
-			newArgs = append(newArgs, ProcArgument{Source: ident.Source, Name: Ident{Source: "_"}})
+			newArgs = append(newArgs, ProcArgument{Source: ident.Source, Name: &Ident{Source: "_"}})
 		}
 
 		if gotTypeExpr {
@@ -491,30 +491,31 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result *T
 	ValidNameCheck(sc, name, "proc")
 
 	// apply doc section
-	name.Comment = append(name.Comment, def.DocComment.BaseDoc...)
+	if def.DocComment != nil {
+		name.Comment = append(name.Comment, def.DocComment.BaseDoc...)
 
-DOCSECTIONS1:
-	for _, it := range def.DocComment.NamedDocSections {
-		key := it.Name
-		value := it.Lines
+	DOCSECTIONS1:
+		for _, it := range def.DocComment.NamedDocSections {
+			key := it.Name
+			value := it.Lines
 
-		for i := range args {
-			if args[i].Name.Source == key {
-				commentRef := &args[i].Name.Comment
-				*commentRef = append(*commentRef, value...)
-				continue DOCSECTIONS1
+			for i := range args {
+				if args[i].Name.Source == key {
+					commentRef := &args[i].Name.Comment
+					*commentRef = append(*commentRef, value...)
+					continue DOCSECTIONS1
+				}
 			}
+			ReportInvalidDocCommentKey(sc, it)
 		}
-		ReportInvalidDocCommentKey(sc, it)
 	}
-
 	procScope := NewSubScope(parentScope)
 	// from here on old school type checking
 
 	result = &TcProcDef{}
 	procScope.CurrentProc = result
 
-	if def.Annotations.Source != "" {
+	if def.Annotations != nil {
 		if def.Annotations.Value == "importc" {
 			result.Importc = true
 		} else {
@@ -657,15 +658,15 @@ func ReportUnexpectedType(sc *SemChecker, context AstNode, expected TypeConstrai
 	ReportErrorf(sc, context, "expected type '%s' but got type '%s'", AstFormat(expected), AstFormat(gotten))
 }
 
-func ReportInvalidDocCommentKey(sc *SemChecker, section NamedDocSection) {
+func ReportInvalidDocCommentKey(sc *SemChecker, section *NamedDocSection) {
 	ReportErrorf(sc, section, "invalid doc comment key: %s", section.Name)
 }
 
-func ReportInvalidAnnotations(sc *SemChecker, lit StrLit) {
+func ReportInvalidAnnotations(sc *SemChecker, lit *StrLit) {
 	ReportErrorf(sc, lit, "invalid annotations string: %s", lit.Value)
 }
 
-func ReportIllegalDocComment(sc *SemChecker, doc DocComment) {
+func ReportIllegalDocComment(sc *SemChecker, doc *DocComment) {
 	ReportErrorf(sc, doc, "doc comment is illegal here, use normal comment instead")
 }
 
@@ -728,7 +729,7 @@ func (structDef *TcStructDef) GetField(name string) (resField TcStructField, idx
 	return TcStructField{Source: name, Name: name, Type: TypeError}, -1
 }
 
-func SemCheckDotExpr(sc *SemChecker, scope Scope, call Call, expected TypeConstraint) TcExpr {
+func SemCheckDotExpr(sc *SemChecker, scope Scope, call *Call, expected TypeConstraint) TcExpr {
 	if !ExpectArgsLen(sc, call, len(call.Args), 2) {
 		return newErrorNode(call)
 	}
@@ -743,7 +744,7 @@ func SemCheckDotExpr(sc *SemChecker, scope Scope, call Call, expected TypeConstr
 	typ := result.Lhs.GetType()
 	switch t := typ.(type) {
 	case *StructType:
-		rhs, isIdent := call.Args[1].(Ident)
+		rhs, isIdent := call.Args[1].(*Ident)
 		if !isIdent {
 			ReportErrorf(sc, call.Args[1], "right of dot operator needs to be an identifier, but it is %T", call.Args[1])
 			return result
@@ -764,7 +765,7 @@ func SemCheckDotExpr(sc *SemChecker, scope Scope, call Call, expected TypeConstr
 	}
 }
 
-func errorProcSym(ident Ident) TcProcSymbol {
+func errorProcSym(ident *Ident) TcProcSymbol {
 	procDef := &TcErrorProcDef{}
 	signature := &Signature{Name: ident.Source, ResultType: TypeError, Impl: procDef}
 	procDef.Signature = signature
@@ -985,8 +986,8 @@ func SignatureApplyTypeSubstitution(sig *Signature, substitutions []Substitution
 	return result
 }
 
-func SemCheckCall(sc *SemChecker, scope Scope, call Call, expected TypeConstraint) TcExpr {
-	ident, isIdent := call.Callee.(Ident)
+func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstraint) TcExpr {
+	ident, isIdent := call.Callee.(*Ident)
 	if !isIdent {
 		ReportErrorf(sc, call.Callee, "expected identifier but got %T (%s)", call.Callee, AstFormat(call.Callee))
 		return newErrorNode(call.Callee)
@@ -1151,34 +1152,35 @@ func SemCheckCall(sc *SemChecker, scope Scope, call Call, expected TypeConstrain
 	return result
 }
 
-func (sc *SemChecker) ApplyDocComment(expr Expr, doc DocComment) Expr {
+func (sc *SemChecker) ApplyDocComment(expr Expr, doc *DocComment) Expr {
 	switch expr2 := expr.(type) {
-	case VariableDefStmt:
-		expr2.Name.Comment = append(expr2.Name.Comment, doc.BaseDoc...)
+	case *VariableDefStmt:
+		_, name, _, _, _ := MatchVariableDefStatement(sc, expr2)
+
+		name.Comment = append(name.Comment, doc.BaseDoc...)
 		for _, it := range doc.NamedDocSections {
 			key := it.Name
 			value := it.Lines
 
-			if expr2.Name.Source != key {
+			if name.Source != key {
 				ReportInvalidDocCommentKey(sc, it)
 				continue
 			}
 
-			commentRef := &expr2.Name.Comment
-			*commentRef = append(*commentRef, value...)
+			name.Comment = append(name.Comment, value...)
 		}
 		return expr2
 	case *ProcDef:
 		expr2.DocComment = doc
 		return expr2
-	case StructDef:
+	case *StructDef:
 		expr2.Name.Comment = append(expr2.Name.Comment, doc.BaseDoc...)
 	DOCSECTIONS2:
 		for _, it := range doc.NamedDocSections {
 			key := it.Name
 			value := it.Lines
 			for i, colonExpr := range expr2.Fields {
-				if ident, ok := colonExpr.Lhs.(Ident); ok {
+				if ident, ok := colonExpr.Lhs.(*Ident); ok {
 					if ident.Source == key {
 						ident.Comment = append(ident.Comment, value...)
 						colonExpr.Lhs = ident
@@ -1190,7 +1192,7 @@ func (sc *SemChecker) ApplyDocComment(expr Expr, doc DocComment) Expr {
 			ReportInvalidDocCommentKey(sc, it)
 		}
 		return expr2
-	case EnumDef:
+	case *EnumDef:
 		expr2.Name.Comment = append(expr2.Name.Comment, doc.BaseDoc...)
 	DOCSECTIONS3:
 		for _, it := range doc.NamedDocSections {
@@ -1213,23 +1215,21 @@ func (sc *SemChecker) ApplyDocComment(expr Expr, doc DocComment) Expr {
 	}
 }
 
-func SemCheckCodeBlock(sc *SemChecker, scope Scope, arg CodeBlock, expected TypeConstraint) (result TcCodeBlock) {
+func SemCheckCodeBlock(sc *SemChecker, scope Scope, arg *CodeBlock, expected TypeConstraint) (result TcCodeBlock) {
 	result.Source = arg.Source
 	scope = NewSubScope(scope)
 	N := len(arg.Items)
 	if N > 0 {
 		resultItems := make([]TcExpr, 0, N)
-		var docComment DocComment
-		var applyDocComment bool = false
+		var docComment *DocComment
 		for i, item := range arg.Items {
-			if comment, ok := item.(DocComment); ok {
+			if comment, ok := item.(*DocComment); ok {
 				docComment = comment
-				applyDocComment = true
 				continue
 			} else {
-				if applyDocComment {
+				if docComment != nil {
 					item = sc.ApplyDocComment(item, docComment)
-					applyDocComment = false
+					docComment = nil
 				}
 				if i == N-1 {
 					resultItems = append(resultItems, SemCheckExpr(sc, scope, item, expected))
@@ -1268,39 +1268,79 @@ func IsValidIdentifier(name string) string {
 	return ""
 }
 
-func ValidNameCheck(sc *SemChecker, ident Ident, extraword string) {
+func ValidNameCheck(sc *SemChecker, ident *Ident, extraword string) {
 	if errMsg := IsValidIdentifier(ident.Source); errMsg != "" {
 		ReportErrorf(sc, ident, "%s %s", extraword, errMsg)
 	}
 }
 
-func SemCheckVariableDefStmt(sc *SemChecker, scope Scope, arg VariableDefStmt) (result TcVariableDefStmt) {
-	ValidNameCheck(sc, arg.Name, "var")
+func MatchVariableDefStatement(sc *SemChecker, arg *VariableDefStmt) (kind SymbolKind, name *Ident, typeExpr TypeExpr, value Expr, ok bool) {
+
+	// String matiching
+	switch arg.Prefix.Source {
+	case "var":
+		kind = SkVar
+	case "let":
+		kind = SkLet
+	case "const":
+		kind = SkConst
+	default:
+		kind = SkInvalid
+	}
+
+	var expr = arg.Expr
+
+	if Lhs, Rhs, ok := MatchAssign(expr); ok {
+		value = Rhs
+		expr = Lhs
+	}
+
+	if colonExpr, ok := MatchColonExpr(expr); ok {
+		typeExpr = colonExpr.Rhs
+		expr = colonExpr.Lhs
+	}
+
+	name, isIdent := expr.(*Ident)
+	if !isIdent {
+		ReportErrorf(sc, expr, "expect identifier")
+	}
+
+	return kind, name, typeExpr, value, kind != SkInvalid && isIdent
+}
+
+func SemCheckVariableDefStmt(sc *SemChecker, scope Scope, arg *VariableDefStmt) (result TcVariableDefStmt) {
+	kind, name, typeExpr, value, ok := MatchVariableDefStatement(sc, arg)
+	if !ok {
+		// TODO return somtehing that indicades an error
+		return
+	}
+	ValidNameCheck(sc, name, "var")
 	result.Source = arg.Source
-	if arg.Value == nil {
-		typ := LookUpType(sc, scope, arg.TypeExpr)
-		if arg.Kind != SkVar {
+	if value == nil {
+		typ := LookUpType(sc, scope, typeExpr)
+		if kind != SkVar {
 			ReportErrorf(sc, arg, "initial value required")
 		}
-		result.Value = typ.DefaultValue(sc, arg.Name)
-		result.Sym = scope.NewSymbol(sc, arg.Name, arg.Kind, typ)
+		result.Value = typ.DefaultValue(sc, name)
+		result.Sym = scope.NewSymbol(sc, name, kind, typ)
 	} else {
 		var expected TypeConstraint = TypeUnspecified
-		if arg.TypeExpr != nil {
-			expected = UniqueTypeConstraint{LookUpType(sc, scope, arg.TypeExpr)}
+		if typeExpr != nil {
+			expected = UniqueTypeConstraint{LookUpType(sc, scope, typeExpr)}
 		}
-		result.Value = SemCheckExpr(sc, scope, arg.Value, expected)
-		if arg.Kind == SkConst {
+		result.Value = SemCheckExpr(sc, scope, value, expected)
+		if kind == SkConst {
 			// TODO: this needs proper checking if it can even computed
-			result.Sym = scope.NewConstSymbol(sc, arg.Name, EvalExpr(sc, result.Value, scope))
+			result.Sym = scope.NewConstSymbol(sc, name, EvalExpr(sc, result.Value, scope))
 		} else {
-			result.Sym = scope.NewSymbol(sc, arg.Name, arg.Kind, result.Value.GetType())
+			result.Sym = scope.NewSymbol(sc, name, kind, result.Value.GetType())
 		}
 	}
+
 	return result
 }
 
-func SemCheckReturnExpr(sc *SemChecker, scope Scope, arg ReturnExpr) (result TcReturnExpr) {
+func SemCheckReturnExpr(sc *SemChecker, scope Scope, arg *ReturnExpr) (result TcReturnExpr) {
 	result.Value = SemCheckExpr(sc, scope, arg.Value, UniqueTypeConstraint{scope.CurrentProc.Signature.ResultType})
 	return
 }
@@ -1433,13 +1473,13 @@ func (field TcStructField) GetType() Type {
 	return field.Type
 }
 
-func SemCheckColonExpr(sc *SemChecker, scope Scope, arg ColonExpr, expected TypeConstraint) TcExpr {
+func SemCheckColonExpr(sc *SemChecker, scope Scope, arg *ColonExpr, expected TypeConstraint) TcExpr {
 	typ := LookUpType(sc, scope, arg.Rhs)
 	typ = ExpectType(sc, arg, typ, expected)
 	return SemCheckExpr(sc, scope, arg.Lhs, UniqueTypeConstraint{typ})
 }
 
-func SemCheckIntLit(sc *SemChecker, scope Scope, arg IntLit, expected TypeConstraint) TcExpr {
+func SemCheckIntLit(sc *SemChecker, scope Scope, arg *IntLit, expected TypeConstraint) TcExpr {
 	uniqueConstraint, isUniqueConstraint := expected.(UniqueTypeConstraint)
 	if !isUniqueConstraint {
 		ReportErrorf(sc, arg, "int literal needs to have a unique type constraint, but got '%s'", AstFormat(expected))
@@ -1509,7 +1549,7 @@ error:
 	}
 }
 
-func SemCheckFloatLit(sc *SemChecker, scope Scope, arg FloatLit, expected TypeConstraint) TcExpr {
+func SemCheckFloatLit(sc *SemChecker, scope Scope, arg *FloatLit, expected TypeConstraint) TcExpr {
 	uniqueConstraint, isUniqueConstraint := expected.(UniqueTypeConstraint)
 	if !isUniqueConstraint {
 		ReportErrorf(sc, arg, "float literal needs to have a unique type constraint, but got '%s'", AstFormat(expected))
@@ -1539,7 +1579,7 @@ error:
 	}
 }
 
-func SemCheckStrLit(sc *SemChecker, scope Scope, arg StrLit, expected TypeConstraint) TcExpr {
+func SemCheckStrLit(sc *SemChecker, scope Scope, arg *StrLit, expected TypeConstraint) TcExpr {
 	uniqueConstraint, isUniqueConstraint := expected.(UniqueTypeConstraint)
 	if !isUniqueConstraint {
 		ReportErrorf(sc, arg, "string literal needs to have a unique type constraint, but got '%s'", AstFormat(expected))
@@ -1578,53 +1618,53 @@ error:
 
 func SemCheckExpr(sc *SemChecker, scope Scope, arg Expr, expected TypeConstraint) TcExpr {
 	switch arg := arg.(type) {
-	case Call:
+	case *Call:
 		return (TcExpr)(SemCheckCall(sc, scope, arg, expected))
-	case BracketExpr:
+	case *BracketExpr:
 		newArgs := make([]Expr, 0, len(arg.Args)+1)
 		newArgs = append(newArgs, arg.Callee)
 		newArgs = append(newArgs, arg.Args...)
-		call := Call{Source: arg.Source, Callee: Ident{Source: "indexOp"}, Args: newArgs}
+		call := &Call{Source: arg.Source, Callee: &Ident{Source: "indexOp"}, Args: newArgs}
 		return (TcExpr)(SemCheckCall(sc, scope, call, expected))
-	case CodeBlock:
+	case *CodeBlock:
 		return (TcExpr)(SemCheckCodeBlock(sc, scope, arg, expected))
-	case Ident:
+	case *Ident:
 		sym := LookUpLetSym(sc, scope, arg, expected)
 		return (TcExpr)(sym)
-	case StrLit:
+	case *StrLit:
 		return (TcExpr)(SemCheckStrLit(sc, scope, arg, expected))
-	case IntLit:
+	case *IntLit:
 		return (TcExpr)(SemCheckIntLit(sc, scope, arg, expected))
-	case FloatLit:
+	case *FloatLit:
 		return (TcExpr)(SemCheckFloatLit(sc, scope, arg, expected))
-	case ReturnExpr:
+	case *ReturnExpr:
 		// ignoring expected type here, because the return as expression
 		// never evaluates to anything
 		return (TcExpr)(SemCheckReturnExpr(sc, scope, arg))
-	case TypeContext:
+	case *TypeContext:
 		var typ Type = LookUpType(sc, scope, arg.Expr)
 		var tcExpr TcTypeContext
 		tcExpr.Source = arg.Source
 		tcExpr.WrappedType = typ
 		return (TcExpr)(tcExpr)
-	case VariableDefStmt:
+	case *VariableDefStmt:
 		ExpectType(sc, arg, TypeVoid, expected)
 		return (TcExpr)(SemCheckVariableDefStmt(sc, scope, arg))
-	case ForLoopStmt:
+	case *ForLoopStmt:
 		ExpectType(sc, arg, TypeVoid, expected)
 		return (TcExpr)(SemCheckForLoopStmt(sc, scope, arg))
-	case IfExpr:
+	case *IfExpr:
 		ExpectType(sc, arg, TypeVoid, expected)
 		return (TcExpr)(SemCheckIfStmt(sc, scope, arg))
-	case IfElseExpr:
+	case *IfElseExpr:
 		return (TcExpr)(SemCheckIfElseStmt(sc, scope, arg, expected))
-	case ArrayLit:
+	case *ArrayLit:
 		return (TcExpr)(SemCheckArrayLit(sc, scope, arg, expected))
-	case NilLit:
+	case *NilLit:
 		return (TcExpr)(SemCheckNilLit(sc, scope, arg, expected))
-	case ColonExpr:
+	case *ColonExpr:
 		return (TcExpr)(SemCheckColonExpr(sc, scope, arg, expected))
-	case WhileLoopStmt:
+	case *WhileLoopStmt:
 		return (TcExpr)(SemCheckWhileLoopStmt(sc, scope, arg))
 	default:
 		panic(fmt.Errorf("not implemented %T", arg))
@@ -1740,7 +1780,7 @@ func GetTypeType(typ Type) (result *TypeType) {
 	return result
 }
 
-func SemCheckArrayLit(sc *SemChecker, scope Scope, arg ArrayLit, expected TypeConstraint) TcExpr {
+func SemCheckArrayLit(sc *SemChecker, scope Scope, arg *ArrayLit, expected TypeConstraint) TcExpr {
 	switch exp := expected.(type) {
 	case *UnspecifiedType:
 		var result TcArrayLit
@@ -1792,7 +1832,7 @@ func SemCheckArrayLit(sc *SemChecker, scope Scope, arg ArrayLit, expected TypeCo
 					if !isAssign {
 						panic(isAssign)
 					}
-					lhsIdent := lhs.(Ident)
+					lhsIdent := lhs.(*Ident)
 					field, idx := exp.Impl.GetField(lhsIdent.Source)
 					if idx < 0 {
 						ReportErrorf(sc, lhsIdent, "type %s has no field %s", exp.Impl.Name, lhsIdent.Source)
@@ -1835,27 +1875,27 @@ func SemCheckArrayLit(sc *SemChecker, scope Scope, arg ArrayLit, expected TypeCo
 	}
 }
 
-func SemCheckNilLit(sc *SemChecker, scope Scope, arg NilLit, expected TypeConstraint) NilLit {
+func SemCheckNilLit(sc *SemChecker, scope Scope, arg *NilLit, expected TypeConstraint) *NilLit {
 	switch exp := expected.(type) {
 	case UniqueTypeConstraint:
 		if _, isPtrType := exp.Typ.(*PtrType); isPtrType {
-			return NilLit{Source: arg.Source, Type: exp.Typ}
+			return &NilLit{Source: arg.Source, Type: exp.Typ}
 		}
 	case *UnspecifiedType:
-		return NilLit{Source: arg.Source, Type: TypeNilPtr}
+		return &NilLit{Source: arg.Source, Type: TypeNilPtr}
 	}
 	ReportUnexpectedType(sc, arg, expected, TypeNilPtr)
-	return NilLit{Source: arg.Source, Type: TypeError}
+	return &NilLit{Source: arg.Source, Type: TypeError}
 }
 
-func SemCheckIfStmt(sc *SemChecker, scope Scope, stmt IfExpr) (result TcIfStmt) {
+func SemCheckIfStmt(sc *SemChecker, scope Scope, stmt *IfExpr) (result TcIfStmt) {
 	// currently only iteration on strings in possible (of course that is not final)
 	result.Condition = SemCheckExpr(sc, scope, stmt.Condition, UniqueTypeConstraint{TypeBoolean})
 	result.Body = SemCheckExpr(sc, scope, stmt.Body, UniqueTypeConstraint{TypeVoid})
 	return
 }
 
-func SemCheckIfElseStmt(sc *SemChecker, scope Scope, stmt IfElseExpr, expected TypeConstraint) (result TcIfElseExpr) {
+func SemCheckIfElseStmt(sc *SemChecker, scope Scope, stmt *IfElseExpr, expected TypeConstraint) (result TcIfElseExpr) {
 	// currently only iteration on strings in possible (of course that is not final)
 	result.Condition = SemCheckExpr(sc, scope, stmt.Condition, UniqueTypeConstraint{TypeBoolean})
 	result.Body = SemCheckExpr(sc, scope, stmt.Body, expected)
@@ -1879,7 +1919,7 @@ func (sc *SemChecker) ElementType(expr TcExpr) Type {
 	return TypeError
 }
 
-func SemCheckForLoopStmt(sc *SemChecker, scope Scope, loopArg ForLoopStmt) (result TcForLoopStmt) {
+func SemCheckForLoopStmt(sc *SemChecker, scope Scope, loopArg *ForLoopStmt) (result TcForLoopStmt) {
 	scope = NewSubScope(scope)
 	// currently only iteration on strings in possible (of course that is not final)
 	result.Collection = SemCheckExpr(sc, scope, loopArg.Collection, TypeUnspecified)
@@ -1889,7 +1929,7 @@ func SemCheckForLoopStmt(sc *SemChecker, scope Scope, loopArg ForLoopStmt) (resu
 	return
 }
 
-func SemCheckWhileLoopStmt(sc *SemChecker, scope Scope, loopArg WhileLoopStmt) (result TcWhileLoopStmt) {
+func SemCheckWhileLoopStmt(sc *SemChecker, scope Scope, loopArg *WhileLoopStmt) (result TcWhileLoopStmt) {
 	scope = NewSubScope(scope)
 
 	result.Source = loopArg.Source
@@ -1898,7 +1938,7 @@ func SemCheckWhileLoopStmt(sc *SemChecker, scope Scope, loopArg WhileLoopStmt) (
 	return result
 }
 
-func SemCheckImportStmt(sc *SemChecker, importScope Scope, currentProgram *ProgramContext, workDir string, stmt ImportStmt) TcImportStmt {
+func SemCheckImportStmt(sc *SemChecker, importScope Scope, currentProgram *ProgramContext, workDir string, stmt *ImportStmt) TcImportStmt {
 	pkg, err := GetPackage(currentProgram, workDir, stmt.Value.Value)
 	if err != nil {
 		ReportErrorf(sc, stmt.Value, "%s", err.Error())
@@ -1926,7 +1966,7 @@ func SemCheckImportStmt(sc *SemChecker, importScope Scope, currentProgram *Progr
 	return TcImportStmt{Source: pkg.Source, Value: stmt.Value, Package: pkg}
 }
 
-func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg PackageDef, mainPackage bool) (result *TcPackageDef) {
+func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *PackageDef, mainPackage bool) (result *TcPackageDef) {
 	result = &TcPackageDef{}
 	importScope := NewSubScope(builtinScope)
 	importScope.CurrentProgram = currentProgram
@@ -1936,20 +1976,17 @@ func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg Package
 	pkgScope.CurrentPackage = result
 	result.Name = arg.Name
 
-	hasDocComment := false
-	var docComment DocComment
-
+	var docComment *DocComment = nil
 	for _, stmt := range arg.TopLevelStmts {
-		if hasDocComment {
+		if docComment != nil {
 			stmt = sc.ApplyDocComment(stmt, docComment)
-			hasDocComment = false
+			docComment = nil
 		}
 		switch stmt := stmt.(type) {
-
-		case EnumDef:
+		case *EnumDef:
 			td := SemCheckEnumDef(sc, pkgScope, stmt)
 			result.EnumDefs = append(result.EnumDefs, td)
-		case StructDef:
+		case *StructDef:
 			td := SemCheckStructDef(sc, pkgScope, stmt)
 			result.StructDefs = append(result.StructDefs, td)
 		case *ProcDef:
@@ -1959,19 +1996,18 @@ func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg Package
 			if mainPackage && procDef.Signature.Name == "main" {
 				currentProgram.Main = procDef
 			}
-		case VariableDefStmt:
+		case *VariableDefStmt:
 			varDef := SemCheckVariableDefStmt(sc, pkgScope, stmt)
 			result.VarDefs = append(result.VarDefs, varDef)
-		case DocComment:
+		case *DocComment:
 			docComment = stmt
-			hasDocComment = true
-		case EmitStmt:
+		case *EmitStmt:
 			result.EmitStatements = append(result.EmitStatements, stmt)
-		case StaticExpr:
+		case *StaticExpr:
 			// TODO: ensure this expression can be evaluated at compile time
 			tcExpr := SemCheckExpr(sc, pkgScope, stmt.Expr, UniqueTypeConstraint{TypeVoid})
 			EvalExpr(sc, tcExpr, pkgScope)
-		case ImportStmt:
+		case *ImportStmt:
 			tcImportStmt := SemCheckImportStmt(sc, importScope, currentProgram, arg.WorkDir, stmt)
 			result.Imports = append(result.Imports, tcImportStmt)
 		case *TraitDef:

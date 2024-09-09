@@ -335,7 +335,7 @@ func (typ *EnumType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 }
 
 func (typ *PtrType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
-	return NilLit{Type: typ}
+	return &NilLit{Type: typ}
 }
 
 func (typ *EnumSetType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
@@ -567,8 +567,7 @@ func registerSimpleTemplate(name string, args []Type, result Type, substitution 
 type BuiltinMacroFunc func(sc *SemChecker, scope Scope, call TcCall) TcExpr
 
 func registerConstant(name string, value TcExpr) {
-	var ident Ident
-	ident.Source = name
+	ident := &Ident{Source: name}
 	_ = builtinScope.NewConstSymbol(nil, ident, value)
 }
 

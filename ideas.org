@@ -1006,3 +1006,7 @@ preprocessor".
   file that has a main function. Imports and forward declarations (things nobody
   really cares about) are at the very end of the file, where they are only seen
   when explicitly searched for.
+
+* 2D array literals
+
+supporting matlab matrix style 2D array literals would be pretty nice. The idea here is that the base `parseExprList` would already process the `;`. Different ast matches could then decide if they want to put semantics into the semicolon, or just out right disallow it. Maybe this would even allow to merge the parsing code of code blocks with array literals, simply through semicolon inference on newlines.

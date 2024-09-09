@@ -143,7 +143,7 @@ type OffsetAlign = struct {
   align: i32
 }
 
-trait HasSizeOf(T) {
+trait HasSizeOf(T) = {
   proc sizeof(_: T): i64
 }
 

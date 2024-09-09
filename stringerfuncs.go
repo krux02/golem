@@ -85,7 +85,7 @@ func mkstring(items []Expr, prefix, infix, postfix string, builder *AstPrettyPri
 }
 
 func (call Call) PrettyPrint(builder *AstPrettyPrinter) {
-	ident, isIdent := call.Callee.(Ident)
+	ident, isIdent := call.Callee.(*Ident)
 	isOperator := isIdent && slices.Contains([]string{".", ":"}, ident.Source)
 	if isOperator {
 		mkstring(call.Args, "(", ident.Source, ")", builder)
@@ -365,25 +365,9 @@ func (expr TypeContext) PrettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (stmt VariableDefStmt) PrettyPrint(builder *AstPrettyPrinter) {
-	switch stmt.Kind {
-	case SkLet:
-		builder.WriteString("let ")
-	case SkVar:
-		builder.WriteString("var ")
-	case SkConst:
-		builder.WriteString("const ")
-	default:
-		panic("illegal or not implemented")
-	}
-	builder.WriteNode(stmt.Name)
-	if stmt.TypeExpr != nil {
-		builder.WriteString(": ")
-		builder.WriteNode(stmt.TypeExpr)
-	}
-	if stmt.Value != nil {
-		builder.WriteString(" = ")
-		builder.WriteNode(stmt.Value)
-	}
+	builder.WriteString(stmt.Prefix.Source)
+	builder.WriteString(" ")
+	builder.WriteNode(stmt.Expr)
 }
 
 func (loopStmt ForLoopStmt) PrettyPrint(builder *AstPrettyPrinter) {

@@ -34,14 +34,15 @@ func OperatorPrecedence(op string) int {
 	return -1
 }
 
-func parseIdent(tokenizer *Tokenizer) (result Ident) {
+func parseIdent(tokenizer *Tokenizer) *Ident {
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkIdent)
-	result.Source = token.value
-	return result
+	return &Ident{
+		Source: token.value,
+	}
 }
 
-func parseInfixOperator(tokenizer *Tokenizer) (result Ident) {
+func parseInfixOperator(tokenizer *Tokenizer) *Ident {
 	token := tokenizer.Next()
 	tk := token.kind
 	if tk != TkOperator && tk != TkAnd && tk != TkOr && tk != TkIn && tk != TkNotIn {
@@ -52,84 +53,75 @@ func parseInfixOperator(tokenizer *Tokenizer) (result Ident) {
 	if precedence < 0 {
 		tokenizer.reportError(token, "invalid operator '%s'", token.value)
 	}
-	result.Source = token.value
-
-	return result
+	return &Ident{
+		Source: token.value,
+	}
 }
 
-func parseTypeContext(tokenizer *Tokenizer) (result TypeContext) {
+func parseTypeContext(tokenizer *Tokenizer) *TypeContext {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkType)
-	result.Expr = TypeExpr(parseExpr(tokenizer, false))
-	lastToken := tokenizer.token
-	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
+	result := &TypeContext{
+		Expr: TypeExpr(parseExpr(tokenizer, false)),
+	}
+	result.Source = joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value)
 	return result
 }
 
-func parseReturnExpr(tokenizer *Tokenizer) (result ReturnExpr) {
+func parseReturnExpr(tokenizer *Tokenizer) *ReturnExpr {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkReturn)
-	result.Value = parseExpr(tokenizer, false)
-	lastToken := tokenizer.token
-	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
+	result := &ReturnExpr{
+		Value: parseExpr(tokenizer, false),
+	}
+	result.Source = joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value)
 	return result
 }
 
-func parseVarExpr(tokenizer *Tokenizer) (result VarExpr) {
+func parseVarExpr(tokenizer *Tokenizer) *VarExpr {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkVar)
-	result.Expr = parseExpr(tokenizer, true)
-	lastToken := tokenizer.token
-	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
-	fmt.Printf("var expr: %s\n", AstFormat(result))
+	result := &VarExpr{
+		Expr: parseExpr(tokenizer, true),
+	}
+	result.Source = joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value)
 	return result
 }
 
 /* (name string, typ TypeExpr, expr Expr) */
 
-func parseVariableDefStmt(tokenizer *Tokenizer) (result VariableDefStmt) {
+func parseVariableDefStmt(tokenizer *Tokenizer) *VariableDefStmt {
+	result := &VariableDefStmt{}
 	firstToken := tokenizer.Next()
 	switch firstToken.kind {
-	case TkLet:
-		result.Kind = SkLet
-	case TkVar:
-		result.Kind = SkVar
-	case TkConst:
-		result.Kind = SkConst
+	case TkLet, TkVar, TkConst:
+		result.Prefix = Ident{Source: firstToken.value}
 	default:
 		tokenizer.reportWrongKind(firstToken)
 		// TODO what now? Create an invalid expression? this default value of result is in valid stmt.
 		return result
 	}
-	expr := parseExpr(tokenizer, false)
-	if Lhs, Rhs, ok := MatchAssign(expr); ok {
-		result.Value = Rhs
-		expr = Lhs
-	}
-	if colonExpr, ok := MatchColonExpr(expr); ok {
-		result.TypeExpr = colonExpr.Rhs
-		expr = colonExpr.Lhs
-	}
-	result.Name = expr.(Ident)
-	result.Source = joinSubstr(tokenizer.code, firstToken.value, expr.GetSource())
+	result.Expr = parseExpr(tokenizer, false)
+	result.Source = joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value)
 	return result
 }
 
-func parseBreakStmt(tokenizer *Tokenizer) (result BreakStmt) {
+func parseBreakStmt(tokenizer *Tokenizer) *BreakStmt {
+	result := &BreakStmt{}
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkBreak)
 	result.Source = token.value
 	return result
 }
 
-func parseContinueStmt(tokenizer *Tokenizer) (result ContinueStmt) {
+func parseContinueStmt(tokenizer *Tokenizer) *ContinueStmt {
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkContinue)
-	result.Source = token.value
-	return result
+	return &ContinueStmt{Source: token.value}
 }
 
-func parseForLoop(tokenizer *Tokenizer) (result ForLoopStmt) {
+func parseForLoop(tokenizer *Tokenizer) *ForLoopStmt {
+	result := &ForLoopStmt{}
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkFor)
 	result.LoopIdent = parseIdent(tokenizer)
@@ -144,7 +136,8 @@ func parseForLoop(tokenizer *Tokenizer) (result ForLoopStmt) {
 	return result
 }
 
-func parseWhileLoop(tokenizer *Tokenizer) (result WhileLoopStmt) {
+func parseWhileLoop(tokenizer *Tokenizer) *WhileLoopStmt {
+	result := &WhileLoopStmt{}
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkWhile)
 	result.Condition = parseExpr(tokenizer, false)
@@ -167,13 +160,13 @@ func parseIfStmt(tokenizer *Tokenizer) Expr {
 		tokenizer.Next()
 		elseExpr := parseExpr(tokenizer, false)
 
-		result := IfElseExpr{Condition: condition, Body: body, Else: elseExpr}
+		result := &IfElseExpr{Condition: condition, Body: body, Else: elseExpr}
 		lastToken := tokenizer.token
 		result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
 		return result
 		// return IfElseStmt{Condition: condition, Body: body, Else: elseExpr}
 	}
-	result := IfExpr{Condition: condition, Body: body}
+	result := &IfExpr{Condition: condition, Body: body}
 	lastToken := tokenizer.token
 	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
 	return result
@@ -191,7 +184,8 @@ func eatNewLines(tokenizer *Tokenizer) {
 	}
 }
 
-func parseCodeBlock(tokenizer *Tokenizer) (result CodeBlock) {
+func parseCodeBlock(tokenizer *Tokenizer) *CodeBlock {
+	result := &CodeBlock{}
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkOpenCurly)
 	eatSemicolons(tokenizer)
@@ -206,10 +200,10 @@ func parseCodeBlock(tokenizer *Tokenizer) (result CodeBlock) {
 	return result
 }
 
-func parseStrLit(tokenizer *Tokenizer) (result StrLit) {
+func parseStrLit(tokenizer *Tokenizer) *StrLit {
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkStrLit)
-	result.Source = token.value
+	result := &StrLit{Source: token.value}
 	var b strings.Builder
 	b.Grow(len(token.value) - 2)
 	var processEscape bool
@@ -255,10 +249,10 @@ func parseStrLit(tokenizer *Tokenizer) (result StrLit) {
 	return result
 }
 
-func parseIntLit(tokenizer *Tokenizer) (result IntLit) {
+func parseIntLit(tokenizer *Tokenizer) *IntLit {
 	token := tokenizer.Next()
 	tokenizer.expectKind2(token, TkIntLit, TkHexLit)
-	result = IntLit{Source: token.value}
+	result := &IntLit{Source: token.value}
 
 	var ok bool
 	if token.kind == TkIntLit {
@@ -273,10 +267,10 @@ func parseIntLit(tokenizer *Tokenizer) (result IntLit) {
 	return result
 }
 
-func parseFloatLit(tokenizer *Tokenizer) (result FloatLit) {
+func parseFloatLit(tokenizer *Tokenizer) *FloatLit {
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkFloatLit)
-	result.Source = token.value
+	result := &FloatLit{Source: token.value}
 
 	floatValue, _, err := big.ParseFloat(token.value, 10, 64, big.ToNearestEven)
 	if err != nil {
@@ -286,13 +280,13 @@ func parseFloatLit(tokenizer *Tokenizer) (result FloatLit) {
 	return result
 }
 
-func applyOperatorPrecedenceFromLeft(tokenizerCode string, lhs Expr, op Ident, rhs Expr) Call {
-	if rhsCall, ok := rhs.(Call); ok && !rhsCall.Braced {
-		rhsOperator, isIdent := rhsCall.Callee.(Ident)
+func applyOperatorPrecedenceFromLeft(tokenizerCode string, lhs Expr, op *Ident, rhs Expr) *Call {
+	if rhsCall, ok := rhs.(*Call); ok && !rhsCall.Braced {
+		rhsOperator, isIdent := rhsCall.Callee.(*Ident)
 		if isIdent && OperatorPrecedence(op.Source) >= OperatorPrecedence(rhsOperator.Source) {
 			newLhs := applyOperatorPrecedenceFromLeft(tokenizerCode, lhs, op, rhsCall.Args[0])
 			newRhs := rhsCall.Args[1]
-			return Call{
+			return &Call{
 				Source: joinSubstr(tokenizerCode, newLhs.GetSource(), newRhs.GetSource()),
 				Callee: rhsOperator,
 				Args:   []Expr{newLhs, newRhs},
@@ -300,94 +294,96 @@ func applyOperatorPrecedenceFromLeft(tokenizerCode string, lhs Expr, op Ident, r
 		}
 	}
 
-	return Call{
+	return &Call{
 		Source: joinSubstr(tokenizerCode, lhs.GetSource(), rhs.GetSource()),
 		Callee: op,
 		Args:   []Expr{lhs, rhs},
 	}
 }
 
-func parseInfixCall(tokenizer *Tokenizer, lhs Expr) (result Call) {
+func parseInfixCall(tokenizer *Tokenizer, lhs Expr) *Call {
 	operator := parseInfixOperator(tokenizer)
 	rhs := parseExpr(tokenizer, false)
 	// parseExpr recursively eats all follow operator calls. Therefore `lhs` is
 	// the _new_ operatore that needs to be applied in the expression from the
 	// left.
-	result = applyOperatorPrecedenceFromLeft(tokenizer.code, lhs, operator, rhs)
-	return result
+	return applyOperatorPrecedenceFromLeft(tokenizer.code, lhs, operator, rhs)
 }
 
 // comma separated list of expressions. used for call arguments and array literals
-func parseExprList(tokenizer *Tokenizer, tkOpen, tkClose TokenKind) (result ExprList) {
+func parseExprList(tokenizer *Tokenizer, tkOpen, tkClose TokenKind) *ExprList {
 	firstToken := tokenizer.lookAheadToken
 	next := tokenizer.Next()
 	tokenizer.expectKind(next, tkOpen)
+	var items []Expr
 	if tokenizer.lookAheadToken.kind != tkClose {
-		result.Items = append(result.Items, parseExpr(tokenizer, false))
+		items = append(items, parseExpr(tokenizer, false))
 		for tokenizer.lookAheadToken.kind == TkComma {
 			tokenizer.Next()
-			result.Items = append(result.Items, parseExpr(tokenizer, false))
+			items = append(items, parseExpr(tokenizer, false))
 		}
 	}
 	eatNewLines(tokenizer)
-	next = tokenizer.Next()
-	tokenizer.expectKind(next, tkClose)
-	result.Source = joinSubstr(tokenizer.code, firstToken.value, next.value)
-	return result
+	lastToken := tokenizer.Next()
+	tokenizer.expectKind(lastToken, tkClose)
+	return &ExprList{
+		Source: joinSubstr(tokenizer.code, firstToken.value, lastToken.value),
+		Items:  items,
+	}
 }
 
-func parseCall(tokenizer *Tokenizer, callee Expr) (result Call) {
+func parseCall(tokenizer *Tokenizer, callee Expr) *Call {
 	// parse call expr
-	result.Callee = callee
+	result := &Call{Callee: callee}
 	result.Args = parseExprList(tokenizer, TkOpenBrace, TkCloseBrace).Items
 	result.Braced = true
-	lastToken := tokenizer.token
-	result.Source = joinSubstr(tokenizer.code, callee.GetSource(), lastToken.value)
+	result.Source = joinSubstr(tokenizer.code, callee.GetSource(), tokenizer.token.value)
 	return result
 }
 
-func parseBracketExpr(tokenizer *Tokenizer, callee Expr) (result BracketExpr) {
+func parseBracketExpr(tokenizer *Tokenizer, callee Expr) *BracketExpr {
 	// parse call expr
-	result.Callee = callee
-	result.Args = parseExprList(tokenizer, TkOpenBracket, TkCloseBracket).Items
-	lastToken := tokenizer.token
-	result.Source = joinSubstr(tokenizer.code, callee.GetSource(), lastToken.value)
+	result := &BracketExpr{
+		Callee: callee,
+		Args:   parseExprList(tokenizer, TkOpenBracket, TkCloseBracket).Items,
+	}
+	result.Source = joinSubstr(tokenizer.code, callee.GetSource(), tokenizer.token.value)
 	return result
 }
 
-func parseArrayLit(tokenizer *Tokenizer) (result ArrayLit) {
+func parseArrayLit(tokenizer *Tokenizer) *ArrayLit {
 	exprList := parseExprList(tokenizer, TkOpenBracket, TkCloseBracket)
-	result.Items = exprList.Items
-	result.Source = exprList.Source
-	return result
+	return &ArrayLit{
+		Items:  exprList.Items,
+		Source: exprList.Source,
+	}
 }
 
-func parseStmtOrExpr(tokenizer *Tokenizer) (result Expr) {
+func parseStmtOrExpr(tokenizer *Tokenizer) Expr {
+	// TODO this code wraps nil with a type, which is then not seen anymore by `expr == nil`. Could be a problem.
 	switch tokenizer.lookAheadToken.kind {
 	case TkPrefixDocComment:
-		result = (Expr)(parseDocComment(tokenizer))
+		return (Expr)(parseDocComment(tokenizer))
 	case TkVar, TkLet, TkConst:
-		result = (Expr)(parseVariableDefStmt(tokenizer))
+		return (Expr)(parseVariableDefStmt(tokenizer))
 	case TkBreak:
-		result = (Expr)(parseBreakStmt(tokenizer))
+		return (Expr)(parseBreakStmt(tokenizer))
 	case TkContinue:
-		result = (Expr)(parseContinueStmt(tokenizer))
+		return (Expr)(parseContinueStmt(tokenizer))
 	case TkFor:
-		result = (Expr)(parseForLoop(tokenizer))
+		return (Expr)(parseForLoop(tokenizer))
 	case TkWhile:
-		result = (Expr)(parseWhileLoop(tokenizer))
+		return (Expr)(parseWhileLoop(tokenizer))
 	case TkProc:
-		result = (Expr)(parseProcDef(tokenizer))
-	default:
-		result = parseExpr(tokenizer, false)
+		return (Expr)(parseProcDef(tokenizer))
 	}
-	return result
+	return parseExpr(tokenizer, false)
 }
 
 func parsePrefixCall(tokenizer *Tokenizer, preventInfixOperatorInArgument bool) Expr {
 	// Currently any token  is legal as prefix. I hope this won't fall on my head.
 	firstToken := tokenizer.Next()
-	op := Ident{Source: firstToken.value}
+	op := &Ident{Source: firstToken.value}
 	secondToken := tokenizer.lookAheadToken
 	arg := parseExpr(tokenizer, preventInfixOperatorInArgument)
 
@@ -398,12 +394,12 @@ func parsePrefixCall(tokenizer *Tokenizer, preventInfixOperatorInArgument bool) 
 		ptr1 := uintptr(unsafe.Pointer(unsafe.StringData(firstToken.value)))
 		ptr2 := uintptr(unsafe.Pointer(unsafe.StringData(secondToken.value)))
 		if ptr1+uintptr(len(op.Source)) == ptr2 { // no space
-			if intLit, isIntLit := arg.(IntLit); isIntLit {
+			if intLit, isIntLit := arg.(*IntLit); isIntLit {
 				intLit.Source = joinSubstr(tokenizer.code, op.Source, intLit.Source)
 				intLit.Value.Neg(intLit.Value)
 				return intLit
 			}
-			if floatLit, isFloatLit := arg.(FloatLit); isFloatLit {
+			if floatLit, isFloatLit := arg.(*FloatLit); isFloatLit {
 				floatLit.Source = joinSubstr(tokenizer.code, op.Source, floatLit.Source)
 				floatLit.Value.Neg(floatLit.Value)
 				return floatLit
@@ -411,9 +407,10 @@ func parsePrefixCall(tokenizer *Tokenizer, preventInfixOperatorInArgument bool) 
 		}
 	}
 
-	var result Call
-	result.Callee = op
-	result.Args = []Expr{arg}
+	result := &Call{
+		Callee: op,
+		Args:   []Expr{arg},
+	}
 	// other properties (TODO can this be removed?)
 	result.Prefix = true
 	result.Braced = true
@@ -451,12 +448,12 @@ func init() {
 	docCommentSectionRegex = regexp.MustCompile(`^\s*([_[:alpha:]][_[:alnum:]]*)\s*:(.*)$`)
 }
 
-func parseDocComment(tokenizer *Tokenizer) (result DocComment) {
+func parseDocComment(tokenizer *Tokenizer) *DocComment {
 	if !tokenizer.expectKind(tokenizer.lookAheadToken, TkPrefixDocComment) {
-		return
+		return nil
 	}
 	token := tokenizer.Next()
-	result.Source = token.value
+	result := &DocComment{Source: token.value}
 	commentScanner := &DocCommentScanner{token.value}
 	for commentScanner.HasNext() {
 		line := commentScanner.Next()
@@ -464,7 +461,7 @@ func parseDocComment(tokenizer *Tokenizer) (result DocComment) {
 			if matches := docCommentSectionRegex.FindStringSubmatch(line); len(matches) > 0 {
 				name := matches[1]
 				value := matches[2]
-				section := NamedDocSection{Name: name}
+				section := &NamedDocSection{Name: name}
 				if value != "" {
 					section.Lines = append(section.Lines, value)
 				}
@@ -478,7 +475,7 @@ func parseDocComment(tokenizer *Tokenizer) (result DocComment) {
 		}
 	}
 	for i := range result.NamedDocSections {
-		section := &result.NamedDocSections[i]
+		section := result.NamedDocSections[i]
 		lastIdx := len(section.Lines) - 1
 		if lastIdx >= 0 {
 			section.Source = joinSubstr(result.Source, section.Name, section.Lines[lastIdx])
@@ -491,7 +488,7 @@ func parseDocComment(tokenizer *Tokenizer) (result DocComment) {
 
 func attachDocComment(expr Expr, target string, value string) bool {
 	switch ex := expr.(type) {
-	case Ident:
+	case *Ident:
 		if ex.Source == target {
 			ex.Comment = append(ex.Comment, value)
 			fmt.Printf("attaching doc comment to %s\n", ex.Source)
@@ -500,17 +497,17 @@ func attachDocComment(expr Expr, target string, value string) bool {
 		} else {
 			return false
 		}
-	case CodeBlock:
+	case *CodeBlock:
 		return false
-	case StrLit:
+	case *StrLit:
 		return false
-	case IntLit:
+	case *IntLit:
 		return false
-	case FloatLit:
+	case *FloatLit:
 		return false
-	case ArrayLit:
+	case *ArrayLit:
 		return false
-	case Call:
+	case *Call:
 		result := attachDocComment(ex.Callee, target, value)
 		for _, arg := range ex.Args {
 			if result {
@@ -519,30 +516,28 @@ func attachDocComment(expr Expr, target string, value string) bool {
 			result = attachDocComment(arg, target, value)
 		}
 		return result
-	case ColonExpr:
+	case *VariableDefStmt:
+		return attachDocComment(ex.Expr, target, value)
+	case *ForLoopStmt:
 		return false
-	case VariableDefStmt:
-		return attachDocComment(ex.Name, target, value)
-	case ForLoopStmt:
+	case *IfExpr:
 		return false
-	case IfExpr:
+	case *IfElseExpr:
 		return false
-	case IfElseExpr:
+	case *ReturnExpr:
 		return false
-	case ReturnExpr:
+	case *BreakStmt:
 		return false
-	case BreakStmt:
-		return false
-	case ContinueStmt:
+	case *ContinueStmt:
 		return false
 	}
 	panic("not implemented")
 }
 
-func parseNilLit(tokenizer *Tokenizer) NilLit {
+func parseNilLit(tokenizer *Tokenizer) *NilLit {
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkNilLit)
-	return NilLit{Source: token.value, Type: TypeNilPtr}
+	return &NilLit{Source: token.value, Type: TypeNilPtr}
 }
 
 func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
@@ -593,7 +588,7 @@ func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
 		result = (Expr)(parseNilLit(tokenizer))
 	default:
 		tokenizer.reportWrongKind(tokenizer.lookAheadToken)
-		result = (Expr)(InvalidTokenExpr{tokenizer.Next()})
+		result = (Expr)(&InvalidTokenExpr{tokenizer.Next()})
 	}
 
 	// any expression could be the start of a longer expression, this is
@@ -634,12 +629,10 @@ func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
 
 					success := attachDocComment(result, target, comment)
 					if !success {
-
-						fmt.Printf("could not attach doc comment <%s> to <%s>\n", comment, result.GetSource())
-						fmt.Printf("key: <%s>, value: <%s> \n", target, comment)
+						tokenizer.reportError(lookAhead, "could not attach doc comment <%s> to <%s>\n", comment, result.GetSource())
 					}
 				} else {
-					panic("invalid doc comment, proper error message not implemented")
+					tokenizer.reportError(lookAhead, "invalid doc comment, proper error message not implemented")
 				}
 			}
 			return result
@@ -655,7 +648,7 @@ func parseTypeDef(tokenizer *Tokenizer) Expr {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkType)
 
-	var annotations StrLit
+	var annotations *StrLit
 	if tokenizer.lookAheadToken.kind == TkStrLit {
 		annotations = parseStrLit(tokenizer)
 	}
@@ -668,23 +661,24 @@ func parseTypeDef(tokenizer *Tokenizer) Expr {
 
 	switch kindToken.kind {
 	case TkStruct:
-		result := StructDef{Name: name, Source: source, Annotations: annotations}
+		result := &StructDef{Name: name, Source: source, Annotations: annotations}
 		result.Name = name
 		for _, it := range body.Items {
 			colonExpr, ok := MatchColonExpr(it)
 			if !ok {
-				//tokenizer.reportError(it, "expect colon expr")
-				panic("expect colon expr")
+				// TODO, this is the wrong location, it should be `it`
+				tokenizer.reportError(firstToken, "expect colon expr")
 			}
 			result.Fields = append(result.Fields, colonExpr)
 		}
 		return result
 	case TkEnum:
-		result := EnumDef{Name: name, Source: source, Annotations: annotations}
+		result := &EnumDef{Name: name, Source: source, Annotations: annotations}
 		for _, it := range body.Items {
-			ident, ok := it.(Ident)
+			ident, ok := it.(*Ident)
 			if !ok {
-				panic("parser error handling not implemented")
+				// TODO, this is the wrong location, it should be `it`
+				tokenizer.reportError(firstToken, "expect ident here")
 			}
 			result.Values = append(result.Values, ident)
 		}
@@ -696,11 +690,11 @@ func parseTypeDef(tokenizer *Tokenizer) Expr {
 }
 
 func MatchColonExpr(expr Expr) (colonExpr ColonExpr, ok bool) {
-	call, ok := expr.(Call)
+	call, ok := expr.(*Call)
 	if !ok {
 		return colonExpr, false
 	}
-	op, ok := call.Callee.(Ident)
+	op, ok := call.Callee.(*Ident)
 	if !ok || op.Source != ":" || len(call.Args) != 2 {
 		return colonExpr, false
 	}
@@ -711,11 +705,11 @@ func MatchColonExpr(expr Expr) (colonExpr ColonExpr, ok bool) {
 }
 
 func MatchAssign(expr Expr) (lhs, rhs Expr, ok bool) {
-	call, ok := expr.(Call)
+	call, ok := expr.(*Call)
 	if !ok {
 		return lhs, rhs, false
 	}
-	op, ok := call.Callee.(Ident)
+	op, ok := call.Callee.(*Ident)
 	if !ok || op.Source != "=" || len(call.Args) != 2 {
 		return lhs, rhs, false
 	}
@@ -724,8 +718,8 @@ func MatchAssign(expr Expr) (lhs, rhs Expr, ok bool) {
 	return lhs, rhs, true
 }
 
-func parseProcDef(tokenizer *Tokenizer) (result *ProcDef) {
-	result = &ProcDef{}
+func parseProcDef(tokenizer *Tokenizer) *ProcDef {
+	result := &ProcDef{}
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkProc)
 	if tokenizer.lookAheadToken.kind == TkStrLit {
@@ -736,25 +730,34 @@ func parseProcDef(tokenizer *Tokenizer) (result *ProcDef) {
 	return result
 }
 
-func parseEmitStmt(tokenizer *Tokenizer) EmitStmt {
+func parseEmitStmt(tokenizer *Tokenizer) *EmitStmt {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkEmit)
 	strLit := parseStrLit(tokenizer)
-	return EmitStmt{Source: joinSubstr(tokenizer.code, firstToken.value, strLit.Source), Value: strLit}
+	return &EmitStmt{
+		Source: joinSubstr(tokenizer.code, firstToken.value, strLit.Source),
+		Value:  strLit,
+	}
 }
 
-func parseStaticExpr(tokenizer *Tokenizer) StaticExpr {
+func parseStaticExpr(tokenizer *Tokenizer) *StaticExpr {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkStatic)
 	expr := parseExpr(tokenizer, false)
-	return StaticExpr{Source: joinSubstr(tokenizer.code, firstToken.value, expr.GetSource()), Expr: expr}
+	return &StaticExpr{
+		Source: joinSubstr(tokenizer.code, firstToken.value, expr.GetSource()),
+		Expr:   expr,
+	}
 }
 
-func parseImportStmt(tokenizer *Tokenizer) ImportStmt {
+func parseImportStmt(tokenizer *Tokenizer) *ImportStmt {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkImport)
 	strLit := parseStrLit(tokenizer)
-	return ImportStmt{Source: joinSubstr(tokenizer.code, firstToken.value, strLit.Source), Value: strLit}
+	return &ImportStmt{
+		Source: joinSubstr(tokenizer.code, firstToken.value, strLit.Source),
+		Value:  strLit,
+	}
 }
 
 func parseTrait(tokenizer *Tokenizer) *TraitDef {
@@ -766,7 +769,8 @@ func parseTrait(tokenizer *Tokenizer) *TraitDef {
 	return result
 }
 
-func parsePackage(tokenizer *Tokenizer) (result PackageDef, errors []ParseError) {
+func parsePackage(tokenizer *Tokenizer) (result *PackageDef, errors []ParseError) {
+	result = &PackageDef{}
 	result.Name = strings.TrimSuffix(filepath.Base(tokenizer.filename), ".golem")
 	result.Source = tokenizer.code
 	result.WorkDir = filepath.Dir(tokenizer.filename)

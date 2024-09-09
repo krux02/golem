@@ -326,7 +326,7 @@ func (builder *CodeBuilder) CompileExprWithPrefix(context *PackageGeneratorConte
 		builder.CompileIntLit(ex)
 	case TcFloatLit:
 		builder.CompileFloatLit(ex)
-	case NilLit:
+	case *NilLit:
 		builder.WriteString("NULL")
 	case TcArrayLit:
 		builder.CompileArrayLit(context, ex)

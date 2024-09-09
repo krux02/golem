@@ -23,7 +23,7 @@ type NamedDocSection struct {
 type DocComment struct {
 	Source           string
 	BaseDoc          DocLines
-	NamedDocSections []NamedDocSection
+	NamedDocSections []*NamedDocSection
 }
 
 // most simple AST node
@@ -47,16 +47,14 @@ type StructField struct {
 }
 
 type VariableDefStmt struct {
-	Source   string
-	Kind     SymbolKind // only SkVar SkLet SkConst allowed
-	Name     Ident
-	TypeExpr TypeExpr // optional
-	Value    Expr
+	Source string
+	Prefix Ident // var, let, const ...
+	Expr   Expr  // everything else
 }
 
 type ForLoopStmt struct {
 	Source     string
-	LoopIdent  Ident
+	LoopIdent  *Ident
 	Collection Expr
 	Body       Expr
 }
@@ -105,16 +103,16 @@ type VarExpr struct {
 
 type EnumDef struct { // type MyEnum enum <Expr>
 	Source      string
-	Name        Ident
-	Values      []Ident
-	Annotations StrLit
+	Name        *Ident
+	Values      []*Ident
+	Annotations *StrLit
 }
 
 type StructDef struct {
 	Source      string
-	Name        Ident
+	Name        *Ident
 	Fields      []ColonExpr
-	Annotations StrLit
+	Annotations *StrLit
 }
 
 type TraitDef struct {
@@ -181,8 +179,8 @@ type ColonExpr struct {
 type ProcDef struct {
 	Source      string
 	Expr        Expr
-	Annotations StrLit
-	DocComment  DocComment
+	Annotations *StrLit
+	DocComment  *DocComment
 }
 
 type PackageDef struct {
@@ -199,43 +197,43 @@ type StaticExpr struct { // static <Expr>
 
 type ImportStmt struct {
 	Source string
-	Value  StrLit
+	Value  *StrLit
 }
 
 type EmitStmt struct {
 	Source string
-	Value  StrLit
+	Value  *StrLit
 }
 
-func (arg InvalidTokenExpr) GetSource() string { return arg.token.value }
-func (arg ExprList) GetSource() string         { return arg.Source }
-func (arg ProcDef) GetSource() string          { return arg.Source }
-func (arg StructDef) GetSource() string        { return arg.Source }
-func (arg EnumDef) GetSource() string          { return arg.Source }
-func (arg DocComment) GetSource() string       { return arg.Source }
-func (arg NamedDocSection) GetSource() string  { return arg.Source }
-func (arg Ident) GetSource() string            { return arg.Source }
-func (arg CodeBlock) GetSource() string        { return arg.Source }
-func (arg StrLit) GetSource() string           { return arg.Source }
-func (arg IntLit) GetSource() string           { return arg.Source }
-func (arg FloatLit) GetSource() string         { return arg.Source }
-func (arg ArrayLit) GetSource() string         { return arg.Source }
-func (arg Call) GetSource() string             { return arg.Source }
-func (arg BracketExpr) GetSource() string      { return arg.Source }
-func (arg ColonExpr) GetSource() string        { return arg.Source }
-func (arg VariableDefStmt) GetSource() string  { return arg.Source }
-func (arg ForLoopStmt) GetSource() string      { return arg.Source }
-func (arg WhileLoopStmt) GetSource() string    { return arg.Source }
-func (arg IfExpr) GetSource() string           { return arg.Source }
-func (arg IfElseExpr) GetSource() string       { return arg.Source }
-func (arg ReturnExpr) GetSource() string       { return arg.Source }
-func (arg VarExpr) GetSource() string          { return arg.Source }
-func (arg BreakStmt) GetSource() string        { return arg.Source }
-func (arg ContinueStmt) GetSource() string     { return arg.Source }
-func (arg TypeContext) GetSource() string      { return arg.Source }
-func (arg NilLit) GetSource() string           { return arg.Source }
-func (arg EmitStmt) GetSource() string         { return arg.Source }
-func (arg StaticExpr) GetSource() string       { return arg.Source }
-func (arg ImportStmt) GetSource() string       { return arg.Source }
-func (arg *TraitDef) GetSource() string        { return arg.Source }
-func (arg PackageDef) GetSource() string       { return arg.Source }
+func (arg *InvalidTokenExpr) GetSource() string { return arg.token.value }
+func (arg *ExprList) GetSource() string         { return arg.Source }
+func (arg *ProcDef) GetSource() string          { return arg.Source }
+func (arg *StructDef) GetSource() string        { return arg.Source }
+func (arg *EnumDef) GetSource() string          { return arg.Source }
+func (arg *DocComment) GetSource() string       { return arg.Source }
+func (arg *NamedDocSection) GetSource() string  { return arg.Source }
+func (arg *Ident) GetSource() string            { return arg.Source }
+func (arg *CodeBlock) GetSource() string        { return arg.Source }
+func (arg *StrLit) GetSource() string           { return arg.Source }
+func (arg *IntLit) GetSource() string           { return arg.Source }
+func (arg *FloatLit) GetSource() string         { return arg.Source }
+func (arg *ArrayLit) GetSource() string         { return arg.Source }
+func (arg *Call) GetSource() string             { return arg.Source }
+func (arg *BracketExpr) GetSource() string      { return arg.Source }
+func (arg *ColonExpr) GetSource() string        { return arg.Source }
+func (arg *VariableDefStmt) GetSource() string  { return arg.Source }
+func (arg *ForLoopStmt) GetSource() string      { return arg.Source }
+func (arg *WhileLoopStmt) GetSource() string    { return arg.Source }
+func (arg *IfExpr) GetSource() string           { return arg.Source }
+func (arg *IfElseExpr) GetSource() string       { return arg.Source }
+func (arg *ReturnExpr) GetSource() string       { return arg.Source }
+func (arg *VarExpr) GetSource() string          { return arg.Source }
+func (arg *BreakStmt) GetSource() string        { return arg.Source }
+func (arg *ContinueStmt) GetSource() string     { return arg.Source }
+func (arg *TypeContext) GetSource() string      { return arg.Source }
+func (arg *NilLit) GetSource() string           { return arg.Source }
+func (arg *EmitStmt) GetSource() string         { return arg.Source }
+func (arg *StaticExpr) GetSource() string       { return arg.Source }
+func (arg *ImportStmt) GetSource() string       { return arg.Source }
+func (arg *TraitDef) GetSource() string         { return arg.Source }
+func (arg *PackageDef) GetSource() string       { return arg.Source }

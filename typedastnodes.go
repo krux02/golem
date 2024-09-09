@@ -296,7 +296,7 @@ type TcPackageDef struct {
 	Name           string
 	CFlags         []string
 	Imports        []TcImportStmt
-	EmitStatements []EmitStmt
+	EmitStatements []*EmitStmt // TODO not a TC node
 	StructDefs     []*TcStructDef
 	EnumDefs       []*TcEnumDef
 	TraitDefs      []*TcTraitDef
@@ -307,7 +307,7 @@ type TcPackageDef struct {
 
 type TcImportStmt struct {
 	Source  string
-	Value   StrLit
+	Value   *StrLit
 	Package *TcPackageDef
 }
 
