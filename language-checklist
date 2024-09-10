@@ -3,21 +3,23 @@ https://www.mcmillen.dev/language_checklist.html
 Programming Language Checklist
 by Colin McMillen, Jason Reed, and Elly Fong-Jones, 2011-10-10.
 You appear to be advocating a new:
-[ ] functional  [X] imperative  [ ] object-oriented  [ ] procedural [ ] stack-based
-[X] "multi-paradigm"  [ ] lazy  [ ] eager  [ ] statically-typed  [ ] dynamically-typed
-[ ] pure  [ ] impure  [ ] non-hygienic  [ ] visual  [ ] beginner-friendly
+[ ] functional  [X] imperative  [ ] object-oriented  [X] procedural [ ] stack-based
+[X] "multi-paradigm"  [ ] lazy  [X] eager  [X] statically-typed  [ ] dynamically-typed
+[ ] pure  [ ] impure  [ ] non-hygienic  [ ] visual  [X] beginner-friendly
 [ ] non-programmer-friendly  [ ] completely incomprehensible
 
 The core is imperative, because that is what I adopted for myself as my personal
 favorite style. The languae should enable other people to write in different
 styles without fighting the language. Features to write in haskell like
-'functional purity' should be there.
+'functional purity' should be there, though I doubt that my language will have
+haskell lazy evaluation.
 
 programming language.  Your language will not work.  Here is why it will not work.
 
 You appear to believe that:
 [ ] Syntax is what makes programming difficult
-[ ] Garbage collection is free                [ ] Computers have infinite memory
+[ ] Garbage collection is free
+[ ] Computers have infinite memory
 [ ] Nobody really needs:
     [ ] concurrency  [ ] a REPL  [ ] debugger support  [ ] IDE support  [ ] I/O
     [ ] to interact with code not written in your language
@@ -32,10 +34,10 @@ You appear to believe that:
 I don't believe in any of those.
 
 Unfortunately, your language (has/lacks):
-[ ] comprehensible syntax  [ ] semicolons  [ ] significant whitespace  [ ] macros
-[ ] implicit type conversion  [ ] explicit casting  [ ] type inference
-[ ] goto  [ ] exceptions  [ ] closures  [ ] tail recursion  [ ] coroutines
-[ ] reflection  [ ] subtyping  [ ] multiple inheritance  [ ] operator overloading
+[✔] comprehensible syntax  [ ] semicolons  [ ] significant whitespace  [ ] macros
+[✘] implicit type conversion  [✔] explicit casting  [✔] type inference
+[✘] goto  [✘] exceptions  [✘] closures  [✘] tail recursion  [✘] coroutines
+[ ] reflection  [✘] subtyping  [✘] multiple inheritance  [✔] operator overloading
 [ ] algebraic datatypes  [ ] recursive types  [ ] polymorphic types
 [ ] covariant array typing  [ ] monads  [ ] dependent types
 [ ] infix operators  [ ] nested comments  [ ] multi-line strings  [ ] regexes

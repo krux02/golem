@@ -1,7 +1,3 @@
-* TODO distinguish between sym usage and sym definition in typed ast
-
-this should be implemented in LookUpLetSymRecursive
-
 * TODO move `applyDocComment` to a later phase of semcheck, when type checking is already done.
 * TODO rename ArrayLit to something else as it is universal for arrays and structs
 * TODO move all complexity from parsing to semchecking and make the untyped AST as trivial as possible.
@@ -116,3 +112,6 @@ just say that ~arr~ needs to be mutable.
 ** rename typechecker to semchecker
 ** make char literals a variant ot string literals
 ** xmake addr a generic builtin. suggestions like "expected type 'array(16, f32) | array(1, cstring)' but got type 'str'" are not helpful
+** distinguish between sym usage and sym definition in typed ast
+
+this should be implemented in LookUpLetSymRecursive

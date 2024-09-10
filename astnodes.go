@@ -105,7 +105,7 @@ type VarExpr struct {
 type EnumDef struct { // type MyEnum enum <Expr>
 	Source      string
 	Name        *Ident
-	Values      []*Ident
+	Values      []Expr
 	Annotations *StrLit
 }
 

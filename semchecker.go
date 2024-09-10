@@ -355,7 +355,13 @@ func SemCheckEnumDef(sc *SemChecker, scope Scope, def *EnumDef) *TcEnumDef {
 			ReportInvalidAnnotations(sc, def.Annotations)
 		}
 	}
-	for _, ident := range def.Values {
+	for _, value := range def.Values {
+		ident, isIdent := value.(*Ident)
+		if !isIdent {
+			ReportErrorf(sc, value, "enum entry must be an identifier")
+			continue
+		}
+
 		ValidNameCheck(sc, ident, "enum value")
 		sym := &TcSymbol{
 			Source: ident.Source,
@@ -450,7 +456,7 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result *T
 		name = ident
 	} else {
 		// TODO firstToken is not the right code location
-		ReportErrorf(sc, expr, "proc name be an identifier, but it is %T", expr)
+		ReportErrorf(sc, expr, "proc name must be an identifier, but it is %T", expr)
 	}
 
 	var args []ProcArgument
@@ -1170,7 +1176,6 @@ func (sc *SemChecker) ApplyDocComment(expr Expr, doc *PrefixDocComment) Expr {
 	switch expr2 := expr.(type) {
 	case *VariableDefStmt:
 		_, name, _, _, _ := MatchVariableDefStatement(sc, expr2)
-
 		name.Comment = append(name.Comment, doc.BaseDoc...)
 		for _, it := range doc.NamedDocSections {
 			key := it.Name
@@ -1198,12 +1203,14 @@ func (sc *SemChecker) ApplyDocComment(expr Expr, doc *PrefixDocComment) Expr {
 				if !isColonExpr {
 					continue
 				}
-				if ident, ok := lhs.(*Ident); ok {
-					if ident.Source == key {
-						ident.Comment = append(ident.Comment, value...)
-						expr2.Fields[i] = colonExpr
-						continue DOCSECTIONS2
-					}
+				ident, isIdent := lhs.(*Ident)
+				if !isIdent {
+					continue
+				}
+				if ident.Source == key {
+					ident.Comment = append(ident.Comment, value...)
+					expr2.Fields[i] = colonExpr
+					continue DOCSECTIONS2
 				}
 			}
 			ReportInvalidDocCommentKey(sc, it)
@@ -1215,7 +1222,11 @@ func (sc *SemChecker) ApplyDocComment(expr Expr, doc *PrefixDocComment) Expr {
 		for _, it := range doc.NamedDocSections {
 			key := it.Name
 			value := it.Lines
-			for i, ident := range expr2.Values {
+			for i, it := range expr2.Values {
+				ident, isIdent := it.(*Ident)
+				if !isIdent {
+					continue
+				}
 				if ident.Source == key {
 					ident.Comment = append(ident.Comment, value...)
 					expr2.Values[i] = ident

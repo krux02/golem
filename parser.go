@@ -652,6 +652,7 @@ func parseTypeDef(tokenizer *Tokenizer) Expr {
 	if tokenizer.lookAheadToken.kind == TkStrLit {
 		annotations = parseStrLit(tokenizer)
 	}
+
 	name := parseIdent(tokenizer)
 	token := tokenizer.Next()
 	tokenizer.expectOperator(token, "=")
@@ -661,23 +662,9 @@ func parseTypeDef(tokenizer *Tokenizer) Expr {
 
 	switch kindToken.kind {
 	case TkStruct:
-		result := &StructDef{Name: name, Source: source, Annotations: annotations}
-		result.Name = name
-		for _, it := range body.Items {
-			result.Fields = append(result.Fields, it)
-		}
-		return result
+    return &StructDef{Source: source,Name: name, Fields: body.Items, Annotations: annotations}
 	case TkEnum:
-		result := &EnumDef{Name: name, Source: source, Annotations: annotations}
-		for _, it := range body.Items {
-			ident, ok := it.(*Ident)
-			if !ok {
-				// TODO, this is the wrong location, it should be `it`
-				tokenizer.reportError(firstToken, "expect ident here")
-			}
-			result.Values = append(result.Values, ident)
-		}
-		return result
+		return &EnumDef{Source: source,Name: name, Values: body.Items, Annotations: annotations}
 	default:
 		tokenizer.expectKind2(kindToken, TkStruct, TkEnum)
 		panic("parser error handling not implemented")
