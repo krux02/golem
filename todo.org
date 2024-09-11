@@ -1,3 +1,16 @@
+* TODO Kontakt: Wirtschaftfördering der Stadt Bonn
+
+Kostenlose Verstaltung zum Thema Gründung
+
+IHK Köln
+Gründungskompass: Unsere Veranstantung zum Thema Gründung
+
+Fundraising
+
+* TODO find a better syntax for general annotations.
+
+No ~Annotation(expr, str)~ node, as this makes it hard to ignore annotations.
+
 * TODO move `applyDocComment` to a later phase of semcheck, when type checking is already done.
 * TODO rename ArrayLit to something else as it is universal for arrays and structs
 * TODO move all complexity from parsing to semchecking and make the untyped AST as trivial as possible.

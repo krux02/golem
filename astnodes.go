@@ -87,12 +87,12 @@ type ContinueStmt struct {
 	Source string
 }
 
-type TypeContext struct { // type <Expr>
+type TypeContext struct {
 	Source string
 	Expr   TypeExpr
 }
 
-type ReturnExpr struct { // return <Expr>
+type ReturnExpr struct {
 	Source string
 	Value  Expr
 }
@@ -102,17 +102,9 @@ type VarExpr struct {
 	Expr   Expr
 }
 
-type EnumDef struct { // type MyEnum enum <Expr>
+type TypeDef struct {
 	Source      string
-	Name        *Ident
-	Values      []Expr
-	Annotations *StrLit
-}
-
-type StructDef struct {
-	Source      string
-	Name        *Ident
-	Fields      []Expr
+	Expr        Expr
 	Annotations *StrLit
 }
 
@@ -203,8 +195,7 @@ type EmitStmt struct {
 func (arg *InvalidTokenExpr) GetSource() string { return arg.token.value }
 func (arg *ExprList) GetSource() string         { return arg.Source }
 func (arg *ProcDef) GetSource() string          { return arg.Source }
-func (arg *StructDef) GetSource() string        { return arg.Source }
-func (arg *EnumDef) GetSource() string          { return arg.Source }
+func (arg *TypeDef) GetSource() string          { return arg.Source }
 func (arg *PrefixDocComment) GetSource() string { return arg.Source }
 func (arg *NamedDocSection) GetSource() string  { return arg.Source }
 func (arg *Ident) GetSource() string            { return arg.Source }

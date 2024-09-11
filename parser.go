@@ -45,7 +45,7 @@ func parseIdent(tokenizer *Tokenizer) *Ident {
 func parseInfixOperator(tokenizer *Tokenizer) *Ident {
 	token := tokenizer.Next()
 	tk := token.kind
-	if tk != TkOperator && tk != TkAnd && tk != TkOr && tk != TkIn && tk != TkNotIn {
+	if tk != TkOperator {
 		tokenizer.reportWrongKind(token)
 	}
 	// ensure operator precedence exists
@@ -126,7 +126,7 @@ func parseForLoop(tokenizer *Tokenizer) *ForLoopStmt {
 	tokenizer.expectKind(firstToken, TkFor)
 	result.LoopIdent = parseIdent(tokenizer)
 	token := tokenizer.Next()
-	tokenizer.expectKind(token, TkIn)
+	tokenizer.expectOperator(token, "in")
 	result.Collection = parseExpr(tokenizer, false)
 	token = tokenizer.Next()
 	tokenizer.expectKind(token, TkDo)
@@ -407,16 +407,13 @@ func parsePrefixCall(tokenizer *Tokenizer, preventInfixOperatorInArgument bool) 
 		}
 	}
 
-	result := &Call{
+	return &Call{
+		Source: joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value),
 		Callee: op,
 		Args:   []Expr{arg},
+		Prefix: true,
+		Braced: true,
 	}
-	// other properties (TODO can this be removed?)
-	result.Prefix = true
-	result.Braced = true
-	lastToken := tokenizer.token
-	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
-	return result
 }
 
 type DocCommentScanner struct {
@@ -564,22 +561,23 @@ func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
 	case TkOpenBrace:
 		token := tokenizer.lookAheadToken
 		exprList := parseExprList(tokenizer, TkOpenBrace, TkCloseBrace)
-
 		if len(exprList.Items) == 1 {
 			result = exprList.Items[0]
+			if call, isCall := result.(*Call); isCall {
+				call.Braced = true
+			}
 		} else {
 			// TODO, this report is not on the right location. It should be on
 			// `exprList`, not token.
 			tokenizer.reportError(token, "braced expression must contain a single expression, but has %d", len(exprList.Items))
 			result = newErrorNode(exprList)
 		}
-	case TkOperator, TkPtr, TkAddr, TkNot:
-		// tokenizer.reportWrongKind(tokenizer.lookAheadToken)
+	case TkOperator:
 		result = (Expr)(parsePrefixCall(tokenizer, true))
+	case TkDiscard, TkStruct, TkUnion, TkEnum:
+		result = (Expr)(parsePrefixCall(tokenizer, false))
 	case TkReturn:
 		result = (Expr)(parseReturnExpr(tokenizer))
-	case TkDiscard:
-		result = (Expr)(parsePrefixCall(tokenizer, false))
 	case TkVar:
 		result = (Expr)(parseVarExpr(tokenizer))
 	case TkType:
@@ -597,8 +595,7 @@ func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
 	for true {
 		lookAhead := tokenizer.lookAheadToken
 		switch lookAhead.kind {
-		// TkAnd, TkOr, TkAssign is an operator token?
-		case TkOperator, TkAnd, TkOr, TkIn, TkNotIn:
+		case TkOperator:
 			// used for:
 			//   -1:f32
 			//   not a or b -> (not a) or b # stops at operator
@@ -647,54 +644,13 @@ func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
 func parseTypeDef(tokenizer *Tokenizer) Expr {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkType)
-
 	var annotations *StrLit
 	if tokenizer.lookAheadToken.kind == TkStrLit {
 		annotations = parseStrLit(tokenizer)
 	}
-
-	name := parseIdent(tokenizer)
-	token := tokenizer.Next()
-	tokenizer.expectOperator(token, "=")
-	kindToken := tokenizer.Next()
-	body := parseCodeBlock(tokenizer)
-	source := joinSubstr(tokenizer.code, firstToken.value, body.Source)
-
-	switch kindToken.kind {
-	case TkStruct:
-    return &StructDef{Source: source,Name: name, Fields: body.Items, Annotations: annotations}
-	case TkEnum:
-		return &EnumDef{Source: source,Name: name, Values: body.Items, Annotations: annotations}
-	default:
-		tokenizer.expectKind2(kindToken, TkStruct, TkEnum)
-		panic("parser error handling not implemented")
-	}
-}
-
-func MatchColonExpr(expr Expr) (lhs Expr, rhs TypeExpr, ok bool) {
-	call, ok := expr.(*Call)
-	if !ok {
-		return nil, nil, false
-	}
-	op, ok := call.Callee.(*Ident)
-	if !ok || op.Source != ":" || len(call.Args) != 2 {
-		return nil, nil, false
-	}
-	return call.Args[0], TypeExpr(call.Args[1]), true
-}
-
-func MatchAssign(expr Expr) (lhs, rhs Expr, ok bool) {
-	call, ok := expr.(*Call)
-	if !ok {
-		return lhs, rhs, false
-	}
-	op, ok := call.Callee.(*Ident)
-	if !ok || op.Source != "=" || len(call.Args) != 2 {
-		return lhs, rhs, false
-	}
-	lhs = call.Args[0]
-	rhs = call.Args[1]
-	return lhs, rhs, true
+	expr := parseExpr(tokenizer, false)
+	source := joinSubstr(tokenizer.code, firstToken.value, expr.GetSource())
+	return &TypeDef{Source: source, Expr: expr, Annotations: annotations}
 }
 
 func parseProcDef(tokenizer *Tokenizer) *ProcDef {

@@ -32,8 +32,6 @@ const (
 	TkVar
 	TkLet
 	TkConst
-	TkPtr
-	TkAddr
 	TkReturn
 	TkDiscard
 	TkBreak
@@ -46,11 +44,6 @@ const (
 	TkTrait
 	TkEmit
 
-	TkAnd
-	TkOr
-	TkNot
-	TkIn
-	TkNotIn
 	TkIf
 	TkElse
 	TkFor
@@ -87,7 +80,6 @@ var TokenKindNames = [...]string{
 	TkVar:               "Var",
 	TkLet:               "Let",
 	TkConst:             "Const",
-	TkPtr:               "Ptr",
 	TkReturn:            "Return",
 	TkDiscard:           "Discard",
 	TkBreak:             "Break",
@@ -99,11 +91,6 @@ var TokenKindNames = [...]string{
 	TkEnum:              "Enum",
 	TkTrait:             "Trait",
 	TkEmit:              "Emit",
-	TkAnd:               "And",
-	TkOr:                "Or",
-	TkNot:               "Not",
-	TkIn:                "In",
-	TkNotIn:             "NotIn",
 	TkIf:                "If",
 	TkElse:              "Else",
 	TkFor:               "For",
@@ -317,7 +304,9 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			}
 		}
 		switch result.value {
-
+		// builtin word operators
+		case "and", "or", "not", "in", "notin", "ptr", "addr":
+			result.kind = TkOperator
 		case "type":
 			result.kind = TkType
 		case "proc":
@@ -328,8 +317,6 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			result.kind = TkLet
 		case "const":
 			result.kind = TkConst
-		case "ptr":
-			result.kind = TkPtr
 		case "return":
 			result.kind = TkReturn
 		case "discard":
@@ -352,16 +339,6 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			result.kind = TkTrait
 		case "emit":
 			result.kind = TkEmit
-		case "and":
-			result.kind = TkAnd
-		case "or":
-			result.kind = TkOr
-		case "not":
-			result.kind = TkNot
-		case "in":
-			result.kind = TkIn
-		case "notin":
-			result.kind = TkNotIn
 		case "if":
 			result.kind = TkIf
 		case "else":

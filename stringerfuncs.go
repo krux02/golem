@@ -59,7 +59,7 @@ func AstFormat(node PrettyPrintable) string {
 	return result
 }
 
-func (arg InvalidTokenExpr) PrettyPrint(builder *AstPrettyPrinter) {
+func (arg *InvalidTokenExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("<invalid ")
 	builder.WriteString(TokenKindNames[arg.token.kind])
 	builder.WriteString(": ")
@@ -67,7 +67,7 @@ func (arg InvalidTokenExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(">")
 }
 
-func (ident Ident) PrettyPrint(builder *AstPrettyPrinter) {
+func (ident *Ident) PrettyPrint(builder *AstPrettyPrinter) {
 	// the only exception where pretty Print may print the original
 	// source.
 	builder.WriteString(ident.Source)
@@ -84,7 +84,7 @@ func mkstring(items []Expr, prefix, infix, postfix string, builder *AstPrettyPri
 	builder.WriteString(postfix)
 }
 
-func (call Call) PrettyPrint(builder *AstPrettyPrinter) {
+func (call *Call) PrettyPrint(builder *AstPrettyPrinter) {
 	ident, isIdent := call.Callee.(*Ident)
 	isOperator := isIdent && slices.Contains([]string{".", ":"}, ident.Source)
 	if isOperator {
@@ -95,12 +95,12 @@ func (call Call) PrettyPrint(builder *AstPrettyPrinter) {
 	}
 }
 
-func (expr BracketExpr) PrettyPrint(builder *AstPrettyPrinter) {
+func (expr *BracketExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteNode(expr.Callee)
 	mkstring(expr.Args, "[", ", ", "]", builder)
 }
 
-func (codeBlock CodeBlock) PrettyPrint(builder *AstPrettyPrinter) {
+func (codeBlock *CodeBlock) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("{")
 	builder.Indentation++
 	for _, item := range codeBlock.Items {
@@ -147,27 +147,27 @@ func WriteStringLit(builder *AstPrettyPrinter, value string) {
 	builder.WriteRune('"')
 }
 
-func (lit StrLit) PrettyPrint(builder *AstPrettyPrinter) {
+func (lit *StrLit) PrettyPrint(builder *AstPrettyPrinter) {
 	WriteStringLit(builder, lit.Value)
 }
 
-func (lit TcStrLit) PrettyPrint(builder *AstPrettyPrinter) {
+func (lit *TcStrLit) PrettyPrint(builder *AstPrettyPrinter) {
 	WriteStringLit(builder, lit.Value)
 }
 
-func (list ExprList) PrettyPrint(builder *AstPrettyPrinter) {
+func (list *ExprList) PrettyPrint(builder *AstPrettyPrinter) {
 	mkstring(list.Items, "(", ", ", ")", builder)
 }
 
-func (node TcErrorNode) PrettyPrint(builder *AstPrettyPrinter) {
+func (node *TcErrorNode) PrettyPrint(builder *AstPrettyPrinter) {
 	node.SourceNode.PrettyPrint(builder)
 }
 
-func (lit ArrayLit) PrettyPrint(builder *AstPrettyPrinter) {
+func (lit *ArrayLit) PrettyPrint(builder *AstPrettyPrinter) {
 	mkstring(lit.Items, "[", ", ", "]", builder)
 }
 
-func (lit TcArrayLit) PrettyPrint(builder *AstPrettyPrinter) {
+func (lit *TcArrayLit) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteRune('[')
 	for i, expr := range lit.Items {
 		if i != 0 {
@@ -178,7 +178,7 @@ func (lit TcArrayLit) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteRune(']')
 }
 
-func (lit TcStructLit) PrettyPrint(builder *AstPrettyPrinter) {
+func (lit *TcStructLit) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteRune('[')
 	for i, expr := range lit.Items {
 		if i != 0 {
@@ -191,7 +191,7 @@ func (lit TcStructLit) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(lit.Type.Impl.Name)
 }
 
-func (lit TcEnumSetLit) PrettyPrint(builder *AstPrettyPrinter) {
+func (lit *TcEnumSetLit) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteRune('[')
 	for i, expr := range lit.Items {
 		if i != 0 {
@@ -230,11 +230,11 @@ func WriteIntLit(builder *strings.Builder, value *big.Int) {
 	// fmt.Fprintf(builder, "%d", value)
 }
 
-func (lit IntLit) PrettyPrint(builder *AstPrettyPrinter) {
+func (lit *IntLit) PrettyPrint(builder *AstPrettyPrinter) {
 	WriteIntLit(&builder.Builder, lit.Value)
 }
 
-func (lit TcIntLit) PrettyPrint(builder *AstPrettyPrinter) {
+func (lit *TcIntLit) PrettyPrint(builder *AstPrettyPrinter) {
 	WriteIntLit(&builder.Builder, lit.Value)
 	if lit.Type != nil && lit.Type != (Type)(GetIntLitType(lit.Value)) {
 		builder.WriteString(":")
@@ -242,12 +242,12 @@ func (lit TcIntLit) PrettyPrint(builder *AstPrettyPrinter) {
 	}
 }
 
-func (lit FloatLit) PrettyPrint(builder *AstPrettyPrinter) {
+func (lit *FloatLit) PrettyPrint(builder *AstPrettyPrinter) {
 	str := fmt.Sprintf("%f", lit.Value)
 	builder.WriteString(str)
 }
 
-func (lit TcFloatLit) PrettyPrint(builder *AstPrettyPrinter) {
+func (lit *TcFloatLit) PrettyPrint(builder *AstPrettyPrinter) {
 	str := fmt.Sprintf("%f", lit.Value)
 	builder.WriteString(str)
 	if lit.Type != (Type)(GetFloatLitType(lit.Value)) {
@@ -256,63 +256,19 @@ func (lit TcFloatLit) PrettyPrint(builder *AstPrettyPrinter) {
 	}
 }
 
-func (lit NilLit) PrettyPrint(builder *AstPrettyPrinter) {
+func (lit *NilLit) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("nullptr")
 }
 
-// func (typeExpr TypeExpr) PrettyPrint(builder *AstPrettyPrinter) {
-// 	builder.WriteString(typeExpr.Ident.Source)
-// 	if len(typeExpr.ExprArgs) > 0 {
-// 		builder.WriteString("(")
-// 		for i, arg := range typeExpr.ExprArgs {
-// 			if i != 0 {
-// 				builder.WriteString(", ")
-// 			}
-// 			builder.WriteNode(arg)
-// 		}
-// 		builder.WriteString(")")
-// 	}
-// 	if len(typeExpr.TypeArgs) > 0 {
-// 		builder.WriteString("[")
-// 		for i, arg := range typeExpr.TypeArgs {
-// 			if i != 0 {
-// 				builder.WriteString(", ")
-// 			}
-// 			builder.WriteNode(arg)
-// 		}
-// 		builder.WriteString("]")
-// 	}
-// }
-
-func (typeDef StructDef) PrettyPrint(builder *AstPrettyPrinter) {
+func (typeDef *TypeDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("type ")
-	builder.WriteNode(typeDef.Name)
-	builder.WriteString(" = struct {")
-	builder.Indentation += 1
-	for _, field := range typeDef.Fields {
-		builder.NewlineAndIndent()
-		builder.WriteNode(field)
+	if typeDef.Annotations != nil {
+		builder.WriteNode(typeDef.Annotations)
 	}
-	builder.Indentation -= 1
-	builder.NewlineAndIndent()
-	builder.WriteString("}")
+	builder.WriteNode(typeDef.Expr)
 }
 
-func (typeDef EnumDef) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("type ")
-	builder.WriteNode(typeDef.Name)
-	builder.WriteString(" = struct {")
-	builder.Indentation += 1
-	for _, field := range typeDef.Values {
-		builder.NewlineAndIndent()
-		builder.WriteNode(field)
-	}
-	builder.Indentation -= 1
-	builder.NewlineAndIndent()
-	builder.WriteString("}")
-}
-
-func (typeDef TraitDef) PrettyPrint(builder *AstPrettyPrinter) {
+func (typeDef *TraitDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("trait ")
 	builder.WriteNode(typeDef.Expr)
 }
@@ -343,28 +299,28 @@ func (procDef *ProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteNode(procDef.Expr)
 }
 
-func (returnExpr ReturnExpr) PrettyPrint(builder *AstPrettyPrinter) {
+func (returnExpr *ReturnExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("return ")
 	builder.WriteNode(returnExpr.Value)
 }
 
-func (varExpr VarExpr) PrettyPrint(builder *AstPrettyPrinter) {
+func (varExpr *VarExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("var ")
 	builder.WriteNode(varExpr.Expr)
 }
 
-func (expr TypeContext) PrettyPrint(builder *AstPrettyPrinter) {
+func (expr *TypeContext) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("type ")
 	builder.WriteNode(expr.Expr)
 }
 
-func (stmt VariableDefStmt) PrettyPrint(builder *AstPrettyPrinter) {
+func (stmt *VariableDefStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(stmt.Prefix.Source)
 	builder.WriteString(" ")
 	builder.WriteNode(stmt.Expr)
 }
 
-func (loopStmt ForLoopStmt) PrettyPrint(builder *AstPrettyPrinter) {
+func (loopStmt *ForLoopStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("for ")
 	builder.WriteNode(loopStmt.LoopIdent)
 	builder.WriteString(" in ")
@@ -373,7 +329,7 @@ func (loopStmt ForLoopStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteNode(loopStmt.Body)
 }
 
-func (loopStmt TcForLoopStmt) PrettyPrint(builder *AstPrettyPrinter) {
+func (loopStmt *TcForLoopStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("for ")
 	builder.WriteString(loopStmt.LoopSym.Source)
 	builder.WriteString(" in ")
@@ -382,35 +338,35 @@ func (loopStmt TcForLoopStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteNode(loopStmt.Body)
 }
 
-func (loopStmt WhileLoopStmt) PrettyPrint(builder *AstPrettyPrinter) {
+func (loopStmt *WhileLoopStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("while ")
 	builder.WriteNode(loopStmt.Condition)
 	builder.WriteString(" do ")
 	builder.WriteNode(loopStmt.Body)
 }
 
-func (loopStmt TcWhileLoopStmt) PrettyPrint(builder *AstPrettyPrinter) {
+func (loopStmt *TcWhileLoopStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("while ")
 	builder.WriteNode(loopStmt.Condition)
 	builder.WriteString(" do ")
 	builder.WriteNode(loopStmt.Body)
 }
 
-func (ifStmt IfExpr) PrettyPrint(builder *AstPrettyPrinter) {
+func (ifStmt *IfExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("if ")
 	builder.WriteNode(ifStmt.Condition)
 	builder.WriteString(" do ")
 	builder.WriteNode(ifStmt.Body)
 }
 
-func (ifStmt TcIfStmt) PrettyPrint(builder *AstPrettyPrinter) {
+func (ifStmt *TcIfStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("if ")
 	builder.WriteNode(ifStmt.Condition)
 	builder.WriteString(" do ")
 	builder.WriteNode(ifStmt.Body)
 }
 
-func (ifStmt IfElseExpr) PrettyPrint(builder *AstPrettyPrinter) {
+func (ifStmt *IfElseExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("if ")
 	builder.WriteNode(ifStmt.Condition)
 	builder.WriteString(" do ")
@@ -419,7 +375,7 @@ func (ifStmt IfElseExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteNode(ifStmt.Else)
 }
 
-func (ifStmt TcIfElseExpr) PrettyPrint(builder *AstPrettyPrinter) {
+func (ifStmt *TcIfElseExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("if ")
 	builder.WriteNode(ifStmt.Condition)
 	builder.WriteString(" do ")
@@ -428,7 +384,7 @@ func (ifStmt TcIfElseExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteNode(ifStmt.Else)
 }
 
-func (pak PackageDef) PrettyPrint(builder *AstPrettyPrinter) {
+func (pak *PackageDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("# file: ")
 	builder.WriteString(pak.Name)
 	for _, stmt := range pak.TopLevelStmts {
@@ -437,29 +393,29 @@ func (pak PackageDef) PrettyPrint(builder *AstPrettyPrinter) {
 	}
 }
 
-func (breakstmt BreakStmt) PrettyPrint(builder *AstPrettyPrinter) {
+func (breakstmt *BreakStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("break")
 }
-func (continuestmt ContinueStmt) PrettyPrint(builder *AstPrettyPrinter) {
+func (continuestmt *ContinueStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("continue")
 }
 
-func (emitstmt EmitStmt) PrettyPrint(builder *AstPrettyPrinter) {
+func (emitstmt *EmitStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("emit ")
 	emitstmt.Value.PrettyPrint(builder)
 }
 
-func (staticExpr StaticExpr) PrettyPrint(builder *AstPrettyPrinter) {
+func (staticExpr *StaticExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("static ")
 	staticExpr.Expr.PrettyPrint(builder)
 }
 
-func (importStmt ImportStmt) PrettyPrint(builder *AstPrettyPrinter) {
+func (importStmt *ImportStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("import ")
 	importStmt.Value.PrettyPrint(builder)
 }
 
-func (importStmt TcImportStmt) PrettyPrint(builder *AstPrettyPrinter) {
+func (importStmt *TcImportStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("import ")
 	importStmt.Value.PrettyPrint(builder)
 }
@@ -516,7 +472,7 @@ func (typ *GenericTypeSymbol) PrettyPrint(builder *AstPrettyPrinter) {
 	// builder.WriteString(")")
 }
 
-func (call TcCall) PrettyPrint(builder *AstPrettyPrinter) {
+func (call *TcCall) PrettyPrint(builder *AstPrettyPrinter) {
 	if call.Braced {
 		builder.WriteString(call.Sym.Source)
 		builder.WriteString("(")
@@ -733,7 +689,7 @@ func (procDef *TcErrorProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(procDef.Signature.Name)
 }
 
-func (pak TcPackageDef) PrettyPrint(builder *AstPrettyPrinter) {
+func (pak *TcPackageDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("# file: ")
 	builder.WriteString(pak.Name)
 
@@ -741,7 +697,7 @@ func (pak TcPackageDef) PrettyPrint(builder *AstPrettyPrinter) {
 		builder.WriteString("\n# Cflags:\n")
 		for _, flag := range pak.CFlags {
 			builder.WriteString("addCFlags(")
-			StrLit{Value: flag}.PrettyPrint(builder)
+			(&StrLit{Value: flag}).PrettyPrint(builder)
 			builder.WriteString(")")
 		}
 		builder.WriteString("\n")
@@ -840,7 +796,7 @@ func (lit *StringLitType) PrettyPrint(builder *AstPrettyPrinter) {
 	WriteStringLit(builder, lit.Value)
 }
 
-func (doc PrefixDocComment) PrettyPrint(builder *AstPrettyPrinter) {
+func (doc *PrefixDocComment) PrettyPrint(builder *AstPrettyPrinter) {
 	for _, line := range doc.BaseDoc {
 		builder.NewlineAndIndent()
 		builder.WriteString("## ")

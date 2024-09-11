@@ -303,7 +303,7 @@ type TcPackageDef struct {
 	Source         string
 	Name           string
 	CFlags         []string
-	Imports        []TcImportStmt
+	Imports        []*TcImportStmt
 	EmitStatements []*EmitStmt // TODO not a TC node
 	StructDefs     []*TcStructDef
 	EnumDefs       []*TcEnumDef
