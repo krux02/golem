@@ -7,9 +7,13 @@ Gründungskompass: Unsere Veranstantung zum Thema Gründung
 
 Fundraising
 
+* TODO Annotation Syntax
 * TODO find a better syntax for general annotations.
 
-No ~Annotation(expr, str)~ node, as this makes it hard to ignore annotations.
+Annotations need to be ignorable. They need to be a type of synatx that isn't seen my regular ast pattern matching.
+An annotation like ~ident @ <Expr>~ must match the pattern of just an identifier, not the ~@~ operator call.
+[[file:parser.go::func applyOperatorPrecedenceFromLeft(tokenizerCode string, lhs Expr, op *Ident, rhs Expr) *Call {][applyOperatorPrecedence]]
+
 
 * TODO move `applyDocComment` to a later phase of semcheck, when type checking is already done.
 * TODO rename ArrayLit to something else as it is universal for arrays and structs

@@ -152,8 +152,9 @@ type Call struct {
 	Source string
 	Callee Expr
 	Args   []Expr
-	// other properties (TODO can this be removed?)
-	Braced bool // true for (a+b) +(a,b), false for a+b
+	// `Braced` true for (a+b) +(a,b), false for a+b. This property is used to
+	// check if applyOperatorPrecedence may rehang this ast.
+	Braced bool
 	Prefix bool // true for -a ++x etc, false for everything else
 }
 

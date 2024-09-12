@@ -271,10 +271,10 @@ func SemCheckTypeDef(sc *SemChecker, scope Scope, def *TypeDef) TcExpr {
 
 	ValidNameCheck(sc, name, "type")
 
-	importc := def.Annotations != nil && def.Annotations.Value == "importc"
+	var importc bool
 	if def.Annotations != nil {
 		if def.Annotations.Value == "importc" {
-			result.Importc = true
+			importc = true
 		} else {
 			ReportInvalidAnnotations(sc, def.Annotations)
 		}
@@ -285,7 +285,7 @@ func SemCheckTypeDef(sc *SemChecker, scope Scope, def *TypeDef) TcExpr {
 		result := &TcStructDef{
 			Source:  def.Source,
 			Name:    name.Source,
-			Importc: importc
+			Importc: importc,
 		}
 		structType := &StructType{Impl: result}
 		// TODO: test when Importc that all fields are also Importc (or importc compatible, like builtin integer types)
@@ -310,9 +310,9 @@ func SemCheckTypeDef(sc *SemChecker, scope Scope, def *TypeDef) TcExpr {
 		return result
 	case "enum":
 		result := &TcEnumDef{
-			Source: def.Source,
-			Name:   name.Source,
-			Importc: importc
+			Source:  def.Source,
+			Name:    name.Source,
+			Importc: importc,
 		}
 		enumType := &EnumType{Impl: result}
 		for _, value := range block.Items {
