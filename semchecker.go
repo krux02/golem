@@ -1181,7 +1181,24 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 			result.Args = checkedArgs
 			ExpectType(sc, call, sig.ResultType, expected)
 		case *TcTemplateDef:
-			substitution := impl.Body
+			sigParams := impl.Signature.Params
+			if len(checkedArgs) != len(sigParams) {
+				panic("internal error")
+			}
+			var substitutions []TemplateSubstitution
+			for i := range sigParams {
+				var value Expr = checkedArgs[i]
+				if tmp, isWrappedUntyped := value.(*TcWrappedUntypedAst); isWrappedUntyped {
+					value = tmp.Expr
+				}
+				substitutions = append(substitutions, TemplateSubstitution{Sym: sigParams[i], Value: value})
+			}
+			templateBodyScope := NewSubScope(scope)
+			substitution := SemCheckExpr(sc,
+				templateBodyScope,
+				impl.Body.RecursiveSubstituteSymbols(substitutions),
+				UniqueTypeConstraint{impl.Signature.ResultType},
+			)
 			ExpectType(sc, call, substitution.GetType(), expected)
 			return substitution
 		case *TcBuiltinMacroDef:
@@ -1365,8 +1382,11 @@ func SemCheckReturnExpr(sc *SemChecker, scope Scope, arg *ReturnExpr) *TcReturnE
 	return result
 }
 
-func (_ *TcErrorNode) GetType() Type {
-	return TypeError
+func UnifyType(a, b Type) Type {
+	if a != b {
+		panic("type incompatible")
+	}
+	return a
 }
 
 func (block *TcCodeBlock) GetType() Type {
@@ -1374,14 +1394,6 @@ func (block *TcCodeBlock) GetType() Type {
 		return TypeVoid
 	}
 	return block.Items[len(block.Items)-1].GetType()
-}
-
-func (call *TcCall) GetType() Type {
-	return call.Sym.Signature.ResultType
-}
-
-func (lit *TcStrLit) GetType() Type {
-	return lit.Type
 }
 
 func (lit *TcIntLit) GetType() Type {
@@ -1405,105 +1417,33 @@ func (lit *NilLit) GetType() Type {
 	return lit.Type
 }
 
-func (lit *TcArrayLit) GetType() Type {
-	return GetArrayType(lit.ElemType, int64(len(lit.Items)))
-}
-
-func (lit *TcEnumSetLit) GetType() Type {
-	return GetEnumSetType(lit.ElemType)
-
-}
-
-func (lit *TcStructLit) GetType() Type {
-	return lit.Type
-}
-
-func (sym *TcSymbol) GetType() Type {
-	return sym.Type
-}
-
-func (sym *TcSymRef) GetType() Type {
-	return sym.Type
-}
-
-func (stmt *TcVariableDefStmt) GetType() Type {
-	return TypeVoid
-}
-
-func (stmt *TcStructDef) GetType() Type {
-	return TypeVoid
-}
-
-func (stmt *TcEnumDef) GetType() Type {
-	return TypeVoid
-}
-
-func (stmt *TcForLoopStmt) GetType() Type {
-	return TypeVoid
-}
-
-func (stmt *TcWhileLoopStmt) GetType() Type {
-	return TypeVoid
-}
-
-func (arg *TcBuiltinProcDef) GetType() Type {
-	return TypeVoid
-}
-
-func (arg *TcBuiltinGenericProcDef) GetType() Type {
-	return TypeVoid
-}
-
-func (arg *TcProcDef) GetType() Type {
-	return TypeVoid
-}
-
-func (arg *TcTemplateDef) GetType() Type {
-	return TypeVoid
-}
-
-func (arg *TcPackageDef) GetType() Type {
-	return TypeVoid
-}
-
-func (arg *TcBuiltinMacroDef) GetType() Type {
-	return TypeVoid
-}
-
-func (arg *TcErrorProcDef) GetType() Type {
-	return TypeVoid // every proc/macro/template definition is of type void, even the one that doesn't exist
-}
-
-func UnifyType(a, b Type) Type {
-	if a != b {
-		panic("type incompatible")
-	}
-	return a
-}
-
-func (stmt TcIfStmt) GetType() Type {
-	return TypeVoid
-}
-
-func (stmt TcIfElseExpr) GetType() Type {
-	return UnifyType(stmt.Body.GetType(), stmt.Else.GetType())
-}
-
-func (returnExpr TcReturnExpr) GetType() Type {
-	return TypeNoReturn
-}
-
-func (expr TcTypeContext) GetType() Type {
-	return GetTypeType(expr.WrappedType)
-}
-
-func (expr TcDotExpr) GetType() Type {
-	return expr.Rhs.GetType()
-}
-
-func (field TcStructField) GetType() Type {
-	return field.Type
-}
+func (_ *TcErrorNode) GetType() Type               { return TypeError }
+func (call *TcCall) GetType() Type                 { return call.Sym.Signature.ResultType }
+func (lit *TcStrLit) GetType() Type                { return lit.Type }
+func (lit *TcArrayLit) GetType() Type              { return GetArrayType(lit.ElemType, int64(len(lit.Items))) }
+func (lit *TcEnumSetLit) GetType() Type            { return GetEnumSetType(lit.ElemType) }
+func (lit *TcStructLit) GetType() Type             { return lit.Type }
+func (sym *TcSymbol) GetType() Type                { return sym.Type }
+func (sym *TcSymRef) GetType() Type                { return sym.Type }
+func (stmt *TcVariableDefStmt) GetType() Type      { return TypeVoid }
+func (stmt *TcStructDef) GetType() Type            { return TypeVoid }
+func (stmt *TcEnumDef) GetType() Type              { return TypeVoid }
+func (stmt *TcForLoopStmt) GetType() Type          { return TypeVoid }
+func (stmt *TcWhileLoopStmt) GetType() Type        { return TypeVoid }
+func (arg *TcBuiltinProcDef) GetType() Type        { return TypeVoid }
+func (arg *TcBuiltinGenericProcDef) GetType() Type { return TypeVoid }
+func (arg *TcProcDef) GetType() Type               { return TypeVoid }
+func (arg *TcTemplateDef) GetType() Type           { return TypeVoid }
+func (arg *TcPackageDef) GetType() Type            { return TypeVoid }
+func (arg *TcBuiltinMacroDef) GetType() Type       { return TypeVoid }
+func (arg *TcErrorProcDef) GetType() Type          { return TypeVoid }
+func (stmt *TcIfStmt) GetType() Type               { return TypeVoid }
+func (stmt *TcIfElseExpr) GetType() Type           { return UnifyType(stmt.Body.GetType(), stmt.Else.GetType()) }
+func (returnExpr *TcReturnExpr) GetType() Type     { return TypeNoReturn }
+func (expr *TcTypeContext) GetType() Type          { return GetTypeType(expr.WrappedType) }
+func (expr *TcDotExpr) GetType() Type              { return expr.Rhs.GetType() }
+func (field *TcStructField) GetType() Type         { return field.Type }
+func (expr *TcWrappedUntypedAst) GetType() Type    { return TypeUntyped }
 
 func SemCheckIntLit(sc *SemChecker, scope Scope, arg *IntLit, expected TypeConstraint) TcExpr {
 	uniqueConstraint, isUniqueConstraint := expected.(UniqueTypeConstraint)
@@ -1643,6 +1583,10 @@ error:
 }
 
 func SemCheckExpr(sc *SemChecker, scope Scope, arg Expr, expected TypeConstraint) TcExpr {
+	if (expected == UniqueTypeConstraint{TypeUntyped}) {
+		return &TcWrappedUntypedAst{arg}
+	}
+
 	switch arg := arg.(type) {
 	case *Call:
 		return (TcExpr)(SemCheckCall(sc, scope, arg, expected))
@@ -1736,7 +1680,9 @@ func GetArrayType(elem Type, len int64) (result *ArrayType) {
 		// TODO the array index operator needs mutability propagation of the first argument.
 		// TODO this should be generic for better error messages on missing overloads, listing all currently known array types is a bit much
 		registerBuiltin("indexOp", "", ".arr[", "]", []Type{result, TypeInt64}, elem, 0)
-		registerSimpleTemplate("len", []Type{result}, TypeInt64, &TcIntLit{Type: TypeInt64, Value: big.NewInt(len)})
+
+		argSym := &TcSymbol{Source: "_", Kind: SkProcArg, Type: result}
+		registerSimpleTemplate("len", []*TcSymbol{argSym}, TypeInt64, &IntLit{Value: big.NewInt(len)})
 	}
 	return result
 }

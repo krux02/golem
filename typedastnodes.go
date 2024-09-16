@@ -250,7 +250,7 @@ type TcBuiltinMacroDef struct {
 type TcTemplateDef struct {
 	Source    string
 	Signature *Signature
-	Body      TcExpr
+	Body      Expr
 }
 
 type TcErrorProcDef struct {
@@ -319,6 +319,10 @@ type TcImportStmt struct {
 	Package *TcPackageDef
 }
 
+type TcWrappedUntypedAst struct {
+	Expr Expr
+}
+
 func (sym *TcDotExpr) expression()          {}
 func (sym *TcSymbol) expression()           {}
 func (sym *TcSymRef) expression()           {}
@@ -360,11 +364,12 @@ func (arg *TcTemplateDef) GetSource() string           { return arg.Source }
 func (arg *TcStructLit) GetSource() string             { return arg.Source }
 func (arg *TcPackageDef) GetSource() string            { return arg.Source }
 
-func (arg *TcStructDef) GetSource() string       { return arg.Source }
-func (arg *TcEnumDef) GetSource() string         { return arg.Source }
-func (arg *GenericTypeSymbol) GetSource() string { return arg.Source }
-func (arg *TcBuiltinMacroDef) GetSource() string { return "" } // builtins have no source
-func (arg *TcErrorProcDef) GetSource() string    { return "" } // non existing proc def has no source
+func (arg *TcStructDef) GetSource() string         { return arg.Source }
+func (arg *TcEnumDef) GetSource() string           { return arg.Source }
+func (arg *GenericTypeSymbol) GetSource() string   { return arg.Source }
+func (arg *TcBuiltinMacroDef) GetSource() string   { return "" } // builtins have no source
+func (arg *TcErrorProcDef) GetSource() string      { return "" } // non existing proc def has no source
+func (arg *TcWrappedUntypedAst) GetSource() string { return arg.Expr.GetSource() }
 
 // func (arg *EnumSetType) GetSource() string { return arg.Source }
 // func (arg TypeGroup) GetSource() string    { return arg.Source }

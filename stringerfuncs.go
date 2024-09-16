@@ -420,6 +420,10 @@ func (importStmt *TcImportStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	importStmt.Value.PrettyPrint(builder)
 }
 
+func (arg *TcWrappedUntypedAst) PrettyPrint(builder *AstPrettyPrinter) {
+	arg.Expr.PrettyPrint(builder)
+}
+
 // format type checked ast nodes
 func (typ *BuiltinType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(typ.Name)
@@ -435,6 +439,10 @@ func (typ *BuiltinFloatType) PrettyPrint(builder *AstPrettyPrinter) {
 
 func (typ *BuiltinStringType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(typ.Name)
+}
+
+func (typ *UntypedType) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("untyped")
 }
 
 func (typ *UnspecifiedType) PrettyPrint(builder *AstPrettyPrinter) {

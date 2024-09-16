@@ -116,10 +116,12 @@ proc main():i32 = {
 
   var myEnumSet : set(MyEnum) = [Option1, Option3]
 
-  # TODO the `:MyEnum` should not be necessary here
-  # assert(Option1:MyEnum in myEnumSet) # TODO enable this
-  # assert(Option2:MyEnum notin myEnumSet) # TODO enable this
-  # assert(Option3:MyEnum in myEnumSet) # TODO enable this
+  assert(Option1 in myEnumSet)
+  assert(not(Option1 notin myEnumSet))
+  assert(Option2 notin myEnumSet)
+  assert(not(Option2 in myEnumSet))
+  assert(Option3 in myEnumSet)
+  assert(not(Option3 notin myEnumSet))
 
   assert(contains(myEnumSet, Option1))
   assert(not contains(myEnumSet, Option2))

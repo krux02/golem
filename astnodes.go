@@ -6,6 +6,7 @@ import "math/big"
 
 type AstNode interface {
 	PrettyPrint(*AstPrettyPrinter)
+	RecursiveSubstituteSymbols(substitutions []TemplateSubstitution) Expr
 	GetSource() string
 }
 
@@ -138,6 +139,7 @@ type NilLit struct {
 	Type   Type
 }
 
+// is this even an ast node?
 type ExprList struct {
 	Source string
 	Items  []Expr

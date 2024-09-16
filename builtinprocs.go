@@ -33,8 +33,10 @@ type BuiltinIntType struct {
 	MaxValue     *big.Int
 }
 
+type UntypedType struct{} // explicitly untyped ast, pass in the ast verbatim, no type checking.
+
 type ErrorType struct{}
-type UnspecifiedType struct{}
+type UnspecifiedType struct{} // type constraint: no costraints
 
 type TypeGroup struct {
 	Name  string
@@ -201,6 +203,10 @@ func (typ *StringLitType) ManglePrint(builder *strings.Builder) {
 	panic("not implemented")
 }
 
+func (typ *UntypedType) ManglePrint(builder *strings.Builder) {
+	panic("untyped ast may not exist in C code generation")
+}
+
 func (typ *GenericTypeSymbol) ManglePrint(builder *strings.Builder) {
 	fmt.Fprintf(builder, "?%s?", typ.Name)
 }
@@ -260,6 +266,9 @@ var TypeNoReturn = &BuiltinType{"noreturn", "void", '-'}
 // this type is the internal representation when no type has been specified. It
 // is not a type by its own.
 var TypeUnspecified = &UnspecifiedType{}
+
+// this type is the internal representaion when an untyped ast should be passed to a macro or template.
+var TypeUntyped Type = &UntypedType{}
 
 // this type is the internal representation when the type checker fails to
 // resolve the type. Expressions with this type cannot be further processed in
@@ -350,6 +359,10 @@ func (typ *FloatLitType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 
 func (typ *StringLitType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 	return &TcStrLit{Type: typ, Value: typ.Value}
+}
+
+func (typ *UntypedType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
+	return &TcCodeBlock{}
 }
 
 func (typ *TypeType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
@@ -544,20 +557,18 @@ func registerBuiltinMacro(name string, varargs bool, args []Type, result Type, m
 	registerGenericBuiltinMacro(name, varargs, nil, args, result, macroFunc)
 }
 
-func registerSimpleTemplate(name string, args []Type, result Type, substitution TcExpr) {
+func registerSimpleTemplate(name string, params []*TcSymbol, result Type, substitution Expr) {
 	templateDef := &TcTemplateDef{
 		// TODO set Source
 		Signature: &Signature{
 			Name:       name,
-			Params:     make([]*TcSymbol, len(args)),
+			Params:     params,
 			ResultType: result,
 		},
 		Body: substitution,
 	}
-	for i, arg := range args {
-		templateDef.Signature.Params[i] = &TcSymbol{Type: arg, Kind: SkProcArg}
-	}
 	templateDef.Signature.Impl = templateDef
+	// TODO check for signature collision
 	builtinScope.Signatures[name] = append(builtinScope.Signatures[name], templateDef.Signature)
 }
 
@@ -807,9 +818,23 @@ func init() {
 		registerBuiltin("f64", "(double)(", "", ")", []Type{typ}, TypeFloat64, 0)
 
 		if intType, isIntType := typ.(*BuiltinIntType); isIntType {
-			registerSimpleTemplate("high", []Type{GetTypeType(typ)}, typ, &TcIntLit{Value: big.NewInt(0).Set(intType.MaxValue), Type: typ})
-			registerSimpleTemplate("low", []Type{GetTypeType(typ)}, typ, &TcIntLit{Value: big.NewInt(0).Set(intType.MinValue), Type: typ})
+			// TODO, invalid source location
+			argSym := &TcSymbol{Source: "arg", Kind: SkProcArg, Type: GetTypeType(typ)}
+			registerSimpleTemplate("high", []*TcSymbol{argSym}, typ, &IntLit{Value: big.NewInt(0).Set(intType.MaxValue)})
+			registerSimpleTemplate("low", []*TcSymbol{argSym}, typ, &IntLit{Value: big.NewInt(0).Set(intType.MinValue)})
 		}
+	}
+
+	{
+		// TODO, invalid source location
+		arg1 := &TcSymbol{Source: "arg1", Kind: SkProcArg, Type: TypeUntyped}
+		arg2 := &TcSymbol{Source: "arg2", Kind: SkProcArg, Type: TypeUntyped}
+
+		inExpr := &Call{Callee: &Ident{Source: "contains"}, Args: []Expr{arg2, arg1}}
+		notInExpr := &Call{Callee: &Ident{Source: "not"}, Args: []Expr{inExpr}}
+
+		registerSimpleTemplate("in", []*TcSymbol{arg1, arg2}, TypeBoolean, inExpr)
+		registerSimpleTemplate("notin", []*TcSymbol{arg1, arg2}, TypeBoolean, notInExpr)
 	}
 
 	// TODO test these bitops

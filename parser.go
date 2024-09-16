@@ -407,8 +407,10 @@ func parsePrefixCall(tokenizer *Tokenizer, preventInfixOperatorInArgument bool) 
 		}
 	}
 
+	source := joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value)
+
 	return &Call{
-		Source: joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value),
+		Source: source,
 		Callee: op,
 		Args:   []Expr{arg},
 		Prefix: true,
