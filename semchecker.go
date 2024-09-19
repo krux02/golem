@@ -1196,7 +1196,7 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 			templateBodyScope := NewSubScope(scope)
 			substitution := SemCheckExpr(sc,
 				templateBodyScope,
-				impl.Body.RecursiveSubstituteSymbols(substitutions),
+				impl.Body.RecSubSyms(substitutions),
 				UniqueTypeConstraint{impl.Signature.ResultType},
 			)
 			ExpectType(sc, call, substitution.GetType(), expected)

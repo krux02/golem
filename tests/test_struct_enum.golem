@@ -116,6 +116,12 @@ proc main():i32 = {
 
   var myEnumSet : set(MyEnum) = [Option1, Option3]
 
+
+  # this effectively tests templates with untyped arguments. `in` is a template
+  # that reverses arguments and forwards to `contains`. The overload resolution
+  # on contains puts context on Option1 to alow it's resolution in MyEnum
+  # namespace.
+
   assert(Option1 in myEnumSet)
   assert(not(Option1 notin myEnumSet))
   assert(Option2 notin myEnumSet)
