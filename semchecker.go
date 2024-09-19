@@ -745,22 +745,6 @@ func ExpectType(sc *SemChecker, node AstNode, gotten Type, expected TypeConstrai
 	return TypeError
 }
 
-func ExpectArgsLen(sc *SemChecker, node AstNode, gotten, expected int) bool {
-	if expected != gotten {
-		ReportErrorf(sc, node, "expected %d arguments, but got %d", expected, gotten)
-		return false
-	}
-	return true
-}
-
-func ExpectMinArgsLen(sc *SemChecker, node AstNode, gotten, expected int) bool {
-	if gotten < expected {
-		ReportErrorf(sc, node, "Expected at least %d arguments, but got %d.", expected, gotten)
-		return false
-	}
-	return true
-}
-
 func (structDef *TcStructDef) GetField(name string) (resField *TcStructField, idx int) {
 	for i, field := range structDef.Fields {
 		if field.Name == name {

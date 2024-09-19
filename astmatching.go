@@ -1,5 +1,21 @@
 package main
 
+func ExpectArgsLen(sc *SemChecker, node AstNode, gotten, expected int) bool {
+	if expected != gotten {
+		ReportErrorf(sc, node, "expected %d arguments, but got %d", expected, gotten)
+		return false
+	}
+	return true
+}
+
+func ExpectMinArgsLen(sc *SemChecker, node AstNode, gotten, expected int) bool {
+	if gotten < expected {
+		ReportErrorf(sc, node, "Expected at least %d arguments, but got %d.", expected, gotten)
+		return false
+	}
+	return true
+}
+
 func MatchVariableDefStatement(sc *SemChecker, arg *VariableDefStmt) (kind SymbolKind, name *Ident, typeExpr TypeExpr, value Expr, ok bool) {
 	// String matiching
 	switch arg.Prefix.Source {

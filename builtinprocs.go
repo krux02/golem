@@ -731,6 +731,30 @@ func BuiltinAddCFlags(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	return &TcCodeBlock{Source: call.Source}
 }
 
+func BuiltinPipeTransformation(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+	if !ExpectArgsLen(sc, call, len(call.Args), 2) {
+		return newErrorNode(call)
+	}
+	// TODO might crash
+	lhs := call.Args[0].(*TcWrappedUntypedAst).Expr
+	rhs, isCall := call.Args[1].(*TcWrappedUntypedAst).Expr.(*Call)
+	if !isCall {
+		ReportErrorf(sc, call.Args[1], "for pipe chaining syntax, this expression must be a function call")
+		return newErrorNode(call)
+	}
+
+	result := &Call{
+		Source: call.Source,
+		Callee: rhs.Callee,
+		Args:   make([]Expr, 0, len(rhs.Args)+1),
+	}
+
+	result.Args = append(result.Args, lhs)
+	result.Args = append(result.Args, rhs.Args...)
+
+	return SemCheckExpr(sc, scope, result, TypeUnspecified)
+}
+
 func init() {
 	arrayTypeMap = make(map[ArrayTypeMapKey]*ArrayType)
 	enumSetTypeMap = make(map[*EnumType]*EnumSetType)
@@ -751,6 +775,7 @@ func init() {
 	registerBuiltinMacro("printf", true, []Type{TypeStr}, TypeVoid, ValidatePrintfCall)
 	registerBuiltinMacro("addCFlags", false, []Type{TypeStr}, TypeVoid, BuiltinAddCFlags)
 	registerBuiltinMacro("addLinkerFlags", false, []Type{TypeStr}, TypeVoid, BuiltinAddLinkerFlags)
+	registerBuiltinMacro("|", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinPipeTransformation)
 
 	// registerBuiltinMacro("sizeof", false, []Type{TypeUnspecified}, TypeInt64, BuiltinSizeOf)
 

@@ -1,3 +1,5 @@
+* TODO proper testing for the | syntax
+
 * TODO Kontakt: Wirtschaftfördering der Stadt Bonn
 
 Kostenlose Verstaltung zum Thema Gründung

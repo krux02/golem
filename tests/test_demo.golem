@@ -79,6 +79,11 @@ proc main():i64 = {
   printf("Hallo Welt!\n")
   printf("x: %d y: %d\n", x, y)
 
+  # pipe syntax for function chaining
+  # don't delete this, this is the only test so far that actually tests the | syntax
+  let z = 12 | myfun1(13, 14) | myfun2(16, 17)
+  printf("z: %d\n", z)
+
   ## f1: some useless doc comment
   let f1 = 123:f64
   let f2: f64 = 567
