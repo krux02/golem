@@ -29,6 +29,8 @@ const (
 	// keywords
 	TkType
 	TkProc
+	TkTemplate
+	TkMacro
 	TkVar
 	TkLet
 	TkConst
@@ -36,7 +38,6 @@ const (
 	TkDiscard
 	TkBreak
 	TkContinue
-	TkStatic
 	TkStruct
 	TkUnion
 	TkEnum
@@ -75,6 +76,8 @@ var TokenKindNames = [...]string{
 	TkPostfixDocComment: "PostfixDocComment",
 	TkType:              "Type",
 	TkProc:              "Proc",
+	TkTemplate:          "Template",
+	TkMacro:             "Macro",
 	TkVar:               "Var",
 	TkLet:               "Let",
 	TkConst:             "Const",
@@ -82,7 +85,6 @@ var TokenKindNames = [...]string{
 	TkDiscard:           "Discard",
 	TkBreak:             "Break",
 	TkContinue:          "Continue",
-	TkStatic:            "Static",
 	TkStruct:            "Struct",
 	TkUnion:             "Union",
 	TkEnum:              "Enum",
@@ -191,11 +193,11 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 	// Printf("read token in:%s...\n", code[:20]);
 	if len(code) == 0 {
 		result.kind = TkEof
-		// technically this is ``result.value := code``, but go optimizes the empty
-		// string to have a null pointer. This breaks the line information that is
-		// encoded in the pointer value.
-		newPtr := uintptr(unsafe.Pointer(unsafe.StringData(this.code))) + uintptr(offset)
-		result.value = unsafe.String((*byte)(unsafe.Pointer(newPtr)), 0)
+		// go optimizes the empty string to have a null pointer. This breaks the
+		// line information that is encoded in the pointer value. If I do something
+		// about it, the go runtime will crash and complain about a bad pointer
+		// value.
+		result.value = code
 		return result, newOffset
 	}
 
@@ -307,6 +309,10 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			result.kind = TkType
 		case "proc":
 			result.kind = TkProc
+		case "macro":
+			result.kind = TkMacro
+		case "template":
+			result.kind = TkTemplate
 		case "var":
 			result.kind = TkVar
 		case "let":
@@ -321,8 +327,6 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			result.kind = TkBreak
 		case "continue":
 			result.kind = TkContinue
-		case "static":
-			result.kind = TkStatic
 		case "struct":
 			result.kind = TkStruct
 		case "union":
@@ -527,6 +531,17 @@ func (tokenizer *Tokenizer) expectKind2(token Token, kind1, kind2 TokenKind) boo
 		panic("never expect an invalid token")
 	}
 	if token.kind != kind1 && token.kind != kind2 {
+		tokenizer.reportWrongKind(token)
+		return false
+	}
+	return true
+}
+
+func (tokenizer *Tokenizer) expectKind3(token Token, kind1, kind2, kind3 TokenKind) bool {
+	if kind1 == TkInvalid || kind2 == TkInvalid || kind3 == TkInvalid {
+		panic("never expect an invalid token")
+	}
+	if token.kind != kind1 && token.kind != kind2 && token.kind != kind3 {
 		tokenizer.reportWrongKind(token)
 		return false
 	}

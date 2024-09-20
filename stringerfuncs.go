@@ -400,11 +400,6 @@ func (continuestmt *ContinueStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("continue")
 }
 
-func (staticExpr *StaticExpr) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("static ")
-	staticExpr.Expr.PrettyPrint(builder)
-}
-
 func (arg *TcWrappedUntypedAst) PrettyPrint(builder *AstPrettyPrinter) {
 	arg.Expr.PrettyPrint(builder)
 }

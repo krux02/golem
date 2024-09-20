@@ -31,9 +31,9 @@
 #         http://www.opengl.org/registry/
 #     
 
-static {
-  addLinkerFlags("-lGL")
-}
+
+addLinkerFlags("-lGL")
+
 emit("#include <GL/gl.h>")
 const GL_CURRENT_BIT:u32 = 0x00000001
 const GL_POINT_BIT:u32 = 0x00000002

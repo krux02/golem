@@ -376,14 +376,12 @@ func parseStmtOrExpr(tokenizer *Tokenizer) Expr {
 		return (Expr)(parseForLoop(tokenizer))
 	case TkWhile:
 		return (Expr)(parseWhileLoop(tokenizer))
-	case TkProc:
+	case TkProc, TkMacro, TkTemplate:
 		return (Expr)(parseProcDef(tokenizer))
 	case TkType:
 		return (Expr)(parseTypeDef(tokenizer))
 	case TkTrait:
 		return (Expr)(parseTrait(tokenizer))
-	case TkStatic:
-		return (Expr)(parseStaticExpr(tokenizer))
 	}
 	return parseExpr(tokenizer, false)
 }
@@ -667,23 +665,14 @@ func parseTypeDef(tokenizer *Tokenizer) Expr {
 func parseProcDef(tokenizer *Tokenizer) *ProcDef {
 	result := &ProcDef{}
 	firstToken := tokenizer.Next()
-	tokenizer.expectKind(firstToken, TkProc)
+	tokenizer.expectKind3(firstToken, TkProc, TkTemplate, TkMacro)
+	result.Kind = firstToken.kind
 	if tokenizer.lookAheadToken.kind == TkStrLit {
 		result.Annotations = parseStrLit(tokenizer)
 	}
 	result.Expr = parseExpr(tokenizer, false)
 	result.Source = joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value)
 	return result
-}
-
-func parseStaticExpr(tokenizer *Tokenizer) *StaticExpr {
-	firstToken := tokenizer.Next()
-	tokenizer.expectKind(firstToken, TkStatic)
-	expr := parseExpr(tokenizer, false)
-	return &StaticExpr{
-		Source: joinSubstr(tokenizer.code, firstToken.value, expr.GetSource()),
-		Expr:   expr,
-	}
 }
 
 func parseTrait(tokenizer *Tokenizer) *TraitDef {

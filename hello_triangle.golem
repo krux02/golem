@@ -4,9 +4,7 @@ emit("#include <SDL2/SDL.h>")
 import("sdl2")
 import("gl")
 
-static {
-  addCFlags("-Werror-implicit-function-declaration")
-}
+addCFlags("-Werror-implicit-function-declaration")
 
 emit("#include <string.h>")
 emit("void glCreateBuffers(GLsizei n, GLuint *buffers);\n")
@@ -147,9 +145,15 @@ trait HasSizeOf(T) = {
   proc sizeof(_: T): i64
 }
 
-proc write[T : HasSizeOf](dst: pointer, var offset: i32, value: T): void = {
-  (cast(type ptr T, cast(type uint, dst) + cast(type uint, offset)))[] = value
-  offset += i32(sizeof(value))
+# TODO enable this
+# proc write[T : HasSizeOf](dst: pointer, var offset: i32, value: T): void = {
+#   (cast(type ptr T, cast(type uint, dst) + cast(type uint, offset)))[] = value
+#   offset += i32(sizeof(value))
+# }
+
+template write(dst: pointer, var offset: i32, value: f32): void = {
+  (cast(type ptr f32, cast(type uint, dst) + cast(type uint, offset)))[] = value
+   offset += i32(sizeof(value))
 }
 
 proc alignFunc(address, alignment: i32): i32 = bitand(address + (alignment - 1), bitnot(alignment - 1))

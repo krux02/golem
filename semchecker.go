@@ -412,6 +412,9 @@ func SemCheckTraitDef(sc *SemChecker, scope Scope, def *TraitDef) *TcTraitDef {
 }
 
 func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result *TcProcDef) {
+	if def.Kind != TkProc {
+		ReportErrorf(sc, def, "%s kind not implemented in the compiler", TokenKindNames[def.Kind])
+	}
 
 	var body Expr
 	var expr = def.Expr
@@ -1332,7 +1335,7 @@ func ValidNameCheck(sc *SemChecker, ident *Ident, extraword string) {
 	}
 	// check for reserved words
 	switch ident.Source {
-	case "emit", "import", "static", "|":
+	case "emit", "import", "static", "|", "break", "continue":
 		ReportErrorf(sc, ident, "%s name is a reserved word", extraword)
 	}
 }
@@ -1945,10 +1948,6 @@ func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *Packag
 			result.VarDefs = append(result.VarDefs, varDef)
 		case *PrefixDocComment:
 			docComment = stmt
-		case *StaticExpr:
-			// TODO: ensure this expression can be evaluated at compile time
-			tcExpr := SemCheckExpr(sc, pkgScope, stmt.Expr, UniqueTypeConstraint{TypeVoid})
-			EvalExpr(sc, tcExpr, pkgScope)
 		case *TraitDef:
 			traitDef := SemCheckTraitDef(sc, pkgScope, stmt)
 			// stmt.Name
@@ -1963,6 +1962,7 @@ func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *Packag
 			}
 			ReportErrorf(sc, stmt, "top level function calls are not allowed: %s", AstFormat(tcExpr))
 		default:
+			ReportInvalidAstNode(sc, stmt, "top level statement")
 			panic(fmt.Errorf("internal error: %T", stmt))
 		}
 	}

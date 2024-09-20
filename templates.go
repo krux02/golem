@@ -121,12 +121,6 @@ func (arg *TypeContext) RecSubSyms(substitutions []TemplateSubstitution) Expr {
 func (arg *NilLit) RecSubSyms(substitutions []TemplateSubstitution) Expr {
 	return arg
 }
-func (arg *StaticExpr) RecSubSyms(substitutions []TemplateSubstitution) Expr {
-	return &StaticExpr{
-		Source: arg.Source,
-		Expr:   arg.Expr.RecSubSyms(substitutions),
-	}
-}
 
 func (arg *TraitDef) RecSubSyms(substitutions []TemplateSubstitution) Expr {
 	return &TraitDef{

@@ -1,3 +1,6 @@
+* TODO loop statements
+implement/test break and continue
+
 * TODO reactivate validate source set internal
 * TODO proper testing for the | syntax
 * TODO import statement issues

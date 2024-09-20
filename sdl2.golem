@@ -1,6 +1,6 @@
-static {
-  addLinkerFlags("-lSDL2")
-}
+
+addLinkerFlags("-lSDL2")
+
 
 emit("#include <SDL2/SDL.h>")
 emit("#include <SDL2/SDL_events.h>")

@@ -152,6 +152,7 @@ type BracketExpr struct {
 
 type ProcDef struct {
 	Source      string
+	Kind        TokenKind
 	Expr        Expr
 	Annotations *StrLit
 	DocComment  *PrefixDocComment
@@ -173,11 +174,6 @@ type ContinueStmt struct {
 }
 
 type TraitDef struct {
-	Source string
-	Expr   Expr
-}
-
-type StaticExpr struct {
 	Source string
 	Expr   Expr
 }
@@ -207,6 +203,5 @@ func (arg *BreakStmt) GetSource() string        { return arg.Source }
 func (arg *ContinueStmt) GetSource() string     { return arg.Source }
 func (arg *TypeContext) GetSource() string      { return arg.Source }
 func (arg *NilLit) GetSource() string           { return arg.Source }
-func (arg *StaticExpr) GetSource() string       { return arg.Source }
 func (arg *TraitDef) GetSource() string         { return arg.Source }
 func (arg *PackageDef) GetSource() string       { return arg.Source }

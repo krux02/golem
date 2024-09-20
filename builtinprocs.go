@@ -767,6 +767,13 @@ func BuiltinEmitStmt(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	return &TcCodeBlock{Source: call.Source}
 }
 
+func BuiltinStaticExpr(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+	// TODO: ensure this expression can be evaluated at compile time
+	expr := call.Args[0].(*TcWrappedUntypedAst).Expr
+	checkedExpr := SemCheckExpr(sc, scope, expr, TypeUnspecified)
+	return EvalExpr(sc, checkedExpr, scope)
+}
+
 func BuiltinImportStmt(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	if !ExpectArgsLen(sc, call, len(call.Args), 1) {
 		return newErrorNode(call)
@@ -831,6 +838,7 @@ func init() {
 	registerBuiltinMacro("import", false, []Type{TypeStr}, TypeVoid, BuiltinImportStmt)
 
 	registerBuiltinMacro("|", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinPipeTransformation)
+	registerBuiltinMacro("static", false, []Type{TypeUntyped}, TypeUntyped, BuiltinStaticExpr)
 
 	// registerBuiltinMacro("sizeof", false, []Type{TypeUnspecified}, TypeInt64, BuiltinSizeOf)
 
