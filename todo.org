@@ -11,7 +11,8 @@ Fundraising
 
 * TODO untyped type
 
-Implement a constraint that when a function is registered with an argument of untyped type, disable all overloading for that function name.
+Implement a constraint that when a function is registered with an argument of
+untyped type, disable all overloading for that function name.
 
 
 * TODO Annotation Syntax

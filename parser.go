@@ -669,16 +669,6 @@ func parseProcDef(tokenizer *Tokenizer) *ProcDef {
 	return result
 }
 
-func parseEmitStmt(tokenizer *Tokenizer) *EmitStmt {
-	firstToken := tokenizer.Next()
-	tokenizer.expectKind(firstToken, TkEmit)
-	strLit := parseStrLit(tokenizer)
-	return &EmitStmt{
-		Source: joinSubstr(tokenizer.code, firstToken.value, strLit.Source),
-		Value:  strLit,
-	}
-}
-
 func parseStaticExpr(tokenizer *Tokenizer) *StaticExpr {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkStatic)
@@ -695,7 +685,17 @@ func parseImportStmt(tokenizer *Tokenizer) *ImportStmt {
 	strLit := parseStrLit(tokenizer)
 	return &ImportStmt{
 		Source: joinSubstr(tokenizer.code, firstToken.value, strLit.Source),
-		Value:  strLit,
+		Expr:   strLit,
+	}
+}
+
+func parseEmitStmt(tokenizer *Tokenizer) *EmitStmt {
+	firstToken := tokenizer.Next()
+	tokenizer.expectKind(firstToken, TkEmit)
+	strLit := parseStrLit(tokenizer)
+	return &EmitStmt{
+		Source: joinSubstr(tokenizer.code, firstToken.value, strLit.Source),
+		Expr:   strLit,
 	}
 }
 

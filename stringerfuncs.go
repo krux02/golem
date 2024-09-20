@@ -402,7 +402,7 @@ func (continuestmt *ContinueStmt) PrettyPrint(builder *AstPrettyPrinter) {
 
 func (emitstmt *EmitStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("emit ")
-	emitstmt.Value.PrettyPrint(builder)
+	emitstmt.Expr.PrettyPrint(builder)
 }
 
 func (staticExpr *StaticExpr) PrettyPrint(builder *AstPrettyPrinter) {
@@ -412,7 +412,7 @@ func (staticExpr *StaticExpr) PrettyPrint(builder *AstPrettyPrinter) {
 
 func (importStmt *ImportStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("import ")
-	importStmt.Value.PrettyPrint(builder)
+	importStmt.Expr.PrettyPrint(builder)
 }
 
 func (importStmt *TcImportStmt) PrettyPrint(builder *AstPrettyPrinter) {

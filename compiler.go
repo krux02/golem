@@ -595,7 +595,7 @@ func compilePackageToC(program *ProgramContext, pak *TcPackageDef, mainPackage b
 	context.includes.NewlineAndIndent()
 
 	for _, emit := range pak.EmitStatements {
-		context.includes.WriteString(emit.Value.Value)
+		context.includes.WriteString(emit.Value)
 		context.includes.NewlineAndIndent()
 	}
 

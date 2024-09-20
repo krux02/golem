@@ -142,7 +142,7 @@ func LookUpType(sc *SemChecker, scope Scope, expr TypeExpr) Type {
 			}
 			intLit, ok := arg0.(*IntLitType)
 			if !ok {
-				ReportErrorf(sc, x.Args[0], "expect int literal but got %T", x.Args[0])
+				ReportInvalidAstNode(sc, x.Args[0], "int literal")
 				return TypeError
 			}
 			elem := LookUpType(sc, scope, x.Args[1])
@@ -705,6 +705,10 @@ func ReportInvalidDocCommentKey(sc *SemChecker, section *NamedDocSection) {
 
 func ReportInvalidAnnotations(sc *SemChecker, lit *StrLit) {
 	ReportErrorf(sc, lit, "invalid annotations string: %s", lit.Value)
+}
+
+func ReportInvalidAstNode(sc *SemChecker, node AstNode, expected string) {
+	ReportErrorf(sc, node, "invalid ast node. Expected %s, but got %T", expected, node)
 }
 
 func ReportIllegalDocComment(sc *SemChecker, doc *PrefixDocComment) {
@@ -1899,22 +1903,28 @@ func SemCheckWhileLoopStmt(sc *SemChecker, scope Scope, loopArg *WhileLoopStmt) 
 }
 
 func SemCheckImportStmt(sc *SemChecker, importScope Scope, currentProgram *ProgramContext, workDir string, stmt *ImportStmt) *TcImportStmt {
-	pkg, err := GetPackage(currentProgram, workDir, stmt.Value.Value)
+
+	strLit, isStrLit := stmt.Expr.(*StrLit)
+	if !isStrLit {
+		ReportInvalidAstNode(sc, stmt.Expr, "string literal")
+	}
+
+	pkg, err := GetPackage(currentProgram, workDir, strLit.Value)
 	if err != nil {
-		ReportErrorf(sc, stmt.Value, "%s", err.Error())
+		ReportErrorf(sc, stmt.Expr, "%s", err.Error())
 	} else {
 		for key, value := range pkg.ExportScope.Variables {
 			// TODO solution for conflicts and actually find out where the conflicting symbol comes from.
 			_, hasKey := importScope.Variables[key]
 			if hasKey {
-				panic(fmt.Errorf("name conflicts in imported variable not yet implemented: %s.%s conflicts with some other symbol", stmt.Value.Value, key))
+				panic(fmt.Errorf("name conflicts in imported variable not yet implemented: %s.%s conflicts with some other symbol", strLit.Value, key))
 			}
 			importScope.Variables[key] = value
 		}
 		for key, value := range pkg.ExportScope.Types {
 			_, hasKey := importScope.Types[key]
 			if hasKey {
-				panic(fmt.Errorf("name conflicts in imported type not yet implemented: %s.%s conflicts with some other symbol", stmt.Value.Value, key))
+				panic(fmt.Errorf("name conflicts in imported type not yet implemented: %s.%s conflicts with some other symbol", strLit.Value, key))
 			}
 			importScope.Types[key] = value
 		}
@@ -1923,7 +1933,7 @@ func SemCheckImportStmt(sc *SemChecker, importScope Scope, currentProgram *Progr
 			importScope.Signatures[key] = append(procs, value...)
 		}
 	}
-	return &TcImportStmt{Source: pkg.Source, Value: stmt.Value, Package: pkg}
+	return &TcImportStmt{Source: pkg.Source, Value: strLit, Package: pkg}
 }
 
 func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *PackageDef, mainPackage bool) (result *TcPackageDef) {
@@ -1965,7 +1975,12 @@ func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *Packag
 		case *PrefixDocComment:
 			docComment = stmt
 		case *EmitStmt:
-			result.EmitStatements = append(result.EmitStatements, stmt)
+			switch expr := stmt.Expr.(type) {
+			case *StrLit:
+				result.EmitStatements = append(result.EmitStatements, expr)
+			default:
+				ReportInvalidAstNode(sc, expr, "string literal")
+			}
 		case *StaticExpr:
 			// TODO: ensure this expression can be evaluated at compile time
 			tcExpr := SemCheckExpr(sc, pkgScope, stmt.Expr, UniqueTypeConstraint{TypeVoid})

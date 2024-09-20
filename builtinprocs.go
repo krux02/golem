@@ -699,8 +699,7 @@ func ValidatePrintfCall(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 }
 
 func BuiltinAddLinkerFlags(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
-	if len(call.Args) != 1 {
-		ReportErrorf(sc, call, "expect single string literal as argument")
+	if !ExpectArgsLen(sc, call, len(call.Args), 1) {
 		return newErrorNode(call)
 	}
 	switch arg0 := call.Args[0].(type) {
@@ -708,7 +707,7 @@ func BuiltinAddLinkerFlags(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 		program := scope.CurrentProgram
 		program.LinkerFlags = append(program.LinkerFlags, arg0.Value)
 	default:
-		ReportErrorf(sc, call, "expect single string literal as argument")
+		ReportInvalidAstNode(sc, arg0, "string literal")
 		return newErrorNode(call)
 	}
 	// return empty code block as a substitude for not returning anything
@@ -716,15 +715,14 @@ func BuiltinAddLinkerFlags(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 }
 
 func BuiltinAddCFlags(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
-	if len(call.Args) != 1 {
-		ReportErrorf(sc, call, "expect single string literal as argument")
+	if !ExpectArgsLen(sc, call, len(call.Args), 1) {
 		return newErrorNode(call)
 	}
 	switch arg0 := call.Args[0].(type) {
 	case *TcStrLit:
 		scope.CurrentPackage.CFlags = append(scope.CurrentPackage.CFlags, arg0.Value)
 	default:
-		ReportErrorf(sc, call, "expect single string literal as argument")
+		ReportInvalidAstNode(sc, arg0, "string literal")
 		return newErrorNode(call)
 	}
 	// return empty code block as a substitude for not returning anything
@@ -739,7 +737,7 @@ func BuiltinPipeTransformation(sc *SemChecker, scope Scope, call *TcCall) TcExpr
 	lhs := call.Args[0].(*TcWrappedUntypedAst).Expr
 	rhs, isCall := call.Args[1].(*TcWrappedUntypedAst).Expr.(*Call)
 	if !isCall {
-		ReportErrorf(sc, call.Args[1], "for pipe chaining syntax, this expression must be a function call")
+		ReportInvalidAstNode(sc, call.Args[1], "call")
 		return newErrorNode(call)
 	}
 

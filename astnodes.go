@@ -43,12 +43,6 @@ type InvalidTokenExpr struct {
 // an expression tagget to be a type expression
 type TypeExpr Expr
 
-type StructField struct {
-	Source   string
-	Name     Ident
-	TypeExpr TypeExpr
-}
-
 type VariableDefStmt struct {
 	Source string
 	Prefix Ident // var, let, const ...
@@ -81,14 +75,6 @@ type IfElseExpr struct {
 	Else      Expr
 }
 
-type BreakStmt struct {
-	Source string
-}
-
-type ContinueStmt struct {
-	Source string
-}
-
 type TypeContext struct {
 	Source string
 	Expr   TypeExpr
@@ -108,11 +94,6 @@ type TypeDef struct {
 	Source      string
 	Expr        Expr
 	Annotations *StrLit
-}
-
-type TraitDef struct {
-	Source string
-	Expr   Expr
 }
 
 type CodeBlock struct {
@@ -180,19 +161,32 @@ type PackageDef struct {
 	TopLevelStmts []Expr
 }
 
-type StaticExpr struct { // static <Expr>
+type BreakStmt struct {
+	Source string
+}
+
+type ContinueStmt struct {
+	Source string
+}
+
+type TraitDef struct {
+	Source string
+	Expr   Expr
+}
+
+type StaticExpr struct {
 	Source string
 	Expr   Expr
 }
 
 type ImportStmt struct {
 	Source string
-	Value  *StrLit
+	Expr   Expr
 }
 
 type EmitStmt struct {
 	Source string
-	Value  *StrLit
+	Expr   Expr
 }
 
 func (arg *InvalidTokenExpr) GetSource() string { return arg.token.value }
