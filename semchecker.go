@@ -1330,6 +1330,11 @@ func ValidNameCheck(sc *SemChecker, ident *Ident, extraword string) {
 	if errMsg := IsValidIdentifier(ident.Source); errMsg != "" {
 		ReportErrorf(sc, ident, "%s %s", extraword, errMsg)
 	}
+	// check for reserved words
+	switch ident.Source {
+	case "emit", "import", "static", "|":
+		ReportErrorf(sc, ident, "%s name is a reserved word", extraword)
+	}
 }
 
 func SemCheckVariableDefStmt(sc *SemChecker, scope Scope, arg *VariableDefStmt) *TcVariableDefStmt {
@@ -1902,42 +1907,8 @@ func SemCheckWhileLoopStmt(sc *SemChecker, scope Scope, loopArg *WhileLoopStmt) 
 	}
 }
 
-func SemCheckImportStmt(sc *SemChecker, importScope Scope, currentProgram *ProgramContext, workDir string, stmt *ImportStmt) *TcImportStmt {
-
-	strLit, isStrLit := stmt.Expr.(*StrLit)
-	if !isStrLit {
-		ReportInvalidAstNode(sc, stmt.Expr, "string literal")
-	}
-
-	pkg, err := GetPackage(currentProgram, workDir, strLit.Value)
-	if err != nil {
-		ReportErrorf(sc, stmt.Expr, "%s", err.Error())
-	} else {
-		for key, value := range pkg.ExportScope.Variables {
-			// TODO solution for conflicts and actually find out where the conflicting symbol comes from.
-			_, hasKey := importScope.Variables[key]
-			if hasKey {
-				panic(fmt.Errorf("name conflicts in imported variable not yet implemented: %s.%s conflicts with some other symbol", strLit.Value, key))
-			}
-			importScope.Variables[key] = value
-		}
-		for key, value := range pkg.ExportScope.Types {
-			_, hasKey := importScope.Types[key]
-			if hasKey {
-				panic(fmt.Errorf("name conflicts in imported type not yet implemented: %s.%s conflicts with some other symbol", strLit.Value, key))
-			}
-			importScope.Types[key] = value
-		}
-		for key, value := range pkg.ExportScope.Signatures {
-			procs, _ := importScope.Signatures[key]
-			importScope.Signatures[key] = append(procs, value...)
-		}
-	}
-	return &TcImportStmt{Source: pkg.Source, Value: strLit, Package: pkg}
-}
-
 func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *PackageDef, mainPackage bool) (result *TcPackageDef) {
-	result = &TcPackageDef{}
+	result = &TcPackageDef{WorkDir: arg.WorkDir}
 	importScope := NewSubScope(builtinScope)
 	importScope.CurrentProgram = currentProgram
 	pkgScope := NewSubScope(importScope)
@@ -1974,24 +1945,23 @@ func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *Packag
 			result.VarDefs = append(result.VarDefs, varDef)
 		case *PrefixDocComment:
 			docComment = stmt
-		case *EmitStmt:
-			switch expr := stmt.Expr.(type) {
-			case *StrLit:
-				result.EmitStatements = append(result.EmitStatements, expr)
-			default:
-				ReportInvalidAstNode(sc, expr, "string literal")
-			}
 		case *StaticExpr:
 			// TODO: ensure this expression can be evaluated at compile time
 			tcExpr := SemCheckExpr(sc, pkgScope, stmt.Expr, UniqueTypeConstraint{TypeVoid})
 			EvalExpr(sc, tcExpr, pkgScope)
-		case *ImportStmt:
-			tcImportStmt := SemCheckImportStmt(sc, importScope, currentProgram, arg.WorkDir, stmt)
-			result.Imports = append(result.Imports, tcImportStmt)
 		case *TraitDef:
 			traitDef := SemCheckTraitDef(sc, pkgScope, stmt)
 			// stmt.Name
 			result.TraitDefs = append(result.TraitDefs, traitDef)
+		case *Call:
+			tcExpr := SemCheckCall(sc, pkgScope, stmt, UniqueTypeConstraint{TypeVoid})
+			switch x := tcExpr.(type) {
+			case *TcCodeBlock:
+				if len(x.Items) == 0 {
+					continue
+				}
+			}
+			ReportErrorf(sc, stmt, "top level function calls are not allowed: %s", AstFormat(tcExpr))
 		default:
 			panic(fmt.Errorf("internal error: %T", stmt))
 		}

@@ -36,13 +36,11 @@ const (
 	TkDiscard
 	TkBreak
 	TkContinue
-	TkImport
 	TkStatic
 	TkStruct
 	TkUnion
 	TkEnum
 	TkTrait
-	TkEmit
 
 	TkIf
 	TkElse
@@ -84,13 +82,11 @@ var TokenKindNames = [...]string{
 	TkDiscard:           "Discard",
 	TkBreak:             "Break",
 	TkContinue:          "Continue",
-	TkImport:            "Import",
 	TkStatic:            "Static",
 	TkStruct:            "Struct",
 	TkUnion:             "Union",
 	TkEnum:              "Enum",
 	TkTrait:             "Trait",
-	TkEmit:              "Emit",
 	TkIf:                "If",
 	TkElse:              "Else",
 	TkFor:               "For",
@@ -325,8 +321,6 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			result.kind = TkBreak
 		case "continue":
 			result.kind = TkContinue
-		case "import":
-			result.kind = TkImport
 		case "static":
 			result.kind = TkStatic
 		case "struct":
@@ -337,8 +331,6 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			result.kind = TkEnum
 		case "trait":
 			result.kind = TkTrait
-		case "emit":
-			result.kind = TkEmit
 		case "if":
 			result.kind = TkIf
 		case "else":

@@ -1,7 +1,7 @@
-import "mymodule"
+import("mymodule")
 
-proc main(): i32  = {
-  let tmp = foobar(1.2,3.4,5.6):f32
+proc main(): i32 = {
+  let tmp = foobar(1.2,3.4,5.6)
   printf("tmp: %f\n", tmp)
   0
 }

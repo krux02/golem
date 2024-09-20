@@ -1,6 +1,8 @@
 package main
 
-import "math/big"
+import (
+	"math/big"
+)
 
 // an overview all all nods that are allowed in an untyped AST emitted directly from the parser
 
@@ -37,7 +39,8 @@ type Ident struct {
 }
 
 type InvalidTokenExpr struct {
-	token Token
+	Source string
+	kind   TokenKind
 }
 
 // an expression tagget to be a type expression
@@ -179,17 +182,7 @@ type StaticExpr struct {
 	Expr   Expr
 }
 
-type ImportStmt struct {
-	Source string
-	Expr   Expr
-}
-
-type EmitStmt struct {
-	Source string
-	Expr   Expr
-}
-
-func (arg *InvalidTokenExpr) GetSource() string { return arg.token.value }
+func (arg *InvalidTokenExpr) GetSource() string { return arg.Source }
 func (arg *ExprList) GetSource() string         { return arg.Source }
 func (arg *ProcDef) GetSource() string          { return arg.Source }
 func (arg *TypeDef) GetSource() string          { return arg.Source }
@@ -214,8 +207,6 @@ func (arg *BreakStmt) GetSource() string        { return arg.Source }
 func (arg *ContinueStmt) GetSource() string     { return arg.Source }
 func (arg *TypeContext) GetSource() string      { return arg.Source }
 func (arg *NilLit) GetSource() string           { return arg.Source }
-func (arg *EmitStmt) GetSource() string         { return arg.Source }
 func (arg *StaticExpr) GetSource() string       { return arg.Source }
-func (arg *ImportStmt) GetSource() string       { return arg.Source }
 func (arg *TraitDef) GetSource() string         { return arg.Source }
 func (arg *PackageDef) GetSource() string       { return arg.Source }

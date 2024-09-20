@@ -378,6 +378,12 @@ func parseStmtOrExpr(tokenizer *Tokenizer) Expr {
 		return (Expr)(parseWhileLoop(tokenizer))
 	case TkProc:
 		return (Expr)(parseProcDef(tokenizer))
+	case TkType:
+		return (Expr)(parseTypeDef(tokenizer))
+	case TkTrait:
+		return (Expr)(parseTrait(tokenizer))
+	case TkStatic:
+		return (Expr)(parseStaticExpr(tokenizer))
 	}
 	return parseExpr(tokenizer, false)
 }
@@ -590,7 +596,8 @@ func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
 		result = (Expr)(parseNilLit(tokenizer))
 	default:
 		tokenizer.reportWrongKind(tokenizer.lookAheadToken)
-		result = (Expr)(&InvalidTokenExpr{tokenizer.Next()})
+		token := tokenizer.Next()
+		result = (Expr)(&InvalidTokenExpr{token.value, token.kind})
 	}
 
 	// any expression could be the start of a longer expression, this is
@@ -679,26 +686,6 @@ func parseStaticExpr(tokenizer *Tokenizer) *StaticExpr {
 	}
 }
 
-func parseImportStmt(tokenizer *Tokenizer) *ImportStmt {
-	firstToken := tokenizer.Next()
-	tokenizer.expectKind(firstToken, TkImport)
-	strLit := parseStrLit(tokenizer)
-	return &ImportStmt{
-		Source: joinSubstr(tokenizer.code, firstToken.value, strLit.Source),
-		Expr:   strLit,
-	}
-}
-
-func parseEmitStmt(tokenizer *Tokenizer) *EmitStmt {
-	firstToken := tokenizer.Next()
-	tokenizer.expectKind(firstToken, TkEmit)
-	strLit := parseStrLit(tokenizer)
-	return &EmitStmt{
-		Source: joinSubstr(tokenizer.code, firstToken.value, strLit.Source),
-		Expr:   strLit,
-	}
-}
-
 func parseTrait(tokenizer *Tokenizer) *TraitDef {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkTrait)
@@ -709,10 +696,11 @@ func parseTrait(tokenizer *Tokenizer) *TraitDef {
 }
 
 func parsePackage(tokenizer *Tokenizer) (result *PackageDef, errors []ParseError) {
-	result = &PackageDef{}
-	result.Name = strings.TrimSuffix(filepath.Base(tokenizer.filename), ".golem")
-	result.Source = tokenizer.code
-	result.WorkDir = filepath.Dir(tokenizer.filename)
+	result = &PackageDef{
+		Name:    strings.TrimSuffix(filepath.Base(tokenizer.filename), ".golem"),
+		Source:  tokenizer.code,
+		WorkDir: filepath.Dir(tokenizer.filename),
+	}
 	for true {
 		switch tokenizer.lookAheadToken.kind {
 		//case TkLineComment:
@@ -722,40 +710,8 @@ func parsePackage(tokenizer *Tokenizer) (result *PackageDef, errors []ParseError
 			continue
 		case TkEof:
 			return result, tokenizer.errors
-		case TkEmit:
-			emitStmt := parseEmitStmt(tokenizer)
-			result.TopLevelStmts = append(result.TopLevelStmts, emitStmt)
-			continue
-		case TkType:
-			typeDef := parseTypeDef(tokenizer)
-			result.TopLevelStmts = append(result.TopLevelStmts, typeDef)
-			continue
-		case TkProc:
-			procDef := parseProcDef(tokenizer)
-			result.TopLevelStmts = append(result.TopLevelStmts, procDef)
-			continue
-		case TkImport:
-			importStmt := parseImportStmt(tokenizer)
-			result.TopLevelStmts = append(result.TopLevelStmts, importStmt)
-			continue
-		case TkVar, TkLet, TkConst:
-			varDef := parseVariableDefStmt(tokenizer)
-			result.TopLevelStmts = append(result.TopLevelStmts, varDef)
-			continue
-		case TkStatic:
-			expr := parseStaticExpr(tokenizer)
-			result.TopLevelStmts = append(result.TopLevelStmts, expr)
-			continue
-		case TkPrefixDocComment:
-			docComment := parseDocComment(tokenizer)
-			result.TopLevelStmts = append(result.TopLevelStmts, docComment)
-			continue
-		case TkTrait:
-			trait := parseTrait(tokenizer)
-			result.TopLevelStmts = append(result.TopLevelStmts, trait)
-			continue
 		default:
-			tokenizer.reportWrongKind(tokenizer.Next())
+			result.TopLevelStmts = append(result.TopLevelStmts, parseStmtOrExpr(tokenizer))
 			continue
 		}
 	}

@@ -1,6 +1,8 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func newAddrExpr(arg TcExpr) TcExpr {
 	sym := TcProcSymbol{

@@ -753,6 +753,60 @@ func BuiltinPipeTransformation(sc *SemChecker, scope Scope, call *TcCall) TcExpr
 	return SemCheckExpr(sc, scope, result, TypeUnspecified)
 }
 
+func BuiltinEmitStmt(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+	if !ExpectArgsLen(sc, call, len(call.Args), 1) {
+		return newErrorNode(call)
+	}
+	switch arg0 := call.Args[0].(type) {
+	case *TcStrLit:
+		scope.CurrentPackage.EmitStatements = append(scope.CurrentPackage.EmitStatements, arg0)
+	default:
+		ReportInvalidAstNode(sc, arg0, "string literal")
+		return newErrorNode(arg0)
+	}
+	return &TcCodeBlock{Source: call.Source}
+}
+
+func BuiltinImportStmt(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+	if !ExpectArgsLen(sc, call, len(call.Args), 1) {
+		return newErrorNode(call)
+	}
+	var strLit *TcStrLit
+	switch arg0 := call.Args[0].(type) {
+	case *TcStrLit:
+		strLit = arg0
+	default:
+		ReportInvalidAstNode(sc, arg0, "string literal")
+		return newErrorNode(arg0)
+	}
+
+	pkg, err := GetPackage(scope.CurrentProgram, scope.CurrentPackage.WorkDir, strLit.Value)
+	if err != nil {
+		ReportErrorf(sc, strLit, "%s", err.Error())
+	} else {
+		for key, value := range pkg.ExportScope.Variables {
+			// TODO solution for conflicts and actually find out where the conflicting symbol comes from.
+			_, hasKey := scope.Variables[key]
+			if hasKey {
+				ReportErrorf(sc, strLit, "name conflicts in imported variable not yet implemented: %s.%s conflicts with some other symbol", strLit.Value, key)
+			}
+			scope.Variables[key] = value
+		}
+		for key, value := range pkg.ExportScope.Types {
+			_, hasKey := scope.Types[key]
+			if hasKey {
+				ReportErrorf(sc, strLit, "name conflicts in imported type not yet implemented: %s.%s conflicts with some other symbol", strLit.Value, key)
+			}
+			scope.Types[key] = value
+		}
+		for key, value := range pkg.ExportScope.Signatures {
+			procs, _ := scope.Signatures[key]
+			scope.Signatures[key] = append(procs, value...)
+		}
+	}
+	return &TcCodeBlock{Source: call.Source}
+}
+
 func init() {
 	arrayTypeMap = make(map[ArrayTypeMapKey]*ArrayType)
 	enumSetTypeMap = make(map[*EnumType]*EnumSetType)
@@ -773,6 +827,9 @@ func init() {
 	registerBuiltinMacro("printf", true, []Type{TypeStr}, TypeVoid, ValidatePrintfCall)
 	registerBuiltinMacro("addCFlags", false, []Type{TypeStr}, TypeVoid, BuiltinAddCFlags)
 	registerBuiltinMacro("addLinkerFlags", false, []Type{TypeStr}, TypeVoid, BuiltinAddLinkerFlags)
+	registerBuiltinMacro("emit", false, []Type{TypeStr}, TypeVoid, BuiltinEmitStmt)
+	registerBuiltinMacro("import", false, []Type{TypeStr}, TypeVoid, BuiltinImportStmt)
+
 	registerBuiltinMacro("|", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinPipeTransformation)
 
 	// registerBuiltinMacro("sizeof", false, []Type{TypeUnspecified}, TypeInt64, BuiltinSizeOf)

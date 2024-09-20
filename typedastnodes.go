@@ -302,21 +302,15 @@ type ProgramContext struct {
 type TcPackageDef struct {
 	Source         string
 	Name           string
+	WorkDir        string
 	CFlags         []string
-	Imports        []*TcImportStmt
-	EmitStatements []*StrLit
+	EmitStatements []*TcStrLit
 	StructDefs     []*TcStructDef
 	EnumDefs       []*TcEnumDef
 	TraitDefs      []*TcTraitDef
 	VarDefs        []*TcVariableDefStmt
 	ProcDefs       []*TcProcDef
 	ExportScope    *ScopeImpl
-}
-
-type TcImportStmt struct {
-	Source  string
-	Value   *StrLit
-	Package *TcPackageDef
 }
 
 type TcWrappedUntypedAst struct {

@@ -1,16 +1,16 @@
-emit "#include <GL/gl.h>"
-emit "#include <SDL2/SDL.h>"
+emit("#include <GL/gl.h>")
+emit("#include <SDL2/SDL.h>")
 
-import "sdl2"
-import "gl"
+import("sdl2")
+import("gl")
 
 static {
   addCFlags("-Werror-implicit-function-declaration")
 }
 
-emit "#include <string.h>"
-emit "void glCreateBuffers(GLsizei n, GLuint *buffers);\n"
-emit "void glNamedBufferStorage(GLuint buffer, GLsizeiptr size, const void *data, GLbitfield flags);\n"
+emit("#include <string.h>")
+emit("void glCreateBuffers(GLsizei n, GLuint *buffers);\n")
+emit("void glNamedBufferStorage(GLuint buffer, GLsizeiptr size, const void *data, GLbitfield flags);\n")
 
 type VertexArrayObject = struct {
   handle: u32

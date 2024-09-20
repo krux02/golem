@@ -61,9 +61,9 @@ func AstFormat(node PrettyPrintable) string {
 
 func (arg *InvalidTokenExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("<invalid ")
-	builder.WriteString(TokenKindNames[arg.token.kind])
+	builder.WriteString(TokenKindNames[arg.kind])
 	builder.WriteString(": ")
-	builder.WriteString(arg.token.value)
+	builder.WriteString(arg.Source)
 	builder.WriteString(">")
 }
 
@@ -400,24 +400,9 @@ func (continuestmt *ContinueStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("continue")
 }
 
-func (emitstmt *EmitStmt) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("emit ")
-	emitstmt.Expr.PrettyPrint(builder)
-}
-
 func (staticExpr *StaticExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("static ")
 	staticExpr.Expr.PrettyPrint(builder)
-}
-
-func (importStmt *ImportStmt) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("import ")
-	importStmt.Expr.PrettyPrint(builder)
-}
-
-func (importStmt *TcImportStmt) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("import ")
-	importStmt.Value.PrettyPrint(builder)
 }
 
 func (arg *TcWrappedUntypedAst) PrettyPrint(builder *AstPrettyPrinter) {
@@ -709,15 +694,6 @@ func (pak *TcPackageDef) PrettyPrint(builder *AstPrettyPrinter) {
 			builder.WriteString(")")
 		}
 		builder.WriteString("\n")
-	}
-
-	if len(pak.Imports) > 0 {
-		builder.WriteString("\n# imports:")
-	}
-
-	for _, importStmt := range pak.Imports {
-		builder.NewlineAndIndent()
-		builder.WriteNode(importStmt)
 	}
 
 	for _, emitStmt := range pak.EmitStatements {

@@ -1,4 +1,10 @@
+* TODO reactivate validate source set internal
 * TODO proper testing for the | syntax
+* TODO import statement issues
+
+technically, my language allows scope local import statements. That is
+completely untested, and with the current implementation it would als recompile
+the import over and over again.
 
 * TODO Kontakt: Wirtschaftfördering der Stadt Bonn
 
@@ -16,6 +22,14 @@ untyped type, disable all overloading for that function name.
 
 
 * TODO Annotation Syntax
+* TODO emit statement issues
+
+Currently the ~emit~ statement does only do package level emits.
+
+  * Local expression level emits exist, but they behave as if they were top level statements.
+  * Emit as an expression.
+  * Reference symbols from local scope.
+
 * TODO find a better syntax for general annotations.
 
 Annotations need to be ignorable. They need to be a type of synatx that isn't seen my regular ast pattern matching.
