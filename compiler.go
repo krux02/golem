@@ -360,11 +360,22 @@ func (builder *CodeBuilder) CompileExprWithPrefix(context *PackageGeneratorConte
 		builder.WriteString(ex.Name)
 	case *TcTypeContext:
 		builder.compileTypeExpr(context, ex.WrappedType)
+	case *TcEmitExpr:
+		builder.CompileEmitExpr(context, ex)
 	case nil:
 		panic(fmt.Sprintf("invalid Ast, expression is nil %T", expr))
 	default:
 		panic(fmt.Sprintf("Not implemented %T expr: %s", expr, AstFormat(expr)))
 	}
+}
+
+func (builder *CodeBuilder) CompileEmitExpr(context *PackageGeneratorContext, emit *TcEmitExpr) {
+	for _, pair := range emit.SourceSymPairs {
+		builder.WriteString(pair.EmitSource)
+		builder.CompileExpr(context, pair.Sym)
+	}
+	builder.WriteString(emit.EmitSource)
+	builder.NewlineAndIndent()
 }
 
 func (builder *CodeBuilder) CompileCodeBlock(context *PackageGeneratorContext, block *TcCodeBlock) {
@@ -595,8 +606,7 @@ func compilePackageToC(program *ProgramContext, pak *TcPackageDef, mainPackage b
 	context.includes.NewlineAndIndent()
 
 	for _, emit := range pak.EmitStatements {
-		context.includes.WriteString(emit.Value)
-		context.includes.NewlineAndIndent()
+		context.includes.CompileEmitExpr(context, emit)
 	}
 
 	// TODO this should depend on the usage of `assert`

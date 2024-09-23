@@ -1440,6 +1440,7 @@ func (expr *TcTypeContext) GetType() Type          { return GetTypeType(expr.Wra
 func (expr *TcDotExpr) GetType() Type              { return expr.Rhs.GetType() }
 func (field *TcStructField) GetType() Type         { return field.Type }
 func (expr *TcWrappedUntypedAst) GetType() Type    { return TypeUntyped }
+func (expr *TcEmitExpr) GetType() Type             { return expr.Type }
 
 func SemCheckIntLit(sc *SemChecker, scope Scope, arg *IntLit, expected TypeConstraint) TcExpr {
 	uniqueConstraint, isUniqueConstraint := expected.(UniqueTypeConstraint)
@@ -1959,11 +1960,13 @@ func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *Packag
 				if len(x.Items) == 0 {
 					continue
 				}
+			case *TcEmitExpr:
+				result.EmitStatements = append(result.EmitStatements, x)
+				continue
 			}
 			ReportErrorf(sc, stmt, "top level function calls are not allowed: %s", AstFormat(tcExpr))
 		default:
 			ReportInvalidAstNode(sc, stmt, "top level statement")
-			panic(fmt.Errorf("internal error: %T", stmt))
 		}
 	}
 	if mainPackage && currentProgram.Main == nil {

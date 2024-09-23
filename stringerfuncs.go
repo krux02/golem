@@ -787,3 +787,9 @@ func (doc *PrefixDocComment) PrettyPrint(builder *AstPrettyPrinter) {
 	// ensure that the following expression won't be commentified
 	builder.NewlineAndIndent()
 }
+
+func (expr *TcEmitExpr) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("emit(")
+	WriteStringLit(builder, expr.EmitSource)
+	builder.WriteString(")")
+}

@@ -27,11 +27,8 @@ untyped type, disable all overloading for that function name.
 * TODO Annotation Syntax
 * TODO emit statement issues
 
-Currently the ~emit~ statement does only do package level emits.
-
-  * Local expression level emits exist, but they behave as if they were top level statements.
-  * Emit as an expression.
-  * Reference symbols from local scope.
+  * Emit as an expression is not yet tested
+  * Reference template arguments from emit expression
 
 * TODO find a better syntax for general annotations.
 

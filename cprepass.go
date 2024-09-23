@@ -185,6 +185,11 @@ func cgenprepass(expr TcExpr) TcExpr {
 			expr.ProcDefs[i] = cgenprepass(procDef).(*TcProcDef)
 		}
 		return expr
+	case *TcEmitExpr:
+		for i, pair := range expr.SourceSymPairs {
+			expr.SourceSymPairs[i].Sym = cgenprepass(pair.Sym)
+		}
+		return expr
 	case *TcErrorNode:
 		panic("error nodes should not be passed down to a cgenprepass, compilation should already have ended")
 	case *TcTypeContext:

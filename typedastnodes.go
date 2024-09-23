@@ -304,13 +304,25 @@ type TcPackageDef struct {
 	Name           string
 	WorkDir        string
 	CFlags         []string
-	EmitStatements []*TcStrLit
+	EmitStatements []*TcEmitExpr
 	StructDefs     []*TcStructDef
 	EnumDefs       []*TcEnumDef
 	TraitDefs      []*TcTraitDef
 	VarDefs        []*TcVariableDefStmt
 	ProcDefs       []*TcProcDef
 	ExportScope    *ScopeImpl
+}
+
+type SymSourcePair struct {
+	EmitSource string
+	Sym        TcExpr
+}
+
+type TcEmitExpr struct {
+	Source         string
+	Type           Type
+	SourceSymPairs []SymSourcePair
+	EmitSource     string
 }
 
 type TcWrappedUntypedAst struct {
@@ -357,6 +369,7 @@ func (arg *TcBuiltinGenericProcDef) GetSource() string { return "" } // builtins
 func (arg *TcTemplateDef) GetSource() string           { return arg.Source }
 func (arg *TcStructLit) GetSource() string             { return arg.Source }
 func (arg *TcPackageDef) GetSource() string            { return arg.Source }
+func (arg *TcEmitExpr) GetSource() string              { return arg.Source }
 
 func (arg *TcStructDef) GetSource() string         { return arg.Source }
 func (arg *TcEnumDef) GetSource() string           { return arg.Source }

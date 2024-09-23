@@ -759,12 +759,38 @@ func BuiltinEmitStmt(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	}
 	switch arg0 := call.Args[0].(type) {
 	case *TcStrLit:
-		scope.CurrentPackage.EmitStatements = append(scope.CurrentPackage.EmitStatements, arg0)
+
+		result := &TcEmitExpr{
+			Source: call.Source,
+			Type:   TypeVoid,
+		}
+
+		emitStr := arg0.Value
+		for true {
+			idx := strings.IndexRune(emitStr, '`')
+			if idx < 0 {
+				result.EmitSource = emitStr
+				return result
+			}
+			source := emitStr[:idx]
+			emitStr = emitStr[idx+1:]
+			idx2 := strings.IndexRune(emitStr, '`')
+			if idx2 < 0 {
+				ReportErrorf(sc, arg0, "unmatching ` in emit source")
+				return newErrorNode(call)
+			}
+			symName := &Ident{Source: emitStr[:idx2]}
+			emitStr = emitStr[idx2+1:]
+			symRef := LookUpLetSym(sc, scope, symName, TypeUnspecified)
+			result.SourceSymPairs = append(result.SourceSymPairs, SymSourcePair{EmitSource: source, Sym: symRef})
+		}
+
+		return result
 	default:
 		ReportInvalidAstNode(sc, arg0, "string literal")
 		return newErrorNode(arg0)
 	}
-	return &TcCodeBlock{Source: call.Source}
+
 }
 
 func BuiltinStaticExpr(sc *SemChecker, scope Scope, call *TcCall) TcExpr {

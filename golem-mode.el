@@ -74,7 +74,6 @@
   (setq-local comment-start-skip "#+ *")
   (setq-local font-lock-defaults '(golem-highlights))
 
-  (setq-local compilation-directory (project-root (project-current)))
   (setq-local
    compile-command
    (let* ((project-root (project-root (project-current)))
