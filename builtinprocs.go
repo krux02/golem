@@ -580,6 +580,7 @@ func registerConstant(name string, value TcExpr) {
 }
 
 func ValidatePrintfCall(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+
 	formatExpr := call.Args[0]
 	formatStrLit, ok := formatExpr.(*TcStrLit)
 	if !ok {
@@ -692,9 +693,19 @@ func ValidatePrintfCall(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 		Source:    call.Sym.Source,
 		Signature: builtinCPrintf,
 	}
-	result.Args = make([]TcExpr, len(call.Args))
+	result.Args = make([]TcExpr, 1, len(call.Args))
 	result.Args[0] = &TcStrLit{Source: formatStrLit.Source, Type: TypeCString, Value: formatStrC.String()}
-	copy(result.Args[1:], call.Args[1:])
+	for _, arg := range call.Args[1:] {
+
+		if arg.GetType() == TypeStr {
+			// TODO this is incorrect for when the argument has side effects
+			lengthExpr := SemCheckExpr(sc, scope, &Call{Callee: &Ident{Source: "i32"}, Args: []Expr{&Call{Callee: &Ident{Source: "len"}, Args: []Expr{arg}}}}, UniqueTypeConstraint{TypeInt32})
+			dataExpr := SemCheckExpr(sc, scope, &Call{Callee: &Ident{Source: "cstring"}, Args: []Expr{arg}}, UniqueTypeConstraint{TypeCString})
+			result.Args = append(result.Args, lengthExpr, dataExpr)
+		} else {
+			result.Args = append(result.Args, arg)
+		}
+	}
 	return result
 }
 

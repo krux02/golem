@@ -70,18 +70,20 @@ func cgenprepassSignature(sig *Signature) *Signature {
 func cgenprepass(expr TcExpr) TcExpr {
 	switch expr := expr.(type) {
 	case *TcCall:
-		if _, isBuiltin := expr.Sym.Signature.Impl.(*TcBuiltinProcDef); isBuiltin {
-			return expr
-		}
+
 		sig := expr.Sym.Signature
+		_, isBuiltin := sig.Impl.(*TcBuiltinProcDef)
 		newArgs := make([]TcExpr, len(expr.Args))
 		for i, arg := range expr.Args {
 			newArg := cgenprepass(arg)
 			var isVarParam bool = false
-			if !sig.Varargs || i < len(sig.Params) {
-				isVarParam = sig.Params[i].Kind == SkVarProcArg
+			if !isBuiltin {
+				if !sig.Varargs || i < len(sig.Params) {
+					isVarParam = sig.Params[i].Kind == SkVarProcArg
+				}
+				newArg = maybeDerefParam(newArg, isVarParam)
 			}
-			newArgs[i] = maybeDerefParam(newArg, isVarParam)
+			newArgs[i] = newArg
 		}
 		expr.Args = newArgs
 		return expr
@@ -193,7 +195,7 @@ func cgenprepass(expr TcExpr) TcExpr {
 	case *TcErrorNode:
 		panic("error nodes should not be passed down to a cgenprepass, compilation should already have ended")
 	case *TcTypeContext:
-		panic("cgenprepass should not have a type context anymore")
+		return expr
 	case *TcStructField:
 		return expr
 	case nil:

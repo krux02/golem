@@ -5,5 +5,20 @@ proc main():i32 = {
   # use string literal with escaped quotes inside
   let `proc`: str = "hello \"something quoted\" end"
   printf("the string: %s\n", `proc`)
+
+
+  let t1:str = \\ this is my raw string literal
+  let t2:str = \\ this is another raw string literal
+  let t3:str = \\ this is a raw string literal spanning multiple lines uitden
+               \\ testing the empty line
+               \\
+               \\ ntdüuriaoe foh türzpm fugoh uiatoetrnia. it ends here
+
+  # here is an invalid string literal
+  let t4:str = \\ valid string literal
+  printf("%s\n---\n%s\n---\n%s\n", t1, t2, t3)
+
+
+
   return 0
 }

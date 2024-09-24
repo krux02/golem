@@ -107,6 +107,7 @@ type CodeBlock struct {
 type StrLit struct {
 	Source string
 	Value  string
+	Raw    bool
 }
 
 type IntLit struct {

@@ -19,6 +19,7 @@ const (
 	TkComma
 	TkOperator
 	TkStrLit
+	TkRawStrLit
 	TkIntLit
 	TkHexLit
 	TkFloatLit
@@ -69,6 +70,7 @@ var TokenKindNames = [...]string{
 	TkComma:             "Comma",
 	TkOperator:          "Operator",
 	TkStrLit:            "StrLit",
+	TkRawStrLit:         "RawStrLit",
 	TkIntLit:            "IntLit",
 	TkFloatLit:          "FloatLit",
 	TkNilLit:            "NilLit",
@@ -231,22 +233,23 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 				goto eatWhiteSpace
 			}
 		case '\\': // very questionable implementation here
-			idx += length
 		newlineEscape:
-			rune, length := utf8.DecodeRuneInString(code[idx:])
-			switch rune {
+			rune2, length2 := utf8.DecodeRuneInString(code[idx+length:])
+			switch rune2 {
 			case ' ', '\r':
-				idx += length
+				idx += length + length2
 				goto newlineEscape
 			case '\n':
-				idx += length
+				idx += length + length2
 				goto eatWhiteSpace
+			case '\\':
+				// do nothing here
 			default:
+				idx += length + length2
 				result.kind = TkInvalid
-				result.value = code[idx-1 : idx+length]
-				idx += length
+				result.value = code[idx-1 : idx+length+length2]
 				newOffset += idx
-				this.reportError(result, "invalid escape sequence \\%c", rune)
+				this.reportError(result, "invalid escape sequence \\%c", rune2)
 				return result, newOffset
 			}
 		default:
@@ -456,6 +459,24 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 		result = Token{TkComma, code[:cLen]}
 	case c == ';':
 		result = Token{TkSemicolon, code[:cLen]}
+	case c == '\\':
+		if strings.HasPrefix(code, "\\\\") {
+			idx2 := strings.IndexRune(code, '\n')
+			if idx2 < 0 {
+				result.value = code
+			} else {
+				// eating the newline character, so that the lookahead token isn't a
+				// newline token But this isn't clean code as the token might have a
+				// newline at the end or not, and later the code needs to remember that
+				// both cases are possible and the newline needs to be removed again
+				result.value = code[:idx2+1]
+			}
+			result.kind = TkRawStrLit
+
+		} else {
+			// if the compiler is correct, this should be unreachable.
+			this.reportError(result, "unexpected input: %c %d", c, c)
+		}
 	case u.IsSymbol(c) || u.IsPunct(c):
 		var idx2 = len(code)
 		for pos, rune := range code[cLen:] {

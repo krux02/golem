@@ -4,6 +4,9 @@
 (require 'compile)
 (require 'project)
 
+
+
+
 (defconst golem-highlights
   (rx-let ((ident (seq (any alpha "_") (* (any alnum "_")))))
     (list
@@ -18,6 +21,9 @@
      (list (rx ":" (* " ") (group ident)) 1 font-lock-type-face)
      (list (rx (group ident) "(") 1 font-lock-function-name-face)
      (list 'golem-string-escape-matcher 0 font-lock-preprocessor-face 'prepend)
+     (list 'golem-multiline-string-matcher
+           (list 1 font-lock-warning-face 'prepend)
+           (list 2 font-lock-string-face 'prepend))
      )))
 
 (add-to-list 'compilation-error-regexp-alist 'golem)
@@ -46,9 +52,31 @@
 (defvar golem-mode-syntax-table (make-syntax-table prog-mode-syntax-table) "Syntax table used while in `golem-mode'.")
 
 (progn
-  (modify-syntax-entry ?\# "<" golem-mode-syntax-table)
-  (modify-syntax-entry ?\n ">#" golem-mode-syntax-table)
+  (modify-syntax-entry ?\# "< a" golem-mode-syntax-table)
+  (modify-syntax-entry ?\\ ". 12a" golem-mode-syntax-table)
+  (modify-syntax-entry ?\n "> a" golem-mode-syntax-table)
+
+  ;; this would make (* comment *) become a comment
+  ;; (modify-syntax-entry ?\( "()1c" golem-mode-syntax-table)
+  ;; (modify-syntax-entry ?* "_ 23c" golem-mode-syntax-table)
+  ;; (modify-syntax-entry ?\) ")(4c" golem-mode-syntax-table)
+
   (modify-syntax-entry ?_ "w" golem-mode-syntax-table))
+
+
+(defun golem-multiline-string-matcher (&optional limit)
+  "Highlight matcher for raw multiline string literals within LIMIT."
+  (let ((loop-running t)
+        (res))
+    (while loop-running
+      (if (re-search-forward (rx "\\\\") limit t)
+          (when (nth 4 (syntax-ppss))
+            (setq loop-running nil
+                  res (re-search-forward (rx (group any) (group (* any)) line-end) limit t)))
+        (setq loop-running nil))
+      )
+    res))
+
 
 (defun golem-string-escape-matcher (&optional limit)
   "Highlight matcher escape sequence in string within LIMIT."
@@ -70,9 +98,13 @@
   "Major mode for editing golem language code."
   :group 'golem
 
+
+
   (setq-local comment-start "#")
-  (setq-local comment-start-skip "#+ *")
+  ;; (setq-local comment-start-skip "#+ *" (rx (or (+ "#") "\\\\") (* " ")))
+  (setq-local comment-start-skip (rx (or (+ "#") "\\\\") (* " ")))
   (setq-local font-lock-defaults '(golem-highlights))
+
 
   (setq-local
    compile-command

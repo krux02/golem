@@ -1629,6 +1629,9 @@ func SemCheckExpr(sc *SemChecker, scope Scope, arg Expr, expected TypeConstraint
 		return (TcExpr)(SemCheckNilLit(sc, scope, arg, expected))
 	case *WhileLoopStmt:
 		return (TcExpr)(SemCheckWhileLoopStmt(sc, scope, arg))
+	case TcExpr:
+		ExpectType(sc, arg, arg.GetType(), expected)
+		return arg
 	default:
 		panic(fmt.Errorf("not implemented %T", arg))
 	}
