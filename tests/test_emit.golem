@@ -1,0 +1,20 @@
+
+
+proc foobar(var arg1: i32): void = {
+   # TODO doesn't work with template arguments yet
+   emit("`arg1` += 123")
+}
+
+
+## foobar
+proc main(): i32 = {
+  emit(
+    \\ printf("Hello World\n")
+  )
+  var tmp:i32 = 1000
+  foobar(tmp)
+  emit(
+    \\ printf("%d\n", `tmp`)
+  )
+  return 0
+}
