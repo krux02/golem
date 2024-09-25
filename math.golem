@@ -1,5 +1,7 @@
 
-emit("#include <math.h>")
+emit(
+  \\ #include <math.h>
+)
 
 ## Compute cosine
 proc "importc" cos(arg:f64):f64

@@ -147,12 +147,29 @@ func WriteStringLit(builder *AstPrettyPrinter, value string) {
 	builder.WriteRune('"')
 }
 
+func WriteRawStringLit(builder *AstPrettyPrinter, value string) {
+	builder.NewlineAndIndent()
+	for _, line := range strings.Split(value, "\n") {
+		builder.WriteString(`\\ `)
+		builder.WriteString(line)
+		builder.NewlineAndIndent()
+	}
+}
+
 func (lit *StrLit) PrettyPrint(builder *AstPrettyPrinter) {
-	WriteStringLit(builder, lit.Value)
+	if lit.Raw {
+		WriteRawStringLit(builder, lit.Value)
+	} else {
+		WriteStringLit(builder, lit.Value)
+	}
 }
 
 func (lit *TcStrLit) PrettyPrint(builder *AstPrettyPrinter) {
-	WriteStringLit(builder, lit.Value)
+	if lit.Raw {
+		WriteRawStringLit(builder, lit.Value)
+	} else {
+		WriteStringLit(builder, lit.Value)
+	}
 }
 
 func (list *ExprList) PrettyPrint(builder *AstPrettyPrinter) {
@@ -791,5 +808,21 @@ func (doc *PrefixDocComment) PrettyPrint(builder *AstPrettyPrinter) {
 func (expr *TcEmitExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("emit(")
 	WriteStringLit(builder, expr.EmitSource)
+	builder.WriteString(")")
+}
+
+func (expr *TcCastExpr) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("cast(type ")
+	builder.WriteNode(expr.Type)
+	builder.WriteString(", ")
+	builder.WriteNode(expr.Expr)
+	builder.WriteString(")")
+}
+
+func (expr *TcConvExpr) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("conv(type ")
+	builder.WriteNode(expr.Type)
+	builder.WriteString(", ")
+	builder.WriteNode(expr.Expr)
 	builder.WriteString(")")
 }

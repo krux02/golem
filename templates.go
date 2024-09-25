@@ -189,3 +189,5 @@ func (arg *TcBuiltinMacroDef) RecSubSyms(substitutions []TemplateSubstitution) E
 func (arg *TcErrorProcDef) RecSubSyms(substitutions []TemplateSubstitution) Expr          { return arg }
 func (arg *TcWrappedUntypedAst) RecSubSyms(substitutions []TemplateSubstitution) Expr     { return arg }
 func (arg *TcEmitExpr) RecSubSyms(substitutions []TemplateSubstitution) Expr              { return arg }
+func (arg *TcCastExpr) RecSubSyms(substitutions []TemplateSubstitution) Expr              { return arg }
+func (arg *TcConvExpr) RecSubSyms(substitutions []TemplateSubstitution) Expr              { return arg }

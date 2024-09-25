@@ -262,6 +262,7 @@ type TcStrLit struct {
 	Source string
 	Type   Type
 	Value  string
+	Raw    bool // was the original string literal a raw string literal, used for nothing but PrettyPrinting
 }
 
 type TcIntLit struct {
@@ -318,6 +319,18 @@ type SymSourcePair struct {
 	Sym        TcExpr
 }
 
+type TcCastExpr struct {
+	Source string
+	Expr   TcExpr
+	Type   Type
+}
+
+type TcConvExpr struct {
+	Source string
+	Expr   TcExpr
+	Type   Type
+}
+
 type TcEmitExpr struct {
 	Source         string
 	Type           Type
@@ -328,20 +341,6 @@ type TcEmitExpr struct {
 type TcWrappedUntypedAst struct {
 	Expr Expr
 }
-
-func (sym *TcDotExpr) expression()          {}
-func (sym *TcSymbol) expression()           {}
-func (sym *TcSymRef) expression()           {}
-func (stmt *TcVariableDefStmt) expression() {}
-func (stmt *TcReturnExpr) expression()      {}
-func (stmt *TcForLoopStmt) expression()     {}
-func (stmt *TcIfStmt) expression()          {}
-func (stmt *TcIfElseExpr) expression()      {}
-func (block *TcCodeBlock) expression()      {}
-func (call *TcCall) expression()            {}
-func (call *TcArrayLit) expression()        {}
-func (call *TcEnumSetLit) expression()      {}
-func (expr *TcStructLit) expression()       {}
 
 func (arg *TcErrorNode) GetSource() string             { return arg.Source }
 func (arg *TcDotExpr) GetSource() string               { return arg.Source }
@@ -370,6 +369,8 @@ func (arg *TcTemplateDef) GetSource() string           { return arg.Source }
 func (arg *TcStructLit) GetSource() string             { return arg.Source }
 func (arg *TcPackageDef) GetSource() string            { return arg.Source }
 func (arg *TcEmitExpr) GetSource() string              { return arg.Source }
+func (arg *TcCastExpr) GetSource() string              { return arg.Source }
+func (arg *TcConvExpr) GetSource() string              { return arg.Source }
 
 func (arg *TcStructDef) GetSource() string         { return arg.Source }
 func (arg *TcEnumDef) GetSource() string           { return arg.Source }
@@ -392,7 +393,6 @@ func (arg *TcErrorProcDef) GetSignature() *Signature          { return arg.Signa
 
 func RequireMutable(sc *SemChecker, expr TcExpr) {
 	switch arg := expr.(type) {
-
 	case *TcDotExpr:
 		RequireMutable(sc, arg.Lhs)
 	case *TcSymRef:

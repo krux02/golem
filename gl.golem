@@ -31,10 +31,11 @@
 #         http://www.opengl.org/registry/
 #     
 
-
 addLinkerFlags("-lGL")
+emit(
+\\ #include <GL/gl.h>
+)
 
-emit("#include <GL/gl.h>")
 const GL_CURRENT_BIT:u32 = 0x00000001
 const GL_POINT_BIT:u32 = 0x00000002
 const GL_LINE_BIT:u32 = 0x00000004

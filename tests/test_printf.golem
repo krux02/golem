@@ -1,6 +1,9 @@
 # TODO technically this ist still a manual test since the output of printf ist not tested against anything
 
-emit("#include <locale.h>")
+emit(
+\\ #include <locale.h>
+)
+
 const LC_CTYPE = 0:i32
 proc "importc" setlocale(category: i32, locale: cstring): cstring
 

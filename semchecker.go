@@ -1441,6 +1441,8 @@ func (expr *TcDotExpr) GetType() Type              { return expr.Rhs.GetType() }
 func (field *TcStructField) GetType() Type         { return field.Type }
 func (expr *TcWrappedUntypedAst) GetType() Type    { return TypeUntyped }
 func (expr *TcEmitExpr) GetType() Type             { return expr.Type }
+func (expr *TcConvExpr) GetType() Type             { return expr.Type }
+func (expr *TcCastExpr) GetType() Type             { return expr.Type }
 
 func SemCheckIntLit(sc *SemChecker, scope Scope, arg *IntLit, expected TypeConstraint) TcExpr {
 	uniqueConstraint, isUniqueConstraint := expected.(UniqueTypeConstraint)
@@ -1550,6 +1552,7 @@ func SemCheckStrLit(sc *SemChecker, scope Scope, arg *StrLit, expected TypeConst
 			Source: arg.Source,
 			Type:   TypeError,
 			Value:  arg.Value,
+			Raw:    arg.Raw,
 		}
 	}
 

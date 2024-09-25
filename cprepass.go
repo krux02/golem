@@ -192,10 +192,16 @@ func cgenprepass(expr TcExpr) TcExpr {
 			expr.SourceSymPairs[i].Sym = cgenprepass(pair.Sym)
 		}
 		return expr
+	case *TcCastExpr:
+		expr.Expr = cgenprepass(expr.Expr)
+		return expr
+	case *TcConvExpr:
+		expr.Expr = cgenprepass(expr.Expr)
+		return expr
 	case *TcErrorNode:
 		panic("error nodes should not be passed down to a cgenprepass, compilation should already have ended")
 	case *TcTypeContext:
-		return expr
+		panic("should not exist at this point in compilation anymore")
 	case *TcStructField:
 		return expr
 	case nil:

@@ -251,8 +251,12 @@ func main() {
 
 	fmt.Println(strings.Join(strings.Split(reg.Comment, "\n"), "\n# "))
 
-	fmt.Println(`addLinkerFlags("-lGL")`)
-	fmt.Println(`emit("#include <GL/gl.h>")`)
+	fmt.Println(`
+addLinkerFlags("-lGL")
+emit(
+\\ #include <GL/gl.h>
+)
+`)
 
 	disable := []string{
 		"glClientWaitSync",

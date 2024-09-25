@@ -811,6 +811,28 @@ func BuiltinStaticExpr(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	return EvalExpr(sc, checkedExpr, scope)
 }
 
+func BuiltinCastExpr(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+	arg1 := call.Args[0].(*TcTypeContext)
+	arg2 := call.Args[1]
+	// TODO validate that expression can actually be casted. E.g. test if they have the same size and alignment
+	return &TcCastExpr{
+		Source: call.Source,
+		Expr:   arg2,
+		Type:   arg1.WrappedType,
+	}
+}
+
+func BuiltinConvExpr(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+	arg1 := call.Args[0].(*TcTypeContext)
+	arg2 := call.Args[1]
+	// TODO validate that expression can actually be converted. e.g. both types are compatible number types
+	return &TcConvExpr{
+		Source: call.Source,
+		Expr:   arg2,
+		Type:   arg1.WrappedType,
+	}
+}
+
 func BuiltinImportStmt(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	if !ExpectArgsLen(sc, call, len(call.Args), 1) {
 		return newErrorNode(call)
@@ -877,6 +899,14 @@ func init() {
 	registerBuiltinMacro("|", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinPipeTransformation)
 	registerBuiltinMacro("static", false, []Type{TypeUntyped}, TypeUntyped, BuiltinStaticExpr)
 
+	{
+		// TODO: has no line information
+		T := &GenericTypeSymbol{Name: "T", Constraint: TypeUnspecified}
+		U := &GenericTypeSymbol{Name: "U", Constraint: TypeUnspecified}
+		registerGenericBuiltinMacro("cast", false, []*GenericTypeSymbol{T, U}, []Type{GetTypeType(T), U}, T, BuiltinCastExpr)
+		registerGenericBuiltinMacro("conv", false, []*GenericTypeSymbol{T, U}, []Type{GetTypeType(T), U}, T, BuiltinConvExpr)
+	}
+
 	// registerBuiltinMacro("sizeof", false, []Type{TypeUnspecified}, TypeInt64, BuiltinSizeOf)
 
 	registerBuiltinType(TypeBoolean)
@@ -927,6 +957,7 @@ func init() {
 		}
 
 		// TODO this should be a generic with proper working type constraint on all builtin number types
+		// maybe it should be implemented with the builtin `conv` macro that exists now.
 		registerBuiltin("i8", "(int8_t)(", "", ")", []Type{typ}, TypeInt8, 0)
 		registerBuiltin("i16", "(int16_t)(", "", ")", []Type{typ}, TypeInt16, 0)
 		registerBuiltin("i32", "(int32_t)(", "", ")", []Type{typ}, TypeInt32, 0)
@@ -1004,13 +1035,6 @@ func init() {
 		registerGenericBuiltin("pointer", "(void*)(", "", ")", []*GenericTypeSymbol{T}, []Type{GetPtrType(T)}, GetPtrType(TypeVoid), 0)
 		registerGenericBuiltin("sizeof", "sizeof(", "", ")", []*GenericTypeSymbol{T}, []Type{T}, TypeInt64, 0)
 		registerGenericBuiltin("discard", "", "", "", []*GenericTypeSymbol{T}, []Type{T}, TypeVoid, 0)
-	}
-
-	{
-		// TODO: has no line information
-		T := &GenericTypeSymbol{Name: "T", Constraint: TypeUnspecified}
-		U := &GenericTypeSymbol{Name: "U", Constraint: TypeUnspecified}
-		registerGenericBuiltin("cast", "*((", "*)(&(", ")))", []*GenericTypeSymbol{T, U}, []Type{GetTypeType(T), U}, T, 0)
 	}
 
 	registerBuiltin("and", "(", "&&", ")", []Type{TypeBoolean, TypeBoolean}, TypeBoolean, 0)

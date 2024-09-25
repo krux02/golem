@@ -217,71 +217,71 @@ func extractRawStringValue(tokenizer *Tokenizer, token Token) string {
 	return str[3:]
 }
 
+func parseRawStrLit(tokenizer *Tokenizer) *StrLit {
+	firstToken := tokenizer.Next()
+	var b strings.Builder
+	tokenizer.expectKind(firstToken, TkRawStrLit)
+	b.WriteString(extractRawStringValue(tokenizer, firstToken))
+	for tokenizer.lookAheadToken.kind == TkRawStrLit {
+		token := tokenizer.Next()
+		b.WriteString("\n")
+		b.WriteString(extractRawStringValue(tokenizer, token))
+	}
+	return &StrLit{
+		Source: joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value),
+		Value:  b.String(),
+		Raw:    true,
+	}
+}
+
 func parseStrLit(tokenizer *Tokenizer) *StrLit {
 	firstToken := tokenizer.Next()
 	var b strings.Builder
-	switch firstToken.kind {
-	case TkRawStrLit:
-		b.WriteString(extractRawStringValue(tokenizer, firstToken))
-		for tokenizer.lookAheadToken.kind == TkRawStrLit {
-			token := tokenizer.Next()
-			b.WriteString("\n")
-			b.WriteString(extractRawStringValue(tokenizer, token))
-		}
-		return &StrLit{
-			Source: joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value),
-			Value:  b.String(),
-			Raw:    true,
-		}
-	case TkStrLit:
-		b.Grow(len(firstToken.value) - 2)
-		var processEscape bool
-		for i, rune := range firstToken.value {
-			if processEscape {
-				switch rune {
-				case 'a':
-					b.WriteRune('\a')
-				case 'b':
-					b.WriteRune('\b')
-				case 'f':
-					b.WriteRune('\f')
-				case 'n':
-					b.WriteRune('\n')
-				case 'r':
-					b.WriteRune('\r')
-				case 't':
-					b.WriteRune('\t')
-				case 'v':
-					b.WriteRune('\v')
-				case '\\':
-					b.WriteRune('\\')
-				case '\'':
-					b.WriteRune('\'')
-				case '"':
-					b.WriteRune('"')
-				default:
-					tokenizer.reportError(firstToken, "invalid escape \\%c in string literal", rune)
-				}
-				processEscape = false
-				continue
+	tokenizer.expectKind(firstToken, TkStrLit)
+	b.Grow(len(firstToken.value) - 2)
+	var processEscape bool
+	for i, rune := range firstToken.value {
+		if processEscape {
+			switch rune {
+			case 'a':
+				b.WriteRune('\a')
+			case 'b':
+				b.WriteRune('\b')
+			case 'f':
+				b.WriteRune('\f')
+			case 'n':
+				b.WriteRune('\n')
+			case 'r':
+				b.WriteRune('\r')
+			case 't':
+				b.WriteRune('\t')
+			case 'v':
+				b.WriteRune('\v')
+			case '\\':
+				b.WriteRune('\\')
+			case '\'':
+				b.WriteRune('\'')
+			case '"':
+				b.WriteRune('"')
+			default:
+				tokenizer.reportError(firstToken, "invalid escape \\%c in string literal", rune)
 			}
+			processEscape = false
+			continue
+		}
 
-			if rune == '\\' {
-				processEscape = true
-				continue
-			} else if i != 0 && i != len(firstToken.value)-1 {
-				b.WriteRune(rune)
-			}
+		if rune == '\\' {
+			processEscape = true
+			continue
+		} else if i != 0 && i != len(firstToken.value)-1 {
+			b.WriteRune(rune)
 		}
-		return &StrLit{
-			Source: firstToken.value,
-			Value:  b.String(),
-		}
-	default:
-		tokenizer.expectKind2(firstToken, TkStrLit, TkRawStrLit)
 	}
-	// TODO maybe return an error node or something
-	return nil
+	return &StrLit{
+		Source: firstToken.value,
+		Value:  b.String(),
+		Raw:    false,
+	}
 }
 
 func parseIntLit(tokenizer *Tokenizer) *IntLit {
@@ -589,8 +589,10 @@ func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
 		result = (Expr)(parseCodeBlock(tokenizer))
 	case TkIf:
 		result = (Expr)(parseIfStmt(tokenizer))
-	case TkStrLit, TkRawStrLit:
+	case TkStrLit:
 		result = (Expr)(parseStrLit(tokenizer))
+	case TkRawStrLit:
+		result = (Expr)(parseRawStrLit(tokenizer))
 	case TkIntLit:
 		result = (Expr)(parseIntLit(tokenizer))
 	case TkHexLit:

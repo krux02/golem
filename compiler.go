@@ -33,7 +33,7 @@ func (builder *CodeBuilder) NewlineAndIndent() {
 	}
 }
 
-func (builder *CodeBuilder) compileTypeExpr(context *PackageGeneratorContext, typ Type) {
+func (builder *CodeBuilder) CompileTypeExpr(context *PackageGeneratorContext, typ Type) {
 	markTypeForGeneration(context, typ)
 	switch typ := typ.(type) {
 	case *BuiltinType:
@@ -55,7 +55,7 @@ func (builder *CodeBuilder) compileTypeExpr(context *PackageGeneratorContext, ty
 	case *EnumSetType:
 		builder.WriteString("uint64_t")
 	case *PtrType:
-		builder.compileTypeExpr(context, typ.Target)
+		builder.CompileTypeExpr(context, typ.Target)
 		builder.WriteRune('*')
 	default:
 		panic(fmt.Errorf("not implemented %T", typ))
@@ -171,7 +171,7 @@ func (builder *CodeBuilder) CompileExpr(context *PackageGeneratorContext, expr T
 }
 
 func (builder *CodeBuilder) CompileVariableDefStmt(context *PackageGeneratorContext, stmt *TcVariableDefStmt) {
-	builder.compileTypeExpr(context, stmt.Sym.GetType())
+	builder.CompileTypeExpr(context, stmt.Sym.GetType())
 	builder.WriteString(" ")
 	builder.WriteString(stmt.Sym.Source)
 	builder.WriteString(" = ")
@@ -238,7 +238,7 @@ func (builder *CodeBuilder) CompileForLoopStmt(context *PackageGeneratorContext,
 		builder.WriteString(") ")
 	} else if arrayType, ok := stmt.Collection.GetType().(*ArrayType); ok {
 		builder.WriteString("for(")
-		builder.compileTypeExpr(context, arrayType.Elem)
+		builder.CompileTypeExpr(context, arrayType.Elem)
 		builder.WriteString(" const ")
 		builder.CompileSymbol(stmt.LoopSym)
 		builder.WriteString(" = ")
@@ -287,7 +287,7 @@ func (builder *CodeBuilder) CompileArrayLit(context *PackageGeneratorContext, li
 
 func (builder *CodeBuilder) CompileStructLit(context *PackageGeneratorContext, lit *TcStructLit) {
 	builder.WriteString("(")
-	builder.compileTypeExpr(context, lit.Type)
+	builder.CompileTypeExpr(context, lit.Type)
 	builder.WriteString("){")
 	builder.CompileSeparatedExprList(context, lit.Items, ", ")
 	builder.WriteString("}")
@@ -359,9 +359,13 @@ func (builder *CodeBuilder) CompileExprWithPrefix(context *PackageGeneratorConte
 	case *TcStructField:
 		builder.WriteString(ex.Name)
 	case *TcTypeContext:
-		builder.compileTypeExpr(context, ex.WrappedType)
+		builder.CompileTypeExpr(context, ex.WrappedType)
 	case *TcEmitExpr:
 		builder.CompileEmitExpr(context, ex)
+	case *TcCastExpr:
+		builder.CompileCastExpr(context, ex)
+	case *TcConvExpr:
+		builder.CompileConvExpr(context, ex)
 	case nil:
 		panic(fmt.Sprintf("invalid Ast, expression is nil %T", expr))
 	default:
@@ -376,6 +380,22 @@ func (builder *CodeBuilder) CompileEmitExpr(context *PackageGeneratorContext, em
 	}
 	builder.WriteString(emit.EmitSource)
 	builder.NewlineAndIndent()
+}
+
+func (builder *CodeBuilder) CompileCastExpr(context *PackageGeneratorContext, cast *TcCastExpr) {
+	builder.WriteString("*((")
+	builder.CompileTypeExpr(context, cast.Type)
+	builder.WriteString("*)(&(")
+	builder.CompileExpr(context, cast.Expr)
+	builder.WriteString(")))")
+}
+
+func (builder *CodeBuilder) CompileConvExpr(context *PackageGeneratorContext, cast *TcConvExpr) {
+	builder.WriteString("(")
+	builder.CompileTypeExpr(context, cast.Type)
+	builder.WriteString(")(")
+	builder.CompileExpr(context, cast.Expr)
+	builder.WriteString(")")
 }
 
 func (builder *CodeBuilder) CompileCodeBlock(context *PackageGeneratorContext, block *TcCodeBlock) {
@@ -407,7 +427,7 @@ func compileArrayDef(context *PackageGeneratorContext, arrayType *ArrayType) {
 	builder := &context.typeDecl
 	builder.NewlineAndIndent()
 	builder.WriteString("typedef struct {")
-	builder.compileTypeExpr(context, arrayType.Elem)
+	builder.CompileTypeExpr(context, arrayType.Elem)
 	fmt.Fprintf(builder, " arr[%d];} ", arrayType.Len)
 	arrayType.ManglePrint(&builder.Builder)
 	builder.WriteString(";")
@@ -452,7 +472,7 @@ func compileStructDef(context *PackageGeneratorContext, structDef *TcStructDef) 
 	builder.Indentation += 1
 	for _, field := range structDef.Fields {
 		builder.NewlineAndIndent()
-		builder.compileTypeExpr(context, field.Type)
+		builder.CompileTypeExpr(context, field.Type)
 		builder.WriteString(" ")
 		builder.WriteString(field.Name)
 		builder.WriteString(";")
@@ -471,7 +491,7 @@ func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 	// reuse string here
 	headBuilder := &CodeBuilder{}
 	headBuilder.NewlineAndIndent()
-	headBuilder.compileTypeExpr(context, procDef.Signature.ResultType)
+	headBuilder.CompileTypeExpr(context, procDef.Signature.ResultType)
 	headBuilder.WriteString(" ")
 	headBuilder.WriteString(procDef.MangledName)
 	headBuilder.WriteString("(")
@@ -479,7 +499,7 @@ func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 		if i != 0 {
 			headBuilder.WriteString(", ")
 		}
-		headBuilder.compileTypeExpr(context, arg.GetType())
+		headBuilder.CompileTypeExpr(context, arg.GetType())
 		headBuilder.WriteString(" ")
 		if arg.Kind == SkVarProcArg {
 			headBuilder.WriteString("*")

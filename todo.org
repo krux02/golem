@@ -6,8 +6,7 @@ implement/test break and continue
 * TODO import statement issues
 
 technically, my language allows scope local import statements. That is
-completely untested, and with the current implementation it would als recompile
-the import over and over again.
+completely untested.
 
 * TODO Kontakt: Wirtschaftfördering der Stadt Bonn
 
@@ -22,7 +21,6 @@ Fundraising
 
 Implement a constraint that when a function is registered with an argument of
 untyped type, disable all overloading for that function name.
-
 
 * TODO Annotation Syntax
 * TODO emit statement issues
