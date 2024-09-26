@@ -4,8 +4,10 @@ emit(
 \\ #include <locale.h>
 )
 
+
 const LC_CTYPE = 0:i32
 proc "importc" setlocale(category: i32, locale: cstring): cstring
+
 
 proc main(): i32 = {
   var i1 : i8 = low(type i8)
@@ -13,15 +15,37 @@ proc main(): i32 = {
   var i3 : i32 = low(type i32)
   var i4 : i64 = low(type i64)
 
+  assert(i1 == -0x80)
+  assert(i2 == -0x8000)
+  assert(i3 == -0x80000000)
+  assert(i4 == -0x8000000000000000)
+
   var i5 : u8 = high(type u8)
   var i6 : u16 = high(type u16)
   var i7 : u32 = high(type u32)
   var i8 : u64 = high(type u64)
 
+  assert(i5 == 0xff)
+  assert(i6 == 0xffff)
+  assert(i7 == 0xffffffff)
+  assert(i8 == 0xffffffffffffffff)
+
   var c1 : char = "c"
   var c2 : char = "ä"
   var c3 : char = "ß"
   var c4 : char = "ẞ"
+  # TODO enable this
+  # var c5 : char = 32
+  var c5: char = " "
+
+  assert(c1 == "c")
+
+  # TODO enable this
+  #assert(c1 == 99)
+  #assert(c2 == 228)
+  #assert(c3 == 223)
+  #assert(c4 == 2838)
+  assert(c5 == " ")
 
   printf("a: %v %v %v %v\n", i1,i2,i3,i4)
   printf("b: %v %v %v %v\n", i5,i6,i7,i8)
@@ -30,6 +54,7 @@ proc main(): i32 = {
   printf("e: %d %d %d %d\n", i5,i6,i7,i8)
   # for unicode chars to be printable, a call to setlocale is necessary.
   discard setlocale(LC_CTYPE, ""): cstring
+  printf("f: %d %d %d %d\n", cast(c1, type i32), cast(c2, type i32),cast(c3, type i32), cast(c4, type i32))
   printf("f: %v %v %v %v\n", c1,c2,c3,c4)
   printf("g: %c %c %c %c\n", c1,c2,c3,c4)
   printf("done\n")

@@ -16,7 +16,7 @@ func ExpectMinArgsLen(sc *SemChecker, node AstNode, gotten, expected int) bool {
 	return true
 }
 
-func MatchVariableDefStatement(sc *SemChecker, arg *VariableDefStmt) (kind SymbolKind, name *Ident, typeExpr TypeExpr, value Expr, ok bool) {
+func MatchVariableDefStatement(sc *SemChecker, arg *VariableDefStmt) (kind SymbolKind, name *Ident, typeExpr Expr, value Expr, ok bool) {
 	// String matiching
 	switch arg.Prefix.Source {
 	case "var":
@@ -49,7 +49,7 @@ func MatchVariableDefStatement(sc *SemChecker, arg *VariableDefStmt) (kind Symbo
 	return kind, name, typeExpr, value, kind != SkInvalid && isIdent
 }
 
-func MatchColonExpr(expr Expr) (lhs Expr, rhs TypeExpr, ok bool) {
+func MatchColonExpr(expr Expr) (lhs Expr, rhs Expr, ok bool) {
 	call, ok := expr.(*Call)
 	if !ok {
 		return nil, nil, false
@@ -58,7 +58,7 @@ func MatchColonExpr(expr Expr) (lhs Expr, rhs TypeExpr, ok bool) {
 	if !ok || op.Source != ":" || len(call.Args) != 2 {
 		return nil, nil, false
 	}
-	return call.Args[0], TypeExpr(call.Args[1]), true
+	return call.Args[0], call.Args[1], true
 }
 
 func MatchAssign(expr Expr) (lhs, rhs Expr, ok bool) {

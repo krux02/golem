@@ -812,24 +812,24 @@ func BuiltinStaticExpr(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 }
 
 func BuiltinCastExpr(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
-	arg1 := call.Args[0].(*TcTypeContext)
-	arg2 := call.Args[1]
+	arg1 := call.Args[0]
+	arg2 := call.Args[1].(*TcTypeContext)
 	// TODO validate that expression can actually be casted. E.g. test if they have the same size and alignment
 	return &TcCastExpr{
 		Source: call.Source,
-		Expr:   arg2,
-		Type:   arg1.WrappedType,
+		Expr:   arg1,
+		Type:   arg2.WrappedType,
 	}
 }
 
 func BuiltinConvExpr(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
-	arg1 := call.Args[0].(*TcTypeContext)
-	arg2 := call.Args[1]
+	arg1 := call.Args[0]
+	arg2 := call.Args[1].(*TcTypeContext)
 	// TODO validate that expression can actually be converted. e.g. both types are compatible number types
 	return &TcConvExpr{
 		Source: call.Source,
-		Expr:   arg2,
-		Type:   arg1.WrappedType,
+		Expr:   arg1,
+		Type:   arg2.WrappedType,
 	}
 }
 
@@ -903,8 +903,8 @@ func init() {
 		// TODO: has no line information
 		T := &GenericTypeSymbol{Name: "T", Constraint: TypeUnspecified}
 		U := &GenericTypeSymbol{Name: "U", Constraint: TypeUnspecified}
-		registerGenericBuiltinMacro("cast", false, []*GenericTypeSymbol{T, U}, []Type{GetTypeType(T), U}, T, BuiltinCastExpr)
-		registerGenericBuiltinMacro("conv", false, []*GenericTypeSymbol{T, U}, []Type{GetTypeType(T), U}, T, BuiltinConvExpr)
+		registerGenericBuiltinMacro("cast", false, []*GenericTypeSymbol{T, U}, []Type{T, GetTypeType(U)}, U, BuiltinCastExpr)
+		registerGenericBuiltinMacro("conv", false, []*GenericTypeSymbol{T, U}, []Type{T, GetTypeType(U)}, U, BuiltinConvExpr)
 	}
 
 	// registerBuiltinMacro("sizeof", false, []Type{TypeUnspecified}, TypeInt64, BuiltinSizeOf)
@@ -946,6 +946,9 @@ func init() {
 		registerBuiltin("-", "(", "-", ")", []Type{typ, typ}, typ, 0)
 		registerBuiltin("*", "(", "*", ")", []Type{typ, typ}, typ, 0)
 		registerBuiltin("/", "(", "/", ")", []Type{typ, typ}, typ, 0)
+
+		registerBuiltin("-", " -", "", "", []Type{typ}, typ, 0)
+		registerBuiltin("+", " +", "", "", []Type{typ}, typ, 0)
 
 		registerBuiltin("<", "(", "<", ")", []Type{typ, typ}, TypeBoolean, 0)
 		registerBuiltin("<=", "(", "<=", ")", []Type{typ, typ}, TypeBoolean, 0)

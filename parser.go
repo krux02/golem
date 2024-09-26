@@ -64,12 +64,11 @@ func parseTypeContext(tokenizer *Tokenizer) *TypeContext {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkType)
 	result := &TypeContext{
-		Expr: TypeExpr(parseExpr(tokenizer, false)),
+		Expr: parseExpr(tokenizer, false),
 	}
 	result.Source = joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value)
 	return result
 }
-
 func parseReturnExpr(tokenizer *Tokenizer) *ReturnExpr {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkReturn)
@@ -202,30 +201,30 @@ func parseCodeBlock(tokenizer *Tokenizer) *CodeBlock {
 	return result
 }
 
-func extractRawStringValue(tokenizer *Tokenizer, token Token) string {
-	// shave off the optional hacky newline that isn't part of the string literal
-	str := token.value
-	if str[len(str)-1] == '\n' {
-		str = str[:len(str)-1]
-	}
-	if len(str) < 3 {
-		return ""
-	}
-	if str[2] != ' ' {
-		tokenizer.reportError(token, "3rd char is raw string literal must be a ' ' (space) character")
-	}
-	return str[3:]
-}
+// func extractRawStringValue(b *strings.Builder, tokenizer *Tokenizer, token Token) {
+// 	// shave off the optional hacky newline that isn't part of the string literal
+// 	str := token.value
+// 	if str[len(str)-1] == '\n' {
+// 		str = str[:len(str)-1]
+// 	}
+// 	if len(str) < 3 {
+// 		return
+// 	}
+// 	if str[2] != ' ' {
+// 		tokenizer.reportError(token, "3rd char is raw string literal must be a ' ' (space) character")
+// 	}
+// 	b.WriteString(str[3:])
+// }
 
 func parseRawStrLit(tokenizer *Tokenizer) *StrLit {
 	firstToken := tokenizer.Next()
 	var b strings.Builder
 	tokenizer.expectKind(firstToken, TkRawStrLit)
-	b.WriteString(extractRawStringValue(tokenizer, firstToken))
-	for tokenizer.lookAheadToken.kind == TkRawStrLit {
-		token := tokenizer.Next()
-		b.WriteString("\n")
-		b.WriteString(extractRawStringValue(tokenizer, token))
+	for i, line := range tokenizer.lastMultilineStrLitLines {
+		if i != 0 {
+			b.WriteString("\n")
+		}
+		b.WriteString(line)
 	}
 	return &StrLit{
 		Source: joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value),

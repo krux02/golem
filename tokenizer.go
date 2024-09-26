@@ -119,12 +119,13 @@ type ParseError struct {
 // full parser of the language.
 
 type Tokenizer struct {
-	code                    string
-	filename                string
-	token, lookAheadToken   Token
-	offset, lookAheadOffset int
-	errors                  []ParseError
-	silentErrors            bool
+	code                     string
+	filename                 string
+	token, lookAheadToken    Token
+	offset, lookAheadOffset  int
+	lastMultilineStrLitLines []string
+	errors                   []ParseError
+	silentErrors             bool
 }
 
 func NewTokenizer(code string, filename string) (result *Tokenizer) {
@@ -186,6 +187,86 @@ func (this *Tokenizer) Next() Token {
 	this.token, this.offset = this.lookAheadToken, this.lookAheadOffset
 	this.lookAheadToken, this.lookAheadOffset = this.ScanTokenAt(this.lookAheadOffset)
 	return this.token
+}
+
+func (this *Tokenizer) MatchMultilineRawString(code string) Token {
+	var state int = 0
+
+	this.lastMultilineStrLitLines = this.lastMultilineStrLitLines[:0]
+
+	commentIssue := false
+	lastCommentStart := -1
+	lastLineEnd := -1
+
+	for idx2, char := range code {
+		switch state {
+		case 0: // new beginning of a new line
+			switch char {
+			case '\\':
+				state = 1
+			case ' ':
+				state = 4
+			default:
+			}
+		case 1: // got the first backslash expect the second one
+			switch char {
+			case '\\':
+				state = 2
+			default:
+				goto DONE
+			}
+		case 2: // skipping the first ' ' after \\
+			switch char {
+			case '\n': // unless it is a newline then we see it as an empty line
+				this.lastMultilineStrLitLines = append(this.lastMultilineStrLitLines, "")
+				lastLineEnd = idx2
+				state = 0
+			default:
+				if char == ' ' {
+					lastCommentStart = idx2 + 1
+				} else {
+					commentIssue = true
+				}
+				state = 3
+			}
+		case 3: // scannting till end of line, no matter what
+			switch char {
+			case '\n':
+				if 0 <= lastCommentStart {
+					line := code[lastCommentStart:idx2]
+					this.lastMultilineStrLitLines = append(this.lastMultilineStrLitLines, line)
+				}
+				lastCommentStart = -1
+				lastLineEnd = idx2
+				state = 0
+			}
+		case 4: // eat all whitespace till \ or anything else
+			switch char {
+			case '\\':
+				state = 1
+			case ' ':
+				// stay in this state
+			default:
+				// not part of the multiline raw string literal anymore
+				goto DONE
+			}
+		}
+	}
+DONE:
+	if lastLineEnd == 0 {
+		fmt.Println(code)
+		panic("should not happen")
+	}
+
+	result := Token{
+		kind:  TkRawStrLit,
+		value: code[:lastLineEnd],
+	}
+
+	if commentIssue {
+		this.reportError(result, "first char after \\ in raw string literal must be a ' ' space")
+	}
+	return result
 }
 
 func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
@@ -306,7 +387,7 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 		}
 		switch result.value {
 		// builtin word operators
-		case "and", "or", "not", "in", "notin", "ptr", "addr":
+		case "and", "or", "not", "in", "notin", "ptr", "addr": // , "conv", "cast":
 			result.kind = TkOperator
 		case "type":
 			result.kind = TkType
@@ -460,21 +541,12 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 	case c == ';':
 		result = Token{TkSemicolon, code[:cLen]}
 	case c == '\\':
-		if strings.HasPrefix(code, "\\\\") {
-			idx2 := strings.IndexRune(code, '\n')
-			if idx2 < 0 {
-				result.value = code
-			} else {
-				// eating the newline character, so that the lookahead token isn't a
-				// newline token But this isn't clean code as the token might have a
-				// newline at the end or not, and later the code needs to remember that
-				// both cases are possible and the newline needs to be removed again
-				result.value = code[:idx2+1]
-			}
-			result.kind = TkRawStrLit
 
+		if strings.HasPrefix(code, "\\\\") {
+			result = this.MatchMultilineRawString(code)
 		} else {
 			// if the compiler is correct, this should be unreachable.
+			// result.kind = TkInvalid
 			this.reportError(result, "unexpected input: %c %d", c, c)
 		}
 	case u.IsSymbol(c) || u.IsPunct(c):

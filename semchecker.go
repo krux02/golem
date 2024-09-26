@@ -121,7 +121,7 @@ func LookUpTypeConstraint(sc *SemChecker, scope Scope, ident *Ident) TypeConstra
 	return UniqueTypeConstraint{TypeError}
 }
 
-func LookUpType(sc *SemChecker, scope Scope, expr TypeExpr) Type {
+func LookUpType(sc *SemChecker, scope Scope, expr Expr) Type {
 	switch x := expr.(type) {
 	case *Call:
 		ident, ok := x.Callee.(*Ident)
@@ -426,7 +426,7 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result *T
 		expr = lhs
 	}
 
-	var resultType TypeExpr
+	var resultType Expr
 	if lhs, rhs, isColonExpr := MatchColonExpr(expr); isColonExpr {
 		resultType = rhs
 		expr = lhs
@@ -451,7 +451,7 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result *T
 		Source  string
 		Name    *Ident
 		Mutable bool
-		Type    TypeExpr
+		Type    Expr
 	}
 
 	var genericArgs []GenericArgument
@@ -497,7 +497,7 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result *T
 	for _, arg := range argsRaw {
 
 		var newArg Expr
-		var typeExpr TypeExpr
+		var typeExpr Expr
 		var gotTypeExpr bool = false
 
 		newArg, typeExpr, gotTypeExpr = MatchColonExpr(arg)
@@ -1041,7 +1041,7 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 		if !ExpectArgsLen(sc, call, len(call.Args), 2) {
 			return newErrorNode(call)
 		}
-		typ := LookUpType(sc, scope, TypeExpr(call.Args[1]))
+		typ := LookUpType(sc, scope, call.Args[1])
 		typ = ExpectType(sc, call, typ, expected)
 		return SemCheckExpr(sc, scope, call.Args[0], UniqueTypeConstraint{typ})
 	}

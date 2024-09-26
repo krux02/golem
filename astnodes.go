@@ -43,9 +43,6 @@ type InvalidTokenExpr struct {
 	kind   TokenKind
 }
 
-// an expression tagget to be a type expression
-type TypeExpr Expr
-
 type VariableDefStmt struct {
 	Source string
 	Prefix Ident // var, let, const ...
@@ -80,7 +77,7 @@ type IfElseExpr struct {
 
 type TypeContext struct {
 	Source string
-	Expr   TypeExpr
+	Expr   Expr
 }
 
 type ReturnExpr struct {

@@ -146,8 +146,8 @@ trait HasSizeOf(T) = {
 # }
 
 template write(dst: pointer, var offset: i32, value: f32): void = {
-  (cast(type ptr f32, cast(type uint, dst) + cast(type uint, offset)))[] = value
-   offset += i32(sizeof(value))
+  indexOp((dist | cast(type uint) + offset | cast(type uint)) | cast(type ptr f32)) = value
+  offset += sizeof(value) | conv(type i32)
 }
 
 proc alignFunc(address, alignment: i32): i32 = bitand(address + (alignment - 1), bitnot(alignment - 1))

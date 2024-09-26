@@ -41,10 +41,20 @@ An annotation like ~ident @ <Expr>~ must match the pattern of just an identifier
 
 move all top level statemets to normal statements
 
+* TODO fix issues with char
+
+ 1. allow both single char string literals, as well as number literals to be valid chars
+ 2. allow char to be printed with %d in printf as number
+ 3. stop using BuiltinStringType for char. it is not a string at all.
+
 * TODO fix problems with printf
+
  1. test %v for all supported types
     # calling printf on chars requires `setlocale` to be executed. It should just work.
  2. test %c for non ASCII chars
+ 3. allow %d for type char
+
+
 
 * TODO templates
 * TODO add infix operators ~in~ and ~notin~ for enum sets
