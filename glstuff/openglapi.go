@@ -315,7 +315,7 @@ emit(
 					typ := typemap[param.PType]
 					if param.PType == "GLchar" && numDeref > 0 {
 						numDeref -= 1
-						typ = "cstring"
+						typ = "cstr"
 					}
 					for i := 0; i < numDeref; i++ {
 						fmt.Print("ptr(")

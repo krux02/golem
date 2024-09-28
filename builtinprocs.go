@@ -246,7 +246,7 @@ var TypeFloat64 = &BuiltinFloatType{"f64", "double", 'd'}
 var TypeBoolean = &BuiltinType{"bool", "bool", 'b'}
 
 var TypeStr = &BuiltinStringType{"str", "string", 'R'}
-var TypeCString = &BuiltinStringType{"cstring", "char const*", 'x'}
+var TypeCStr = &BuiltinStringType{"cstr", "char const*", 'x'}
 
 // TODO is this really best as a subtype of BuiltinStringType
 var TypeChar = &BuiltinStringType{"char", "int32_t", 'c'}
@@ -287,7 +287,7 @@ var TypeAnyNumber = &TypeGroup{Name: "AnyNumber", Items: []Type{
 
 // TODO: The char type is not included in there, even though it is implemented
 // as a BuiltinStringType. This is an ugly code smell.
-var TypeAnyString = &TypeGroup{Name: "AnyString", Items: []Type{TypeStr, TypeCString}}
+var TypeAnyString = &TypeGroup{Name: "AnyString", Items: []Type{TypeStr, TypeCStr}}
 
 // builtin proc signatures
 var builtinCPrintf *Signature
@@ -616,7 +616,7 @@ func ValidatePrintfCall(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 				c2 = 'd'
 			case TypeUInt8, TypeUInt16, TypeUInt32, TypeUInt64:
 				c2 = 'u'
-			case TypeCString, TypeStr:
+			case TypeCStr, TypeStr:
 				c2 = 's'
 			case TypeChar:
 				c2 = 'c'
@@ -668,7 +668,7 @@ func ValidatePrintfCall(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 		case TypeInt64, TypeUInt64:
 			formatStrC.WriteString("l")
 			formatStrC.WriteRune(rune(c2))
-		case TypeCString:
+		case TypeCStr:
 			formatStrC.WriteString("s")
 		case TypeStr:
 			formatStrC.WriteString("*s")
@@ -694,13 +694,13 @@ func ValidatePrintfCall(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 		Signature: builtinCPrintf,
 	}
 	result.Args = make([]TcExpr, 1, len(call.Args))
-	result.Args[0] = &TcStrLit{Source: formatStrLit.Source, Type: TypeCString, Value: formatStrC.String()}
+	result.Args[0] = &TcStrLit{Source: formatStrLit.Source, Type: TypeCStr, Value: formatStrC.String()}
 	for _, arg := range call.Args[1:] {
 
 		if arg.GetType() == TypeStr {
 			// TODO this is incorrect for when the argument has side effects
 			lengthExpr := SemCheckExpr(sc, scope, &Call{Callee: &Ident{Source: "i32"}, Args: []Expr{&Call{Callee: &Ident{Source: "len"}, Args: []Expr{arg}}}}, UniqueTypeConstraint{TypeInt32})
-			dataExpr := SemCheckExpr(sc, scope, &Call{Callee: &Ident{Source: "cstring"}, Args: []Expr{arg}}, UniqueTypeConstraint{TypeCString})
+			dataExpr := SemCheckExpr(sc, scope, &Call{Callee: &Ident{Source: "cstr"}, Args: []Expr{arg}}, UniqueTypeConstraint{TypeCStr})
 			result.Args = append(result.Args, lengthExpr, dataExpr)
 		} else {
 			result.Args = append(result.Args, arg)
@@ -887,7 +887,7 @@ func init() {
 	// practical. Therefore the implementation for varargs will be strictly tied to
 	// printf for now. A general concept for varargs will be specified out as soon
 	// as it becomes necessary, but right now it is not planned.
-	builtinCPrintf = registerBuiltin("c_printf", "printf(", ", ", ")", []Type{TypeCString}, TypeVoid, 0)
+	builtinCPrintf = registerBuiltin("c_printf", "printf(", ", ", ")", []Type{TypeCStr}, TypeVoid, 0)
 	builtinCPrintf.Varargs = true
 
 	registerBuiltinMacro("printf", true, []Type{TypeStr}, TypeVoid, ValidatePrintfCall)
@@ -921,7 +921,7 @@ func init() {
 	registerBuiltinType(TypeFloat32)
 	registerBuiltinType(TypeFloat64)
 	registerBuiltinType(TypeStr)
-	registerBuiltinType(TypeCString)
+	registerBuiltinType(TypeCStr)
 	registerBuiltinType(TypeChar)
 	registerBuiltinType(TypeVoid)
 	registerBuiltinType(TypeNoReturn)
@@ -982,6 +982,7 @@ func init() {
 			registerSimpleTemplate("high", []*TcSymbol{argSym}, typ, &IntLit{Value: big.NewInt(0).Set(intType.MaxValue)})
 			registerSimpleTemplate("low", []*TcSymbol{argSym}, typ, &IntLit{Value: big.NewInt(0).Set(intType.MinValue)})
 		}
+
 	}
 
 	{
@@ -1009,7 +1010,7 @@ func init() {
 	}
 
 	registerBuiltin("len", "", "", ".len", []Type{TypeStr}, TypeInt64, 0)
-	registerBuiltin("cstring", "", "", ".data", []Type{TypeStr}, TypeCString, 0)
+	registerBuiltin("cstr", "", "", ".data", []Type{TypeStr}, TypeCStr, 0)
 
 	// vector types
 	for _, typ := range []Type{TypeFloat32x4} {

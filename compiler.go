@@ -314,7 +314,7 @@ func (builder *CodeBuilder) CompileExprWithPrefix(context *PackageGeneratorConte
 		switch ex.Type {
 		case TypeStr:
 			builder.compileStrLit(ex.Value, true, '"')
-		case TypeCString:
+		case TypeCStr:
 			builder.compileStrLit(ex.Value, false, '"')
 		case TypeChar:
 			rune, _ := utf8.DecodeRuneInString(ex.Value)

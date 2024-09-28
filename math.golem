@@ -118,7 +118,7 @@ proc "importc" remquo(x,y:f64, quo: ptr i32):f64
 ## Composes a floating point value with the magnitude of x and the sign of y.
 proc "importc" copysign(x,y:f64): f64
 ## Generate quiet NaN (function)
-proc "importc" nan(arg: cstring): f64
+proc "importc" nan(arg: cstr): f64
 ## Next representable value (function)
 proc "importc" nextafter(from, to:f64): f64
 

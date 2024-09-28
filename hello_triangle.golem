@@ -46,16 +46,16 @@ type Pipeline = struct {
 }
 
 
-proc "importc" strlen(str: cstring): uint;
+proc "importc" strlen(str: cstr): uint;
 proc "importc" malloc(size: uint): pointer;
 
-proc makeString(cstr: cstring): str = {
+proc makeString(cstr: cstr): str = {
   # TODO not implemented
   ""
 }
 
-proc shaderSource(shader: Shader, source: cstring) : void = {
-  var source: cstring = source
+proc shaderSource(shader: Shader, source: cstr) : void = {
+  var source: cstr = source
   var length: i32 = i32(strlen(source))
   glShaderSource(shader.handle, 1, addr(source), addr(length))
 }
@@ -82,9 +82,9 @@ proc shaderInfoLog(shader: Shader): str = {
 
 # type GLenum = u32
 
-proc showError(a: str, b: cstring, d: LineInfo): void = {}
+proc showError(a: str, b: cstr, d: LineInfo): void = {}
 
-proc compileShader(shaderType: u32, source: cstring, lineinfo: LineInfo): Shader = {
+proc compileShader(shaderType: u32, source: cstr, lineinfo: LineInfo): Shader = {
   var result: Shader
 
   result.handle = glCreateShader(shaderType)
@@ -123,12 +123,12 @@ proc createVertexArrayObject(label: str): VertexArrayObject = {
   var result: VertexArrayObject
   glCreateVertexArrays(1, addr(result.handle))
   if len(label) > 0 do {
-    glObjectLabel(GL_VERTEX_ARRAY, result.handle, i32(len(label)), cstring(label))
+    glObjectLabel(GL_VERTEX_ARRAY, result.handle, i32(len(label)), cstr(label))
   }
   result
 }
 
-proc attributeLocation(program: Program, name: str) : Location = [index = glGetAttribLocation(program.handle, cstring(name))]
+proc attributeLocation(program: Program, name: str) : Location = [index = glGetAttribLocation(program.handle, cstr(name))]
 
 type OffsetAlign = struct {
   offset: i32

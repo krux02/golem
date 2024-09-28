@@ -158,7 +158,7 @@ through mutablility propagation to ~arr~ and the error message would actually
 just say that ~arr~ needs to be mutable.
 ** rename typechecker to semchecker
 ** make char literals a variant ot string literals
-** xmake addr a generic builtin. suggestions like "expected type 'array(16, f32) | array(1, cstring)' but got type 'str'" are not helpful
+** xmake addr a generic builtin. suggestions like "expected type 'array(16, f32) | array(1, cstr)' but got type 'str'" are not helpful
 ** distinguish between sym usage and sym definition in typed ast
 
 this should be implemented in LookUpLetSymRecursive
