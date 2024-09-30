@@ -294,7 +294,7 @@ var builtinCPrintf *Signature
 var builtinAddr *Signature
 var builtinDeref *Signature
 
-func (typ *BuiltinType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
+func (typ *BuiltinType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
 	if typ == TypeNoReturn {
 		ReportErrorf(sc, context, "a default value of no retrun does not exist")
 		return newErrorNode(context)
@@ -309,15 +309,15 @@ func (typ *BuiltinType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
 	}
 }
 
-func (typ *BuiltinIntType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
+func (typ *BuiltinIntType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
 	return &TcIntLit{Type: typ, Value: big.NewInt(0)} // TODO no Source set
 }
 
-func (typ *BuiltinFloatType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
+func (typ *BuiltinFloatType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
 	return &TcFloatLit{Type: typ, Value: big.NewFloat(0)}
 }
 
-func (typ *BuiltinStringType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
+func (typ *BuiltinStringType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
 	if typ == TypeChar {
 		return &TcStrLit{Type: typ, Value: "\000"}
 	}
@@ -325,55 +325,55 @@ func (typ *BuiltinStringType) DefaultValue(sc *SemChecker, context AstNode) TcEx
 
 }
 
-func (typ *ErrorType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
+func (typ *ErrorType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
 	return nil
 }
 
-func (typ *ArrayType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
+func (typ *ArrayType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
 	return &TcArrayLit{ElemType: typ.Elem}
 }
 
-func (typ *StructType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
+func (typ *StructType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
 	return &TcStructLit{Type: typ}
 }
 
-func (typ *EnumType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
+func (typ *EnumType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
 	return typ.Impl.Values[0]
 }
 
-func (typ *PtrType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
+func (typ *PtrType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
 	return &NilLit{Type: typ}
 }
 
-func (typ *EnumSetType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
+func (typ *EnumSetType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
 	return &TcEnumSetLit{ElemType: typ.Elem}
 }
 
-func (typ *IntLitType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
+func (typ *IntLitType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
 	return &TcIntLit{Type: typ, Value: typ.Value}
 }
 
-func (typ *FloatLitType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
+func (typ *FloatLitType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
 	return &TcFloatLit{Type: typ, Value: typ.Value}
 }
 
-func (typ *StringLitType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
+func (typ *StringLitType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
 	return &TcStrLit{Type: typ, Value: typ.Value}
 }
 
-func (typ *UntypedType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
+func (typ *UntypedType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
 	return &TcCodeBlock{}
 }
 
-func (typ *TypeType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
+func (typ *TypeType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
 	panic("no default value for types")
 }
 
-func (typ *GenericTypeSymbol) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
+func (typ *GenericTypeSymbol) DefaultValue(sc *SemChecker, context Expr) TcExpr {
 	panic("not implemented")
 }
 
-func (typ *OpenGenericType) DefaultValue(sc *SemChecker, context AstNode) TcExpr {
+func (typ *OpenGenericType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
 	panic("not implemented")
 }
 

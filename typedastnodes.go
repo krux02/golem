@@ -11,7 +11,7 @@ import (
 type Type interface {
 	PrettyPrint(*AstPrettyPrinter)
 	ManglePrint(*strings.Builder) // print for name magling
-	DefaultValue(sc *SemChecker, context AstNode) TcExpr
+	DefaultValue(sc *SemChecker, context Expr) TcExpr
 }
 
 type TypeConstraint interface {
@@ -35,7 +35,7 @@ type UniqueTypeConstraint struct {
 }
 
 type TcExpr interface {
-	AstNode
+	Expr
 	GetType() Type
 }
 
@@ -311,6 +311,7 @@ type TcPackageDef struct {
 	TraitDefs      []*TcTraitDef
 	VarDefs        []*TcVariableDefStmt
 	ProcDefs       []*TcProcDef
+	TemplateDefs   []*TcTemplateDef
 	ExportScope    *ScopeImpl
 }
 

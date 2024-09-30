@@ -107,7 +107,7 @@ func (builder *AstPrettyPrinter) DebugNodeFormat(visitedNodes map[uintptr]int, n
 	}
 }
 
-func DebugAstFormat(node AstNode) string {
+func DebugAstFormat(node Expr) string {
 	printer := &AstPrettyPrinter{}
 	printer.DebugNodeFormat(map[uintptr]int{}, reflect.ValueOf(node))
 	return printer.String()

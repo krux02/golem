@@ -174,7 +174,6 @@ proc std140AlignedWrite[T: AnyNumber](dst: pointer, offset: i32, value: T): Offs
   write(dst, result.offset, value)
 }
 
-
 proc std140AlignedWrite(dst: pointer, offset: i32, uniformObject: UniformBufType_436214163): OffsetAlign = {
   var result: OffsetAlign
 

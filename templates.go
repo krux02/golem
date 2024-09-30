@@ -1,8 +1,8 @@
 package main
 
 type TemplateSubstitution struct {
-	Sym   *TcSymbol
-	Value Expr
+	SymOrIdent Expr
+	Value      Expr
 }
 
 func MapSliceForSyms(items []Expr, substitutions []TemplateSubstitution) (result []Expr) {
@@ -143,8 +143,19 @@ func (arg *TcSymbol) RecSubSyms(substitutions []TemplateSubstitution) Expr {
 	// this is the only typed ast node that is allowed to be substituted.
 	// Substitutions within a typed ast is not allowed.
 	for _, it := range substitutions {
-		if it.Sym == arg {
+		if it.SymOrIdent == arg {
 			return it.Value
+		}
+	}
+	return arg
+}
+
+func (arg *Ident) RecSubSyms(substitutions []TemplateSubstitution) Expr {
+	for _, it := range substitutions {
+		if ident, isIdent := it.SymOrIdent.(*Ident); isIdent {
+			if ident.Source == arg.Source {
+				return it.Value
+			}
 		}
 	}
 	return arg
@@ -152,7 +163,6 @@ func (arg *TcSymbol) RecSubSyms(substitutions []TemplateSubstitution) Expr {
 
 func (arg *PrefixDocComment) RecSubSyms(substitutions []TemplateSubstitution) Expr        { return arg }
 func (arg *NamedDocSection) RecSubSyms(substitutions []TemplateSubstitution) Expr         { return arg }
-func (arg *Ident) RecSubSyms(substitutions []TemplateSubstitution) Expr                   { return arg }
 func (arg *IntLit) RecSubSyms(substitutions []TemplateSubstitution) Expr                  { return arg }
 func (arg *FloatLit) RecSubSyms(substitutions []TemplateSubstitution) Expr                { return arg }
 func (arg *StrLit) RecSubSyms(substitutions []TemplateSubstitution) Expr                  { return arg }

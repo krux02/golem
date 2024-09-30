@@ -9,7 +9,7 @@ import (
 )
 
 type CompileError struct {
-	node AstNode
+	node Expr
 	msg  string
 }
 
@@ -34,7 +34,7 @@ type ScopeImpl struct {
 	// probably be redued to be just the proc signature.
 	CurrentProgram  *ProgramContext
 	CurrentPackage  *TcPackageDef
-	CurrentProc     *TcProcDef
+	CurrentProc     *TcProcDef // used for `return` statements
 	CurrentTrait    *TcTraitDef
 	Variables       map[string]*TcSymbol
 	Signatures      map[string][]*Signature
@@ -58,7 +58,7 @@ func NewSubScope(scope Scope) Scope {
 	}
 }
 
-func RegisterType(sc *SemChecker, scope Scope, name string, typ Type, context AstNode) {
+func RegisterType(sc *SemChecker, scope Scope, name string, typ Type, context Expr) {
 	if _, ok := scope.Types[name]; ok {
 		ReportErrorf(sc, context, "double definition of type '%s'", name)
 		// TODO previously defined at ...
@@ -67,7 +67,7 @@ func RegisterType(sc *SemChecker, scope Scope, name string, typ Type, context As
 	scope.Types[name] = typ
 }
 
-func RegisterTrait(sc *SemChecker, scope Scope, trait *TcTraitDef, context AstNode) TypeConstraint {
+func RegisterTrait(sc *SemChecker, scope Scope, trait *TcTraitDef, context Expr) TypeConstraint {
 	name := trait.Name
 	if oldTrait, ok := scope.TypeConstraints[name]; ok {
 		ReportErrorf(sc, context, "double definition of trait '%s'", trait.Name)
@@ -79,7 +79,7 @@ func RegisterTrait(sc *SemChecker, scope Scope, trait *TcTraitDef, context AstNo
 	return constraint
 }
 
-func RegisterProc(sc *SemChecker, scope Scope, proc *Signature, context AstNode) {
+func RegisterProc(sc *SemChecker, scope Scope, proc *Signature, context Expr) {
 	name := proc.Name
 	// TODO check for name collisions with the same signature
 	scope.Signatures[name] = append(scope.Signatures[name], proc)
@@ -400,7 +400,7 @@ func SemCheckTraitDef(sc *SemChecker, scope Scope, def *TraitDef) *TcTraitDef {
 		// TODO, support setting the Constraint here
 		sym := &GenericTypeSymbol{Source: typ.Source, Name: typ.Source, Constraint: trait}
 		result.DependentTypes = append(result.DependentTypes, sym)
-		RegisterType(sc, traitScope, sym.Name, sym, typ)
+		RegisterType(sc, traitScope, sym.Name, sym, sym)
 	}
 
 	for _, procDef := range signatures {
@@ -411,163 +411,10 @@ func SemCheckTraitDef(sc *SemChecker, scope Scope, def *TraitDef) *TcTraitDef {
 	return result
 }
 
-func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result *TcProcDef) {
-	if def.Kind != TkProc {
-		ReportErrorf(sc, def, "%s kind not implemented in the compiler", TokenKindNames[def.Kind])
-	}
-
-	var body Expr
-	var expr = def.Expr
-
-	// validate syntax
-
-	if lhs, rhs, isAssign := MatchAssign(expr); isAssign {
-		body = rhs
-		expr = lhs
-	}
-
-	var resultType Expr
-	if lhs, rhs, isColonExpr := MatchColonExpr(expr); isColonExpr {
-		resultType = rhs
-		expr = lhs
-	}
-
-	var argsRaw []Expr
-	if call, isCall := expr.(*Call); isCall {
-		argsRaw = call.Args
-		expr = call.Callee
-	} else {
-		// TODO, test this
-		ReportErrorf(sc, expr, "proc def requires an argument list")
-	}
-
-	type GenericArgument struct {
-		Source    string
-		Name      *Ident
-		TraitName *Ident
-	}
-
-	type ProcArgument struct {
-		Source  string
-		Name    *Ident
-		Mutable bool
-		Type    Expr
-	}
-
-	var genericArgs []GenericArgument
-	if bracketExpr, isBracketExpr := expr.(*BracketExpr); isBracketExpr {
-		expr = bracketExpr.Callee
-		genericArgs = make([]GenericArgument, 0, len(bracketExpr.Args))
-		// TODO do something with args
-		for _, arg := range bracketExpr.Args {
-			lhs, rhs, isColonExpr := MatchColonExpr(arg)
-			if !isColonExpr {
-				// TODO test error message
-				ReportErrorf(sc, arg, "generic argument must be a colon expr")
-				continue
-			}
-			name, isIdent := lhs.(*Ident)
-			if !isIdent {
-				// TODO test error message
-				ReportErrorf(sc, lhs, "generic argument name must be an Identifire, but it is %T", lhs)
-				continue
-			}
-			traitName, isIdent := rhs.(*Ident)
-			if !isIdent {
-				// TODO firstToken is not the right code location
-				ReportErrorf(sc, rhs, "generic argument constraint must be an Identifire, but it is %T", rhs)
-				continue
-			}
-
-			genericArg := GenericArgument{Source: arg.GetSource(), Name: name, TraitName: traitName}
-			genericArgs = append(genericArgs, genericArg)
-		}
-	}
-
-	var name *Ident
-	if ident, isIdent := expr.(*Ident); isIdent {
-		name = ident
-	} else {
-		// TODO firstToken is not the right code location
-		ReportErrorf(sc, expr, "proc name must be an identifier, but it is %T", expr)
-	}
-
-	var args []ProcArgument
-	var newArgs []ProcArgument
-	for _, arg := range argsRaw {
-
-		var newArg Expr
-		var typeExpr Expr
-		var gotTypeExpr bool = false
-
-		newArg, typeExpr, gotTypeExpr = MatchColonExpr(arg)
-		if gotTypeExpr {
-			arg = newArg
-		}
-
-		var mutable = false
-		if varExpr, ok := arg.(*VarExpr); ok {
-			mutable = true
-			arg = varExpr.Expr
-		}
-		if ident, isIdent := arg.(*Ident); isIdent {
-			newArgs = append(newArgs, ProcArgument{Source: ident.Source, Name: ident, Mutable: mutable})
-		} else {
-			ReportErrorf(sc, arg, "expected identifier but got %T (%s)", arg, AstFormat(arg))
-			// TODO decide if this should be an error node or something in the arguments list
-			newArgs = append(newArgs, ProcArgument{Source: arg.GetSource(), Name: &Ident{Source: "_"}})
-		}
-
-		if gotTypeExpr {
-			for i := range newArgs {
-				newArgs[i].Type = typeExpr
-			}
-			args = append(args, newArgs...)
-
-			newArgs = newArgs[:0]
-		}
-	}
-	if len(newArgs) > 0 {
-		// TODO test this error
-		ReportErrorf(sc, newArgs[0].Name, "arguments have no type: %+v", newArgs)
-	}
-
-	ValidNameCheck(sc, name, "proc")
-
-	// apply doc section
-	if def.DocComment != nil {
-		name.Comment = append(name.Comment, def.DocComment.BaseDoc...)
-
-	DOCSECTIONS1:
-		for _, it := range def.DocComment.NamedDocSections {
-			key := it.Name
-			value := it.Lines
-
-			for i := range args {
-				if args[i].Name.Source == key {
-					commentRef := &args[i].Name.Comment
-					*commentRef = append(*commentRef, value...)
-					continue DOCSECTIONS1
-				}
-			}
-			ReportInvalidDocCommentKey(sc, it)
-		}
-	}
-	procScope := NewSubScope(parentScope)
-	// from here on old school type checking
-
-	result = &TcProcDef{}
-	procScope.CurrentProc = result
-
-	if def.Annotations != nil {
-		if def.Annotations.Value == "importc" {
-			result.Importc = true
-		} else {
-			ReportInvalidAnnotations(sc, def.Annotations)
-		}
-	}
-
+func SemCheckSignature(sc *SemChecker, innerScope Scope, genericArgs []GenericArgument, args []ProcArgument) *Signature {
 	var genericParams []*GenericTypeSymbol
+
+	parentScope := innerScope.Parent
 	if parentScope.CurrentTrait != nil {
 		genericParams = append(genericParams, parentScope.CurrentTrait.DependentTypes...)
 	}
@@ -582,12 +429,12 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result *T
 		genTypeSym := &GenericTypeSymbol{Source: name.Source, Name: name.Source, Constraint: constraint}
 		genericParams = append(genericParams, genTypeSym)
 		// make the generic type symbol available to look up in its body
-		RegisterType(sc, procScope, name.Source, genTypeSym, def)
+		RegisterType(sc, innerScope, name.Source, genTypeSym, name)
 
 		switch constraint := constraint.(type) {
 		case *TypeTrait:
 			for _, sig := range constraint.Impl.Signatures {
-				RegisterProc(sc, procScope, sig, genericArg.TraitName)
+				RegisterProc(sc, innerScope, sig, genericArg.TraitName)
 			}
 		default:
 			ReportWarningf(sc, genericArg.TraitName, "currently only traits are supported in the compiler as type constraints")
@@ -601,7 +448,7 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result *T
 			symKind = SkVarProcArg
 		}
 
-		paramType := LookUpType(sc, procScope, arg.Type)
+		paramType := LookUpType(sc, innerScope, arg.Type)
 
 		typ := maybeWrapWithOpenGenericType(
 			paramType,
@@ -613,7 +460,7 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result *T
 		// might be a better solution.
 		if arg.Name.Source != "_" {
 			ValidNameCheck(sc, arg.Name, "proc arg")
-			tcArg = procScope.NewSymbol(sc, arg.Name, symKind, typ)
+			tcArg = innerScope.NewSymbol(sc, arg.Name, symKind, typ)
 		} else {
 			// parameters with the name "_" are explicity not put in the scope.
 			tcArg = &TcSymbol{
@@ -628,18 +475,65 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result *T
 
 	// makeGenericSignature(def.Name.Source, genericParams, params, resultType, 0)
 	signature := &Signature{
-		Name:          name.Source,
 		GenericParams: genericParams,
 		Params:        params,
-		Impl:          result,
 	}
-	result.Signature = signature
+	return signature
+}
+
+func SemCheckTemplateDef(sc *SemChecker, parentScope Scope, def *ProcDef) (templateDef *TcTemplateDef) {
+	innerScope := NewSubScope(parentScope)
+	name, body, resultType, genericArgs, args := MustMatchProcDef(sc, def)
+
+	LookUpType(sc, parentScope, resultType)
+	if def.Annotations != nil {
+		ReportInvalidAnnotations(sc, def.Annotations)
+	}
+
+	signature := SemCheckSignature(sc, innerScope, genericArgs, args)
+	signature.Name = name.Source
+
+	N := len(signature.Params)
+	subs := make([]TemplateSubstitution, N)
+	for i, it := range signature.Params {
+		subs[i] = TemplateSubstitution{&Ident{Source: it.Source}, it}
+	}
+	templateDef = &TcTemplateDef{
+		// TODO set Source
+		Signature: signature,
+		Body:      body.RecSubSyms(subs),
+	}
+	templateDef.Signature, signature.Impl = signature, templateDef
+	signature.Impl = templateDef
+	// TODO check for signature collision
+	//
+	return templateDef
+}
+
+func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result *TcProcDef) {
+	innerScope := NewSubScope(parentScope)
+	name, body, resultType, genericArgs, args := MustMatchProcDef(sc, def)
+
+	result = &TcProcDef{}
+	innerScope.CurrentProc = result
+
+	if def.Annotations != nil {
+		if def.Annotations.Value == "importc" {
+			result.Importc = true
+		} else {
+			ReportInvalidAnnotations(sc, def.Annotations)
+		}
+	}
+
+	signature := SemCheckSignature(sc, innerScope, genericArgs, args)
+	signature.Name = name.Source
+	result.Signature, signature.Impl = signature, result
 
 	if resultType == nil {
 		ReportErrorf(sc, def, "proc def needs result type specified")
 		signature.ResultType = TypeError
 	} else {
-		signature.ResultType = LookUpType(sc, procScope, resultType)
+		signature.ResultType = LookUpType(sc, innerScope, resultType)
 	}
 
 	if result.Importc || name.Source == "main" {
@@ -670,14 +564,14 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result *T
 		if body == nil {
 			ReportErrorf(sc, def, "proc def misses a body")
 		} else {
-			result.Body = SemCheckExpr(sc, procScope, body, UniqueTypeConstraint{signature.ResultType})
+			result.Body = SemCheckExpr(sc, innerScope, body, UniqueTypeConstraint{signature.ResultType})
 		}
 	}
 
 	return result
 }
 
-func ReportMessagef(sc *SemChecker, node AstNode, kind string, msg string, args ...interface{}) {
+func ReportMessagef(sc *SemChecker, node Expr, kind string, msg string, args ...interface{}) {
 	newMsg := fmt.Sprintf(msg, args...)
 	sc.errors = append(sc.errors, CompileError{node: node, msg: newMsg})
 	if !sc.silentErrors {
@@ -690,15 +584,15 @@ func ReportMessagef(sc *SemChecker, node AstNode, kind string, msg string, args 
 	}
 }
 
-func ReportErrorf(sc *SemChecker, node AstNode, msg string, args ...interface{}) {
+func ReportErrorf(sc *SemChecker, node Expr, msg string, args ...interface{}) {
 	ReportMessagef(sc, node, "Error", msg, args...)
 }
 
-func ReportWarningf(sc *SemChecker, node AstNode, msg string, args ...interface{}) {
+func ReportWarningf(sc *SemChecker, node Expr, msg string, args ...interface{}) {
 	ReportMessagef(sc, node, "Warning", msg, args...)
 }
 
-func ReportUnexpectedType(sc *SemChecker, context AstNode, expected TypeConstraint, gotten Type) {
+func ReportUnexpectedType(sc *SemChecker, context Expr, expected TypeConstraint, gotten Type) {
 	ReportErrorf(sc, context, "expected type '%s' but got type '%s'", AstFormat(expected), AstFormat(gotten))
 }
 
@@ -710,7 +604,7 @@ func ReportInvalidAnnotations(sc *SemChecker, lit *StrLit) {
 	ReportErrorf(sc, lit, "invalid annotations string: %s", lit.Value)
 }
 
-func ReportInvalidAstNode(sc *SemChecker, node AstNode, expected string) {
+func ReportInvalidAstNode(sc *SemChecker, node Expr, expected string) {
 	ReportErrorf(sc, node, "invalid ast node. Expected %s, but got %T", expected, node)
 }
 
@@ -722,7 +616,7 @@ func ReportMustBeMutable(sc *SemChecker, doc Expr) {
 	ReportErrorf(sc, doc, "expression must be mutable")
 }
 
-func ExpectType(sc *SemChecker, node AstNode, gotten Type, expected TypeConstraint) Type {
+func ExpectType(sc *SemChecker, node Expr, gotten Type, expected TypeConstraint) Type {
 	// TODO this doesn't work for partial types (e.g. array[<unspecified>])
 	if gotten == TypeError {
 		return TypeError
@@ -1182,7 +1076,7 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 				if tmp, isWrappedUntyped := value.(*TcWrappedUntypedAst); isWrappedUntyped {
 					value = tmp.Expr
 				}
-				substitutions = append(substitutions, TemplateSubstitution{Sym: sigParams[i], Value: value})
+				substitutions = append(substitutions, TemplateSubstitution{SymOrIdent: sigParams[i], Value: value})
 			}
 			templateBodyScope := NewSubScope(scope)
 			substitution := SemCheckExpr(sc,
@@ -1944,12 +1838,21 @@ func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *Packag
 				panic("internal error")
 			}
 		case *ProcDef:
-			procDef := SemCheckProcDef(sc, pkgScope, stmt)
-			result.ProcDefs = append(result.ProcDefs, procDef)
-			// TODO, verify compatible signature for main
-			if mainPackage && procDef.Signature.Name == "main" {
-				currentProgram.Main = procDef
+			switch stmt.Kind {
+			case TkProc:
+				def := SemCheckProcDef(sc, pkgScope, stmt)
+				result.ProcDefs = append(result.ProcDefs, def)
+				if mainPackage && def.Signature.Name == "main" {
+					currentProgram.Main = def
+				}
+			case TkTemplate:
+				def := SemCheckTemplateDef(sc, pkgScope, stmt)
+				result.TemplateDefs = append(result.TemplateDefs, def)
+			default:
+				ReportErrorf(sc, stmt, "%s kind not implemented in the compiler", TokenKindNames[stmt.Kind])
 			}
+
+			// TODO, verify compatible signature for main
 		case *VariableDefStmt:
 			varDef := SemCheckVariableDefStmt(sc, pkgScope, stmt)
 			result.VarDefs = append(result.VarDefs, varDef)

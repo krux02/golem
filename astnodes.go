@@ -6,14 +6,12 @@ import (
 
 // an overview all all nods that are allowed in an untyped AST emitted directly from the parser
 
-type AstNode interface {
+type Expr interface {
 	PrettyPrint(*AstPrettyPrinter)
 	// Recursive substitute symbols
 	RecSubSyms(substitutions []TemplateSubstitution) Expr
 	GetSource() string
 }
-
-type Expr = AstNode
 
 // all lines from a documentation comment
 type DocLines []string
