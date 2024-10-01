@@ -1,4 +1,4 @@
-# NumErrors:      24
+# NumErrors:      25
 
 proc foo(arg: i32): i64 = {
   printf("foo1: %d\n", i32(arg))
@@ -20,6 +20,9 @@ proc foo__bar(arg: i64): i64 = 0 # Error: proc identifier may not use __ (double
 proc bar1(_arg: i64): i64 = 0     # Error: proc arg identifier may not start or end with _ (underscore), reserved for internal usage
 proc bar2(arg_: i64): i64 = 0     # Error: proc arg identifier may not start or end with _ (underscore), reserved for internal usage
 proc bar3(arg__0: i64): i64 = 0   # Error: proc arg identifier may not use __ (double underscore), reserved for internal usage
+
+# `untyped` shall not be allowed outside the macro/template context.
+proc bar3(arg0: untyped): i64 = 0 # Error: Type not found: untyped
 
 proc main():i64 = {
   let tmp0 = 321 # Error: int literal needs to have a unique type constraint, but got 'no constraint'

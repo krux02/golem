@@ -112,12 +112,6 @@ func (arg *BreakStmt) RecSubSyms(substitutions []TemplateSubstitution) Expr {
 func (arg *ContinueStmt) RecSubSyms(substitutions []TemplateSubstitution) Expr {
 	return arg
 }
-func (arg *TypeContext) RecSubSyms(substitutions []TemplateSubstitution) Expr {
-	return &TypeContext{
-		Source: arg.Source,
-		Expr:   arg.Expr.RecSubSyms(substitutions),
-	}
-}
 func (arg *NilLit) RecSubSyms(substitutions []TemplateSubstitution) Expr {
 	return arg
 }
@@ -194,6 +188,7 @@ func (arg *TcStructLit) RecSubSyms(substitutions []TemplateSubstitution) Expr   
 func (arg *TcPackageDef) RecSubSyms(substitutions []TemplateSubstitution) Expr            { return arg }
 func (arg *TcStructDef) RecSubSyms(substitutions []TemplateSubstitution) Expr             { return arg }
 func (arg *TcEnumDef) RecSubSyms(substitutions []TemplateSubstitution) Expr               { return arg }
+func (arg *TcTypeAlias) RecSubSyms(substitutions []TemplateSubstitution) Expr             { return arg }
 func (arg *GenericTypeSymbol) RecSubSyms(substitutions []TemplateSubstitution) Expr       { return arg }
 func (arg *TcBuiltinMacroDef) RecSubSyms(substitutions []TemplateSubstitution) Expr       { return arg }
 func (arg *TcErrorProcDef) RecSubSyms(substitutions []TemplateSubstitution) Expr          { return arg }

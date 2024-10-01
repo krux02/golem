@@ -226,28 +226,7 @@ func main() {
 		enums = enums[0:j]
 	}
 
-	typemap := map[string]string{
-		"GLenum":      "u32",
-		"GLboolean":   "bool",
-		"GLbitfield":  "u32",
-		"GLvoid":      "void",
-		"GLubyte":     "u8",
-		"GLchar":      "i8",
-		"GLbyte":      "i8",
-		"GLushort":    "u16",
-		"GLshort":     "i16",
-		"GLuint":      "u32",
-		"GLuint64":    "u64",
-		"GLint64":     "i64",
-		"GLfloat":     "f32",
-		"GLdouble":    "f64",
-		"GLintptr":    "int",
-		"GLsizeiptr":  "int",
-		"GLsizei":     "i32",
-		"GLint":       "i32",
-		"GLsync":      "<not implemented GLsync>",
-		"GLDEBUGPROC": "<not implemented GLDEBUGPROC>",
-	}
+	//typemap := map[string]string{}
 
 	fmt.Println(strings.Join(strings.Split(reg.Comment, "\n"), "\n# "))
 
@@ -256,6 +235,27 @@ addLinkerFlags("-lGL")
 emit(
 \\ #include <GL/gl.h>
 )
+
+type GLenum =     type u32
+type GLboolean =  type bool
+type GLbitfield = type u32
+type GLvoid =     type void
+type GLubyte =    type u8
+type GLchar =     type i8
+type GLbyte =     type i8
+type GLushort =   type u16
+type GLshort =    type i16
+type GLuint =     type u32
+type GLuint64 =   type u64
+type GLint64 =    type i64
+type GLfloat =    type f32
+type GLdouble =   type f64
+type GLintptr =   type int
+type GLsizeiptr = type int
+type GLsizei =    type i32
+type GLint =      type i32
+# type GLsync =     <not implemented GLsync>
+# type DEBUGPROC = <not implemented GLDEBUGPROC>
 `)
 
 	disable := []string{
@@ -274,28 +274,35 @@ emit(
 				if enum.Comment != "" {
 					fmt.Printf("# %s\n", enum.Comment)
 				}
-				if enum.Type == "ull" {
-					// this is just for GL_TIMEOUT_IGNORED
-					// TODO, this literal is currently unsupported
-					fmt.Printf("# const %s:u64 = %s\n", enum.Name, enum.Value)
-				} else {
-					fmt.Printf("const %s:u32 = %s\n", enum.Name, enum.Value)
+
+				var typestr string
+
+				switch enum.Type {
+				case "ull":
+					typestr = "u64"
+				case "u":
+					typestr = "u32"
+				case "":
+					typestr = "GLenum"
+				default:
+					panic(fmt.Errorf("not handled %s", enum.Type))
 				}
+				fmt.Printf("const %s:%s = %s\n", enum.Name, typestr, enum.Value)
 
 			}
 		}
 	}
 
-	for ii, command := range reg.Commands.Command {
+	for _, command := range reg.Commands.Command {
 		if slices.Contains(disable, command.Name) {
 			continue
 		}
 		if _, found := slices.BinarySearch(commands, command.Name); found {
 			fmt.Printf("proc \"importc\" %s(", command.Name)
 			for i, param := range command.Param {
-				if _, found := typemap[param.PType]; !found && param.PType != "" {
-					panic(fmt.Errorf("\n%d:  %s", ii, param.PType))
-				}
+				// if _, found := typemap[param.PType]; !found && param.PType != "" {
+				// 	panic(fmt.Errorf("\n%d:  %s", ii, param.PType))
+				// }
 
 				if i != 0 {
 					fmt.Printf(", ")
@@ -312,7 +319,8 @@ emit(
 					fmt.Printf("pointer")
 				} else if param.Len != "" || strings.ContainsRune(param.Data, '*') {
 					numDeref := strings.Count(param.Data, "*")
-					typ := typemap[param.PType]
+					// typ := typemap[param.PType]
+					typ := param.PType
 					if param.PType == "GLchar" && numDeref > 0 {
 						numDeref -= 1
 						typ = "cstr"
@@ -325,14 +333,16 @@ emit(
 						fmt.Print(")")
 					}
 				} else {
-					fmt.Printf("%s", typemap[param.PType])
+					//fmt.Printf("%s", typemap[param.PType])
+					fmt.Printf("%s", param.PType)
 				}
 			}
 			if command.Type != "" {
-				if _, found := typemap[command.Type]; !found {
-					panic(fmt.Errorf("\n%d:  %s", ii, command.Type))
-				}
-				fmt.Printf("): %s\n", typemap[command.Type])
+				// if _, found := typemap[command.Type]; !found {
+				// 	panic(fmt.Errorf("\n%d:  %s", ii, command.Type))
+				// }
+				// fmt.Printf("): %s\n", typemap[command.Type])
+				fmt.Printf("): %s\n", command.Type)
 			} else if command.Name[0:5] == "glMap" {
 				fmt.Printf("): pointer\n")
 			} else {

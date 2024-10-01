@@ -326,11 +326,6 @@ func (varExpr *VarExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteNode(varExpr.Expr)
 }
 
-func (expr *TypeContext) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("type ")
-	builder.WriteNode(expr.Expr)
-}
-
 func (stmt *VariableDefStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(stmt.Prefix.Source)
 	builder.WriteString(" ")
@@ -439,7 +434,7 @@ func (typ *BuiltinStringType) PrettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (typ *UntypedType) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("untyped")
+	builder.WriteString(typ.Name)
 }
 
 func (typ *UnspecifiedType) PrettyPrint(builder *AstPrettyPrinter) {
@@ -521,6 +516,13 @@ func (structDef *TcStructDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.Indentation--
 	builder.NewlineAndIndent()
 	builder.WriteString("}")
+}
+
+func (def *TcTypeAlias) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("type ")
+	builder.WriteString(def.Name)
+	builder.WriteString(" = type ")
+	builder.WriteNode(def.Type)
 }
 
 func (typ *EnumType) PrettyPrint(builder *AstPrettyPrinter) {
@@ -775,9 +777,13 @@ func (typ *OpenGenericType) PrettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (typ *PtrType) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("ptr(")
-	typ.Target.PrettyPrint(builder)
-	builder.WriteString(")")
+	if typ.Target == TypeVoid {
+		builder.WriteString("pointer")
+	} else {
+		builder.WriteString("ptr(")
+		typ.Target.PrettyPrint(builder)
+		builder.WriteString(")")
+	}
 }
 
 func (lit *IntLitType) PrettyPrint(builder *AstPrettyPrinter) {

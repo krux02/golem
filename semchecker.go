@@ -263,11 +263,6 @@ func SemCheckTypeDef(sc *SemChecker, scope Scope, def *TypeDef) TcExpr {
 		ReportErrorf(sc, rhs, "expect prefix call")
 		return &TcErrorNode{Source: def.Source, SourceNode: def}
 	}
-	block, isBlock := body.(*CodeBlock)
-	if !isBlock {
-		ReportErrorf(sc, body, "expect code block")
-		return &TcErrorNode{Source: def.Source, SourceNode: def}
-	}
 
 	ValidNameCheck(sc, name, "type")
 
@@ -282,6 +277,12 @@ func SemCheckTypeDef(sc *SemChecker, scope Scope, def *TypeDef) TcExpr {
 
 	switch callee.Source {
 	case "struct":
+		block, isBlock := body.(*CodeBlock)
+		if !isBlock {
+			ReportErrorf(sc, body, "expect code block")
+			return &TcErrorNode{Source: def.Source, SourceNode: def}
+		}
+
 		result := &TcStructDef{
 			Source:  def.Source,
 			Name:    name.Source,
@@ -309,6 +310,12 @@ func SemCheckTypeDef(sc *SemChecker, scope Scope, def *TypeDef) TcExpr {
 		RegisterType(sc, scope, structType.Impl.Name, structType, name)
 		return result
 	case "enum":
+		block, isBlock := body.(*CodeBlock)
+		if !isBlock {
+			ReportErrorf(sc, body, "expect code block")
+			return &TcErrorNode{Source: def.Source, SourceNode: def}
+		}
+
 		result := &TcEnumDef{
 			Source:  def.Source,
 			Name:    name.Source,
@@ -338,6 +345,17 @@ func SemCheckTypeDef(sc *SemChecker, scope Scope, def *TypeDef) TcExpr {
 			registerBuiltin(result.Name, fmt.Sprintf("(%s)", result.Name), "", "", []Type{intType}, enumType, 0)
 		}
 		registerBuiltin("contains", "(((", ") & (1 << (", "))) != 0)", []Type{GetEnumSetType(enumType), enumType}, TypeBoolean, 0)
+		return result
+	case "type":
+		// a very primitive type alias implementation
+		typ := LookUpType(sc, scope, body)
+
+		result := &TcTypeAlias{
+			Source: def.Source,
+			Name:   name.Source,
+			Type:   typ,
+		}
+		RegisterType(sc, scope, name.Source, typ, name)
 		return result
 	default:
 		ReportErrorf(sc, callee, "type must be struct or enum")
@@ -490,6 +508,8 @@ func SemCheckTemplateDef(sc *SemChecker, parentScope Scope, def *ProcDef) (templ
 		ReportInvalidAnnotations(sc, def.Annotations)
 	}
 
+	// the type `untyped` is a special builtin type that is not actually a type. It should only be legal to use it in the context of
+	innerScope.Types["untyped"] = TypeUntyped
 	signature := SemCheckSignature(sc, innerScope, genericArgs, args)
 	signature.Name = name.Source
 
@@ -1019,8 +1039,8 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 				panic(
 					fmt.Sprintf(
 						"internal error: generics arguments are expected to instanciated\n%s\n%s\n",
-						DebugAstFormat(sig.Impl),
-						DebugAstFormat(call),
+						AstFormat(sig.Impl),
+						AstFormat(call),
 					),
 				)
 			}
@@ -1318,6 +1338,7 @@ func (sym *TcSymRef) GetType() Type                { return sym.Type }
 func (stmt *TcVariableDefStmt) GetType() Type      { return TypeVoid }
 func (stmt *TcStructDef) GetType() Type            { return TypeVoid }
 func (stmt *TcEnumDef) GetType() Type              { return TypeVoid }
+func (stmt *TcTypeAlias) GetType() Type            { return TypeVoid }
 func (stmt *TcForLoopStmt) GetType() Type          { return TypeVoid }
 func (stmt *TcWhileLoopStmt) GetType() Type        { return TypeVoid }
 func (arg *TcBuiltinProcDef) GetType() Type        { return TypeVoid }
@@ -1504,11 +1525,6 @@ func SemCheckExpr(sc *SemChecker, scope Scope, arg Expr, expected TypeConstraint
 		// ignoring expected type here, because the return as expression
 		// never evaluates to anything
 		return (TcExpr)(SemCheckReturnExpr(sc, scope, arg))
-	case *TypeContext:
-		return (TcExpr)(&TcTypeContext{
-			Source:      arg.Source,
-			WrappedType: LookUpType(sc, scope, arg.Expr),
-		})
 	case *VariableDefStmt:
 		ExpectType(sc, arg, TypeVoid, expected)
 		return (TcExpr)(SemCheckVariableDefStmt(sc, scope, arg))
@@ -1834,8 +1850,12 @@ func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *Packag
 				result.StructDefs = append(result.StructDefs, td)
 			case *TcEnumDef:
 				result.EnumDefs = append(result.EnumDefs, td)
+			case *TcTypeAlias:
+				result.TypeAliases = append(result.TypeAliases, td)
+			case *TcErrorNode:
+				// ignore, error already reported
 			default:
-				panic("internal error")
+				panic(fmt.Errorf("internal error, %T", td))
 			}
 		case *ProcDef:
 			switch stmt.Kind {

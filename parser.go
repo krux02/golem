@@ -60,15 +60,6 @@ func parseInfixOperator(tokenizer *Tokenizer) *Ident {
 	}
 }
 
-func parseTypeContext(tokenizer *Tokenizer) *TypeContext {
-	firstToken := tokenizer.Next()
-	tokenizer.expectKind(firstToken, TkType)
-	result := &TypeContext{
-		Expr: parseExpr(tokenizer, false),
-	}
-	result.Source = joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value)
-	return result
-}
 func parseReturnExpr(tokenizer *Tokenizer) *ReturnExpr {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkReturn)
@@ -616,14 +607,12 @@ func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
 		}
 	case TkOperator:
 		result = (Expr)(parsePrefixCall(tokenizer, true))
-	case TkDiscard, TkStruct, TkUnion, TkEnum:
+	case TkDiscard, TkStruct, TkUnion, TkEnum, TkType:
 		result = (Expr)(parsePrefixCall(tokenizer, false))
 	case TkReturn:
 		result = (Expr)(parseReturnExpr(tokenizer))
 	case TkVar:
 		result = (Expr)(parseVarExpr(tokenizer))
-	case TkType:
-		result = (Expr)(parseTypeContext(tokenizer))
 	case TkNilLit:
 		result = (Expr)(parseNilLit(tokenizer))
 	default:

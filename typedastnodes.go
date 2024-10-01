@@ -69,6 +69,12 @@ type TcStructDef struct {
 	Importc bool
 }
 
+type TcTypeAlias struct {
+	Source string
+	Name   string
+	Type   Type
+}
+
 type TcTraitDef struct {
 	Source         string
 	Name           string
@@ -308,6 +314,7 @@ type TcPackageDef struct {
 	EmitStatements []*TcEmitExpr
 	StructDefs     []*TcStructDef
 	EnumDefs       []*TcEnumDef
+	TypeAliases    []*TcTypeAlias
 	TraitDefs      []*TcTraitDef
 	VarDefs        []*TcVariableDefStmt
 	ProcDefs       []*TcProcDef
@@ -375,6 +382,7 @@ func (arg *TcConvExpr) GetSource() string              { return arg.Source }
 
 func (arg *TcStructDef) GetSource() string         { return arg.Source }
 func (arg *TcEnumDef) GetSource() string           { return arg.Source }
+func (arg *TcTypeAlias) GetSource() string         { return arg.Source }
 func (arg *GenericTypeSymbol) GetSource() string   { return arg.Source }
 func (arg *TcBuiltinMacroDef) GetSource() string   { return "" } // builtins have no source
 func (arg *TcErrorProcDef) GetSource() string      { return "" } // non existing proc def has no source

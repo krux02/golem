@@ -73,11 +73,6 @@ type IfElseExpr struct {
 	Else      Expr
 }
 
-type TypeContext struct {
-	Source string
-	Expr   Expr
-}
-
 type ReturnExpr struct {
 	Source string
 	Value  Expr
@@ -197,7 +192,6 @@ func (arg *ReturnExpr) GetSource() string       { return arg.Source }
 func (arg *VarExpr) GetSource() string          { return arg.Source }
 func (arg *BreakStmt) GetSource() string        { return arg.Source }
 func (arg *ContinueStmt) GetSource() string     { return arg.Source }
-func (arg *TypeContext) GetSource() string      { return arg.Source }
 func (arg *NilLit) GetSource() string           { return arg.Source }
 func (arg *TraitDef) GetSource() string         { return arg.Source }
 func (arg *PackageDef) GetSource() string       { return arg.Source }

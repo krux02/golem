@@ -33,7 +33,7 @@ type BuiltinIntType struct {
 	MaxValue     *big.Int
 }
 
-type UntypedType struct{} // explicitly untyped ast, pass in the ast verbatim, no type checking.
+type UntypedType struct{ Name string } // explicitly untyped ast, pass in the ast verbatim, no type checking.
 
 type ErrorType struct{}
 type UnspecifiedType struct{} // type constraint: no costraints
@@ -268,7 +268,7 @@ var TypeNoReturn = &BuiltinType{"noreturn", "void", '-'}
 var TypeUnspecified = &UnspecifiedType{}
 
 // this type is the internal representaion when an untyped ast should be passed to a macro or template.
-var TypeUntyped Type = &UntypedType{}
+var TypeUntyped Type = &UntypedType{"untyped"}
 
 // this type is the internal representation when the type checker fails to
 // resolve the type. Expressions with this type cannot be further processed in
@@ -413,6 +413,8 @@ func extractGenericTypeSymbols(typ Type) (result []*GenericTypeSymbol) {
 	switch typ := typ.(type) {
 	case *BuiltinType:
 		return nil
+	case *UntypedType:
+		return nil
 	case *EnumType:
 		return nil
 	case *StructType:
@@ -431,7 +433,7 @@ func extractGenericTypeSymbols(typ Type) (result []*GenericTypeSymbol) {
 	case *BuiltinStringType:
 		return nil
 	case *ErrorType:
-		panic("internal error")
+		return nil
 	case *TypeType:
 		return extractGenericTypeSymbols(typ.WrappedType)
 	case *PtrType:
@@ -873,6 +875,14 @@ func BuiltinImportStmt(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	return &TcCodeBlock{Source: call.Source}
 }
 
+func BuiltinTypeExpr(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+	expr := call.Args[0].(*TcWrappedUntypedAst).Expr
+	return (TcExpr)(&TcTypeContext{
+		Source:      call.Source,
+		WrappedType: LookUpType(sc, scope, expr),
+	})
+}
+
 func init() {
 	arrayTypeMap = make(map[ArrayTypeMapKey]*ArrayType)
 	enumSetTypeMap = make(map[*EnumType]*EnumSetType)
@@ -895,6 +905,7 @@ func init() {
 	registerBuiltinMacro("addLinkerFlags", false, []Type{TypeStr}, TypeVoid, BuiltinAddLinkerFlags)
 	registerBuiltinMacro("emit", false, []Type{TypeStr}, TypeVoid, BuiltinEmitStmt)
 	registerBuiltinMacro("import", false, []Type{TypeStr}, TypeVoid, BuiltinImportStmt)
+	registerBuiltinMacro("type", false, []Type{TypeUntyped}, TypeUntyped, BuiltinTypeExpr)
 
 	registerBuiltinMacro("|", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinPipeTransformation)
 	registerBuiltinMacro("static", false, []Type{TypeUntyped}, TypeUntyped, BuiltinStaticExpr)
