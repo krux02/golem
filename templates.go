@@ -116,12 +116,6 @@ func (arg *NilLit) RecSubSyms(substitutions []TemplateSubstitution) Expr {
 	return arg
 }
 
-func (arg *TraitDef) RecSubSyms(substitutions []TemplateSubstitution) Expr {
-	return &TraitDef{
-		Source: arg.Source,
-		Expr:   arg.Expr.RecSubSyms(substitutions),
-	}
-}
 func (arg *PackageDef) RecSubSyms(substitutions []TemplateSubstitution) Expr {
 	panic("package level substitutions not thought through")
 }
@@ -189,6 +183,7 @@ func (arg *TcPackageDef) RecSubSyms(substitutions []TemplateSubstitution) Expr  
 func (arg *TcStructDef) RecSubSyms(substitutions []TemplateSubstitution) Expr             { return arg }
 func (arg *TcEnumDef) RecSubSyms(substitutions []TemplateSubstitution) Expr               { return arg }
 func (arg *TcTypeAlias) RecSubSyms(substitutions []TemplateSubstitution) Expr             { return arg }
+func (arg *TcTraitDef) RecSubSyms(substitutions []TemplateSubstitution) Expr              { return arg }
 func (arg *GenericTypeSymbol) RecSubSyms(substitutions []TemplateSubstitution) Expr       { return arg }
 func (arg *TcBuiltinMacroDef) RecSubSyms(substitutions []TemplateSubstitution) Expr       { return arg }
 func (arg *TcErrorProcDef) RecSubSyms(substitutions []TemplateSubstitution) Expr          { return arg }

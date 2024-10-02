@@ -363,8 +363,8 @@ func SemCheckTypeDef(sc *SemChecker, scope Scope, def *TypeDef) TcExpr {
 	return &TcErrorNode{Source: def.Source, SourceNode: def}
 }
 
-func ParseTraitDef(sc *SemChecker, def *TraitDef) (name *Ident, dependentTypes []*Ident, signatures []*ProcDef) {
-	if lhs, rhs, isAssign := MatchAssign(def.Expr); isAssign {
+func ParseTraitDef(sc *SemChecker, expr Expr) (name *Ident, dependentTypes []*Ident, signatures []*ProcDef) {
+	if lhs, rhs, isAssign := MatchAssign(expr); isAssign {
 		switch x := lhs.(type) {
 		case *Call:
 			switch n := x.Callee.(type) {
@@ -397,36 +397,10 @@ func ParseTraitDef(sc *SemChecker, def *TraitDef) (name *Ident, dependentTypes [
 			ReportErrorf(sc, rhs, "expect code block here")
 		}
 	} else {
-		ReportErrorf(sc, def.Expr, "expect assignment")
+		ReportErrorf(sc, expr, "expect assignment")
 	}
 
 	return
-}
-
-func SemCheckTraitDef(sc *SemChecker, scope Scope, def *TraitDef) *TcTraitDef {
-	name, dependentTypes, signatures := ParseTraitDef(sc, def)
-	ValidNameCheck(sc, name, "trait")
-
-	result := &TcTraitDef{}
-	result.Source = def.Source
-	result.Name = name.Source
-	traitScope := NewSubScope(scope)
-	traitScope.CurrentTrait = result
-	trait := RegisterTrait(sc, scope, result, name)
-
-	for _, typ := range dependentTypes {
-		// TODO, support setting the Constraint here
-		sym := &GenericTypeSymbol{Source: typ.Source, Name: typ.Source, Constraint: trait}
-		result.DependentTypes = append(result.DependentTypes, sym)
-		RegisterType(sc, traitScope, sym.Name, sym, sym)
-	}
-
-	for _, procDef := range signatures {
-		tcProcDef := SemCheckProcDef(sc, traitScope, procDef)
-		result.Signatures = append(result.Signatures, tcProcDef.Signature)
-	}
-
-	return result
 }
 
 func SemCheckSignature(sc *SemChecker, innerScope Scope, genericArgs []GenericArgument, args []ProcArgument) *Signature {
@@ -1339,6 +1313,7 @@ func (stmt *TcVariableDefStmt) GetType() Type      { return TypeVoid }
 func (stmt *TcStructDef) GetType() Type            { return TypeVoid }
 func (stmt *TcEnumDef) GetType() Type              { return TypeVoid }
 func (stmt *TcTypeAlias) GetType() Type            { return TypeVoid }
+func (stmt *TcTraitDef) GetType() Type             { return TypeVoid }
 func (stmt *TcForLoopStmt) GetType() Type          { return TypeVoid }
 func (stmt *TcWhileLoopStmt) GetType() Type        { return TypeVoid }
 func (arg *TcBuiltinProcDef) GetType() Type        { return TypeVoid }
@@ -1878,10 +1853,6 @@ func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *Packag
 			result.VarDefs = append(result.VarDefs, varDef)
 		case *PrefixDocComment:
 			docComment = stmt
-		case *TraitDef:
-			traitDef := SemCheckTraitDef(sc, pkgScope, stmt)
-			// stmt.Name
-			result.TraitDefs = append(result.TraitDefs, traitDef)
 		case *Call:
 			tcExpr := SemCheckCall(sc, pkgScope, stmt, UniqueTypeConstraint{TypeVoid})
 			switch x := tcExpr.(type) {
@@ -1892,6 +1863,8 @@ func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *Packag
 			case *TcEmitExpr:
 				result.EmitStatements = append(result.EmitStatements, x)
 				continue
+			case *TcTraitDef:
+				result.TraitDefs = append(result.TraitDefs, x)
 			}
 			ReportErrorf(sc, stmt, "top level function calls are not allowed: %s", AstFormat(tcExpr))
 		default:

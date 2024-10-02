@@ -164,11 +164,6 @@ type ContinueStmt struct {
 	Source string
 }
 
-type TraitDef struct {
-	Source string
-	Expr   Expr
-}
-
 func (arg *InvalidTokenExpr) GetSource() string { return arg.Source }
 func (arg *ExprList) GetSource() string         { return arg.Source }
 func (arg *ProcDef) GetSource() string          { return arg.Source }
@@ -193,5 +188,4 @@ func (arg *VarExpr) GetSource() string          { return arg.Source }
 func (arg *BreakStmt) GetSource() string        { return arg.Source }
 func (arg *ContinueStmt) GetSource() string     { return arg.Source }
 func (arg *NilLit) GetSource() string           { return arg.Source }
-func (arg *TraitDef) GetSource() string         { return arg.Source }
 func (arg *PackageDef) GetSource() string       { return arg.Source }

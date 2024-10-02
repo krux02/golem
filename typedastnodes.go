@@ -383,6 +383,7 @@ func (arg *TcConvExpr) GetSource() string              { return arg.Source }
 func (arg *TcStructDef) GetSource() string         { return arg.Source }
 func (arg *TcEnumDef) GetSource() string           { return arg.Source }
 func (arg *TcTypeAlias) GetSource() string         { return arg.Source }
+func (arg *TcTraitDef) GetSource() string          { return arg.Source }
 func (arg *GenericTypeSymbol) GetSource() string   { return arg.Source }
 func (arg *TcBuiltinMacroDef) GetSource() string   { return "" } // builtins have no source
 func (arg *TcErrorProcDef) GetSource() string      { return "" } // non existing proc def has no source

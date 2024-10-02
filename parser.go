@@ -403,8 +403,6 @@ func parseStmtOrExpr(tokenizer *Tokenizer) Expr {
 		return (Expr)(parseProcDef(tokenizer))
 	case TkType:
 		return (Expr)(parseTypeDef(tokenizer))
-	case TkTrait:
-		return (Expr)(parseTrait(tokenizer))
 	}
 	return parseExpr(tokenizer, false)
 }
@@ -607,7 +605,7 @@ func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
 		}
 	case TkOperator:
 		result = (Expr)(parsePrefixCall(tokenizer, true))
-	case TkDiscard, TkStruct, TkUnion, TkEnum, TkType:
+	case TkDiscard, TkStruct, TkUnion, TkEnum, TkType, TkTrait:
 		result = (Expr)(parsePrefixCall(tokenizer, false))
 	case TkReturn:
 		result = (Expr)(parseReturnExpr(tokenizer))
@@ -693,15 +691,6 @@ func parseProcDef(tokenizer *Tokenizer) *ProcDef {
 	if tokenizer.lookAheadToken.kind == TkStrLit {
 		result.Annotations = parseStrLit(tokenizer)
 	}
-	result.Expr = parseExpr(tokenizer, false)
-	result.Source = joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value)
-	return result
-}
-
-func parseTrait(tokenizer *Tokenizer) *TraitDef {
-	firstToken := tokenizer.Next()
-	tokenizer.expectKind(firstToken, TkTrait)
-	result := &TraitDef{}
 	result.Expr = parseExpr(tokenizer, false)
 	result.Source = joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value)
 	return result

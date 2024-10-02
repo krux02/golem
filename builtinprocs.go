@@ -813,6 +813,33 @@ func BuiltinStaticExpr(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	return EvalExpr(sc, checkedExpr, scope)
 }
 
+func BuiltinTraitDef(sc *SemChecker, scope Scope, def *TcCall) TcExpr {
+	expr := def.Args[0].(*TcWrappedUntypedAst).Expr
+	name, dependentTypes, signatures := ParseTraitDef(sc, expr)
+	ValidNameCheck(sc, name, "trait")
+
+	result := &TcTraitDef{}
+	result.Source = def.Source
+	result.Name = name.Source
+	traitScope := NewSubScope(scope)
+	traitScope.CurrentTrait = result
+	trait := RegisterTrait(sc, scope, result, name)
+
+	for _, typ := range dependentTypes {
+		// TODO, support setting the Constraint here
+		sym := &GenericTypeSymbol{Source: typ.Source, Name: typ.Source, Constraint: trait}
+		result.DependentTypes = append(result.DependentTypes, sym)
+		RegisterType(sc, traitScope, sym.Name, sym, sym)
+	}
+
+	for _, procDef := range signatures {
+		tcProcDef := SemCheckProcDef(sc, traitScope, procDef)
+		result.Signatures = append(result.Signatures, tcProcDef.Signature)
+	}
+
+	return result
+}
+
 func BuiltinCastExpr(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	arg1 := call.Args[0]
 	arg2 := call.Args[1].(*TcTypeContext)
@@ -909,6 +936,7 @@ func init() {
 
 	registerBuiltinMacro("|", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinPipeTransformation)
 	registerBuiltinMacro("static", false, []Type{TypeUntyped}, TypeUntyped, BuiltinStaticExpr)
+	registerBuiltinMacro("trait", false, []Type{TypeUntyped}, TypeVoid, BuiltinTraitDef)
 
 	{
 		// TODO: has no line information

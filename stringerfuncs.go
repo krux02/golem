@@ -285,11 +285,6 @@ func (typeDef *TypeDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteNode(typeDef.Expr)
 }
 
-func (typeDef *TraitDef) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("trait ")
-	builder.WriteNode(typeDef.Expr)
-}
-
 func (typeDef *TcTraitDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("trait ")
 	builder.WriteString(typeDef.Name)
