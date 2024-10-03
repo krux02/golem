@@ -663,7 +663,7 @@ func errorProcSym(ident *Ident) TcProcSymbol {
 
 type TypeGroupBuilder TypeGroup
 
-func AppendNoDuplicats(types []Type, typ Type) (result []Type) {
+func AppendNoDuplicats[T comparable](types []T, typ T) (result []T) {
 	for _, it := range types {
 		if it == typ {
 			return types
@@ -851,6 +851,15 @@ func ApplyTypeSubstitutions(argTyp Type, substitutions []Substitution) Type {
 
 }
 
+func FindSubstitution(substitutions []Substitution, sym *GenericTypeSymbol) (newTypo Type, ok bool) {
+	for _, sub := range substitutions {
+		if sym == sub.sym {
+			return sub.newType, true
+		}
+	}
+	return nil, false
+}
+
 func SignatureApplyTypeSubstitution(sig *Signature, substitutions []Substitution) *Signature {
 	if len(substitutions) == 0 {
 		return sig
@@ -871,12 +880,30 @@ func SignatureApplyTypeSubstitution(sig *Signature, substitutions []Substitution
 		}
 	}
 
-	result := &Signature{}
-	result.Params = newParams
-	result.ResultType = ApplyTypeSubstitutions(sig.ResultType, substitutions)
-	result.Substitutions = append(sig.Substitutions, substitutions...)
-	result.Varargs = sig.Varargs
-	result.Impl = sig.Impl
+	newGen := make([]*GenericTypeSymbol, 0, len(sig.GenericParams))
+	for _, it := range sig.GenericParams {
+		if newType, foundNewType := FindSubstitution(substitutions, it); foundNewType {
+			if genType, isGenType := newType.(*OpenGenericType); isGenType {
+				for _, openSym := range genType.OpenSymbols {
+					newGen = AppendNoDuplicats(newGen, openSym)
+				}
+			}
+		} else {
+			// generic parameter isn't substituted. keep it unchanged
+			newGen = AppendNoDuplicats(newGen, it)
+		}
+	}
+
+	result := &Signature{
+		Name:          sig.Name,
+		GenericParams: newGen,
+		Params:        newParams,
+		ResultType:    ApplyTypeSubstitutions(sig.ResultType, substitutions),
+		Varargs:       sig.Varargs,
+		Substitutions: append(sig.Substitutions, substitutions...),
+		Impl:          sig.Impl,
+	}
+	fmt.Printf("sig: %s\n", AstFormat(result))
 	return result
 }
 
@@ -915,13 +942,6 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 			if ok, substitutions := ParamSignatureMatch(argType, typ); ok {
 				// instantiate generic
 
-				// if len(substitutions) > 0 {
-				// 	fmt.Println(call.Source)
-				// 	fmt.Printf("sig: %s substitutions:\n", sig.Name)
-				// 	for _, sub := range substitutions {
-				// 		fmt.Printf(" %s -> %s \n", sub.sym.Name, AstFormat(sub.newType))
-				// 	}
-				// }
 				signatures[n] = SignatureApplyTypeSubstitution(sig, substitutions)
 				n++
 				continue
@@ -958,7 +978,6 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 				for _, sig := range signatures {
 					builder.NewlineAndIndent()
 					builder.WriteString("proc ")
-					builder.WriteString(ident.Source)
 					sig.PrettyPrint(builder)
 				}
 			}

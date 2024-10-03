@@ -610,39 +610,39 @@ func (expr *TcStructField) PrettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (signature *Signature) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString(signature.Name)
+	if len(signature.GenericParams) > 0 {
+		builder.WriteString("[")
+		for _, genParam := range signature.GenericParams {
+			builder.WriteNode(genParam)
+		}
+		builder.WriteString("]")
+	}
 	builder.WriteString("(")
-	if len(signature.Params) > 3 {
-		builder.Indentation += 2
+	splitLines := len(signature.Params) > 3
+
+	builder.Indentation += 2
+	if splitLines {
 		builder.NewlineAndIndent()
-		iLast := len(signature.Params) - 1
-		for i, arg := range signature.Params {
-			if len(arg.Source) > 0 {
-				builder.WriteString(arg.Source)
-			} else {
-				builder.WriteString("_")
-			}
-			builder.WriteString(": ")
-			builder.WriteNode(arg.GetType())
-			if i == iLast {
-				builder.Indentation -= 2
-			}
+	}
+	iLast := len(signature.Params) - 1
+	for i, arg := range signature.Params {
+		if len(arg.Source) > 0 {
+			builder.WriteString(arg.Source)
+		} else {
+			builder.WriteString("_")
+		}
+		builder.WriteString(": ")
+		builder.WriteNode(arg.GetType())
+		if i == iLast {
+			builder.Indentation -= 2
+		}
+		builder.WriteString(", ")
+		if splitLines {
 			builder.NewlineAndIndent()
 		}
-
-	} else {
-		for i, arg := range signature.Params {
-			if i != 0 {
-				builder.WriteString("; ")
-			}
-			if len(arg.Source) > 0 {
-				builder.WriteString(arg.Source)
-			} else {
-				builder.WriteString("_")
-			}
-			builder.WriteString(": ")
-			builder.WriteNode(arg.GetType())
-		}
 	}
+
 	builder.WriteString("): ")
 	builder.WriteNode(signature.ResultType)
 }
@@ -652,7 +652,6 @@ func (procDef *TcProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 	if procDef.Importc {
 		builder.WriteString("\"importc\"")
 	}
-	builder.WriteString(procDef.Signature.Name)
 	procDef.Signature.PrettyPrint(builder)
 	if procDef.Body != nil {
 		builder.WriteString(" = ")
@@ -662,19 +661,16 @@ func (procDef *TcProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 
 func (procDef *TcBuiltinProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("proc \"builtin\" ")
-	builder.WriteString(procDef.Signature.Name)
 	procDef.Signature.PrettyPrint(builder)
 }
 
 func (procDef *TcBuiltinGenericProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("proc \"builtin\" ")
-	builder.WriteString(procDef.Signature.Name)
 	procDef.Signature.PrettyPrint(builder)
 }
 
 func (procDef *TcTemplateDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("template ")
-	builder.WriteString(procDef.Signature.Name)
 	procDef.Signature.PrettyPrint(builder)
 	builder.WriteString(" = ")
 	builder.WriteNode(procDef.Body)
@@ -682,7 +678,6 @@ func (procDef *TcTemplateDef) PrettyPrint(builder *AstPrettyPrinter) {
 
 func (procDef *TcBuiltinMacroDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("macro \"builtin\"")
-	builder.WriteString(procDef.Signature.Name)
 	procDef.Signature.PrettyPrint(builder)
 }
 

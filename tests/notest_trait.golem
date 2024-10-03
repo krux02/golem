@@ -11,14 +11,13 @@ trait MyMultiTrait(T,U) = {
   proc bar(_:T, _:U): i32
 }
 
-proc bar[T : MyTrait](a:  T): void = {
+proc bar[M : MyTrait](a: M): void = {
   foo(a, "abc":str)
   foo(a, 234:f32)
   foo(a, 567:f64)
 }
 
 # TODO multitrait isn't even figured out yet
-
 type MyStruct = struct {
   a: i32
   b: str
