@@ -649,42 +649,6 @@ func (structDef *TcStructDef) GetField(name string) (resField *TcStructField, id
 	return &TcStructField{Source: name, Name: name, Type: TypeError}, -1
 }
 
-func SemCheckDotExpr(sc *SemChecker, scope Scope, call *Call, expected TypeConstraint) TcExpr {
-	if !ExpectArgsLen(sc, call, len(call.Args), 2) {
-		return newErrorNode(call)
-	}
-
-	lhs := SemCheckExpr(sc, scope, call.Args[0], TypeUnspecified)
-
-	result := &TcDotExpr{
-		Source: call.Source,
-		Lhs:    lhs,
-	}
-	// fmt.Printf("lhs: %T %+v\n", result.Lhs, result.Lhs)
-	typ := result.Lhs.GetType()
-	switch t := typ.(type) {
-	case *StructType:
-		rhs, isIdent := call.Args[1].(*Ident)
-		if !isIdent {
-			ReportErrorf(sc, call.Args[1], "right of dot operator needs to be an identifier, but it is %T", call.Args[1])
-			return result
-		}
-		var idx int
-		result.Rhs, idx = t.Impl.GetField(rhs.Source)
-		if idx < 0 {
-			ReportErrorf(sc, rhs, "type %s has no field %s", t.Impl.Name, rhs.GetSource())
-			return newErrorNode(call)
-		}
-		ExpectType(sc, rhs, result.Rhs.GetType(), expected)
-		return result
-	case *ErrorType:
-		return newErrorNode(call)
-	default:
-		ReportErrorf(sc, lhs, "dot call is only supported on struct types, but got: %s", AstFormat(typ))
-		return newErrorNode(call)
-	}
-}
-
 func errorProcSym(ident *Ident) TcProcSymbol {
 	procDef := &TcErrorProcDef{}
 	signature := &Signature{Name: ident.Source, ResultType: TypeError, Impl: procDef}
@@ -891,6 +855,7 @@ func SignatureApplyTypeSubstitution(sig *Signature, substitutions []Substitution
 	if len(substitutions) == 0 {
 		return sig
 	}
+
 	newParams := make([]*TcSymbol, len(sig.Params))
 	for j, param := range sig.Params {
 		newType := ApplyTypeSubstitutions(param.Type, substitutions)
@@ -921,18 +886,6 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 		ReportErrorf(sc, call.Callee, "expected identifier but got %T (%s)", call.Callee, AstFormat(call.Callee))
 		return newErrorNode(call.Callee)
 	}
-	// language level reserved calls
-	switch ident.Source {
-	case ".":
-		return SemCheckDotExpr(sc, scope, call, expected)
-	case ":":
-		if !ExpectArgsLen(sc, call, len(call.Args), 2) {
-			return newErrorNode(call)
-		}
-		typ := LookUpType(sc, scope, call.Args[1])
-		typ = ExpectType(sc, call, typ, expected)
-		return SemCheckExpr(sc, scope, call.Args[0], UniqueTypeConstraint{typ})
-	}
 
 	signatures := LookUpProc(scope, ident, len(call.Args), nil)
 
@@ -949,6 +902,7 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 			signatures = nil
 			continue
 		}
+
 		// in place filter procedures for compatilbes
 		n := 0
 		for _, sig := range signatures {
@@ -960,8 +914,17 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 			typ := sig.Params[i].Type
 			if ok, substitutions := ParamSignatureMatch(argType, typ); ok {
 				// instantiate generic
+
+				// if len(substitutions) > 0 {
+				// 	fmt.Println(call.Source)
+				// 	fmt.Printf("sig: %s substitutions:\n", sig.Name)
+				// 	for _, sub := range substitutions {
+				// 		fmt.Printf(" %s -> %s \n", sub.sym.Name, AstFormat(sub.newType))
+				// 	}
+				// }
 				signatures[n] = SignatureApplyTypeSubstitution(sig, substitutions)
 				n++
+				continue
 			}
 		}
 		signatures = signatures[:n]
@@ -1010,6 +973,7 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 
 		for i, arg := range sig.Params {
 			if _, isGeneric := arg.Type.(*OpenGenericType); isGeneric {
+				ReportErrorf(sc, checkedArgs[i], "generics arguments are expected to instanciated %s", AstFormat(checkedArgs[i].GetType()))
 				panic(
 					fmt.Sprintf(
 						"internal error: generics arguments are expected to instanciated\n%s\n%s\n",
@@ -1381,7 +1345,7 @@ func SemCheckIntLit(sc *SemChecker, scope Scope, arg *IntLit, expected TypeConst
 			Value:  arg.Value,
 		}
 	case *IntLitType:
-		if arg.Value != typ.Value {
+		if arg.Value.Cmp(typ.Value) != 0 {
 			ReportUnexpectedType(sc, arg, expected, typ)
 			goto error
 		}
@@ -1865,6 +1829,7 @@ func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *Packag
 				continue
 			case *TcTraitDef:
 				result.TraitDefs = append(result.TraitDefs, x)
+				continue
 			}
 			ReportErrorf(sc, stmt, "top level function calls are not allowed: %s", AstFormat(tcExpr))
 		default:

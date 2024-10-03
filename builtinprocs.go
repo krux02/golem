@@ -766,6 +766,53 @@ func BuiltinPipeTransformation(sc *SemChecker, scope Scope, call *TcCall) TcExpr
 	return SemCheckExpr(sc, scope, result, TypeUnspecified)
 }
 
+func BuiltinDotOperator(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+	if !ExpectArgsLen(sc, call, len(call.Args), 2) {
+		return newErrorNode(call)
+	}
+
+	lhs := SemCheckExpr(sc, scope, call.Args[0].(*TcWrappedUntypedAst).Expr, TypeUnspecified)
+
+	result := &TcDotExpr{
+		Source: call.Source,
+		Lhs:    lhs,
+	}
+	// fmt.Printf("lhs: %T %+v\n", result.Lhs, result.Lhs)
+	typ := result.Lhs.GetType()
+	switch t := typ.(type) {
+	case *StructType:
+		rhs, isIdent := call.Args[1].(*TcWrappedUntypedAst).Expr.(*Ident)
+		if !isIdent {
+			ReportErrorf(sc, call.Args[1], "right of dot operator needs to be an identifier, but it is %T", call.Args[1])
+			return result
+		}
+		var idx int
+		result.Rhs, idx = t.Impl.GetField(rhs.Source)
+		if idx < 0 {
+			ReportErrorf(sc, rhs, "type %s has no field %s", t.Impl.Name, rhs.GetSource())
+			return newErrorNode(call)
+		}
+		// ExpectType(sc, rhs, result.Rhs.GetType(), expected)
+		return result
+	case *ErrorType:
+		return newErrorNode(call)
+	default:
+		ReportErrorf(sc, lhs, "dot call is only supported on struct types, but got: %s", AstFormat(typ))
+		return newErrorNode(call)
+	}
+}
+
+func BuiltinColonExpr(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+	if !ExpectArgsLen(sc, call, len(call.Args), 2) {
+		return newErrorNode(call)
+	}
+	lhs := call.Args[0].(*TcWrappedUntypedAst).Expr
+	rhs := call.Args[1].(*TcWrappedUntypedAst).Expr
+	typ := LookUpType(sc, scope, rhs)
+	// typ = ExpectType(sc, call, typ, expected)
+	return SemCheckExpr(sc, scope, lhs, UniqueTypeConstraint{typ})
+}
+
 func BuiltinEmitStmt(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	if !ExpectArgsLen(sc, call, len(call.Args), 1) {
 		return newErrorNode(call)
@@ -935,6 +982,9 @@ func init() {
 	registerBuiltinMacro("type", false, []Type{TypeUntyped}, TypeUntyped, BuiltinTypeExpr)
 
 	registerBuiltinMacro("|", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinPipeTransformation)
+	registerBuiltinMacro(".", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinDotOperator)
+	registerBuiltinMacro(":", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinColonExpr)
+
 	registerBuiltinMacro("static", false, []Type{TypeUntyped}, TypeUntyped, BuiltinStaticExpr)
 	registerBuiltinMacro("trait", false, []Type{TypeUntyped}, TypeVoid, BuiltinTraitDef)
 
