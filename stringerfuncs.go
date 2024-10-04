@@ -636,8 +636,9 @@ func (signature *Signature) PrettyPrint(builder *AstPrettyPrinter) {
 		builder.WriteNode(arg.GetType())
 		if i == iLast {
 			builder.Indentation -= 2
+		} else {
+			builder.WriteString(", ")
 		}
-		builder.WriteString(", ")
 		if splitLines {
 			builder.NewlineAndIndent()
 		}

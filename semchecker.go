@@ -903,7 +903,7 @@ func SignatureApplyTypeSubstitution(sig *Signature, substitutions []Substitution
 		Substitutions: append(sig.Substitutions, substitutions...),
 		Impl:          sig.Impl,
 	}
-	fmt.Printf("sig: %s\n", AstFormat(result))
+	// fmt.Printf("sig: %s\n", AstFormat(result))
 	return result
 }
 
@@ -990,39 +990,62 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 	case 1:
 		sig := signatures[0]
 
-		for i, arg := range sig.Params {
-			if _, isGeneric := arg.Type.(*OpenGenericType); isGeneric {
-				ReportErrorf(sc, checkedArgs[i], "generics arguments are expected to instanciated %s", AstFormat(checkedArgs[i].GetType()))
-				panic(
-					fmt.Sprintf(
-						"internal error: generics arguments are expected to instanciated\n%s\n%s\n",
-						AstFormat(sig.Impl),
-						AstFormat(call),
-					),
-				)
-			}
+		// some sanity checks. Technically this part is unnecessary if the compiler
+		// has no bugs. And if it has bugs. This test is also incomplete.
+		//
+		// What is done here is to check that there are no Open generic types left anymore in non-generic code.
+		// In the body of a generic function, there could be a better sanity check here.
+		if scope.CurrentProc == nil || len(scope.CurrentProc.Signature.GenericParams) == 0 {
+			for i, arg := range sig.Params {
+				if _, isGeneric := arg.Type.(*OpenGenericType); isGeneric {
 
-			if arg.Kind == SkVarProcArg {
-				RequireMutable(sc, checkedArgs[i])
+					ReportErrorf(sc, checkedArgs[i], "generics arguments are expected to instanciated %s", AstFormat(checkedArgs[i].GetType()))
+					panic(
+						fmt.Sprintf(
+							"internal error: generics arguments are expected to instanciated\n%s\n%s\n",
+							AstFormat(sig.Impl),
+							AstFormat(call),
+						),
+					)
+				}
+
+				if arg.Kind == SkVarProcArg {
+					RequireMutable(sc, checkedArgs[i])
+				}
 			}
-		}
-		if _, isGeneric := sig.ResultType.(*OpenGenericType); isGeneric {
-			panic("internal error: generics are expected to instanciated")
+			if _, isGeneric := sig.ResultType.(*OpenGenericType); isGeneric {
+				panic("internal error: generics are expected to instanciated")
+			}
 		}
 
 		switch impl := sig.Impl.(type) {
-		case *TcBuiltinProcDef, *TcProcDef:
+		case *TcBuiltinProcDef:
 			result.Sym = TcProcSymbol{Source: ident.Source, Signature: sig}
 			result.Args = checkedArgs
 			ExpectType(sc, call, sig.ResultType, expected)
+		case *TcProcDef:
+			result.Sym = TcProcSymbol{Source: ident.Source, Signature: sig}
+			result.Args = checkedArgs
+			ExpectType(sc, call, sig.ResultType, expected)
+
+			if len(sig.GenericParams) == 0 && len(impl.Signature.GenericParams) > 0 {
+				fmt.Println(AstFormat(sig))
+				fmt.Println(AstFormat(impl.GetSignature()))
+				ReportErrorf(sc, ident, "instanciating generic functions is not yet implemented")
+				// just as a reminder to implement this.
+				// `sig` is the concrete signature of this call. All symbols resolved.
+				// `impl.Signature` is the generic signature from the definition with generic types in it.
+			}
+
 		case *TcBuiltinGenericProcDef:
+
 			// TODO: actually use sig.Substitutions to instantiate the generic proc def.
 			// TODO: ensure that only one instance is generated per signature.
 			// TODO: add back reference to original generic TcGenericProcDef
 			//
 			// currently replacing the signature alone is enough, but that is not a
 			// general solution.
-			//
+
 			sigInstance := &Signature{
 				Name:          sig.Name,
 				GenericParams: sig.GenericParams,
