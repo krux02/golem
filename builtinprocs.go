@@ -530,15 +530,28 @@ func makeGenericSignature(name string, genericParams []*GenericTypeSymbol, args 
 }
 
 func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []*GenericTypeSymbol, args []Type, result Type, argMutableBitmask uint64) *Signature {
-	procDef := &TcBuiltinGenericProcDef{
-		Signature: makeGenericSignature(name, genericParams, args, result, argMutableBitmask),
-		Prefix:    prefix,
-		Infix:     infix,
-		Postfix:   postfix,
+	if len(genericParams) > 0 {
+		procDef := &TcBuiltinGenericProcDef{
+			Signature:     makeGenericSignature(name, genericParams, args, result, argMutableBitmask),
+			Prefix:        prefix,
+			Infix:         infix,
+			Postfix:       postfix,
+			InstanceCache: NewInstanceCache(len(genericParams)),
+		}
+		procDef.Signature.Impl = procDef
+		builtinScope.Signatures[name] = append(builtinScope.Signatures[name], procDef.Signature)
+		return procDef.Signature
+	} else {
+		procDef := &TcBuiltinProcDef{
+			Signature: makeGenericSignature(name, genericParams, args, result, argMutableBitmask),
+			Prefix:    prefix,
+			Infix:     infix,
+			Postfix:   postfix,
+		}
+		procDef.Signature.Impl = procDef
+		builtinScope.Signatures[name] = append(builtinScope.Signatures[name], procDef.Signature)
+		return procDef.Signature
 	}
-	procDef.Signature.Impl = procDef
-	builtinScope.Signatures[name] = append(builtinScope.Signatures[name], procDef.Signature)
-	return procDef.Signature
 }
 
 func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Type, argMutableBitmask uint64) *Signature {

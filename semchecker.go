@@ -907,6 +907,117 @@ func SignatureApplyTypeSubstitution(sig *Signature, substitutions []Substitution
 	return result
 }
 
+type InstanceCache struct {
+	Map any
+}
+
+func (this *InstanceCache) Init(N int) {
+	switch N {
+	case 1:
+		this.Map = make(map[[1]Type]Overloadable)
+	case 2:
+		this.Map = make(map[[2]Type]Overloadable)
+	case 3:
+		this.Map = make(map[[3]Type]Overloadable)
+	case 4:
+		this.Map = make(map[[4]Type]Overloadable)
+	case 5:
+		this.Map = make(map[[5]Type]Overloadable)
+	case 6:
+		this.Map = make(map[[6]Type]Overloadable)
+	default:
+		panic(fmt.Errorf("not implemented %d", N))
+	}
+}
+
+func NewInstanceCache(N int) *InstanceCache {
+	result := &InstanceCache{}
+	result.Init(N)
+	return result
+}
+
+func (this *InstanceCache) Set(key []Type, value Overloadable) {
+	switch len(key) {
+	case 1:
+		key2 := [...]Type{key[0]}
+		this.Map.(map[[1]Type]Overloadable)[key2] = value
+	case 2:
+		key2 := [...]Type{key[0], key[1]}
+		this.Map.(map[[2]Type]Overloadable)[key2] = value
+	case 3:
+		key2 := [...]Type{key[0], key[1], key[2]}
+		this.Map.(map[[3]Type]Overloadable)[key2] = value
+	case 4:
+		key2 := [...]Type{key[0], key[1], key[2], key[3]}
+		this.Map.(map[[4]Type]Overloadable)[key2] = value
+	case 5:
+		key2 := [...]Type{key[0], key[1], key[2], key[3], key[4]}
+		this.Map.(map[[5]Type]Overloadable)[key2] = value
+	case 6:
+		key2 := [...]Type{key[0], key[1], key[2], key[3], key[4], key[5]}
+		this.Map.(map[[6]Type]Overloadable)[key2] = value
+	default:
+		panic(fmt.Errorf("not implemented %d", key))
+	}
+}
+
+func (this *InstanceCache) LookUp(key []Type) Overloadable {
+	switch len(key) {
+	case 1:
+		key2 := [...]Type{key[0]}
+		return this.Map.(map[[1]Type]Overloadable)[key2]
+	case 2:
+		key2 := [...]Type{key[0], key[1]}
+		return this.Map.(map[[2]Type]Overloadable)[key2]
+	case 3:
+		key2 := [...]Type{key[0], key[1], key[2]}
+		return this.Map.(map[[3]Type]Overloadable)[key2]
+	case 4:
+		key2 := [...]Type{key[0], key[1], key[2], key[3]}
+		return this.Map.(map[[4]Type]Overloadable)[key2]
+	case 5:
+		key2 := [...]Type{key[0], key[1], key[2], key[3], key[4]}
+		return this.Map.(map[[5]Type]Overloadable)[key2]
+	case 6:
+		key2 := [...]Type{key[0], key[1], key[2], key[3], key[4], key[5]}
+		return this.Map.(map[[6]Type]Overloadable)[key2]
+	default:
+		panic(fmt.Errorf("not implemented %d", key))
+	}
+}
+
+func InstanciateBuiltinGenericProc(sc *SemChecker, proc *TcBuiltinGenericProcDef, substitutions []Substitution) *TcBuiltinProcDef {
+	cacheKey := make([]Type, len(proc.Signature.GenericParams))
+genericParams:
+	for i, sym := range proc.Signature.GenericParams {
+		for _, sub := range substitutions {
+			if sym == sub.sym {
+				cacheKey[i] = sub.newType
+				continue genericParams
+			}
+		}
+		panic(fmt.Errorf("symbol has no substitudion: %s", AstFormat(sym)))
+	}
+
+	newSig := SignatureApplyTypeSubstitution(proc.Signature, substitutions)
+
+	result := proc.InstanceCache.LookUp(cacheKey)
+	if result != nil {
+		return result.(*TcBuiltinProcDef)
+	}
+
+	result = &TcBuiltinProcDef{
+		Signature: newSig,
+		Prefix:    proc.Prefix,
+		Infix:     proc.Infix,
+		Postfix:   proc.Postfix,
+	}
+
+	proc.InstanceCache.Set(cacheKey, result)
+
+	return result.(*TcBuiltinProcDef)
+}
+
 func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstraint) TcExpr {
 	ident, isIdent := call.Callee.(*Ident)
 	if !isIdent {
@@ -1030,7 +1141,7 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 
 			if len(sig.GenericParams) == 0 && len(impl.Signature.GenericParams) > 0 {
 				fmt.Println(AstFormat(sig))
-				fmt.Println(AstFormat(impl.GetSignature()))
+				fmt.Println(AstFormat(impl.Signature))
 				ReportErrorf(sc, ident, "instanciating generic functions is not yet implemented")
 				// just as a reminder to implement this.
 				// `sig` is the concrete signature of this call. All symbols resolved.
@@ -1039,12 +1150,15 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 
 		case *TcBuiltinGenericProcDef:
 
-			// TODO: actually use sig.Substitutions to instantiate the generic proc def.
-			// TODO: ensure that only one instance is generated per signature.
-			// TODO: add back reference to original generic TcGenericProcDef
-			//
-			// currently replacing the signature alone is enough, but that is not a
-			// general solution.
+			// if len(impl.Signature.GenericParams) > 0 {
+			// 	fmt.Println(AstFormat(sig))
+			// 	fmt.Println(AstFormat(impl.Signature))
+			// 	for _, sub := range sig.Substitutions {
+			// 		fmt.Printf("%s -> %s\n", sub.sym.Name, AstFormat(sub.newType))
+			// 	}
+
+			// 	// fmt.Println(sig.Substitutions)
+			// }
 
 			sigInstance := &Signature{
 				Name:          sig.Name,
@@ -1053,14 +1167,7 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 				ResultType:    sig.ResultType,
 			}
 
-			implInstance := &TcBuiltinProcDef{
-				Signature: sigInstance,
-				Prefix:    impl.Prefix,
-				Infix:     impl.Infix,
-				Postfix:   impl.Postfix,
-			}
-
-			sigInstance.Impl = implInstance
+			sigInstance.Impl = InstanciateBuiltinGenericProc(sc, impl, sig.Substitutions)
 
 			result.Sym = TcProcSymbol{Source: ident.Source, Signature: sigInstance}
 			result.Args = checkedArgs

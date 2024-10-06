@@ -197,6 +197,7 @@ type Signature struct {
 
 	// NOTE: Varargs currently only used for printf.
 	Varargs bool
+
 	// current list of substitutions that are not yet applied to `Impl`
 	Substitutions []Substitution
 	Impl          Overloadable
@@ -227,6 +228,8 @@ type TcBuiltinGenericProcDef struct {
 	// example2 "(", " + ", ")"          operator+ call
 	// example3 "somearray[", "][", "]"  array access
 	Prefix, Infix, Postfix string
+
+	InstanceCache *InstanceCache
 }
 
 type TcBuiltinStaticProcDef struct {
@@ -247,6 +250,25 @@ type TcProcDef struct {
 	// generating the same type multiple times.
 	scheduledforgeneration bool
 }
+
+// type TcGenericProcDef struct {
+// 	Source    string
+// 	Signature *Signature
+// 	Body      TcExpr // still has open generic types in it that need to be instanciated
+// 	Instances []*TcGenericProcInstance
+// }
+
+// type TcGenericProcInstance struct {
+// 	MangledName string
+// 	Signature   *Signature
+// 	Body        TcExpr
+
+// 	// TODO: find a better solution for tagging other than mutuble setting a value
+// 	// this value is set to true in the code generator to mark this proc as
+// 	// already scheduled for code generation. This flag is used to prevent
+// 	// generating the same type multiple times.
+// 	scheduledforgeneration bool
+// }
 
 type TcBuiltinMacroDef struct {
 	Signature *Signature
