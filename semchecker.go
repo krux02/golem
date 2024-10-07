@@ -418,7 +418,7 @@ func SemCheckSignature(sc *SemChecker, innerScope Scope, genericArgs []GenericAr
 		}
 		name := genericArg.Name
 
-		genTypeSym := &GenericTypeSymbol{Source: name.Source, Name: name.Source, Constraint: constraint}
+		genTypeSym := NewGenericTypeSymbol(name.Source, name.Source, constraint)
 		genericParams = append(genericParams, genTypeSym)
 		// make the generic type symbol available to look up in its body
 		RegisterType(sc, innerScope, name.Source, genTypeSym, name)
@@ -440,12 +440,7 @@ func SemCheckSignature(sc *SemChecker, innerScope Scope, genericArgs []GenericAr
 			symKind = SkVarProcArg
 		}
 
-		paramType := LookUpType(sc, innerScope, arg.Type)
-
-		typ := maybeWrapWithOpenGenericType(
-			paramType,
-			genericParams,
-		)
+		typ := LookUpType(sc, innerScope, arg.Type)
 
 		var tcArg *TcSymbol
 		// TODO this is ugly. Refactoring `NewSymbol` to a simple `RegisterSymbol`
@@ -697,7 +692,7 @@ func argTypeGroupAtIndex(signatures []*Signature, idx int) (result TypeConstrain
 			return TypeUnspecified
 		}
 		typ := sig.Params[idx].Type
-		if _, ok := typ.(*OpenGenericType); ok {
+		if len(openGenericsMap[typ]) > 0 {
 			// TODO this can be more precise than the most generic `TypeUnspecified`
 			return TypeUnspecified
 		}
@@ -774,8 +769,8 @@ func GenericParamSignatureMatch(exprType, paramType Type, substitutions []Substi
 }
 
 func ParamSignatureMatch(exprType, paramType Type) (ok bool, substitutions []Substitution) {
-	if genericParamType, paramIsGeneric := paramType.(*OpenGenericType); paramIsGeneric {
-		return GenericParamSignatureMatch(exprType, genericParamType.Type, nil)
+	if len(openGenericsMap[paramType]) > 0 {
+		return GenericParamSignatureMatch(exprType, paramType, nil)
 	}
 	// fast non recursive pass
 	return exprType == paramType, []Substitution{}
@@ -809,8 +804,6 @@ func RecursiveTypeSubstitution(typ Type, substitutions []Substitution) Type {
 		return GetPtrType(RecursiveTypeSubstitution(typ.Target, substitutions))
 	case *ErrorType:
 		panic("internal error")
-	case *OpenGenericType:
-		panic("internal error")
 	default:
 		panic("internal error")
 	}
@@ -834,39 +827,34 @@ func Contains2(theSet []Substitution, item *GenericTypeSymbol) bool {
 	return false
 }
 
-func ApplyTypeSubstitutions(argTyp Type, substitutions []Substitution) Type {
-	typ, isOpenGeneric := argTyp.(*OpenGenericType)
-	if !isOpenGeneric {
+func ApplyTypeSubstitutions(argType Type, substitutions []Substitution) Type {
+	openSymbols := openGenericsMap[argType]
+	if len(openSymbols) == 0 {
 		// not a type with open generic symbols. nothing to substitute here
-		return argTyp
+		return argType
 	}
 
 	// all substitutions that are actively part of the open symbols
 	var filteredSubstitutions []Substitution
 	for _, sub := range substitutions {
-		if Contains(typ.OpenSymbols, sub.sym) {
+		if Contains(openSymbols, sub.sym) {
 			filteredSubstitutions = append(filteredSubstitutions, sub)
 		}
 	}
 
 	if len(filteredSubstitutions) == 0 {
 		// substitutions do not apply to this type, nothing to do here
-		return typ
+		return argType
 	}
 
 	// compute new open symbols
-	var openSymbols []*GenericTypeSymbol = nil
-	for _, sym := range typ.OpenSymbols {
+	var newOpenSymbols []*GenericTypeSymbol = nil
+	for _, sym := range openSymbols {
 		if !Contains2(filteredSubstitutions, sym) {
-			openSymbols = append(openSymbols, sym)
+			newOpenSymbols = append(newOpenSymbols, sym)
 		}
 	}
-	newTyp := RecursiveTypeSubstitution(typ.Type, filteredSubstitutions)
-	if len(openSymbols) == 0 {
-		return newTyp
-	}
-	return &OpenGenericType{newTyp, openSymbols}
-
+	return RecursiveTypeSubstitution(argType, filteredSubstitutions)
 }
 
 func FindSubstitution(substitutions []Substitution, sym *GenericTypeSymbol) (newTypo Type, ok bool) {
@@ -901,10 +889,9 @@ func SignatureApplyTypeSubstitution(sig *Signature, substitutions []Substitution
 	newGen := make([]*GenericTypeSymbol, 0, len(sig.GenericParams))
 	for _, it := range sig.GenericParams {
 		if newType, foundNewType := FindSubstitution(substitutions, it); foundNewType {
-			if genType, isGenType := newType.(*OpenGenericType); isGenType {
-				for _, openSym := range genType.OpenSymbols {
-					newGen = AppendNoDuplicats(newGen, openSym)
-				}
+			openGenericSyms := openGenericsMap[newType]
+			for _, openSym := range openGenericSyms {
+				newGen = AppendNoDuplicats(newGen, openSym)
 			}
 		} else {
 			// generic parameter isn't substituted. keep it unchanged
@@ -1126,8 +1113,8 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 		// In the body of a generic function, there could be a better sanity check here.
 		if scope.CurrentProc == nil || len(scope.CurrentProc.GenericParams) == 0 {
 			for i, arg := range sig.Params {
-				if _, isGeneric := arg.Type.(*OpenGenericType); isGeneric {
-
+				openGenericSymbols := openGenericsMap[arg.Type]
+				if len(openGenericSymbols) > 0 {
 					ReportErrorf(sc, checkedArgs[i], "generics arguments are expected to instanciated %s", AstFormat(checkedArgs[i].GetType()))
 					panic(
 						fmt.Sprintf(
@@ -1142,7 +1129,7 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 					RequireMutable(sc, checkedArgs[i])
 				}
 			}
-			if _, isGeneric := sig.ResultType.(*OpenGenericType); isGeneric {
+			if len(openGenericsMap[sig.ResultType]) > 0 {
 				panic("internal error: generics are expected to instanciated")
 			}
 		}
@@ -1660,6 +1647,9 @@ type ArrayTypeMapKey struct {
 	len  int64
 }
 
+// Stores information that a type still has unresolved generics.
+var openGenericsMap map[Type][]*GenericTypeSymbol
+
 var arrayTypeMap map[ArrayTypeMapKey]*ArrayType
 
 // is this safe, will this always look up a value? It is a pointer in a map
@@ -1692,6 +1682,7 @@ func GetArrayType(elem Type, len int64) (result *ArrayType) {
 	if !ok {
 		result = &ArrayType{Elem: elem, Len: len}
 		arrayTypeMap[ArrayTypeMapKey{elem, len}] = result
+		openGenericsMap[result] = openGenericsMap[elem]
 		// TODO, this should be one generic builtin. Adding the overloads like here
 		// does have a negative effect or error messages.
 		//
@@ -1710,7 +1701,7 @@ func GetEnumSetType(elem *EnumType) (result *EnumSetType) {
 	if !ok {
 		result = &EnumSetType{Elem: elem}
 		enumSetTypeMap[elem] = result
-
+		openGenericsMap[result] = openGenericsMap[elem]
 	}
 	return result
 }
@@ -1720,6 +1711,7 @@ func GetPtrType(target Type) (result *PtrType) {
 	if !ok {
 		result = &PtrType{Target: target}
 		ptrTypeMap[target] = result
+		openGenericsMap[result] = openGenericsMap[target]
 	}
 	return result
 }
@@ -1762,6 +1754,7 @@ func GetTypeType(typ Type) (result *TypeType) {
 	if !ok {
 		result = &TypeType{WrappedType: typ}
 		typeTypeMap[typ] = result
+		openGenericsMap[result] = openGenericsMap[typ]
 	}
 	return result
 }

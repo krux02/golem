@@ -112,7 +112,6 @@ var _ Type = &IntLitType{}
 var _ Type = &ErrorType{}
 var _ Type = &TypeType{}
 var _ Type = &PtrType{}
-var _ Type = &OpenGenericType{}
 var _ Type = &GenericTypeSymbol{}
 
 var _ TypeConstraint = &TypeGroup{}
@@ -153,12 +152,6 @@ type EnumSetType struct {
 
 type PtrType struct {
 	Target Type
-}
-
-type OpenGenericType struct {
-	// incomplete type that still needs Generic symbols to be substituted becfore it can be used.
-	Type        Type
-	OpenSymbols []*GenericTypeSymbol
 }
 
 func (typ *ArrayType) ManglePrint(builder *strings.Builder) {
@@ -209,12 +202,6 @@ func (typ *UntypedType) ManglePrint(builder *strings.Builder) {
 
 func (typ *GenericTypeSymbol) ManglePrint(builder *strings.Builder) {
 	fmt.Fprintf(builder, "?%s?", typ.Name)
-}
-
-func (typ *OpenGenericType) ManglePrint(builder *strings.Builder) {
-	// TODO this mangled named may never actually be used. A good code
-	// architecture should not use this and error instead.
-	typ.Type.ManglePrint(builder)
 }
 
 func (typ *TypeGroup) GetSource() string {
@@ -373,10 +360,6 @@ func (typ *GenericTypeSymbol) DefaultValue(sc *SemChecker, context Expr) TcExpr 
 	panic("this is an abstrict type, there cannot be a default value")
 }
 
-func (typ *OpenGenericType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
-	panic("not implemented")
-}
-
 var builtinScope Scope = &ScopeImpl{
 	Parent:          nil,
 	CurrentPackage:  nil,
@@ -409,45 +392,6 @@ func registerBuiltinTypeGroup(typ *TypeGroup) {
 	builtinScope.TypeConstraints[typ.Name] = typ
 }
 
-func extractGenericTypeSymbols(typ Type) (result []*GenericTypeSymbol) {
-	switch typ := typ.(type) {
-	case *BuiltinType:
-		return nil
-	case *UntypedType:
-		return nil
-	case *EnumType:
-		return nil
-	case *StructType:
-		for _, field := range typ.Impl.Fields {
-			result = append(result, extractGenericTypeSymbols(field.Type)...)
-		}
-		return result
-	case *ArrayType:
-		return extractGenericTypeSymbols(typ.Elem)
-	case *IntLitType:
-		return nil
-	case *BuiltinIntType:
-		return nil
-	case *BuiltinFloatType:
-		return nil
-	case *BuiltinStringType:
-		return nil
-	case *ErrorType:
-		return nil
-	case *TypeType:
-		return extractGenericTypeSymbols(typ.WrappedType)
-	case *PtrType:
-		return extractGenericTypeSymbols(typ.Target)
-	case *EnumSetType:
-		return extractGenericTypeSymbols(typ.Elem)
-	case *OpenGenericType:
-		panic("interanl error, OpenGenericType should not be created around another OpenGenericType")
-	case *GenericTypeSymbol:
-		return []*GenericTypeSymbol{typ}
-	}
-	panic(fmt.Errorf("unhandled type: %T", typ))
-}
-
 func SymSubset(setA, setB []*GenericTypeSymbol) bool {
 OUTER:
 	for _, symA := range setA {
@@ -476,41 +420,7 @@ func AstListFormat[T PrettyPrintable](syms []T) string {
 	return builder.String()
 }
 
-func maybeWrapWithOpenGenericType(arg Type, genericParams []*GenericTypeSymbol) Type {
-	// wraps a Type that contains generic type symbols with `OpenGenericType`.
-	// This wrapping of `OpenGenericType` is important as it tells the type
-	// checker that this type is an incomplete generic type that needs proper deep
-	// type matching logic. Fully resolved types can be be compared with simple
-	// type equality.
-
-	syms := extractGenericTypeSymbols(arg)
-	// if a type contains generic type symbols, it must be wrapped.
-	if len(syms) > 0 {
-		if !SymSubset(syms, genericParams) {
-			panic(fmt.Errorf("internal error: generic type symbols %s ⊆ %s",
-				AstListFormat(syms),
-				AstListFormat(genericParams),
-			))
-		}
-		return &OpenGenericType{arg, syms}
-	}
-	return arg
-}
-
 func makeGenericSignature(name string, genericParams []*GenericTypeSymbol, args []Type, result Type, argMutableBitmask uint64) *Signature {
-	if len(genericParams) > 0 {
-		for i, arg := range args {
-			args[i] = maybeWrapWithOpenGenericType(arg, genericParams)
-		}
-		syms := extractGenericTypeSymbols(result)
-		if len(syms) > 0 {
-			if !SymSubset(syms, genericParams) {
-				panic("not a true subset")
-			}
-			result = &OpenGenericType{result, syms}
-		}
-	}
-
 	params := make([]*TcSymbol, len(args))
 	for i, arg := range args {
 		params[i] = &TcSymbol{Type: arg}
@@ -530,6 +440,7 @@ func makeGenericSignature(name string, genericParams []*GenericTypeSymbol, args 
 }
 
 func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []*GenericTypeSymbol, args []Type, result Type, argMutableBitmask uint64) *Signature {
+
 	if len(genericParams) > 0 {
 		procDef := &TcBuiltinGenericProcDef{
 			Signature:     makeGenericSignature(name, genericParams, args, result, argMutableBitmask),
@@ -888,7 +799,7 @@ func BuiltinTraitDef(sc *SemChecker, scope Scope, def *TcCall) TcExpr {
 
 	for _, typ := range dependentTypes {
 		// TODO, support setting the Constraint here
-		sym := &GenericTypeSymbol{Source: typ.Source, Name: typ.Source, Constraint: trait}
+		sym := NewGenericTypeSymbol(typ.Source, typ.Source, trait)
 		result.DependentTypes = append(result.DependentTypes, sym)
 		RegisterType(sc, traitScope, sym.Name, sym, sym)
 	}
@@ -972,6 +883,7 @@ func BuiltinTypeExpr(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 }
 
 func init() {
+	openGenericsMap = make(map[Type][]*GenericTypeSymbol)
 	arrayTypeMap = make(map[ArrayTypeMapKey]*ArrayType)
 	enumSetTypeMap = make(map[*EnumType]*EnumSetType)
 	ptrTypeMap = make(map[Type]*PtrType)
@@ -1004,8 +916,8 @@ func init() {
 
 	{
 		// TODO: has no line information
-		T := &GenericTypeSymbol{Name: "T", Constraint: TypeUnspecified}
-		U := &GenericTypeSymbol{Name: "U", Constraint: TypeUnspecified}
+		T := NewGenericTypeSymbol("", "T", TypeUnspecified)
+		U := NewGenericTypeSymbol("", "U", TypeUnspecified)
 		registerGenericBuiltinMacro("cast", false, []*GenericTypeSymbol{T, U}, []Type{T, GetTypeType(U)}, U, BuiltinCastExpr)
 		registerGenericBuiltinMacro("conv", false, []*GenericTypeSymbol{T, U}, []Type{T, GetTypeType(U)}, U, BuiltinConvExpr)
 	}
@@ -1130,7 +1042,7 @@ func init() {
 
 	{
 		// TODO: has no line information
-		T := &GenericTypeSymbol{Name: "T", Constraint: TypeUnspecified}
+		T := NewGenericTypeSymbol("", "T", TypeUnspecified)
 		// TODO mark argument as mutable
 		builtinAddr = registerGenericBuiltin("addr", "&(", "", ")", []*GenericTypeSymbol{T}, []Type{T}, GetPtrType(T), 1)
 		builtinDeref = registerGenericBuiltin("indexOp", "*(", "", ")", []*GenericTypeSymbol{T}, []Type{GetPtrType(T)}, T, 0)

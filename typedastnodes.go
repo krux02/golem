@@ -89,6 +89,16 @@ type GenericTypeSymbol struct {
 	Constraint TypeConstraint // TypeGroup, TypeTrait, TypeUnspecified
 }
 
+func NewGenericTypeSymbol(Source string, Name string, constraint TypeConstraint) *GenericTypeSymbol {
+	result := &GenericTypeSymbol{
+		Source:     Source,
+		Name:       Name,
+		Constraint: constraint,
+	}
+	openGenericsMap[result] = []*GenericTypeSymbol{result}
+	return result
+}
+
 type TcCodeBlock struct {
 	Source string
 	Items  []TcExpr

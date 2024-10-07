@@ -767,13 +767,6 @@ func (self *TypeTrait) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(self.Impl.Name)
 }
 
-func (typ *OpenGenericType) PrettyPrint(builder *AstPrettyPrinter) {
-	// don't print open symbols for now
-	builder.WriteString("OpenGenericType{")
-	typ.Type.PrettyPrint(builder)
-	builder.WriteString("}")
-}
-
 func (typ *PtrType) PrettyPrint(builder *AstPrettyPrinter) {
 	if typ.Target == TypeVoid {
 		builder.WriteString("pointer")
