@@ -370,7 +370,7 @@ func (typ *TypeType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
 }
 
 func (typ *GenericTypeSymbol) DefaultValue(sc *SemChecker, context Expr) TcExpr {
-	panic("not implemented")
+	panic("this is an abstrict type, there cannot be a default value")
 }
 
 func (typ *OpenGenericType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
@@ -639,6 +639,7 @@ func ValidatePrintfCall(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 				c2 = 'f'
 			default:
 				// TODO test error message
+
 				ReportErrorf(sc, formatExpr, "type not supported for %%v: %s", AstFormat(argType))
 				return call
 			}
@@ -894,7 +895,7 @@ func BuiltinTraitDef(sc *SemChecker, scope Scope, def *TcCall) TcExpr {
 
 	for _, procDef := range signatures {
 		tcProcDef := SemCheckProcDef(sc, traitScope, procDef)
-		result.Signatures = append(result.Signatures, tcProcDef.Signature)
+		result.Signatures = append(result.Signatures, tcProcDef.GetSignature())
 	}
 
 	return result

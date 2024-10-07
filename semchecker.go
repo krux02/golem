@@ -34,7 +34,7 @@ type ScopeImpl struct {
 	// probably be redued to be just the proc signature.
 	CurrentProgram  *ProgramContext
 	CurrentPackage  *TcPackageDef
-	CurrentProc     *TcProcDef // used for `return` statements
+	CurrentProc     *Signature // used for `return` statements
 	CurrentTrait    *TcTraitDef
 	Variables       map[string]*TcSymbol
 	Signatures      map[string][]*Signature
@@ -504,24 +504,24 @@ func SemCheckTemplateDef(sc *SemChecker, parentScope Scope, def *ProcDef) (templ
 	return templateDef
 }
 
-func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result *TcProcDef) {
+func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) Overloadable {
 	innerScope := NewSubScope(parentScope)
 	name, body, resultType, genericArgs, args := MustMatchProcDef(sc, def)
 
-	result = &TcProcDef{}
-	innerScope.CurrentProc = result
+	var importc bool
 
 	if def.Annotations != nil {
 		if def.Annotations.Value == "importc" {
-			result.Importc = true
+			importc = true
 		} else {
 			ReportInvalidAnnotations(sc, def.Annotations)
 		}
 	}
 
 	signature := SemCheckSignature(sc, innerScope, genericArgs, args)
+	isGeneric := len(signature.GenericParams) > 0
+	innerScope.CurrentProc = signature
 	signature.Name = name.Source
-	result.Signature, signature.Impl = signature, result
 
 	if resultType == nil {
 		ReportErrorf(sc, def, "proc def needs result type specified")
@@ -530,23 +530,25 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result *T
 		signature.ResultType = LookUpType(sc, innerScope, resultType)
 	}
 
-	if result.Importc || name.Source == "main" {
+	var mangledName string
+	if importc || name.Source == "main" {
 		// TODO, don't special case `main` like this here
-		result.MangledName = name.Source
-	} else {
+		mangledName = name.Source
+	} else if !isGeneric {
 		mangledNameBuilder := &strings.Builder{}
 		mangledNameBuilder.WriteString(name.Source)
 		mangledNameBuilder.WriteRune('_')
-		for _, arg := range result.Signature.Params {
+		for _, arg := range signature.Params {
 			arg.Type.ManglePrint(mangledNameBuilder)
 		}
-		result.MangledName = mangledNameBuilder.String()
+		mangledName = mangledNameBuilder.String()
 	}
 
 	// register proc before type checking the body to allow recursion. (TODO needs a test)
 	RegisterProc(sc, parentScope, signature, name)
 
-	if result.Importc {
+	var tcBody TcExpr
+	if importc {
 		if body != nil {
 			ReportErrorf(sc, body, "proc is importc, it may not have a body")
 		}
@@ -558,11 +560,27 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result *T
 		if body == nil {
 			ReportErrorf(sc, def, "proc def misses a body")
 		} else {
-			result.Body = SemCheckExpr(sc, innerScope, body, UniqueTypeConstraint{signature.ResultType})
+			tcBody = SemCheckExpr(sc, innerScope, body, UniqueTypeConstraint{signature.ResultType})
 		}
 	}
 
-	return result
+	if isGeneric {
+		signature.Impl = &TcGenericProcDef{
+			Source:        def.Source,
+			Signature:     signature,
+			Body:          tcBody, // still has open generic types in it that need to be instanciated
+			InstanceCache: NewInstanceCache(len(signature.GenericParams)),
+		}
+	} else {
+		signature.Impl = &TcProcDef{
+			Source:      def.Source,
+			MangledName: mangledName,
+			Signature:   signature,
+			Importc:     importc,
+			Body:        tcBody,
+		}
+	}
+	return signature.Impl
 }
 
 func ReportMessagef(sc *SemChecker, node Expr, kind string, msg string, args ...interface{}) {
@@ -1106,7 +1124,7 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 		//
 		// What is done here is to check that there are no Open generic types left anymore in non-generic code.
 		// In the body of a generic function, there could be a better sanity check here.
-		if scope.CurrentProc == nil || len(scope.CurrentProc.Signature.GenericParams) == 0 {
+		if scope.CurrentProc == nil || len(scope.CurrentProc.GenericParams) == 0 {
 			for i, arg := range sig.Params {
 				if _, isGeneric := arg.Type.(*OpenGenericType); isGeneric {
 
@@ -1139,27 +1157,25 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 			result.Args = checkedArgs
 			ExpectType(sc, call, sig.ResultType, expected)
 
-			if len(sig.GenericParams) == 0 && len(impl.Signature.GenericParams) > 0 {
-				fmt.Println(AstFormat(sig))
-				fmt.Println(AstFormat(impl.Signature))
-				ReportErrorf(sc, ident, "instanciating generic functions is not yet implemented")
-				// just as a reminder to implement this.
-				// `sig` is the concrete signature of this call. All symbols resolved.
-				// `impl.Signature` is the generic signature from the definition with generic types in it.
-			}
+		case *TcGenericProcDef:
+
+			result.Sym = TcProcSymbol{Source: ident.Source, Signature: sig}
+			result.Args = checkedArgs
+			ExpectType(sc, call, sig.ResultType, expected)
+
+			fmt.Println(AstFormat(sig))
+			fmt.Println(AstFormat(impl.Signature))
+			ReportErrorf(sc, ident, "instanciating generic functions is not yet implemented")
+			// just as a reminder to implement this.
+			// `sig` is the concrete signature of this call. All symbols resolved.
+			// `impl.Signature` is the generic signature from the definition with generic types in it.
 
 		case *TcBuiltinGenericProcDef:
-
-			// if len(impl.Signature.GenericParams) > 0 {
-			// 	fmt.Println(AstFormat(sig))
-			// 	fmt.Println(AstFormat(impl.Signature))
-			// 	for _, sub := range sig.Substitutions {
-			// 		fmt.Printf("%s -> %s\n", sub.sym.Name, AstFormat(sub.newType))
-			// 	}
-
-			// 	// fmt.Println(sig.Substitutions)
+			// fmt.Println(AstFormat(sig))
+			// fmt.Println(AstFormat(impl.Signature))
+			// for _, sub := range sig.Substitutions {
+			// 	fmt.Printf("%s -> %s\n", sub.sym.Name, AstFormat(sub.newType))
 			// }
-
 			sigInstance := &Signature{
 				Name:          sig.Name,
 				GenericParams: sig.GenericParams,
@@ -1374,7 +1390,7 @@ func SemCheckVariableDefStmt(sc *SemChecker, scope Scope, arg *VariableDefStmt) 
 }
 
 func SemCheckReturnExpr(sc *SemChecker, scope Scope, arg *ReturnExpr) *TcReturnExpr {
-	result := &TcReturnExpr{Value: SemCheckExpr(sc, scope, arg.Value, UniqueTypeConstraint{scope.CurrentProc.Signature.ResultType})}
+	result := &TcReturnExpr{Value: SemCheckExpr(sc, scope, arg.Value, UniqueTypeConstraint{scope.CurrentProc.ResultType})}
 	result.Source = arg.Source
 	return result
 }
@@ -1432,6 +1448,7 @@ func (stmt *TcWhileLoopStmt) GetType() Type        { return TypeVoid }
 func (arg *TcBuiltinProcDef) GetType() Type        { return TypeVoid }
 func (arg *TcBuiltinGenericProcDef) GetType() Type { return TypeVoid }
 func (arg *TcProcDef) GetType() Type               { return TypeVoid }
+func (arg *TcGenericProcDef) GetType() Type        { return TypeVoid }
 func (arg *TcTemplateDef) GetType() Type           { return TypeVoid }
 func (arg *TcPackageDef) GetType() Type            { return TypeVoid }
 func (arg *TcBuiltinMacroDef) GetType() Type       { return TypeVoid }
@@ -1948,10 +1965,16 @@ func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *Packag
 		case *ProcDef:
 			switch stmt.Kind {
 			case TkProc:
-				def := SemCheckProcDef(sc, pkgScope, stmt)
-				result.ProcDefs = append(result.ProcDefs, def)
-				if mainPackage && def.Signature.Name == "main" {
-					currentProgram.Main = def
+				switch def := SemCheckProcDef(sc, pkgScope, stmt).(type) {
+				case *TcProcDef:
+					result.ProcDefs = append(result.ProcDefs, def)
+					if mainPackage && def.Signature.Name == "main" {
+						currentProgram.Main = def
+					}
+				case *TcGenericProcDef:
+					result.GenericProcDefs = append(result.GenericProcDefs, def)
+				default:
+					panic("internal error")
 				}
 			case TkTemplate:
 				def := SemCheckTemplateDef(sc, pkgScope, stmt)

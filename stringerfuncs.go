@@ -660,6 +660,13 @@ func (procDef *TcProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 	}
 }
 
+func (procDef *TcGenericProcDef) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("proc ")
+	procDef.Signature.PrettyPrint(builder)
+	builder.WriteString(" = ")
+	builder.WriteNode(procDef.Body)
+}
+
 func (procDef *TcBuiltinProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("proc \"builtin\" ")
 	procDef.Signature.PrettyPrint(builder)

@@ -1,0 +1,30 @@
+
+type ArrayTag = enum {A;B;C;D}
+
+type WrappedArray = struct {
+  tag: ArrayTag
+  arr: array(16,f32)
+}
+
+trait Any() = {}
+
+proc pointless[T : Any](arg1: T) : void = {
+  # TODO get rid of this `OpenGenericType{T}` thing, it doesn't work.
+  var tmp: T = arg1
+  var someArray: array(4, T) = [arg1,arg1,arg1,arg1]
+}
+
+
+proc main():i32= {
+  let myarray : WrappedArray = [A,[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]]
+
+  printf("tag: %v\n", myarray.tag | string())
+  for it in myarray.arr do {
+    printf("hello %v\n", it)
+  }
+
+  let tmp = 123:i32
+  pointless(tmp)
+
+  0
+}

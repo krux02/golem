@@ -251,17 +251,12 @@ type TcProcDef struct {
 	scheduledforgeneration bool
 }
 
-// type TcGenericProcDef struct {
-// 	Source    string
-// 	Signature *Signature
-// 	Body      TcExpr // still has open generic types in it that need to be instanciated
-// 	Instances []*TcGenericProcInstance
-// }
-
-// type TcGenericProcInstance struct {
-// 	MangledName string
-// 	Signature   *Signature
-// 	Body        TcExpr
+type TcGenericProcDef struct {
+	Source        string
+	Signature     *Signature
+	Body          TcExpr // still has open generic types in it that need to be instanciated
+	InstanceCache *InstanceCache
+}
 
 // 	// TODO: find a better solution for tagging other than mutuble setting a value
 // 	// this value is set to true in the code generator to mark this proc as
@@ -329,19 +324,20 @@ type ProgramContext struct {
 }
 
 type TcPackageDef struct {
-	Source         string
-	Name           string
-	WorkDir        string
-	CFlags         []string
-	EmitStatements []*TcEmitExpr
-	StructDefs     []*TcStructDef
-	EnumDefs       []*TcEnumDef
-	TypeAliases    []*TcTypeAlias
-	TraitDefs      []*TcTraitDef
-	VarDefs        []*TcVariableDefStmt
-	ProcDefs       []*TcProcDef
-	TemplateDefs   []*TcTemplateDef
-	ExportScope    *ScopeImpl
+	Source          string
+	Name            string
+	WorkDir         string
+	CFlags          []string
+	EmitStatements  []*TcEmitExpr
+	StructDefs      []*TcStructDef
+	EnumDefs        []*TcEnumDef
+	TypeAliases     []*TcTypeAlias
+	TraitDefs       []*TcTraitDef
+	VarDefs         []*TcVariableDefStmt
+	ProcDefs        []*TcProcDef
+	GenericProcDefs []*TcGenericProcDef
+	TemplateDefs    []*TcTemplateDef
+	ExportScope     *ScopeImpl
 }
 
 type SymSourcePair struct {
@@ -393,6 +389,7 @@ func (arg *TcStrLit) GetSource() string                { return arg.Source }
 func (arg *TcArrayLit) GetSource() string              { return arg.Source }
 func (arg *TcEnumSetLit) GetSource() string            { return arg.Source }
 func (arg *TcProcDef) GetSource() string               { return arg.Source }
+func (arg *TcGenericProcDef) GetSource() string        { return arg.Source }
 func (arg *TcBuiltinProcDef) GetSource() string        { return "" } // builtins have no source location
 func (arg *TcBuiltinGenericProcDef) GetSource() string { return "" } // builtins have no source location
 func (arg *TcTemplateDef) GetSource() string           { return arg.Source }
@@ -419,6 +416,7 @@ func (arg *TcWrappedUntypedAst) GetSource() string { return arg.Expr.GetSource()
 func (arg *TcBuiltinProcDef) GetSignature() *Signature        { return arg.Signature }
 func (arg *TcBuiltinGenericProcDef) GetSignature() *Signature { return arg.Signature }
 func (arg *TcProcDef) GetSignature() *Signature               { return arg.Signature }
+func (arg *TcGenericProcDef) GetSignature() *Signature        { return arg.Signature }
 func (arg *TcTemplateDef) GetSignature() *Signature           { return arg.Signature }
 func (arg *TcBuiltinMacroDef) GetSignature() *Signature       { return arg.Signature }
 func (arg *TcErrorProcDef) GetSignature() *Signature          { return arg.Signature }

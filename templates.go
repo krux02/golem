@@ -175,6 +175,7 @@ func (arg *TcStrLit) RecSubSyms(substitutions []TemplateSubstitution) Expr      
 func (arg *TcArrayLit) RecSubSyms(substitutions []TemplateSubstitution) Expr              { return arg }
 func (arg *TcEnumSetLit) RecSubSyms(substitutions []TemplateSubstitution) Expr            { return arg }
 func (arg *TcProcDef) RecSubSyms(substitutions []TemplateSubstitution) Expr               { return arg }
+func (arg *TcGenericProcDef) RecSubSyms(substitutions []TemplateSubstitution) Expr        { return arg }
 func (arg *TcBuiltinProcDef) RecSubSyms(substitutions []TemplateSubstitution) Expr        { return arg } // builtins have no source location
 func (arg *TcBuiltinGenericProcDef) RecSubSyms(substitutions []TemplateSubstitution) Expr { return arg } // builtins have no source location
 func (arg *TcTemplateDef) RecSubSyms(substitutions []TemplateSubstitution) Expr           { return arg }
