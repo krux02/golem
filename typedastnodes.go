@@ -173,7 +173,7 @@ type TcDotExpr struct {
 
 type TcCall struct {
 	Source string
-	Sym    TcProcSymbol
+	Sym    *TcProcSymbol
 	Args   []TcExpr
 	// other properties
 	Braced bool // true for (a+b) +(a,b), false for a+b
@@ -208,9 +208,7 @@ type Signature struct {
 	// NOTE: Varargs currently only used for printf.
 	Varargs bool
 
-	// current list of substitutions that are not yet applied to `Impl`
-	Substitutions []Substitution
-	Impl          Overloadable
+	Impl Overloadable
 }
 
 type Overloadable interface {

@@ -1,4 +1,6 @@
 
+# this test is supposed to do something with the wrapped array and test generics of the language
+
 type ArrayTag = enum {A;B;C;D}
 
 type WrappedArray = struct {
@@ -21,8 +23,10 @@ proc main():i32= {
     printf("hello %v\n", it)
   }
 
-  let tmp = 123:i32
-  pointless(tmp)
+  let tmp1 = 123:i32
+  let tmp2 = "abcdef":str
+  pointless(tmp1)
+  pointless(tmp2)
 
   0
 }

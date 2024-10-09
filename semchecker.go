@@ -499,6 +499,16 @@ func SemCheckTemplateDef(sc *SemChecker, parentScope Scope, def *ProcDef) (templ
 	return templateDef
 }
 
+func MangleSignature(signature *Signature) string {
+	mangledNameBuilder := &strings.Builder{}
+	mangledNameBuilder.WriteString(signature.Name)
+	mangledNameBuilder.WriteRune('_')
+	for _, arg := range signature.Params {
+		arg.Type.ManglePrint(mangledNameBuilder)
+	}
+	return mangledNameBuilder.String()
+}
+
 func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) Overloadable {
 	innerScope := NewSubScope(parentScope)
 	name, body, resultType, genericArgs, args := MustMatchProcDef(sc, def)
@@ -530,13 +540,7 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) Overloadab
 		// TODO, don't special case `main` like this here
 		mangledName = name.Source
 	} else if !isGeneric {
-		mangledNameBuilder := &strings.Builder{}
-		mangledNameBuilder.WriteString(name.Source)
-		mangledNameBuilder.WriteRune('_')
-		for _, arg := range signature.Params {
-			arg.Type.ManglePrint(mangledNameBuilder)
-		}
-		mangledName = mangledNameBuilder.String()
+		mangledName = MangleSignature(signature)
 	}
 
 	// register proc before type checking the body to allow recursion. (TODO needs a test)
@@ -662,12 +666,12 @@ func (structDef *TcStructDef) GetField(name string) (resField *TcStructField, id
 	return &TcStructField{Source: name, Name: name, Type: TypeError}, -1
 }
 
-func errorProcSym(ident *Ident) TcProcSymbol {
+func errorProcSym(ident *Ident) *TcProcSymbol {
 	procDef := &TcErrorProcDef{}
 	signature := &Signature{Name: ident.Source, ResultType: TypeError, Impl: procDef}
 	procDef.Signature = signature
 
-	return TcProcSymbol{
+	return &TcProcSymbol{
 		Source: ident.GetSource(),
 		// maybe add some debug information here
 		Signature: signature,
@@ -707,12 +711,22 @@ func argTypeGroupAtIndex(signatures []*Signature, idx int) (result TypeConstrain
 	return (*TypeGroup)(builder)
 }
 
-type Substitution = struct {
+type ProcSubstitution = struct {
+	sym    *TcProcSymbol
+	newSym *TcProcSymbol
+}
+
+type SymbolSubstitution = struct {
+	sym    *TcSymbol
+	newSym *TcSymbol
+}
+
+type TypeSubstitution = struct {
 	sym     *GenericTypeSymbol
 	newType Type
 }
 
-func GenericParamSignatureMatch(exprType, paramType Type, substitutions []Substitution) (ok bool, outSubstitutions []Substitution) {
+func GenericParamSignatureMatch(exprType, paramType Type, substitutions []TypeSubstitution) (ok bool, outSubstitutions []TypeSubstitution) {
 	if typeSym, isTypeSym := paramType.(*GenericTypeSymbol); isTypeSym {
 		// check if the type is somehow in the substitutions list
 		for _, sub := range substitutions {
@@ -726,7 +740,7 @@ func GenericParamSignatureMatch(exprType, paramType Type, substitutions []Substi
 		}
 
 		// not in the substitutions list, so append it
-		return true, append(substitutions, Substitution{typeSym, exprType})
+		return true, append(substitutions, TypeSubstitution{typeSym, exprType})
 	}
 
 	{
@@ -768,15 +782,15 @@ func GenericParamSignatureMatch(exprType, paramType Type, substitutions []Substi
 	return false, nil
 }
 
-func ParamSignatureMatch(exprType, paramType Type) (ok bool, substitutions []Substitution) {
+func ParamSignatureMatch(exprType, paramType Type) (ok bool, substitutions []TypeSubstitution) {
 	if len(openGenericsMap[paramType]) > 0 {
 		return GenericParamSignatureMatch(exprType, paramType, nil)
 	}
 	// fast non recursive pass
-	return exprType == paramType, []Substitution{}
+	return exprType == paramType, []TypeSubstitution{}
 }
 
-func RecursiveTypeSubstitution(typ Type, substitutions []Substitution) Type {
+func RecursiveTypeSubstitution(typ Type, substitutions []TypeSubstitution) Type {
 	switch typ := typ.(type) {
 	case *GenericTypeSymbol:
 		for _, it := range substitutions {
@@ -818,7 +832,7 @@ func Contains(theSet []*GenericTypeSymbol, item *GenericTypeSymbol) bool {
 	return false
 }
 
-func Contains2(theSet []Substitution, item *GenericTypeSymbol) bool {
+func Contains2(theSet []TypeSubstitution, item *GenericTypeSymbol) bool {
 	for _, it := range theSet {
 		if it.sym == item {
 			return true
@@ -827,7 +841,25 @@ func Contains2(theSet []Substitution, item *GenericTypeSymbol) bool {
 	return false
 }
 
-func ApplyTypeSubstitutions(argType Type, substitutions []Substitution) Type {
+func ApplyProcSubstitutions(sym *TcProcSymbol, subs []ProcSubstitution) *TcProcSymbol {
+	for _, sub := range subs {
+		if sym == sub.sym {
+			return sub.newSym
+		}
+	}
+	return sym
+}
+
+func ApplySymbolSubstitutions(sym *TcSymbol, subs []SymbolSubstitution) *TcSymbol {
+	for _, sub := range subs {
+		if sym == sub.sym {
+			return sub.newSym
+		}
+	}
+	return sym
+}
+
+func ApplyTypeSubstitutions(argType Type, substitutions []TypeSubstitution) Type {
 	openSymbols := openGenericsMap[argType]
 	if len(openSymbols) == 0 {
 		// not a type with open generic symbols. nothing to substitute here
@@ -835,7 +867,7 @@ func ApplyTypeSubstitutions(argType Type, substitutions []Substitution) Type {
 	}
 
 	// all substitutions that are actively part of the open symbols
-	var filteredSubstitutions []Substitution
+	var filteredSubstitutions []TypeSubstitution
 	for _, sub := range substitutions {
 		if Contains(openSymbols, sub.sym) {
 			filteredSubstitutions = append(filteredSubstitutions, sub)
@@ -857,7 +889,7 @@ func ApplyTypeSubstitutions(argType Type, substitutions []Substitution) Type {
 	return RecursiveTypeSubstitution(argType, filteredSubstitutions)
 }
 
-func FindSubstitution(substitutions []Substitution, sym *GenericTypeSymbol) (newTypo Type, ok bool) {
+func FindSubstitution(substitutions []TypeSubstitution, sym *GenericTypeSymbol) (newTypo Type, ok bool) {
 	for _, sub := range substitutions {
 		if sym == sub.sym {
 			return sub.newType, true
@@ -866,21 +898,23 @@ func FindSubstitution(substitutions []Substitution, sym *GenericTypeSymbol) (new
 	return nil, false
 }
 
-func SignatureApplyTypeSubstitution(sig *Signature, substitutions []Substitution) *Signature {
-	if len(substitutions) == 0 {
+func SignatureApplyTypeSubstitution(sig *Signature, subs *Substitutions) *Signature {
+	if len(subs.typeSubs) == 0 {
 		return sig
 	}
 
 	newParams := make([]*TcSymbol, len(sig.Params))
 	for j, param := range sig.Params {
-		newType := ApplyTypeSubstitutions(param.Type, substitutions)
+		newType := ApplyTypeSubstitutions(param.Type, subs.typeSubs)
 		if newType != param.Type {
-			newParams[j] = &TcSymbol{
+			newSym := &TcSymbol{
 				Source: param.Source,
 				Kind:   param.Kind,
 				Value:  param.Value, // only set when symbol is `const`
 				Type:   newType,
 			}
+			subs.symSubs = append(subs.symSubs, SymbolSubstitution{param, newSym})
+			newParams[j] = newSym
 		} else {
 			newParams[j] = param
 		}
@@ -888,7 +922,7 @@ func SignatureApplyTypeSubstitution(sig *Signature, substitutions []Substitution
 
 	newGen := make([]*GenericTypeSymbol, 0, len(sig.GenericParams))
 	for _, it := range sig.GenericParams {
-		if newType, foundNewType := FindSubstitution(substitutions, it); foundNewType {
+		if newType, foundNewType := FindSubstitution(subs.typeSubs, it); foundNewType {
 			openGenericSyms := openGenericsMap[newType]
 			for _, openSym := range openGenericSyms {
 				newGen = AppendNoDuplicats(newGen, openSym)
@@ -903,12 +937,11 @@ func SignatureApplyTypeSubstitution(sig *Signature, substitutions []Substitution
 		Name:          sig.Name,
 		GenericParams: newGen,
 		Params:        newParams,
-		ResultType:    ApplyTypeSubstitutions(sig.ResultType, substitutions),
+		ResultType:    ApplyTypeSubstitutions(sig.ResultType, subs.typeSubs),
 		Varargs:       sig.Varargs,
-		Substitutions: append(sig.Substitutions, substitutions...),
 		Impl:          sig.Impl,
 	}
-	// fmt.Printf("sig: %s\n", AstFormat(result))
+
 	return result
 }
 
@@ -991,11 +1024,11 @@ func (this *InstanceCache) LookUp(key []Type) Overloadable {
 	}
 }
 
-func InstanciateBuiltinGenericProc(sc *SemChecker, proc *TcBuiltinGenericProcDef, substitutions []Substitution) *TcBuiltinProcDef {
+func InstanciateBuiltinGenericProc(sc *SemChecker, proc *TcBuiltinGenericProcDef, substitutions *Substitutions) *TcBuiltinProcDef {
 	cacheKey := make([]Type, len(proc.Signature.GenericParams))
 genericParams:
 	for i, sym := range proc.Signature.GenericParams {
-		for _, sub := range substitutions {
+		for _, sub := range substitutions.typeSubs {
 			if sym == sub.sym {
 				cacheKey[i] = sub.newType
 				continue genericParams
@@ -1004,24 +1037,25 @@ genericParams:
 		panic(fmt.Errorf("symbol has no substitudion: %s", AstFormat(sym)))
 	}
 
-	newSig := SignatureApplyTypeSubstitution(proc.Signature, substitutions)
-
 	result := proc.InstanceCache.LookUp(cacheKey)
 	if result != nil {
 		return result.(*TcBuiltinProcDef)
 	}
-
+	newSig := SignatureApplyTypeSubstitution(proc.Signature, substitutions)
 	result = &TcBuiltinProcDef{
 		Signature: newSig,
 		Prefix:    proc.Prefix,
 		Infix:     proc.Infix,
 		Postfix:   proc.Postfix,
 	}
-
 	proc.InstanceCache.Set(cacheKey, result)
-
 	return result.(*TcBuiltinProcDef)
 }
+
+// type SignatureSubstitutionsPair struct {
+// 	sig *Signature
+// 	sub *Substitutions
+// }
 
 func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstraint) TcExpr {
 	ident, isIdent := call.Callee.(*Ident)
@@ -1031,6 +1065,12 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 	}
 
 	signatures := LookUpProc(scope, ident, len(call.Args), nil)
+	sigSubstitutions := make([]Substitutions, len(signatures))
+	// signatures := make([]SignatureSubstitutionsPair, len(tmp))
+	// for i, it := range tmp {
+	// 	signatures[i].sig = it
+	// 	signatures[i].sub = &Substitutions{}
+	// }
 
 	var checkedArgs []TcExpr
 	hasArgTypeError := false
@@ -1043,27 +1083,34 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 		if argType == TypeError {
 			hasArgTypeError = true
 			signatures = nil
+			sigSubstitutions = nil
 			continue
 		}
 
 		// in place filter procedures for compatilbes
 		n := 0
-		for _, sig := range signatures {
+		for j, sig := range signatures {
+			subs := sigSubstitutions[j]
+
 			if sig.Varargs && i >= len(sig.Params) {
 				signatures[n] = sig
+				sigSubstitutions[n] = subs
 				n++
 				continue
 			}
+
 			typ := sig.Params[i].Type
 			if ok, substitutions := ParamSignatureMatch(argType, typ); ok {
 				// instantiate generic
-
-				signatures[n] = SignatureApplyTypeSubstitution(sig, substitutions)
+				subs.typeSubs = append(subs.typeSubs, substitutions...)
+				signatures[n] = SignatureApplyTypeSubstitution(sig, &subs)
+				sigSubstitutions[n] = subs
 				n++
 				continue
 			}
 		}
 		signatures = signatures[:n]
+		sigSubstitutions = sigSubstitutions[:n]
 	}
 
 	result := &TcCall{Source: call.Source}
@@ -1136,23 +1183,23 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 
 		switch impl := sig.Impl.(type) {
 		case *TcBuiltinProcDef:
-			result.Sym = TcProcSymbol{Source: ident.Source, Signature: sig}
+			result.Sym = &TcProcSymbol{Source: ident.Source, Signature: sig}
 			result.Args = checkedArgs
 			ExpectType(sc, call, sig.ResultType, expected)
 		case *TcProcDef:
-			result.Sym = TcProcSymbol{Source: ident.Source, Signature: sig}
+			result.Sym = &TcProcSymbol{Source: ident.Source, Signature: sig}
 			result.Args = checkedArgs
 			ExpectType(sc, call, sig.ResultType, expected)
 
 		case *TcGenericProcDef:
+			subs := &sigSubstitutions[0]
 
-			result.Sym = TcProcSymbol{Source: ident.Source, Signature: sig}
+			result.Sym = &TcProcSymbol{Source: ident.Source, Signature: sig}
 			result.Args = checkedArgs
 			ExpectType(sc, call, sig.ResultType, expected)
 
-			fmt.Println(AstFormat(sig))
-			fmt.Println(AstFormat(impl.Signature))
-			ReportErrorf(sc, ident, "instanciating generic functions is not yet implemented")
+			sig.Impl = instanciateGenericBody(impl, subs).(Overloadable)
+			// ReportErrorf(sc, ident, "instanciating generic functions is not yet implemented")
 			// just as a reminder to implement this.
 			// `sig` is the concrete signature of this call. All symbols resolved.
 			// `impl.Signature` is the generic signature from the definition with generic types in it.
@@ -1170,9 +1217,8 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 				ResultType:    sig.ResultType,
 			}
 
-			sigInstance.Impl = InstanciateBuiltinGenericProc(sc, impl, sig.Substitutions)
-
-			result.Sym = TcProcSymbol{Source: ident.Source, Signature: sigInstance}
+			sigInstance.Impl = InstanciateBuiltinGenericProc(sc, impl, &sigSubstitutions[0])
+			result.Sym = &TcProcSymbol{Source: ident.Source, Signature: sigInstance}
 			result.Args = checkedArgs
 			ExpectType(sc, call, sig.ResultType, expected)
 		case *TcTemplateDef:
@@ -1197,7 +1243,7 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 			ExpectType(sc, call, substitution.GetType(), expected)
 			return substitution
 		case *TcBuiltinMacroDef:
-			result.Sym = TcProcSymbol{Source: ident.Source, Signature: sig}
+			result.Sym = &TcProcSymbol{Source: ident.Source, Signature: sig}
 			result.Args = checkedArgs
 			newResult := impl.MacroFunc(sc, scope, result)
 			ExpectType(sc, call, newResult.GetType(), expected)
