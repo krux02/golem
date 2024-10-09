@@ -1024,11 +1024,11 @@ func (this *InstanceCache) LookUp(key []Type) Overloadable {
 	}
 }
 
-func InstanciateBuiltinGenericProc(sc *SemChecker, proc *TcBuiltinGenericProcDef, substitutions *Substitutions) *TcBuiltinProcDef {
-	cacheKey := make([]Type, len(proc.Signature.GenericParams))
+func ComputeInstanceCacheKey(genericParams []*GenericTypeSymbol, typeSubs []TypeSubstitution) []Type {
+	cacheKey := make([]Type, len(genericParams))
 genericParams:
-	for i, sym := range proc.Signature.GenericParams {
-		for _, sub := range substitutions.typeSubs {
+	for i, sym := range genericParams {
+		for _, sub := range typeSubs {
 			if sym == sub.sym {
 				cacheKey[i] = sub.newType
 				continue genericParams
@@ -1036,6 +1036,11 @@ genericParams:
 		}
 		panic(fmt.Errorf("symbol has no substitudion: %s", AstFormat(sym)))
 	}
+	return cacheKey
+}
+
+func InstanciateBuiltinGenericProc(sc *SemChecker, proc *TcBuiltinGenericProcDef, substitutions *Substitutions) *TcBuiltinProcDef {
+	cacheKey := ComputeInstanceCacheKey(proc.Signature.GenericParams, substitutions.typeSubs)
 
 	result := proc.InstanceCache.LookUp(cacheKey)
 	if result != nil {
@@ -1052,11 +1057,6 @@ genericParams:
 	return result.(*TcBuiltinProcDef)
 }
 
-// type SignatureSubstitutionsPair struct {
-// 	sig *Signature
-// 	sub *Substitutions
-// }
-
 func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstraint) TcExpr {
 	ident, isIdent := call.Callee.(*Ident)
 	if !isIdent {
@@ -1066,11 +1066,6 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 
 	signatures := LookUpProc(scope, ident, len(call.Args), nil)
 	sigSubstitutions := make([]Substitutions, len(signatures))
-	// signatures := make([]SignatureSubstitutionsPair, len(tmp))
-	// for i, it := range tmp {
-	// 	signatures[i].sig = it
-	// 	signatures[i].sub = &Substitutions{}
-	// }
 
 	var checkedArgs []TcExpr
 	hasArgTypeError := false

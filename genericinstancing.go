@@ -136,25 +136,29 @@ func instanciateGenericBody(body TcExpr, subs *Substitutions) TcExpr {
 		// 	Signature: instanciateGenericBody(b.Signature, subs),
 		// }
 	case *TcGenericProcDef:
+		cacheKey := ComputeInstanceCacheKey(b.Signature.GenericParams, subs.typeSubs)
+		result := b.InstanceCache.LookUp(cacheKey)
+		if result != nil {
+			return result
+		}
 		newSignature := SignatureApplyTypeSubstitution(b.Signature, subs)
-
-		// TODO use InstanceCache here
-
 		if len(newSignature.GenericParams) > 0 {
-			return &TcGenericProcDef{
+			result = &TcGenericProcDef{
 				Source:        b.Source,
 				Signature:     newSignature,
 				Body:          instanciateGenericBody(b.Body, subs),
 				InstanceCache: b.InstanceCache, // TODO is this even correct?
 			}
+		} else {
+			result = &TcProcDef{
+				Source:      b.Source,
+				MangledName: MangleSignature(newSignature),
+				Signature:   newSignature,
+				Body:        instanciateGenericBody(b.Body, subs),
+			}
 		}
-		return &TcProcDef{
-			Source:      b.Source,
-			MangledName: MangleSignature(newSignature),
-			Signature:   newSignature,
-			Body:        instanciateGenericBody(b.Body, subs),
-		}
-		// panic("not implemented")
+		b.InstanceCache.Set(cacheKey, result)
+		return result
 	case *TcBuiltinProcDef:
 		panic("not implemented")
 	case *TcBuiltinGenericProcDef:

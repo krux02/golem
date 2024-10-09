@@ -27,6 +27,9 @@ proc main():i32= {
   let tmp2 = "abcdef":str
   pointless(tmp1)
   pointless(tmp2)
+  # test reuse if generic instance
+  pointless(tmp2)
+  pointless(tmp1)
 
   0
 }
