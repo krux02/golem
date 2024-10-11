@@ -666,12 +666,12 @@ func (structDef *TcStructDef) GetField(name string) (resField *TcStructField, id
 	return &TcStructField{Source: name, Name: name, Type: TypeError}, -1
 }
 
-func errorProcSym(ident *Ident) *TcProcSymbol {
+func errorProcSym(ident *Ident) *TcProcRef {
 	procDef := &TcErrorProcDef{}
 	signature := &Signature{Name: ident.Source, ResultType: TypeError, Impl: procDef}
 	procDef.Signature = signature
 
-	return &TcProcSymbol{
+	return &TcProcRef{
 		Source: ident.GetSource(),
 		// maybe add some debug information here
 		Signature: signature,
@@ -712,8 +712,8 @@ func argTypeGroupAtIndex(signatures []*Signature, idx int) (result TypeConstrain
 }
 
 type ProcSubstitution = struct {
-	sym    *TcProcSymbol
-	newSym *TcProcSymbol
+	sig    *Signature
+	newSig *Signature
 }
 
 type SymbolSubstitution = struct {
@@ -841,13 +841,16 @@ func Contains2(theSet []TypeSubstitution, item *GenericTypeSymbol) bool {
 	return false
 }
 
-func ApplyProcSubstitutions(sym *TcProcSymbol, subs []ProcSubstitution) *TcProcSymbol {
+func ApplyProcSubstitutions(ref *TcProcRef, subs []ProcSubstitution) *TcProcRef {
 	for _, sub := range subs {
-		if sym == sub.sym {
-			return sub.newSym
+		if ref.Signature == sub.sig {
+			return &TcProcRef{
+				ref.Source,
+				sub.newSig,
+			}
 		}
 	}
-	return sym
+	return ref
 }
 
 func ApplySymbolSubstitutions(sym *TcSymbol, subs []SymbolSubstitution) *TcSymbol {
@@ -1108,7 +1111,7 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 		sigSubstitutions = sigSubstitutions[:n]
 	}
 
-	result := &TcCall{Source: call.Source}
+	result := &TcCall{Source: call.Source, Braced: call.Braced}
 
 	switch len(signatures) {
 	case 0:
@@ -1178,18 +1181,18 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 
 		switch impl := sig.Impl.(type) {
 		case *TcBuiltinProcDef:
-			result.Sym = &TcProcSymbol{Source: ident.Source, Signature: sig}
+			result.Sym = &TcProcRef{Source: ident.Source, Signature: sig}
 			result.Args = checkedArgs
 			ExpectType(sc, call, sig.ResultType, expected)
 		case *TcProcDef:
-			result.Sym = &TcProcSymbol{Source: ident.Source, Signature: sig}
+			result.Sym = &TcProcRef{Source: ident.Source, Signature: sig}
 			result.Args = checkedArgs
 			ExpectType(sc, call, sig.ResultType, expected)
 
 		case *TcGenericProcDef:
 			subs := &sigSubstitutions[0]
 
-			result.Sym = &TcProcSymbol{Source: ident.Source, Signature: sig}
+			result.Sym = &TcProcRef{Source: ident.Source, Signature: sig}
 			result.Args = checkedArgs
 			ExpectType(sc, call, sig.ResultType, expected)
 
@@ -1213,7 +1216,7 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 			}
 
 			sigInstance.Impl = InstanciateBuiltinGenericProc(sc, impl, &sigSubstitutions[0])
-			result.Sym = &TcProcSymbol{Source: ident.Source, Signature: sigInstance}
+			result.Sym = &TcProcRef{Source: ident.Source, Signature: sigInstance}
 			result.Args = checkedArgs
 			ExpectType(sc, call, sig.ResultType, expected)
 		case *TcTemplateDef:
@@ -1238,7 +1241,7 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 			ExpectType(sc, call, substitution.GetType(), expected)
 			return substitution
 		case *TcBuiltinMacroDef:
-			result.Sym = &TcProcSymbol{Source: ident.Source, Signature: sig}
+			result.Sym = &TcProcRef{Source: ident.Source, Signature: sig}
 			result.Args = checkedArgs
 			newResult := impl.MacroFunc(sc, scope, result)
 			ExpectType(sc, call, newResult.GetType(), expected)
@@ -1666,9 +1669,9 @@ func SemCheckExpr(sc *SemChecker, scope Scope, arg Expr, expected TypeConstraint
 		return (TcExpr)(SemCheckForLoopStmt(sc, scope, arg))
 	case *IfExpr:
 		ExpectType(sc, arg, TypeVoid, expected)
-		return (TcExpr)(SemCheckIfStmt(sc, scope, arg))
+		return (TcExpr)(SemCheckIfExpr(sc, scope, arg))
 	case *IfElseExpr:
-		return (TcExpr)(SemCheckIfElseStmt(sc, scope, arg, expected))
+		return (TcExpr)(SemCheckIfElseExpr(sc, scope, arg, expected))
 	case *ArrayLit:
 		return (TcExpr)(SemCheckArrayLit(sc, scope, arg, expected))
 	case *NilLit:
@@ -1908,7 +1911,7 @@ func SemCheckNilLit(sc *SemChecker, scope Scope, arg *NilLit, expected TypeConst
 	return &NilLit{Source: arg.Source, Type: TypeError}
 }
 
-func SemCheckIfStmt(sc *SemChecker, scope Scope, stmt *IfExpr) *TcIfStmt {
+func SemCheckIfExpr(sc *SemChecker, scope Scope, stmt *IfExpr) *TcIfStmt {
 	// currently only iteration on strings in possible (of course that is not final)
 	return &TcIfStmt{
 		Source:    stmt.Source,
@@ -1917,7 +1920,7 @@ func SemCheckIfStmt(sc *SemChecker, scope Scope, stmt *IfExpr) *TcIfStmt {
 	}
 }
 
-func SemCheckIfElseStmt(sc *SemChecker, scope Scope, stmt *IfElseExpr, expected TypeConstraint) *TcIfElseExpr {
+func SemCheckIfElseExpr(sc *SemChecker, scope Scope, stmt *IfElseExpr, expected TypeConstraint) *TcIfElseExpr {
 	// currently only iteration on strings in possible (of course that is not final)
 	return &TcIfElseExpr{
 		Source:    stmt.Source,

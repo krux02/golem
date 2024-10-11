@@ -616,7 +616,7 @@ func ValidatePrintfCall(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	}
 
 	result := &TcCall{Source: call.Source, Braced: call.Braced}
-	result.Sym = &TcProcSymbol{
+	result.Sym = &TcProcRef{
 		Source:    call.Sym.Source,
 		Signature: builtinCPrintf,
 	}

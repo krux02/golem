@@ -564,7 +564,7 @@ func (sym *TcSymRef) PrettyPrint(printer *AstPrettyPrinter) {
 	printer.WriteString(sym.Source)
 }
 
-func (sym *TcProcSymbol) PrettyPrint(printer *AstPrettyPrinter) {
+func (sym *TcProcRef) PrettyPrint(printer *AstPrettyPrinter) {
 	printer.WriteString(sym.Source)
 }
 

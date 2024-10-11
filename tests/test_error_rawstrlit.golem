@@ -2,8 +2,8 @@
 
 
 proc main(): i32 = {
-  # test an operator immediately after a raw string literal. A previeous
-  # would have seen the operator `-` ase an infix operator between the strLit ant x.
+  # test an operator immediately after a raw string literal. A previeous implementation
+  # would have seen the operator `-` ase an infix operator between the strLit and x.
   let x:f32 = 1.0
   let myLit: str = \\ my string lit
   -x # Error: expected type 'void' but got type 'f32'

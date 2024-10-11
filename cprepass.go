@@ -5,7 +5,7 @@ import (
 )
 
 func newAddrExpr(arg TcExpr) TcExpr {
-	sym := &TcProcSymbol{
+	sym := &TcProcRef{
 		Source:    "", // no source possible, hidden
 		Signature: builtinAddr,
 	}
@@ -32,7 +32,7 @@ func maybeUnrefParamSym(sym *TcSymRef) TcExpr {
 	case SkProcArg:
 		switch sym.Type.(type) {
 		case *StructType:
-			hiddenSym := &TcProcSymbol{
+			hiddenSym := &TcProcRef{
 				Source:    "",
 				Signature: builtinDeref,
 			}

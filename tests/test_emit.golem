@@ -5,7 +5,6 @@ proc foobar(var arg1: i32): void = {
    emit("`arg1` += 123")
 }
 
-
 ## foobar
 proc main(): i32 = {
   emit(

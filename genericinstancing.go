@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 type Substitutions struct {
 	procSubs []ProcSubstitution
 	symSubs  []SymbolSubstitution
@@ -8,6 +10,9 @@ type Substitutions struct {
 
 func instanciateGenericBody(body TcExpr, subs *Substitutions) TcExpr {
 	switch b := body.(type) {
+	case nil:
+		// The body of trait procs is nil
+		return nil
 	case *TcErrorNode:
 		copy := *b
 		return &copy
@@ -142,19 +147,21 @@ func instanciateGenericBody(body TcExpr, subs *Substitutions) TcExpr {
 			return result
 		}
 		newSignature := SignatureApplyTypeSubstitution(b.Signature, subs)
-		if len(newSignature.GenericParams) > 0 {
+		newBody := instanciateGenericBody(b.Body, subs)
+		N := len(newSignature.GenericParams)
+		if N > 0 {
 			result = &TcGenericProcDef{
 				Source:        b.Source,
 				Signature:     newSignature,
-				Body:          instanciateGenericBody(b.Body, subs),
-				InstanceCache: b.InstanceCache, // TODO is this even correct?
+				Body:          newBody,
+				InstanceCache: NewInstanceCache(N),
 			}
 		} else {
 			result = &TcProcDef{
 				Source:      b.Source,
 				MangledName: MangleSignature(newSignature),
 				Signature:   newSignature,
-				Body:        instanciateGenericBody(b.Body, subs),
+				Body:        newBody,
 			}
 		}
 		b.InstanceCache.Set(cacheKey, result)
@@ -221,5 +228,5 @@ func instanciateGenericBody(body TcExpr, subs *Substitutions) TcExpr {
 			Type:   ApplyTypeSubstitutions(b.Type, subs.typeSubs),
 		}
 	}
-	panic("compiler bug, node not handled in instanciate generic body")
+	panic(fmt.Errorf("compiler bug, node not handled in instanciate generic body %T", body))
 }

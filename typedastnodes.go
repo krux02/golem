@@ -105,7 +105,7 @@ type TcCodeBlock struct {
 }
 
 // TODO maybe unify TcProcSym with SymRef
-type TcProcSymbol struct {
+type TcProcRef struct {
 	Source    string
 	Signature *Signature
 }
@@ -173,7 +173,7 @@ type TcDotExpr struct {
 
 type TcCall struct {
 	Source string
-	Sym    *TcProcSymbol
+	Sym    *TcProcRef
 	Args   []TcExpr
 	// other properties
 	Braced bool // true for (a+b) +(a,b), false for a+b
@@ -381,7 +381,7 @@ func (arg *TcDotExpr) GetSource() string               { return arg.Source }
 func (arg *TcStructField) GetSource() string           { return arg.Source }
 func (arg *TcSymbol) GetSource() string                { return arg.Source }
 func (arg *TcSymRef) GetSource() string                { return arg.Source }
-func (arg *TcProcSymbol) GetSource() string            { return arg.Source }
+func (arg *TcProcRef) GetSource() string               { return arg.Source }
 func (arg *TcVariableDefStmt) GetSource() string       { return arg.Source }
 func (arg *TcReturnExpr) GetSource() string            { return arg.Source }
 func (arg *TcTypeContext) GetSource() string           { return arg.Source }
