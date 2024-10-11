@@ -24,6 +24,22 @@ type PackageGeneratorContext struct {
 	TodoListProc []*TcProcDef
 	// types marked for code generation
 	TodoListTypes []Type
+
+	// procs marked for code generation
+	ScheduledForGenerationProcDef    map[*TcProcDef]bool
+	ScheduledForGenerationStructType map[*StructType]bool
+	ScheduledForGenerationEnumType   map[*EnumType]bool
+	ScheduledForGenerationArrayType  map[*ArrayType]bool
+}
+
+func NewPackageGeneratorContext(pak *TcPackageDef) *PackageGeneratorContext {
+	return &PackageGeneratorContext{
+		Pak:                              pak,
+		ScheduledForGenerationProcDef:    make(map[*TcProcDef]bool),
+		ScheduledForGenerationStructType: make(map[*StructType]bool),
+		ScheduledForGenerationEnumType:   make(map[*EnumType]bool),
+		ScheduledForGenerationArrayType:  make(map[*ArrayType]bool),
+	}
 }
 
 func (builder *CodeBuilder) NewlineAndIndent() {
@@ -542,11 +558,12 @@ func (context *PackageGeneratorContext) markProcForGeneration(procDef *TcProcDef
 	if procDef.Importc {
 		return // importc procs don't have an impl
 	}
-	if procDef.scheduledforgeneration {
+
+	if context.ScheduledForGenerationProcDef[procDef] {
 		return // nothing to do when already scheduled
 	}
 	context.TodoListProc = append(context.TodoListProc, procDef)
-	procDef.scheduledforgeneration = true
+	context.ScheduledForGenerationProcDef[procDef] = true
 }
 
 func markTypeForGeneration(context *PackageGeneratorContext, typ Type) {
@@ -569,32 +586,32 @@ func markTypeForGeneration(context *PackageGeneratorContext, typ Type) {
 }
 
 func markArrayTypeForGeneration(context *PackageGeneratorContext, typ *ArrayType) {
-	if typ.scheduledforgeneration {
+	if context.ScheduledForGenerationArrayType[typ] {
 		return // nothing to do when already scheduled
 	}
 	markTypeForGeneration(context, typ.Elem)
-	typ.scheduledforgeneration = true
 	context.TodoListTypes = append(context.TodoListTypes, typ)
+	context.ScheduledForGenerationArrayType[typ] = true
 	//fmt.Printf("marking type for generation: %s %s\n", AstFormat(typ), AstFormat(typ.Elem))
 }
 
 func markStructTypeForGeneration(context *PackageGeneratorContext, typ *StructType) {
-	if typ.scheduledforgeneration || typ.Impl.Importc {
+	if typ.Impl.Importc || context.ScheduledForGenerationStructType[typ] {
 		return // nothing to do when already scheduled
 	}
 	for _, field := range typ.Impl.Fields {
 		markTypeForGeneration(context, field.Type)
 	}
-	typ.scheduledforgeneration = true
 	context.TodoListTypes = append(context.TodoListTypes, typ)
+	context.ScheduledForGenerationStructType[typ] = true
 }
 
 func markEnumTypeForGeneration(context *PackageGeneratorContext, typ *EnumType) {
-	if typ.scheduledforgeneration || typ.Impl.Importc {
+	if typ.Impl.Importc || context.ScheduledForGenerationEnumType[typ] {
 		return // nothing to do when already scheduled
 	}
-	typ.scheduledforgeneration = true
 	context.TodoListTypes = append(context.TodoListTypes, typ)
+	context.ScheduledForGenerationEnumType[typ] = true
 }
 
 // might return nil when nothing to do
@@ -619,7 +636,8 @@ func (context *PackageGeneratorContext) popMarkedForGenerationType() (result Typ
 // TODO this needs a signature change. Compiling a Package will also trigger the
 // compilation of its imported packages. This is not yet reflected in the API.
 func compilePackageToC(program *ProgramContext, pak *TcPackageDef, mainPackage bool) string {
-	context := &PackageGeneratorContext{Pak: pak}
+	context := NewPackageGeneratorContext(pak)
+
 	context.includes.NewlineAndIndent()
 	context.includes.WriteString("#include <stdint.h>")
 	context.includes.NewlineAndIndent()

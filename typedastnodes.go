@@ -252,11 +252,6 @@ type TcProcDef struct {
 	Signature   *Signature
 	Body        TcExpr
 	Importc     bool
-	// TODO: find a better solution for tagging other than mutuble setting a value
-	// this value is set to true in the code generator to mark this proc as
-	// already scheduled for code generation. This flag is used to prevent
-	// generating the same type multiple times.
-	scheduledforgeneration bool
 }
 
 type TcGenericProcDef struct {
@@ -265,13 +260,6 @@ type TcGenericProcDef struct {
 	Body          TcExpr // still has open generic types in it that need to be instanciated
 	InstanceCache *InstanceCache
 }
-
-// 	// TODO: find a better solution for tagging other than mutuble setting a value
-// 	// this value is set to true in the code generator to mark this proc as
-// 	// already scheduled for code generation. This flag is used to prevent
-// 	// generating the same type multiple times.
-// 	scheduledforgeneration bool
-// }
 
 type TcBuiltinMacroDef struct {
 	Signature *Signature

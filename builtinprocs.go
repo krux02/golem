@@ -49,33 +49,15 @@ type TypeTrait struct {
 
 type EnumType struct {
 	Impl *TcEnumDef
-
-	// TODO: find a better solution for tagging other than mutuble setting a value
-	// this value is set to true in the code generator to mark this type as
-	// already scheduled for code generation. This flag is used to prevent
-	// generating the same type multiple times.
-	scheduledforgeneration bool
 }
 
 type StructType struct {
 	Impl *TcStructDef
-
-	// TODO: find a better solution for tagging other than mutuble setting a value
-	// this value is set to true in the code generator to mark this type as
-	// already scheduled for code generation. This flag is used to prevent
-	// generating the same type multiple times.
-	scheduledforgeneration bool
 }
 
 type ArrayType struct {
 	Len  int64
 	Elem Type
-
-	// TODO: find a better solution for tagging other than mutuble setting a value
-	// this value is set to true in the code generator to mark this type as
-	// already scheduled for code generation. This flag is used to prevent
-	// generating the same type multiple times.
-	scheduledforgeneration bool
 }
 
 // types for literals
