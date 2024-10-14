@@ -676,11 +676,6 @@ func (procDef *TcBuiltinProcDef) PrettyPrint(builder *AstPrettyPrinter) {
 	procDef.Signature.PrettyPrint(builder)
 }
 
-func (procDef *TcBuiltinGenericProcDef) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("proc \"builtin\" ")
-	procDef.Signature.PrettyPrint(builder)
-}
-
 func (procDef *TcTemplateDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("template ")
 	procDef.Signature.PrettyPrint(builder)

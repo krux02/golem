@@ -169,9 +169,6 @@ func cgenprepass(expr TcExpr) TcExpr {
 		}
 	case *TcBuiltinProcDef:
 		return expr
-	case *TcBuiltinGenericProcDef:
-		panic("i don't know what to do?")
-		// return expr
 	case *TcTemplateDef:
 		// template should be inlined at this point in time. Their definitions are therefore superflous.
 		// Technically they should just be removed, but taking them in verbatim shouldn't cause harm either.

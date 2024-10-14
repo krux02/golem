@@ -223,24 +223,11 @@ type TcBuiltinProcDef struct {
 	// example2 "(", " + ", ")"          operator+ call
 	// example3 "somearray[", "][", "]"  array access
 	Prefix, Infix, Postfix string
-}
-
-type TcBuiltinGenericProcDef struct {
-	Signature Signature
-	//Body      TcExpr
-
-	// TODO these are fields to specifiy how to generate a call
-	// example1 "foo(", ", ", ")"        function call
-	// example2 "(", " + ", ")"          operator+ call
-	// example3 "somearray[", "][", "]"  array access
-	Prefix, Infix, Postfix string
-
-	InstanceCache *InstanceCache
+	InstanceCache          *InstanceCache
 }
 
 type TcBuiltinStaticProcDef struct {
 	Signature Signature
-
 	ApplyFunc func(context *TcPackageDef, args []TcExpr) TcExpr
 }
 
@@ -251,11 +238,6 @@ type TcProcDef struct {
 	Body          TcExpr
 	Importc       bool
 	InstanceCache *InstanceCache
-}
-
-type TcPseudoProcDefForTrait struct {
-	Source    string
-	Signature Signature
 }
 
 type TcBuiltinMacroDef struct {
@@ -360,35 +342,34 @@ type TcWrappedUntypedAst struct {
 	Expr Expr
 }
 
-func (arg *TcErrorNode) GetSource() string             { return arg.Source }
-func (arg *TcDotExpr) GetSource() string               { return arg.Source }
-func (arg *TcStructField) GetSource() string           { return arg.Source }
-func (arg *TcSymbol) GetSource() string                { return arg.Source }
-func (arg *TcSymRef) GetSource() string                { return arg.Source }
-func (arg *TcProcRef) GetSource() string               { return arg.Source }
-func (arg *TcVariableDefStmt) GetSource() string       { return arg.Source }
-func (arg *TcReturnExpr) GetSource() string            { return arg.Source }
-func (arg *TcTypeContext) GetSource() string           { return arg.Source }
-func (arg *TcForLoopStmt) GetSource() string           { return arg.Source }
-func (arg *TcWhileLoopStmt) GetSource() string         { return arg.Source }
-func (arg *TcIfStmt) GetSource() string                { return arg.Source }
-func (arg *TcIfElseExpr) GetSource() string            { return arg.Source }
-func (arg *TcCodeBlock) GetSource() string             { return arg.Source }
-func (arg *TcCall) GetSource() string                  { return arg.Source }
-func (arg *TcIntLit) GetSource() string                { return arg.Source }
-func (arg *TcFloatLit) GetSource() string              { return arg.Source }
-func (arg *TcStrLit) GetSource() string                { return arg.Source }
-func (arg *TcArrayLit) GetSource() string              { return arg.Source }
-func (arg *TcEnumSetLit) GetSource() string            { return arg.Source }
-func (arg *TcProcDef) GetSource() string               { return arg.Source }
-func (arg *TcBuiltinProcDef) GetSource() string        { return "" } // builtins have no source location
-func (arg *TcBuiltinGenericProcDef) GetSource() string { return "" } // builtins have no source location
-func (arg *TcTemplateDef) GetSource() string           { return arg.Source }
-func (arg *TcStructLit) GetSource() string             { return arg.Source }
-func (arg *TcPackageDef) GetSource() string            { return arg.Source }
-func (arg *TcEmitExpr) GetSource() string              { return arg.Source }
-func (arg *TcCastExpr) GetSource() string              { return arg.Source }
-func (arg *TcConvExpr) GetSource() string              { return arg.Source }
+func (arg *TcErrorNode) GetSource() string       { return arg.Source }
+func (arg *TcDotExpr) GetSource() string         { return arg.Source }
+func (arg *TcStructField) GetSource() string     { return arg.Source }
+func (arg *TcSymbol) GetSource() string          { return arg.Source }
+func (arg *TcSymRef) GetSource() string          { return arg.Source }
+func (arg *TcProcRef) GetSource() string         { return arg.Source }
+func (arg *TcVariableDefStmt) GetSource() string { return arg.Source }
+func (arg *TcReturnExpr) GetSource() string      { return arg.Source }
+func (arg *TcTypeContext) GetSource() string     { return arg.Source }
+func (arg *TcForLoopStmt) GetSource() string     { return arg.Source }
+func (arg *TcWhileLoopStmt) GetSource() string   { return arg.Source }
+func (arg *TcIfStmt) GetSource() string          { return arg.Source }
+func (arg *TcIfElseExpr) GetSource() string      { return arg.Source }
+func (arg *TcCodeBlock) GetSource() string       { return arg.Source }
+func (arg *TcCall) GetSource() string            { return arg.Source }
+func (arg *TcIntLit) GetSource() string          { return arg.Source }
+func (arg *TcFloatLit) GetSource() string        { return arg.Source }
+func (arg *TcStrLit) GetSource() string          { return arg.Source }
+func (arg *TcArrayLit) GetSource() string        { return arg.Source }
+func (arg *TcEnumSetLit) GetSource() string      { return arg.Source }
+func (arg *TcProcDef) GetSource() string         { return arg.Source }
+func (arg *TcBuiltinProcDef) GetSource() string  { return "" } // builtins have no source location
+func (arg *TcTemplateDef) GetSource() string     { return arg.Source }
+func (arg *TcStructLit) GetSource() string       { return arg.Source }
+func (arg *TcPackageDef) GetSource() string      { return arg.Source }
+func (arg *TcEmitExpr) GetSource() string        { return arg.Source }
+func (arg *TcCastExpr) GetSource() string        { return arg.Source }
+func (arg *TcConvExpr) GetSource() string        { return arg.Source }
 
 func (arg *TcStructDef) GetSource() string         { return arg.Source }
 func (arg *TcEnumDef) GetSource() string           { return arg.Source }
@@ -399,12 +380,11 @@ func (arg *TcBuiltinMacroDef) GetSource() string   { return "" } // builtins hav
 func (arg *TcErrorProcDef) GetSource() string      { return "" } // non existing proc def has no source
 func (arg *TcWrappedUntypedAst) GetSource() string { return arg.Expr.GetSource() }
 
-func (arg *TcBuiltinProcDef) GetSignature() *Signature        { return &arg.Signature }
-func (arg *TcBuiltinGenericProcDef) GetSignature() *Signature { return &arg.Signature }
-func (arg *TcProcDef) GetSignature() *Signature               { return &arg.Signature }
-func (arg *TcTemplateDef) GetSignature() *Signature           { return &arg.Signature }
-func (arg *TcBuiltinMacroDef) GetSignature() *Signature       { return &arg.Signature }
-func (arg *TcErrorProcDef) GetSignature() *Signature          { return &arg.Signature }
+func (arg *TcBuiltinProcDef) GetSignature() *Signature  { return &arg.Signature }
+func (arg *TcProcDef) GetSignature() *Signature         { return &arg.Signature }
+func (arg *TcTemplateDef) GetSignature() *Signature     { return &arg.Signature }
+func (arg *TcBuiltinMacroDef) GetSignature() *Signature { return &arg.Signature }
+func (arg *TcErrorProcDef) GetSignature() *Signature    { return &arg.Signature }
 
 func RequireMutable(sc *SemChecker, expr TcExpr) {
 	switch arg := expr.(type) {

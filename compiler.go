@@ -84,10 +84,6 @@ func (builder *CodeBuilder) compileCall(context *PackageGeneratorContext, call *
 		builder.WriteString(impl.Prefix)
 		builder.CompileSeparatedExprList(context, call.Args, impl.Infix)
 		builder.WriteString(impl.Postfix)
-	case *TcBuiltinGenericProcDef:
-		builder.WriteString(impl.Prefix)
-		builder.CompileSeparatedExprList(context, call.Args, impl.Infix)
-		builder.WriteString(impl.Postfix)
 	case *TcProcDef:
 		context.markProcForGeneration(impl)
 		builder.WriteString(impl.MangledName)

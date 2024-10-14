@@ -8,9 +8,11 @@ type Substitutions struct {
 	typeSubs []TypeSubstitution
 }
 
-func InstanciateBuiltinGenericProc(proc *TcBuiltinGenericProcDef, subs *Substitutions) *TcBuiltinProcDef {
+func InstanciateBuiltinGenericProc(proc *TcBuiltinProcDef, subs *Substitutions) *TcBuiltinProcDef {
+	if len(proc.Signature.GenericParams) == 0 {
+		return proc
+	}
 	cacheKey := ComputeInstanceCacheKey(proc.Signature.GenericParams, subs.typeSubs)
-
 	result := proc.InstanceCache.LookUp(cacheKey)
 	if result != nil {
 		return result.(*TcBuiltinProcDef)
@@ -37,24 +39,14 @@ func InstanciateGenericProc(proc *TcProcDef, subs *Substitutions) Overloadable {
 	}
 	newSignature := SignatureApplyTypeSubstitution(proc.Signature, subs)
 	newBody := recursiveInstanciateGenericBody(proc.Body, subs)
-	N := len(newSignature.GenericParams)
-	if N > 0 {
-		panic("not implemented")
-		// result = &TcGenericProcDef{
-		// 	Source:        b.Source,
-		// 	MangledName:   MangleSignature(newSignature),
-		// 	Signature:     newSignature,
-		// 	Body:          newBody,
-		// 	InstanceCache: NewInstanceCache(N),
-		// }
-	} else {
-		result = &TcProcDef{
-			Source:        proc.Source,
-			MangledName:   MangleSignature(&newSignature),
-			Signature:     newSignature,
-			Body:          newBody,
-			InstanceCache: NewInstanceCache(N),
-		}
+	if len(newSignature.GenericParams) > 0 {
+		panic("internal error, generic proc not fully instanciated")
+	}
+	result = &TcProcDef{
+		Source:      proc.Source,
+		MangledName: MangleSignature(&newSignature),
+		Signature:   newSignature,
+		Body:        newBody,
 	}
 	proc.InstanceCache.Set(cacheKey, result)
 	return result
@@ -193,8 +185,6 @@ func recursiveInstanciateGenericBody(body TcExpr, subs *Substitutions) TcExpr {
 		// 	Signature: instanciateGenericBody(b.Signature, subs),
 		// }
 	case *TcBuiltinProcDef:
-		panic("not implemented")
-	case *TcBuiltinGenericProcDef:
 		panic("not implemented")
 	case *TcTemplateDef:
 		panic("not implemented")

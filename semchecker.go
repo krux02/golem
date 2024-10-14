@@ -1017,7 +1017,7 @@ func (this *InstanceCache) LookUp(key []Type) Overloadable {
 		key2 := [...]Type{key[0], key[1], key[2], key[3], key[4], key[5]}
 		return this.Map.(map[[6]Type]Overloadable)[key2]
 	default:
-		panic(fmt.Errorf("not implemented %d", key))
+		panic(fmt.Errorf("not implemented %d", len(key)))
 	}
 }
 
@@ -1166,11 +1166,6 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 		}
 
 		switch impl := overloadables[0].(type) {
-		case *TcBuiltinProcDef:
-			result.Sym = &TcProcRef{Source: ident.Source, Overloadable: impl}
-			result.Args = checkedArgs
-			ExpectType(sc, call, sig.ResultType, expected)
-
 		case *TcProcDef:
 			instance := InstanciateGenericProc(impl, &sigSubstitutions[0])
 			result.Sym = &TcProcRef{Source: ident.Source, Overloadable: instance}
@@ -1181,23 +1176,12 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 			// just as a reminder to implement this.
 			// `sig` is the concrete signature of this call. All symbols resolved.
 			// `impl.Signature` is the generic signature from the definition with generic types in it.
-
-		case *TcBuiltinGenericProcDef:
-			// fmt.Println(AstFormat(sig))
-			// fmt.Println(AstFormat(impl.Signature))
-			// for _, sub := range sig.Substitutions {
-			// 	fmt.Printf("%s -> %s\n", sub.sym.Name, AstFormat(sub.newType))
-			// }
-			// sigInstance := &Signature{
-			// 	Name:          sig.Name,
-			// 	GenericParams: sig.GenericParams,
-			// 	Params:        sig.Params,
-			// 	ResultType:    sig.ResultType,
-			// }
+		case *TcBuiltinProcDef:
 			instance := InstanciateBuiltinGenericProc(impl, &sigSubstitutions[0])
 			result.Sym = &TcProcRef{Source: ident.Source, Overloadable: instance}
 			result.Args = checkedArgs
 			ExpectType(sc, call, sig.ResultType, expected)
+
 		case *TcTemplateDef:
 			sigParams := impl.Signature.Params
 			if len(checkedArgs) != len(sigParams) {
@@ -1440,38 +1424,37 @@ func (lit *NilLit) GetType() Type {
 	return lit.Type
 }
 
-func (_ *TcErrorNode) GetType() Type               { return TypeError }
-func (call *TcCall) GetType() Type                 { return call.Sym.Overloadable.GetSignature().ResultType }
-func (lit *TcStrLit) GetType() Type                { return lit.Type }
-func (lit *TcArrayLit) GetType() Type              { return GetArrayType(lit.ElemType, int64(len(lit.Items))) }
-func (lit *TcEnumSetLit) GetType() Type            { return GetEnumSetType(lit.ElemType) }
-func (lit *TcStructLit) GetType() Type             { return lit.Type }
-func (sym *TcSymbol) GetType() Type                { return sym.Type }
-func (sym *TcSymRef) GetType() Type                { return sym.Type }
-func (stmt *TcVariableDefStmt) GetType() Type      { return TypeVoid }
-func (stmt *TcStructDef) GetType() Type            { return TypeVoid }
-func (stmt *TcEnumDef) GetType() Type              { return TypeVoid }
-func (stmt *TcTypeAlias) GetType() Type            { return TypeVoid }
-func (stmt *TcTraitDef) GetType() Type             { return TypeVoid }
-func (stmt *TcForLoopStmt) GetType() Type          { return TypeVoid }
-func (stmt *TcWhileLoopStmt) GetType() Type        { return TypeVoid }
-func (arg *TcBuiltinProcDef) GetType() Type        { return TypeVoid }
-func (arg *TcBuiltinGenericProcDef) GetType() Type { return TypeVoid }
-func (arg *TcProcDef) GetType() Type               { return TypeVoid }
-func (arg *TcTemplateDef) GetType() Type           { return TypeVoid }
-func (arg *TcPackageDef) GetType() Type            { return TypeVoid }
-func (arg *TcBuiltinMacroDef) GetType() Type       { return TypeVoid }
-func (arg *TcErrorProcDef) GetType() Type          { return TypeVoid }
-func (stmt *TcIfStmt) GetType() Type               { return TypeVoid }
-func (stmt *TcIfElseExpr) GetType() Type           { return UnifyType(stmt.Body.GetType(), stmt.Else.GetType()) }
-func (returnExpr *TcReturnExpr) GetType() Type     { return TypeNoReturn }
-func (expr *TcTypeContext) GetType() Type          { return GetTypeType(expr.WrappedType) }
-func (expr *TcDotExpr) GetType() Type              { return expr.Rhs.GetType() }
-func (field *TcStructField) GetType() Type         { return field.Type }
-func (expr *TcWrappedUntypedAst) GetType() Type    { return TypeUntyped }
-func (expr *TcEmitExpr) GetType() Type             { return expr.Type }
-func (expr *TcConvExpr) GetType() Type             { return expr.Type }
-func (expr *TcCastExpr) GetType() Type             { return expr.Type }
+func (_ *TcErrorNode) GetType() Type            { return TypeError }
+func (call *TcCall) GetType() Type              { return call.Sym.Overloadable.GetSignature().ResultType }
+func (lit *TcStrLit) GetType() Type             { return lit.Type }
+func (lit *TcArrayLit) GetType() Type           { return GetArrayType(lit.ElemType, int64(len(lit.Items))) }
+func (lit *TcEnumSetLit) GetType() Type         { return GetEnumSetType(lit.ElemType) }
+func (lit *TcStructLit) GetType() Type          { return lit.Type }
+func (sym *TcSymbol) GetType() Type             { return sym.Type }
+func (sym *TcSymRef) GetType() Type             { return sym.Type }
+func (stmt *TcVariableDefStmt) GetType() Type   { return TypeVoid }
+func (stmt *TcStructDef) GetType() Type         { return TypeVoid }
+func (stmt *TcEnumDef) GetType() Type           { return TypeVoid }
+func (stmt *TcTypeAlias) GetType() Type         { return TypeVoid }
+func (stmt *TcTraitDef) GetType() Type          { return TypeVoid }
+func (stmt *TcForLoopStmt) GetType() Type       { return TypeVoid }
+func (stmt *TcWhileLoopStmt) GetType() Type     { return TypeVoid }
+func (arg *TcBuiltinProcDef) GetType() Type     { return TypeVoid }
+func (arg *TcProcDef) GetType() Type            { return TypeVoid }
+func (arg *TcTemplateDef) GetType() Type        { return TypeVoid }
+func (arg *TcPackageDef) GetType() Type         { return TypeVoid }
+func (arg *TcBuiltinMacroDef) GetType() Type    { return TypeVoid }
+func (arg *TcErrorProcDef) GetType() Type       { return TypeVoid }
+func (stmt *TcIfStmt) GetType() Type            { return TypeVoid }
+func (stmt *TcIfElseExpr) GetType() Type        { return UnifyType(stmt.Body.GetType(), stmt.Else.GetType()) }
+func (returnExpr *TcReturnExpr) GetType() Type  { return TypeNoReturn }
+func (expr *TcTypeContext) GetType() Type       { return GetTypeType(expr.WrappedType) }
+func (expr *TcDotExpr) GetType() Type           { return expr.Rhs.GetType() }
+func (field *TcStructField) GetType() Type      { return field.Type }
+func (expr *TcWrappedUntypedAst) GetType() Type { return TypeUntyped }
+func (expr *TcEmitExpr) GetType() Type          { return expr.Type }
+func (expr *TcConvExpr) GetType() Type          { return expr.Type }
+func (expr *TcCastExpr) GetType() Type          { return expr.Type }
 
 func SemCheckIntLit(sc *SemChecker, scope Scope, arg *IntLit, expected TypeConstraint) TcExpr {
 	uniqueConstraint, isUniqueConstraint := expected.(UniqueTypeConstraint)
