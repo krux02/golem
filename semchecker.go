@@ -1577,14 +1577,18 @@ func SemCheckStrLit(sc *SemChecker, scope Scope, arg *StrLit, expected TypeConst
 	}
 
 	switch typ := uniqueConstraint.Typ.(type) {
-	case *BuiltinStringType:
+	case *BuiltinIntType:
 		if typ == TypeChar {
 			runeCount := utf8.RuneCountInString(arg.Value)
 			if runeCount != 1 {
 				ReportErrorf(sc, arg, "char lit must have exactly one rune, but it has %d runes", runeCount)
 				goto error
 			}
+			rune, _ := utf8.DecodeRuneInString(arg.Value)
+			value := big.NewInt(int64(rune))
+			return &TcIntLit{arg.Source, typ, value}
 		}
+	case *BuiltinStringType:
 		return &TcStrLit{
 			Source: arg.Source,
 			Type:   typ,

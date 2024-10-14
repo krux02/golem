@@ -34,17 +34,15 @@ proc main(): i32 = {
   var c2 : char = "ä"
   var c3 : char = "ß"
   var c4 : char = "ẞ"
-  # TODO enable this
-  # var c5 : char = 32
-  var c5: char = " "
+
+  var c5 : char = 32
 
   assert(c1 == "c")
 
-  # TODO enable this
-  #assert(c1 == 99)
-  #assert(c2 == 228)
-  #assert(c3 == 223)
-  #assert(c4 == 2838)
+  assert(c1 == 99)
+  assert(c2 == 228)
+  assert(c3 == 223)
+  assert(c4 == 7838)
   assert(c5 == " ")
 
   printf("a: %v %v %v %v\n", i1,i2,i3,i4)
@@ -53,10 +51,10 @@ proc main(): i32 = {
   printf("d: %X %X %X %X\n", i5,i6,i7,i8)
   printf("e: %d %d %d %d\n", i5,i6,i7,i8)
   # for unicode chars to be printable, a call to setlocale is necessary.
-  discard setlocale(LC_CTYPE, ""): cstr
-  printf("f: %d %d %d %d\n", cast(c1, type i32), cast(c2, type i32),cast(c3, type i32), cast(c4, type i32))
-  printf("f: %v %v %v %v\n", c1,c2,c3,c4)
-  printf("g: %c %c %c %c\n", c1,c2,c3,c4)
+  discard setlocale(LC_CTYPE, "")
+  printf("f: %d %d %d %d\n", c1,c2,c3,c4) # should print 99 228 223 7838
+  printf("g: %v %v %v %v\n", c1,c2,c3,c4) # should print c ä ß ẞ
+  printf("h: %c %c %c %c\n", c1,c2,c3,c4) # should print c ä ß ẞ
   printf("done\n")
   0
 }

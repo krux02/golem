@@ -217,8 +217,7 @@ var TypeBoolean = &BuiltinType{"bool", "bool", 'b'}
 var TypeStr = &BuiltinStringType{"str", "string", 'R'}
 var TypeCStr = &BuiltinStringType{"cstr", "char const*", 'x'}
 
-// TODO is this really best as a subtype of BuiltinStringType
-var TypeChar = &BuiltinStringType{"char", "int32_t", 'c'}
+var TypeChar = &BuiltinIntType{"char", "uint32_t", 'c', big.NewInt(0), big.NewInt(0xffffffff)}
 
 // TODO maybe have something like this cchar type
 //var TypeCChar = &BuiltinIntType{"cchar", "char", 'm', big.NewInt(-0x80), big.NewInt(0x7f)}
@@ -247,6 +246,7 @@ var TypeError = &ErrorType{}
 var TypeAnyUInt = &TypeGroup{Name: "AnyUInt", Items: []Type{TypeUInt8, TypeUInt16, TypeUInt32, TypeUInt64}}
 var TypeAnySInt = &TypeGroup{Name: "AnySInt", Items: []Type{TypeInt8, TypeInt16, TypeInt32, TypeInt64}}
 var TypeAnyInt = &TypeGroup{Name: "AnyInt", Items: []Type{TypeInt8, TypeInt16, TypeInt32, TypeInt64, TypeUInt8, TypeUInt16, TypeUInt32, TypeUInt64}}
+var TypeAnyIntOrChar = &TypeGroup{Name: "AnyIntOrChar", Items: []Type{TypeInt8, TypeInt16, TypeInt32, TypeInt64, TypeUInt8, TypeUInt16, TypeUInt32, TypeUInt64, TypeChar}}
 var TypeAnyFloat = &TypeGroup{Name: "AnyFloat", Items: []Type{TypeFloat32, TypeFloat64}}
 var TypeAnyNumber = &TypeGroup{Name: "AnyNumber", Items: []Type{
 	TypeFloat32, TypeFloat64,
@@ -287,11 +287,7 @@ func (typ *BuiltinFloatType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
 }
 
 func (typ *BuiltinStringType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
-	if typ == TypeChar {
-		return &TcStrLit{Type: typ, Value: "\000"}
-	}
 	return &TcStrLit{Type: typ}
-
 }
 
 func (typ *ErrorType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
@@ -504,7 +500,6 @@ func ValidatePrintfCall(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 				c2 = 'f'
 			default:
 				// TODO test error message
-
 				ReportErrorf(sc, formatExpr, "type not supported for %%v: %s", AstFormat(argType))
 				return call
 			}
@@ -524,7 +519,7 @@ func ValidatePrintfCall(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 		case 's':
 			typeExpectation = TypeAnyString
 		case 'd':
-			typeExpectation = TypeAnyInt
+			typeExpectation = TypeAnyIntOrChar
 		case 'x', 'X', 'u':
 			typeExpectation = TypeAnyUInt
 		case 'f':
@@ -554,8 +549,12 @@ func ValidatePrintfCall(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 		case TypeStr:
 			formatStrC.WriteString("*s")
 		case TypeChar:
-			// TODO: add support to print unicode runes as well
-			formatStrC.WriteString("lc")
+			if c2 == 'd' {
+				formatStrC.WriteString("d")
+			} else {
+				// requires setlocale to be called
+				formatStrC.WriteString("lc")
+			}
 		case TypeFloat32, TypeFloat64:
 			formatStrC.WriteString("f")
 		default:
@@ -905,6 +904,7 @@ func init() {
 
 	RegisterTypeGroup(nil, builtinScope, TypeAnyFloat, nil)
 	RegisterTypeGroup(nil, builtinScope, TypeAnyInt, nil)
+	RegisterTypeGroup(nil, builtinScope, TypeAnyIntOrChar, nil)
 	RegisterTypeGroup(nil, builtinScope, TypeAnyUInt, nil)
 	RegisterTypeGroup(nil, builtinScope, TypeAnySInt, nil)
 	RegisterTypeGroup(nil, builtinScope, TypeAnyNumber, nil)
