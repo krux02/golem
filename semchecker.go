@@ -37,7 +37,7 @@ type ScopeImpl struct {
 	CurrentProcSignature *Signature // used for `return` statements
 	CurrentTrait         *TcTraitDef
 	Variables            map[string]*TcSymbol
-	Signatures           map[string][]Overloadable // TODO rename this, no longer signatures
+	Overloadables        map[string][]Overloadable
 	Types                map[string]Type
 	TypeConstraints      map[string]TypeConstraint
 }
@@ -52,7 +52,7 @@ func NewSubScope(scope Scope) Scope {
 		CurrentProcSignature: scope.CurrentProcSignature,
 		// TODO maybe do lazy initialization of some of these? Traits are rarely addad.
 		Variables:       make(map[string]*TcSymbol),
-		Signatures:      make(map[string][]Overloadable),
+		Overloadables:   make(map[string][]Overloadable),
 		Types:           make(map[string]Type),
 		TypeConstraints: make(map[string]TypeConstraint),
 	}
@@ -65,6 +65,14 @@ func RegisterType(sc *SemChecker, scope Scope, name string, typ Type, context Ex
 		return
 	}
 	scope.Types[name] = typ
+}
+
+func RegisterTypeGroup(sc *SemChecker, scope Scope, tg *TypeGroup, context Expr) TypeConstraint {
+	if _, ok := builtinScope.TypeConstraints[tg.Name]; ok {
+		ReportErrorf(sc, context, "double definition of type group %s", AstFormat(tg))
+	}
+	builtinScope.TypeConstraints[tg.Name] = tg
+	return tg
 }
 
 func RegisterTrait(sc *SemChecker, scope Scope, trait *TcTraitDef, context Expr) TypeConstraint {
@@ -82,7 +90,7 @@ func RegisterTrait(sc *SemChecker, scope Scope, trait *TcTraitDef, context Expr)
 func RegisterProc(sc *SemChecker, scope Scope, proc Overloadable, context Expr) {
 	name := proc.GetSignature().Name
 	// TODO check for name collisions with the same signature
-	scope.Signatures[name] = append(scope.Signatures[name], proc)
+	scope.Overloadables[name] = append(scope.Overloadables[name], proc)
 }
 
 func (scope Scope) NewSymbol(sc *SemChecker, name *Ident, kind SymbolKind, typ Type) *TcSymbol {
@@ -195,7 +203,7 @@ func LookUpType(sc *SemChecker, scope Scope, expr Expr) Type {
 
 func LookUpProc(scope Scope, ident *Ident, numArgs int, overloadables []Overloadable) []Overloadable {
 	for scope != nil {
-		if localOverloadables, ok := scope.Signatures[ident.Source]; ok {
+		if localOverloadables, ok := scope.Overloadables[ident.Source]; ok {
 			if numArgs >= 0 { // num args may be set to -1 to get all signatures
 				for _, overloadable := range localOverloadables {
 					sig := overloadable.GetSignature()

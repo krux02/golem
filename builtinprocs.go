@@ -346,7 +346,7 @@ var builtinScope Scope = &ScopeImpl{
 	Parent:               nil,
 	CurrentPackage:       nil,
 	CurrentProcSignature: nil,
-	Signatures:           make(map[string][]Overloadable),
+	Overloadables:        make(map[string][]Overloadable),
 	Variables:            make(map[string]*TcSymbol),
 	Types:                make(map[string]Type),
 	TypeConstraints:      make(map[string]TypeConstraint),
@@ -360,18 +360,7 @@ func registerBuiltinType(typ Type) {
 	if nameField.Kind() != reflect.String {
 		panic(fmt.Errorf("internal error type %s needs Name Field of type string", rValue.Type().Name()))
 	}
-	name := nameField.String()
-	if _, ok := builtinScope.Types[name]; ok {
-		panic("internal error double definition of builtin type")
-	}
-	builtinScope.Types[name] = typ
-}
-
-func registerBuiltinTypeGroup(typ *TypeGroup) {
-	if _, ok := builtinScope.TypeConstraints[typ.Name]; ok {
-		panic("internal error double definition of builtin type group")
-	}
-	builtinScope.TypeConstraints[typ.Name] = typ
+	RegisterType(nil, builtinScope, nameField.String(), typ, nil)
 }
 
 func SymSubset(setA, setB []*GenericTypeSymbol) bool {
@@ -429,7 +418,7 @@ func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams [
 		Postfix:       postfix,
 		InstanceCache: NewInstanceCache(len(genericParams)),
 	}
-	builtinScope.Signatures[name] = append(builtinScope.Signatures[name], procDef)
+	RegisterProc(nil, builtinScope, procDef, nil)
 	return procDef
 }
 
@@ -443,7 +432,7 @@ func registerGenericBuiltinMacro(name string, varargs bool, genericParams []*Gen
 		MacroFunc: macroFunc,
 	}
 	macroDef.Signature.Varargs = varargs
-	builtinScope.Signatures[name] = append(builtinScope.Signatures[name], macroDef)
+	RegisterProc(nil, builtinScope, macroDef, nil)
 }
 
 func registerBuiltinMacro(name string, varargs bool, args []Type, result Type, macroFunc BuiltinMacroFunc) {
@@ -460,8 +449,7 @@ func registerSimpleTemplate(name string, params []*TcSymbol, result Type, substi
 		},
 		Body: substitution,
 	}
-	// TODO check for signature collision
-	builtinScope.Signatures[name] = append(builtinScope.Signatures[name], templateDef)
+	RegisterProc(nil, builtinScope, templateDef, nil)
 }
 
 type BuiltinMacroFunc func(sc *SemChecker, scope Scope, call *TcCall) TcExpr
@@ -832,9 +820,9 @@ func BuiltinImportStmt(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 			}
 			scope.Types[key] = value
 		}
-		for key, value := range pkg.ExportScope.Signatures {
-			procs, _ := scope.Signatures[key]
-			scope.Signatures[key] = append(procs, value...)
+		for key, value := range pkg.ExportScope.Overloadables {
+			procs, _ := scope.Overloadables[key]
+			scope.Overloadables[key] = append(procs, value...)
 		}
 	}
 	return &TcCodeBlock{Source: call.Source}
@@ -911,16 +899,16 @@ func init() {
 	registerBuiltinType(TypeFloat32x4)
 
 	// type aliases
-	builtinScope.Types["pointer"] = GetPtrType(TypeVoid)
-	builtinScope.Types["int"] = TypeInt64
-	builtinScope.Types["uint"] = TypeUInt64
+	RegisterType(nil, builtinScope, "pointer", GetPtrType(TypeVoid), nil)
+	RegisterType(nil, builtinScope, "int", TypeInt64, nil)
+	RegisterType(nil, builtinScope, "uint", TypeUInt64, nil)
 
-	registerBuiltinTypeGroup(TypeAnyFloat)
-	registerBuiltinTypeGroup(TypeAnyInt)
-	registerBuiltinTypeGroup(TypeAnyUInt)
-	registerBuiltinTypeGroup(TypeAnySInt)
-	registerBuiltinTypeGroup(TypeAnyNumber)
-	registerBuiltinTypeGroup(TypeAnyString)
+	RegisterTypeGroup(nil, builtinScope, TypeAnyFloat, nil)
+	RegisterTypeGroup(nil, builtinScope, TypeAnyInt, nil)
+	RegisterTypeGroup(nil, builtinScope, TypeAnyUInt, nil)
+	RegisterTypeGroup(nil, builtinScope, TypeAnySInt, nil)
+	RegisterTypeGroup(nil, builtinScope, TypeAnyNumber, nil)
+	RegisterTypeGroup(nil, builtinScope, TypeAnyString, nil)
 
 	for _, typ := range TypeAnyNumber.Items {
 		registerBuiltin("+", "(", "+", ")", []Type{typ, typ}, typ, 0)
