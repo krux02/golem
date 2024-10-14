@@ -26,7 +26,7 @@ func InstanciateBuiltinGenericProc(proc *TcBuiltinGenericProcDef, subs *Substitu
 	return result.(*TcBuiltinProcDef)
 }
 
-func InstanciateGenericProc(proc *TcGenericProcDef, subs *Substitutions) Overloadable {
+func InstanciateGenericProc(proc *TcProcDef, subs *Substitutions) Overloadable {
 	if len(proc.Signature.GenericParams) == 0 {
 		return proc
 	}
@@ -192,8 +192,6 @@ func recursiveInstanciateGenericBody(body TcExpr, subs *Substitutions) TcExpr {
 		// 	Importc     bool
 		// 	Signature: instanciateGenericBody(b.Signature, subs),
 		// }
-	case *TcGenericProcDef:
-		panic("not implemented")
 	case *TcBuiltinProcDef:
 		panic("not implemented")
 	case *TcBuiltinGenericProcDef:

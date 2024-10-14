@@ -509,7 +509,7 @@ func MangleSignature(signature *Signature) string {
 	return mangledNameBuilder.String()
 }
 
-func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result Overloadable) {
+func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result *TcProcDef) {
 	innerScope := NewSubScope(parentScope)
 	name, body, resultType, genericArgs, args := MustMatchProcDef(sc, def)
 
@@ -543,22 +543,12 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result Ov
 		mangledName = MangleSignature(signature)
 	}
 
-	if isGeneric {
-		result = &TcGenericProcDef{
-			Source:        def.Source,
-			MangledName:   mangledName,
-			Signature:     *signature,
-			Importc:       importc,
-			InstanceCache: NewInstanceCache(len(signature.GenericParams)),
-		}
-	} else {
-		result = &TcProcDef{
-			Source:        def.Source,
-			MangledName:   mangledName,
-			Signature:     *signature,
-			Importc:       importc,
-			InstanceCache: NewInstanceCache(len(signature.GenericParams)),
-		}
+	result = &TcProcDef{
+		Source:        def.Source,
+		MangledName:   mangledName,
+		Signature:     *signature,
+		Importc:       importc,
+		InstanceCache: NewInstanceCache(len(signature.GenericParams)),
 	}
 
 	// register proc before type checking the body to allow recursion. (TODO needs a test)
@@ -581,12 +571,7 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result Ov
 		}
 	}
 
-	if isGeneric {
-		result.(*TcGenericProcDef).Body = tcBody
-	} else {
-		result.(*TcProcDef).Body = tcBody
-	}
-
+	result.Body = tcBody
 	return result
 }
 
@@ -1185,20 +1170,8 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 			result.Sym = &TcProcRef{Source: ident.Source, Overloadable: impl}
 			result.Args = checkedArgs
 			ExpectType(sc, call, sig.ResultType, expected)
+
 		case *TcProcDef:
-			result.Sym = &TcProcRef{Source: ident.Source, Overloadable: impl}
-			result.Args = checkedArgs
-			ExpectType(sc, call, sig.ResultType, expected)
-
-			// newImpl := InstanciateGenericProc(impl, &sigSubstitutions[0]).(Overloadable)
-			// fmt.Println("vvv")
-			// fmt.Println(AstFormat(sig.Impl))
-			// fmt.Println(" => ")
-			// fmt.Println(AstFormat(newImpl))
-			// fmt.Println("^^^")
-
-		case *TcGenericProcDef:
-
 			instance := InstanciateGenericProc(impl, &sigSubstitutions[0])
 			result.Sym = &TcProcRef{Source: ident.Source, Overloadable: instance}
 			result.Args = checkedArgs
@@ -1485,7 +1458,6 @@ func (stmt *TcWhileLoopStmt) GetType() Type        { return TypeVoid }
 func (arg *TcBuiltinProcDef) GetType() Type        { return TypeVoid }
 func (arg *TcBuiltinGenericProcDef) GetType() Type { return TypeVoid }
 func (arg *TcProcDef) GetType() Type               { return TypeVoid }
-func (arg *TcGenericProcDef) GetType() Type        { return TypeVoid }
 func (arg *TcTemplateDef) GetType() Type           { return TypeVoid }
 func (arg *TcPackageDef) GetType() Type            { return TypeVoid }
 func (arg *TcBuiltinMacroDef) GetType() Type       { return TypeVoid }
@@ -2008,16 +1980,14 @@ func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *Packag
 		case *ProcDef:
 			switch stmt.Kind {
 			case TkProc:
-				switch def := SemCheckProcDef(sc, pkgScope, stmt).(type) {
-				case *TcProcDef:
-					result.ProcDefs = append(result.ProcDefs, def)
-					if mainPackage && def.Signature.Name == "main" {
-						currentProgram.Main = def
+				def := SemCheckProcDef(sc, pkgScope, stmt)
+				result.ProcDefs = append(result.ProcDefs, def)
+				if mainPackage && def.Signature.Name == "main" {
+					if len(def.Signature.GenericParams) > 0 {
+						ReportErrorf(sc, def, "main proc may not be generic")
 					}
-				case *TcGenericProcDef:
-					result.GenericProcDefs = append(result.GenericProcDefs, def)
-				default:
-					panic("internal error")
+					currentProgram.Main = def
+
 				}
 			case TkTemplate:
 				def := SemCheckTemplateDef(sc, pkgScope, stmt)

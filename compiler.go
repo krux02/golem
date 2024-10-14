@@ -98,8 +98,6 @@ func (builder *CodeBuilder) compileCall(context *PackageGeneratorContext, call *
 		panic(fmt.Errorf("internal error: templates must be resolved before code generation"))
 	case *TcBuiltinMacroDef:
 		panic(fmt.Errorf("internal error: macros must be resolved before code generation"))
-	case *TcGenericProcDef:
-		panic(fmt.Errorf("internal error: generic procs must be instanciated before code generation\n%s\n%s\n", AstFormat(call), AstFormat(impl)))
 	default:
 		panic(fmt.Errorf("internal error: %T", impl))
 	}
