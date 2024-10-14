@@ -27,6 +27,9 @@ func InstanciateBuiltinGenericProc(proc *TcBuiltinGenericProcDef, subs *Substitu
 }
 
 func InstanciateGenericProc(proc *TcGenericProcDef, subs *Substitutions) Overloadable {
+	if len(proc.Signature.GenericParams) == 0 {
+		return proc
+	}
 	cacheKey := ComputeInstanceCacheKey(proc.Signature.GenericParams, subs.typeSubs)
 	result := proc.InstanceCache.LookUp(cacheKey)
 	if result != nil {
