@@ -1025,10 +1025,11 @@ func init() {
 	{
 		// TODO: has no line information
 		T := NewGenericTypeSymbol("", "T", TypeUnspecified)
-		// TODO mark argument as mutable
 		builtinAddr = registerGenericBuiltin("addr", "&(", "", ")", []*GenericTypeSymbol{T}, []Type{T}, GetPtrType(T), 1)
+
+		// TODO mark argument as mutable
 		builtinDeref = registerGenericBuiltin("indexOp", "*(", "", ")", []*GenericTypeSymbol{T}, []Type{GetPtrType(T)}, T, 0)
-		// TODO mark first argument as mutable
+
 		registerGenericBuiltin("=", "(", "=", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeVoid, 1)
 		registerGenericBuiltin("==", "(", "==", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeBoolean, 0)
 		registerGenericBuiltin("!=", "(", "!=", ")", []*GenericTypeSymbol{T}, []Type{T, T}, TypeBoolean, 0)

@@ -566,17 +566,20 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) Overloadab
 	if isGeneric {
 		signature.Impl = &TcGenericProcDef{
 			Source:        def.Source,
+			MangledName:   mangledName,
 			Signature:     signature,
+			Importc:       importc,
 			Body:          tcBody, // still has open generic types in it that need to be instanciated
 			InstanceCache: NewInstanceCache(len(signature.GenericParams)),
 		}
 	} else {
 		signature.Impl = &TcProcDef{
-			Source:      def.Source,
-			MangledName: mangledName,
-			Signature:   signature,
-			Importc:     importc,
-			Body:        tcBody,
+			Source:        def.Source,
+			MangledName:   mangledName,
+			Signature:     signature,
+			Importc:       importc,
+			Body:          tcBody,
+			InstanceCache: NewInstanceCache(len(signature.GenericParams)),
 		}
 	}
 	return signature.Impl
@@ -971,9 +974,11 @@ func (this *InstanceCache) Init(N int) {
 	}
 }
 
-func NewInstanceCache(N int) *InstanceCache {
-	result := &InstanceCache{}
-	result.Init(N)
+func NewInstanceCache(N int) (result *InstanceCache) {
+	if N > 0 {
+		result = &InstanceCache{}
+		result.Init(N)
+	}
 	return result
 }
 
@@ -1040,24 +1045,6 @@ genericParams:
 		panic(fmt.Errorf("symbol has no substitudion: %s", AstFormat(sym)))
 	}
 	return cacheKey
-}
-
-func InstanciateBuiltinGenericProc(sc *SemChecker, proc *TcBuiltinGenericProcDef, substitutions *Substitutions) *TcBuiltinProcDef {
-	cacheKey := ComputeInstanceCacheKey(proc.Signature.GenericParams, substitutions.typeSubs)
-
-	result := proc.InstanceCache.LookUp(cacheKey)
-	if result != nil {
-		return result.(*TcBuiltinProcDef)
-	}
-	newSig := SignatureApplyTypeSubstitution(proc.Signature, substitutions)
-	result = &TcBuiltinProcDef{
-		Signature: newSig,
-		Prefix:    proc.Prefix,
-		Infix:     proc.Infix,
-		Postfix:   proc.Postfix,
-	}
-	proc.InstanceCache.Set(cacheKey, result)
-	return result.(*TcBuiltinProcDef)
 }
 
 func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstraint) TcExpr {
@@ -1189,14 +1176,20 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 			result.Args = checkedArgs
 			ExpectType(sc, call, sig.ResultType, expected)
 
+			// newImpl := InstanciateGenericProc(impl, &sigSubstitutions[0]).(Overloadable)
+			// fmt.Println("vvv")
+			// fmt.Println(AstFormat(sig.Impl))
+			// fmt.Println(" => ")
+			// fmt.Println(AstFormat(newImpl))
+			// fmt.Println("^^^")
+
 		case *TcGenericProcDef:
-			subs := &sigSubstitutions[0]
 
 			result.Sym = &TcProcRef{Source: ident.Source, Signature: sig}
 			result.Args = checkedArgs
 			ExpectType(sc, call, sig.ResultType, expected)
 
-			sig.Impl = instanciateGenericBody(impl, subs).(Overloadable)
+			sig.Impl = InstanciateGenericProc(impl, &sigSubstitutions[0]).(Overloadable)
 			// ReportErrorf(sc, ident, "instanciating generic functions is not yet implemented")
 			// just as a reminder to implement this.
 			// `sig` is the concrete signature of this call. All symbols resolved.
@@ -1215,7 +1208,7 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 				ResultType:    sig.ResultType,
 			}
 
-			sigInstance.Impl = InstanciateBuiltinGenericProc(sc, impl, &sigSubstitutions[0])
+			sigInstance.Impl = InstanciateBuiltinGenericProc(impl, &sigSubstitutions[0])
 			result.Sym = &TcProcRef{Source: ident.Source, Signature: sigInstance}
 			result.Args = checkedArgs
 			ExpectType(sc, call, sig.ResultType, expected)

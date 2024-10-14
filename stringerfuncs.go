@@ -823,3 +823,27 @@ func (expr *TcConvExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteNode(expr.Expr)
 	builder.WriteString(")")
 }
+
+func (subs *Substitutions) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("subs(")
+	builder.Indentation += 1
+	for _, sub := range subs.symSubs {
+		builder.NewlineAndIndent()
+		builder.WriteNode(sub.sym)
+		builder.WriteString(" -> ")
+		builder.WriteNode(sub.newSym)
+	}
+	for _, sub := range subs.typeSubs {
+		builder.NewlineAndIndent()
+		builder.WriteNode(sub.sym)
+		builder.WriteString(" -> ")
+		builder.WriteNode(sub.newType)
+	}
+	for _, sub := range subs.procSubs {
+		builder.NewlineAndIndent()
+		builder.WriteNode(sub.sig)
+		builder.WriteString(" -> ")
+		builder.WriteNode(sub.newSig)
+	}
+	builder.WriteString(")")
+}

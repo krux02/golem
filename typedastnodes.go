@@ -247,17 +247,20 @@ type TcBuiltinStaticProcDef struct {
 }
 
 type TcProcDef struct {
-	Source      string
-	MangledName string
-	Signature   *Signature
-	Body        TcExpr
-	Importc     bool
+	Source        string
+	MangledName   string
+	Signature     *Signature
+	Body          TcExpr
+	Importc       bool
+	InstanceCache *InstanceCache
 }
 
 type TcGenericProcDef struct {
 	Source        string
+	MangledName   string
 	Signature     *Signature
 	Body          TcExpr // still has open generic types in it that need to be instanciated
+	Importc       bool
 	InstanceCache *InstanceCache
 }
 
@@ -403,11 +406,6 @@ func (arg *GenericTypeSymbol) GetSource() string   { return arg.Source }
 func (arg *TcBuiltinMacroDef) GetSource() string   { return "" } // builtins have no source
 func (arg *TcErrorProcDef) GetSource() string      { return "" } // non existing proc def has no source
 func (arg *TcWrappedUntypedAst) GetSource() string { return arg.Expr.GetSource() }
-
-// func (arg *EnumSetType) GetSource() string { return arg.Source }
-// func (arg TypeGroup) GetSource() string    { return arg.Source }
-// func (arg *BuiltinType) GetSource() string { return arg.Source }
-// func (arg *ArrayType) GetSource() string   { return arg.Source }
 
 func (arg *TcBuiltinProcDef) GetSignature() *Signature        { return arg.Signature }
 func (arg *TcBuiltinGenericProcDef) GetSignature() *Signature { return arg.Signature }

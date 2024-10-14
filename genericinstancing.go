@@ -8,7 +8,56 @@ type Substitutions struct {
 	typeSubs []TypeSubstitution
 }
 
-func instanciateGenericBody(body TcExpr, subs *Substitutions) TcExpr {
+func InstanciateBuiltinGenericProc(proc *TcBuiltinGenericProcDef, subs *Substitutions) *TcBuiltinProcDef {
+	cacheKey := ComputeInstanceCacheKey(proc.Signature.GenericParams, subs.typeSubs)
+
+	result := proc.InstanceCache.LookUp(cacheKey)
+	if result != nil {
+		return result.(*TcBuiltinProcDef)
+	}
+	newSig := SignatureApplyTypeSubstitution(proc.Signature, subs)
+	result = &TcBuiltinProcDef{
+		Signature: newSig,
+		Prefix:    proc.Prefix,
+		Infix:     proc.Infix,
+		Postfix:   proc.Postfix,
+	}
+	proc.InstanceCache.Set(cacheKey, result)
+	return result.(*TcBuiltinProcDef)
+}
+
+func InstanciateGenericProc(proc *TcGenericProcDef, subs *Substitutions) Overloadable {
+	cacheKey := ComputeInstanceCacheKey(proc.Signature.GenericParams, subs.typeSubs)
+	result := proc.InstanceCache.LookUp(cacheKey)
+	if result != nil {
+		return result
+	}
+	newSignature := SignatureApplyTypeSubstitution(proc.Signature, subs)
+	newBody := recursiveInstanciateGenericBody(proc.Body, subs)
+	N := len(newSignature.GenericParams)
+	if N > 0 {
+		panic("not implemented")
+		// result = &TcGenericProcDef{
+		// 	Source:        b.Source,
+		// 	MangledName:   MangleSignature(newSignature),
+		// 	Signature:     newSignature,
+		// 	Body:          newBody,
+		// 	InstanceCache: NewInstanceCache(N),
+		// }
+	} else {
+		result = &TcProcDef{
+			Source:        proc.Source,
+			MangledName:   MangleSignature(newSignature),
+			Signature:     newSignature,
+			Body:          newBody,
+			InstanceCache: NewInstanceCache(N),
+		}
+	}
+	proc.InstanceCache.Set(cacheKey, result)
+	return result
+}
+
+func recursiveInstanciateGenericBody(body TcExpr, subs *Substitutions) TcExpr {
 	switch b := body.(type) {
 	case nil:
 		// The body of trait procs is nil
@@ -19,8 +68,8 @@ func instanciateGenericBody(body TcExpr, subs *Substitutions) TcExpr {
 	case *TcDotExpr:
 		return &TcDotExpr{
 			Source: b.Source,
-			Lhs:    instanciateGenericBody(b.Lhs, subs),
-			Rhs:    instanciateGenericBody(b.Rhs, subs).(*TcStructField),
+			Lhs:    recursiveInstanciateGenericBody(b.Lhs, subs),
+			Rhs:    recursiveInstanciateGenericBody(b.Rhs, subs).(*TcStructField),
 		}
 	case *TcStructField:
 		return &TcStructField{
@@ -44,12 +93,12 @@ func instanciateGenericBody(body TcExpr, subs *Substitutions) TcExpr {
 		return &TcVariableDefStmt{
 			Source: b.Source,
 			Sym:    newSym,
-			Value:  instanciateGenericBody(b.Value, subs),
+			Value:  recursiveInstanciateGenericBody(b.Value, subs),
 		}
 	case *TcReturnExpr:
 		return &TcReturnExpr{
 			Source: b.Source,
-			Value:  instanciateGenericBody(b.Value, subs),
+			Value:  recursiveInstanciateGenericBody(b.Value, subs),
 		}
 	case *TcTypeContext:
 		return &TcTypeContext{
@@ -66,32 +115,32 @@ func instanciateGenericBody(body TcExpr, subs *Substitutions) TcExpr {
 		return &TcForLoopStmt{
 			Source:     b.Source,
 			LoopSym:    newSym,
-			Collection: instanciateGenericBody(b.Collection, subs),
-			Body:       instanciateGenericBody(b.Body, subs),
+			Collection: recursiveInstanciateGenericBody(b.Collection, subs),
+			Body:       recursiveInstanciateGenericBody(b.Body, subs),
 		}
 	case *TcWhileLoopStmt:
 		return &TcWhileLoopStmt{
 			Source:    b.Source,
-			Condition: instanciateGenericBody(b.Condition, subs),
-			Body:      instanciateGenericBody(b.Body, subs),
+			Condition: recursiveInstanciateGenericBody(b.Condition, subs),
+			Body:      recursiveInstanciateGenericBody(b.Body, subs),
 		}
 	case *TcIfStmt:
 		return &TcIfStmt{
 			Source:    b.Source,
-			Condition: instanciateGenericBody(b.Condition, subs),
-			Body:      instanciateGenericBody(b.Body, subs),
+			Condition: recursiveInstanciateGenericBody(b.Condition, subs),
+			Body:      recursiveInstanciateGenericBody(b.Body, subs),
 		}
 	case *TcIfElseExpr:
 		return &TcIfElseExpr{
 			Source:    b.Source,
-			Condition: instanciateGenericBody(b.Condition, subs),
-			Body:      instanciateGenericBody(b.Body, subs),
-			Else:      instanciateGenericBody(b.Else, subs),
+			Condition: recursiveInstanciateGenericBody(b.Condition, subs),
+			Body:      recursiveInstanciateGenericBody(b.Body, subs),
+			Else:      recursiveInstanciateGenericBody(b.Else, subs),
 		}
 	case *TcCodeBlock:
 		newItems := make([]TcExpr, len(b.Items))
 		for i, it := range b.Items {
-			newItems[i] = instanciateGenericBody(it, subs)
+			newItems[i] = recursiveInstanciateGenericBody(it, subs)
 		}
 		return &TcCodeBlock{
 			Source: b.Source,
@@ -100,7 +149,7 @@ func instanciateGenericBody(body TcExpr, subs *Substitutions) TcExpr {
 	case *TcCall:
 		newArgs := make([]TcExpr, len(b.Args))
 		for i, it := range b.Args {
-			newArgs[i] = instanciateGenericBody(it, subs)
+			newArgs[i] = recursiveInstanciateGenericBody(it, subs)
 		}
 		return &TcCall{
 			Source: b.Source,
@@ -113,7 +162,7 @@ func instanciateGenericBody(body TcExpr, subs *Substitutions) TcExpr {
 	case *TcArrayLit:
 		newItems := make([]TcExpr, len(b.Items))
 		for i, it := range b.Items {
-			newItems[i] = instanciateGenericBody(it, subs)
+			newItems[i] = recursiveInstanciateGenericBody(it, subs)
 		}
 		return &TcArrayLit{
 			Source:   b.Source,
@@ -123,7 +172,7 @@ func instanciateGenericBody(body TcExpr, subs *Substitutions) TcExpr {
 	case *TcEnumSetLit:
 		newItems := make([]TcExpr, len(b.Items))
 		for i, it := range b.Items {
-			newItems[i] = instanciateGenericBody(it, subs)
+			newItems[i] = recursiveInstanciateGenericBody(it, subs)
 		}
 		return &TcEnumSetLit{
 			Source:   b.Source,
@@ -141,31 +190,7 @@ func instanciateGenericBody(body TcExpr, subs *Substitutions) TcExpr {
 		// 	Signature: instanciateGenericBody(b.Signature, subs),
 		// }
 	case *TcGenericProcDef:
-		cacheKey := ComputeInstanceCacheKey(b.Signature.GenericParams, subs.typeSubs)
-		result := b.InstanceCache.LookUp(cacheKey)
-		if result != nil {
-			return result
-		}
-		newSignature := SignatureApplyTypeSubstitution(b.Signature, subs)
-		newBody := instanciateGenericBody(b.Body, subs)
-		N := len(newSignature.GenericParams)
-		if N > 0 {
-			result = &TcGenericProcDef{
-				Source:        b.Source,
-				Signature:     newSignature,
-				Body:          newBody,
-				InstanceCache: NewInstanceCache(N),
-			}
-		} else {
-			result = &TcProcDef{
-				Source:      b.Source,
-				MangledName: MangleSignature(newSignature),
-				Signature:   newSignature,
-				Body:        newBody,
-			}
-		}
-		b.InstanceCache.Set(cacheKey, result)
-		return result
+		panic("not implemented")
 	case *TcBuiltinProcDef:
 		panic("not implemented")
 	case *TcBuiltinGenericProcDef:
@@ -175,7 +200,7 @@ func instanciateGenericBody(body TcExpr, subs *Substitutions) TcExpr {
 	case *TcStructLit:
 		newItems := make([]TcExpr, len(b.Items))
 		for i, it := range b.Items {
-			newItems[i] = instanciateGenericBody(it, subs)
+			newItems[i] = recursiveInstanciateGenericBody(it, subs)
 		}
 		return &TcStructLit{
 			Source: b.Source,
@@ -207,7 +232,7 @@ func instanciateGenericBody(body TcExpr, subs *Substitutions) TcExpr {
 		newSourceSymPairs := make([]SymSourcePair, len(b.SourceSymPairs))
 		for i, it := range b.SourceSymPairs {
 			newSourceSymPairs[i].EmitSource = it.EmitSource
-			newSourceSymPairs[i].Sym = instanciateGenericBody(it.Sym, subs)
+			newSourceSymPairs[i].Sym = recursiveInstanciateGenericBody(it.Sym, subs)
 		}
 		return &TcEmitExpr{
 			Source:         b.Source,
@@ -218,13 +243,13 @@ func instanciateGenericBody(body TcExpr, subs *Substitutions) TcExpr {
 	case *TcCastExpr:
 		return &TcCastExpr{
 			Source: b.Source,
-			Expr:   instanciateGenericBody(b.Expr, subs),
+			Expr:   recursiveInstanciateGenericBody(b.Expr, subs),
 			Type:   ApplyTypeSubstitutions(b.Type, subs.typeSubs),
 		}
 	case *TcConvExpr:
 		return &TcConvExpr{
 			Source: b.Source,
-			Expr:   instanciateGenericBody(b.Expr, subs),
+			Expr:   recursiveInstanciateGenericBody(b.Expr, subs),
 			Type:   ApplyTypeSubstitutions(b.Type, subs.typeSubs),
 		}
 	}
