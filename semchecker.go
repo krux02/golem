@@ -32,27 +32,27 @@ type ScopeImpl struct {
 	// A return stmt needs to know which procedure it belongs to. This
 	// pointer points to the corresponding procedure. This should
 	// probably be redued to be just the proc signature.
-	CurrentProgram  *ProgramContext
-	CurrentPackage  *TcPackageDef
-	CurrentProc     *Signature // used for `return` statements
-	CurrentTrait    *TcTraitDef
-	Variables       map[string]*TcSymbol
-	Signatures      map[string][]*Signature
-	Types           map[string]Type
-	TypeConstraints map[string]TypeConstraint
+	CurrentProgram       *ProgramContext
+	CurrentPackage       *TcPackageDef
+	CurrentProcSignature *Signature // used for `return` statements
+	CurrentTrait         *TcTraitDef
+	Variables            map[string]*TcSymbol
+	Signatures           map[string][]Overloadable // TODO rename this, no longer signatures
+	Types                map[string]Type
+	TypeConstraints      map[string]TypeConstraint
 }
 
 type Scope = *ScopeImpl
 
 func NewSubScope(scope Scope) Scope {
 	return &ScopeImpl{
-		Parent:         scope,
-		CurrentProgram: scope.CurrentProgram,
-		CurrentPackage: scope.CurrentPackage,
-		CurrentProc:    scope.CurrentProc,
+		Parent:               scope,
+		CurrentProgram:       scope.CurrentProgram,
+		CurrentPackage:       scope.CurrentPackage,
+		CurrentProcSignature: scope.CurrentProcSignature,
 		// TODO maybe do lazy initialization of some of these? Traits are rarely addad.
 		Variables:       make(map[string]*TcSymbol),
-		Signatures:      make(map[string][]*Signature),
+		Signatures:      make(map[string][]Overloadable),
 		Types:           make(map[string]Type),
 		TypeConstraints: make(map[string]TypeConstraint),
 	}
@@ -79,8 +79,8 @@ func RegisterTrait(sc *SemChecker, scope Scope, trait *TcTraitDef, context Expr)
 	return constraint
 }
 
-func RegisterProc(sc *SemChecker, scope Scope, proc *Signature, context Expr) {
-	name := proc.Name
+func RegisterProc(sc *SemChecker, scope Scope, proc Overloadable, context Expr) {
+	name := proc.GetSignature().Name
 	// TODO check for name collisions with the same signature
 	scope.Signatures[name] = append(scope.Signatures[name], proc)
 }
@@ -193,24 +193,25 @@ func LookUpType(sc *SemChecker, scope Scope, expr Expr) Type {
 	panic(fmt.Sprintf("unexpected ast node in type expr: %s type: %T", AstFormat(expr), expr))
 }
 
-func LookUpProc(scope Scope, ident *Ident, numArgs int, signatures []*Signature) []*Signature {
+func LookUpProc(scope Scope, ident *Ident, numArgs int, overloadables []Overloadable) []Overloadable {
 	for scope != nil {
-		if localSignatures, ok := scope.Signatures[ident.Source]; ok {
+		if localOverloadables, ok := scope.Signatures[ident.Source]; ok {
 			if numArgs >= 0 { // num args may be set to -1 to get all signatures
-				for _, sig := range localSignatures {
+				for _, overloadable := range localOverloadables {
+					sig := overloadable.GetSignature()
 					// TODO, the varargs logic herer needs a proper test
 					if len(sig.Params) == numArgs || sig.Varargs && len(sig.Params) <= numArgs {
-						signatures = append(signatures, sig)
+						overloadables = append(overloadables, overloadable)
 					}
 				}
 			} else {
-				signatures = append(signatures, localSignatures...)
+				overloadables = append(overloadables, localOverloadables...)
 			}
 
 		}
 		scope = scope.Parent
 	}
-	return signatures
+	return overloadables
 }
 
 func LookUpLetSymRecursive(sc *SemChecker, scope Scope, ident *Ident, expected TypeConstraint) *TcSymRef {
@@ -425,8 +426,9 @@ func SemCheckSignature(sc *SemChecker, innerScope Scope, genericArgs []GenericAr
 
 		switch constraint := constraint.(type) {
 		case *TypeTrait:
-			for _, sig := range constraint.Impl.Signatures {
-				RegisterProc(sc, innerScope, sig, genericArg.TraitName)
+			for _, overloadable := range constraint.Impl.Overloadables {
+
+				RegisterProc(sc, innerScope, overloadable, genericArg.TraitName)
 			}
 		default:
 			ReportWarningf(sc, genericArg.TraitName, "currently only traits are supported in the compiler as type constraints")
@@ -489,11 +491,9 @@ func SemCheckTemplateDef(sc *SemChecker, parentScope Scope, def *ProcDef) (templ
 	}
 	templateDef = &TcTemplateDef{
 		// TODO set Source
-		Signature: signature,
+		Signature: *signature,
 		Body:      body.RecSubSyms(subs),
 	}
-	templateDef.Signature, signature.Impl = signature, templateDef
-	signature.Impl = templateDef
 	// TODO check for signature collision
 	//
 	return templateDef
@@ -509,7 +509,7 @@ func MangleSignature(signature *Signature) string {
 	return mangledNameBuilder.String()
 }
 
-func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) Overloadable {
+func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result Overloadable) {
 	innerScope := NewSubScope(parentScope)
 	name, body, resultType, genericArgs, args := MustMatchProcDef(sc, def)
 
@@ -525,7 +525,7 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) Overloadab
 
 	signature := SemCheckSignature(sc, innerScope, genericArgs, args)
 	isGeneric := len(signature.GenericParams) > 0
-	innerScope.CurrentProc = signature
+	innerScope.CurrentProcSignature = signature
 	signature.Name = name.Source
 
 	if resultType == nil {
@@ -543,8 +543,26 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) Overloadab
 		mangledName = MangleSignature(signature)
 	}
 
+	if isGeneric {
+		result = &TcGenericProcDef{
+			Source:        def.Source,
+			MangledName:   mangledName,
+			Signature:     *signature,
+			Importc:       importc,
+			InstanceCache: NewInstanceCache(len(signature.GenericParams)),
+		}
+	} else {
+		result = &TcProcDef{
+			Source:        def.Source,
+			MangledName:   mangledName,
+			Signature:     *signature,
+			Importc:       importc,
+			InstanceCache: NewInstanceCache(len(signature.GenericParams)),
+		}
+	}
+
 	// register proc before type checking the body to allow recursion. (TODO needs a test)
-	RegisterProc(sc, parentScope, signature, name)
+	RegisterProc(sc, parentScope, result, name)
 
 	var tcBody TcExpr
 	if importc {
@@ -564,25 +582,12 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) Overloadab
 	}
 
 	if isGeneric {
-		signature.Impl = &TcGenericProcDef{
-			Source:        def.Source,
-			MangledName:   mangledName,
-			Signature:     signature,
-			Importc:       importc,
-			Body:          tcBody, // still has open generic types in it that need to be instanciated
-			InstanceCache: NewInstanceCache(len(signature.GenericParams)),
-		}
+		result.(*TcGenericProcDef).Body = tcBody
 	} else {
-		signature.Impl = &TcProcDef{
-			Source:        def.Source,
-			MangledName:   mangledName,
-			Signature:     signature,
-			Importc:       importc,
-			Body:          tcBody,
-			InstanceCache: NewInstanceCache(len(signature.GenericParams)),
-		}
+		result.(*TcProcDef).Body = tcBody
 	}
-	return signature.Impl
+
+	return result
 }
 
 func ReportMessagef(sc *SemChecker, node Expr, kind string, msg string, args ...interface{}) {
@@ -670,14 +675,14 @@ func (structDef *TcStructDef) GetField(name string) (resField *TcStructField, id
 }
 
 func errorProcSym(ident *Ident) *TcProcRef {
-	procDef := &TcErrorProcDef{}
-	signature := &Signature{Name: ident.Source, ResultType: TypeError, Impl: procDef}
-	procDef.Signature = signature
+	procDef := &TcErrorProcDef{
+		Signature: Signature{Name: ident.Source, ResultType: TypeError},
+	}
 
 	return &TcProcRef{
 		Source: ident.GetSource(),
 		// maybe add some debug information here
-		Signature: signature,
+		Overloadable: procDef,
 	}
 }
 
@@ -692,7 +697,7 @@ func AppendNoDuplicats[T comparable](types []T, typ T) (result []T) {
 	return append(types, typ)
 }
 
-func argTypeGroupAtIndex(signatures []*Signature, idx int) (result TypeConstraint) {
+func argTypeGroupAtIndex(signatures []Signature, idx int) (result TypeConstraint) {
 	builder := &TypeGroupBuilder{}
 	for _, sig := range signatures {
 		if sig.Varargs && idx >= len(sig.Params) {
@@ -715,8 +720,8 @@ func argTypeGroupAtIndex(signatures []*Signature, idx int) (result TypeConstrain
 }
 
 type ProcSubstitution = struct {
-	sig    *Signature
-	newSig *Signature
+	sig    Overloadable
+	newSig Overloadable
 }
 
 type SymbolSubstitution = struct {
@@ -846,7 +851,7 @@ func Contains2(theSet []TypeSubstitution, item *GenericTypeSymbol) bool {
 
 func ApplyProcSubstitutions(ref *TcProcRef, subs []ProcSubstitution) *TcProcRef {
 	for _, sub := range subs {
-		if ref.Signature == sub.sig {
+		if ref.Overloadable == sub.sig {
 			return &TcProcRef{
 				ref.Source,
 				sub.newSig,
@@ -904,7 +909,7 @@ func FindSubstitution(substitutions []TypeSubstitution, sym *GenericTypeSymbol) 
 	return nil, false
 }
 
-func SignatureApplyTypeSubstitution(sig *Signature, subs *Substitutions) *Signature {
+func SignatureApplyTypeSubstitution(sig Signature, subs *Substitutions) Signature {
 	if len(subs.typeSubs) == 0 {
 		return sig
 	}
@@ -939,13 +944,12 @@ func SignatureApplyTypeSubstitution(sig *Signature, subs *Substitutions) *Signat
 		}
 	}
 
-	result := &Signature{
+	result := Signature{
 		Name:          sig.Name,
 		GenericParams: newGen,
 		Params:        newParams,
 		ResultType:    ApplyTypeSubstitutions(sig.ResultType, subs.typeSubs),
 		Varargs:       sig.Varargs,
-		Impl:          sig.Impl,
 	}
 
 	return result
@@ -1054,8 +1058,15 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 		return newErrorNode(call.Callee)
 	}
 
-	signatures := LookUpProc(scope, ident, len(call.Args), nil)
-	sigSubstitutions := make([]Substitutions, len(signatures))
+	overloadables := LookUpProc(scope, ident, len(call.Args), nil)
+	signatures := make([]Signature, len(overloadables))
+	sigSubstitutions := make([]Substitutions, len(overloadables))
+
+	// copy of the signature matches, because they are mutated is signature
+	// matching
+	for i, it := range overloadables {
+		signatures[i] = *it.GetSignature()
+	}
 
 	var checkedArgs []TcExpr
 	hasArgTypeError := false
@@ -1067,6 +1078,7 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 		argType := tcArg.GetType()
 		if argType == TypeError {
 			hasArgTypeError = true
+			overloadables = nil
 			signatures = nil
 			sigSubstitutions = nil
 			continue
@@ -1076,8 +1088,10 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 		n := 0
 		for j, sig := range signatures {
 			subs := sigSubstitutions[j]
+			overloadable := overloadables[j]
 
 			if sig.Varargs && i >= len(sig.Params) {
+				overloadables[n] = overloadable
 				signatures[n] = sig
 				sigSubstitutions[n] = subs
 				n++
@@ -1088,19 +1102,21 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 			if ok, substitutions := ParamSignatureMatch(argType, typ); ok {
 				// instantiate generic
 				subs.typeSubs = append(subs.typeSubs, substitutions...)
+				overloadables[n] = overloadable
 				signatures[n] = SignatureApplyTypeSubstitution(sig, &subs)
 				sigSubstitutions[n] = subs
 				n++
 				continue
 			}
 		}
+		overloadables = overloadables[:n]
 		signatures = signatures[:n]
 		sigSubstitutions = sigSubstitutions[:n]
 	}
 
 	result := &TcCall{Source: call.Source, Braced: call.Braced}
 
-	switch len(signatures) {
+	switch len(overloadables) {
 	case 0:
 		// don't report that proc `foo(TypeError)` can't be resolved. The error that
 		// lead to `TypeError` is already reported at this point, so nothing new to
@@ -1119,11 +1135,11 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 			builder.WriteString(")")
 
 			// original signatures
-			signatures = LookUpProc(scope, ident, -1, nil)
-			if len(signatures) > 0 {
+			overloadables = LookUpProc(scope, ident, -1, nil)
+			if len(overloadables) > 0 {
 				builder.NewlineAndIndent()
 				builder.WriteString("available overloads: ")
-				for _, sig := range signatures {
+				for _, sig := range overloadables {
 					builder.NewlineAndIndent()
 					builder.WriteString("proc ")
 					sig.PrettyPrint(builder)
@@ -1137,21 +1153,19 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 
 	case 1:
 		sig := signatures[0]
-
 		// some sanity checks. Technically this part is unnecessary if the compiler
 		// has no bugs. And if it has bugs. This test is also incomplete.
 		//
 		// What is done here is to check that there are no Open generic types left anymore in non-generic code.
 		// In the body of a generic function, there could be a better sanity check here.
-		if scope.CurrentProc == nil || len(scope.CurrentProc.GenericParams) == 0 {
+		if scope.CurrentProcSignature == nil || len(scope.CurrentProcSignature.GenericParams) == 0 {
 			for i, arg := range sig.Params {
 				openGenericSymbols := openGenericsMap[arg.Type]
 				if len(openGenericSymbols) > 0 {
 					ReportErrorf(sc, checkedArgs[i], "generics arguments are expected to instanciated %s", AstFormat(checkedArgs[i].GetType()))
 					panic(
 						fmt.Sprintf(
-							"internal error: generics arguments are expected to instanciated\n%s\n%s\n",
-							AstFormat(sig.Impl),
+							"internal error: generics arguments are expected to instanciated\n%s\n",
 							AstFormat(call),
 						),
 					)
@@ -1166,13 +1180,13 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 			}
 		}
 
-		switch impl := sig.Impl.(type) {
+		switch impl := overloadables[0].(type) {
 		case *TcBuiltinProcDef:
-			result.Sym = &TcProcRef{Source: ident.Source, Signature: sig}
+			result.Sym = &TcProcRef{Source: ident.Source, Overloadable: impl}
 			result.Args = checkedArgs
 			ExpectType(sc, call, sig.ResultType, expected)
 		case *TcProcDef:
-			result.Sym = &TcProcRef{Source: ident.Source, Signature: sig}
+			result.Sym = &TcProcRef{Source: ident.Source, Overloadable: impl}
 			result.Args = checkedArgs
 			ExpectType(sc, call, sig.ResultType, expected)
 
@@ -1185,11 +1199,11 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 
 		case *TcGenericProcDef:
 
-			result.Sym = &TcProcRef{Source: ident.Source, Signature: sig}
+			instance := InstanciateGenericProc(impl, &sigSubstitutions[0])
+			result.Sym = &TcProcRef{Source: ident.Source, Overloadable: instance}
 			result.Args = checkedArgs
 			ExpectType(sc, call, sig.ResultType, expected)
 
-			sig.Impl = InstanciateGenericProc(impl, &sigSubstitutions[0]).(Overloadable)
 			// ReportErrorf(sc, ident, "instanciating generic functions is not yet implemented")
 			// just as a reminder to implement this.
 			// `sig` is the concrete signature of this call. All symbols resolved.
@@ -1201,15 +1215,14 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 			// for _, sub := range sig.Substitutions {
 			// 	fmt.Printf("%s -> %s\n", sub.sym.Name, AstFormat(sub.newType))
 			// }
-			sigInstance := &Signature{
-				Name:          sig.Name,
-				GenericParams: sig.GenericParams,
-				Params:        sig.Params,
-				ResultType:    sig.ResultType,
-			}
-
-			sigInstance.Impl = InstanciateBuiltinGenericProc(impl, &sigSubstitutions[0])
-			result.Sym = &TcProcRef{Source: ident.Source, Signature: sigInstance}
+			// sigInstance := &Signature{
+			// 	Name:          sig.Name,
+			// 	GenericParams: sig.GenericParams,
+			// 	Params:        sig.Params,
+			// 	ResultType:    sig.ResultType,
+			// }
+			instance := InstanciateBuiltinGenericProc(impl, &sigSubstitutions[0])
+			result.Sym = &TcProcRef{Source: ident.Source, Overloadable: instance}
 			result.Args = checkedArgs
 			ExpectType(sc, call, sig.ResultType, expected)
 		case *TcTemplateDef:
@@ -1234,7 +1247,7 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 			ExpectType(sc, call, substitution.GetType(), expected)
 			return substitution
 		case *TcBuiltinMacroDef:
-			result.Sym = &TcProcRef{Source: ident.Source, Signature: sig}
+			result.Sym = &TcProcRef{Source: ident.Source, Overloadable: impl}
 			result.Args = checkedArgs
 			newResult := impl.MacroFunc(sc, scope, result)
 			ExpectType(sc, call, newResult.GetType(), expected)
@@ -1414,7 +1427,7 @@ func SemCheckVariableDefStmt(sc *SemChecker, scope Scope, arg *VariableDefStmt) 
 }
 
 func SemCheckReturnExpr(sc *SemChecker, scope Scope, arg *ReturnExpr) *TcReturnExpr {
-	result := &TcReturnExpr{Value: SemCheckExpr(sc, scope, arg.Value, UniqueTypeConstraint{scope.CurrentProc.ResultType})}
+	result := &TcReturnExpr{Value: SemCheckExpr(sc, scope, arg.Value, UniqueTypeConstraint{scope.CurrentProcSignature.ResultType})}
 	result.Source = arg.Source
 	return result
 }
@@ -1455,7 +1468,7 @@ func (lit *NilLit) GetType() Type {
 }
 
 func (_ *TcErrorNode) GetType() Type               { return TypeError }
-func (call *TcCall) GetType() Type                 { return call.Sym.Signature.ResultType }
+func (call *TcCall) GetType() Type                 { return call.Sym.Overloadable.GetSignature().ResultType }
 func (lit *TcStrLit) GetType() Type                { return lit.Type }
 func (lit *TcArrayLit) GetType() Type              { return GetArrayType(lit.ElemType, int64(len(lit.Items))) }
 func (lit *TcEnumSetLit) GetType() Type            { return GetEnumSetType(lit.ElemType) }

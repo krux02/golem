@@ -79,7 +79,7 @@ type TcTraitDef struct {
 	Source         string
 	Name           string
 	DependentTypes []*GenericTypeSymbol
-	Signatures     []*Signature
+	Overloadables  []Overloadable
 }
 
 type GenericTypeSymbol struct {
@@ -106,8 +106,8 @@ type TcCodeBlock struct {
 
 // TODO maybe unify TcProcSym with SymRef
 type TcProcRef struct {
-	Source    string
-	Signature *Signature
+	Source       string
+	Overloadable Overloadable
 }
 
 type SymbolKind int
@@ -207,8 +207,6 @@ type Signature struct {
 
 	// NOTE: Varargs currently only used for printf.
 	Varargs bool
-
-	Impl Overloadable
 }
 
 type Overloadable interface {
@@ -217,7 +215,7 @@ type Overloadable interface {
 }
 
 type TcBuiltinProcDef struct {
-	Signature *Signature
+	Signature Signature
 	//Body      TcExpr
 
 	// TODO these are fields to specifiy how to generate a call
@@ -228,7 +226,7 @@ type TcBuiltinProcDef struct {
 }
 
 type TcBuiltinGenericProcDef struct {
-	Signature *Signature
+	Signature Signature
 	//Body      TcExpr
 
 	// TODO these are fields to specifiy how to generate a call
@@ -241,7 +239,7 @@ type TcBuiltinGenericProcDef struct {
 }
 
 type TcBuiltinStaticProcDef struct {
-	Signature *Signature
+	Signature Signature
 
 	ApplyFunc func(context *TcPackageDef, args []TcExpr) TcExpr
 }
@@ -249,7 +247,7 @@ type TcBuiltinStaticProcDef struct {
 type TcProcDef struct {
 	Source        string
 	MangledName   string
-	Signature     *Signature
+	Signature     Signature
 	Body          TcExpr
 	Importc       bool
 	InstanceCache *InstanceCache
@@ -258,26 +256,31 @@ type TcProcDef struct {
 type TcGenericProcDef struct {
 	Source        string
 	MangledName   string
-	Signature     *Signature
+	Signature     Signature
 	Body          TcExpr // still has open generic types in it that need to be instanciated
 	Importc       bool
 	InstanceCache *InstanceCache
 }
 
+type TcPseudoProcDefForTrait struct {
+	Source    string
+	Signature Signature
+}
+
 type TcBuiltinMacroDef struct {
-	Signature *Signature
+	Signature Signature
 	MacroFunc BuiltinMacroFunc // this function transforms the call, post function resolution
 }
 
 type TcTemplateDef struct {
 	Source    string
-	Signature *Signature
+	Signature Signature
 	Body      Expr
 }
 
 type TcErrorProcDef struct {
 	// this is just a placeholder to set a TcProcSymbol to something
-	Signature *Signature
+	Signature Signature
 }
 
 type TcStrLit struct {
@@ -407,13 +410,13 @@ func (arg *TcBuiltinMacroDef) GetSource() string   { return "" } // builtins hav
 func (arg *TcErrorProcDef) GetSource() string      { return "" } // non existing proc def has no source
 func (arg *TcWrappedUntypedAst) GetSource() string { return arg.Expr.GetSource() }
 
-func (arg *TcBuiltinProcDef) GetSignature() *Signature        { return arg.Signature }
-func (arg *TcBuiltinGenericProcDef) GetSignature() *Signature { return arg.Signature }
-func (arg *TcProcDef) GetSignature() *Signature               { return arg.Signature }
-func (arg *TcGenericProcDef) GetSignature() *Signature        { return arg.Signature }
-func (arg *TcTemplateDef) GetSignature() *Signature           { return arg.Signature }
-func (arg *TcBuiltinMacroDef) GetSignature() *Signature       { return arg.Signature }
-func (arg *TcErrorProcDef) GetSignature() *Signature          { return arg.Signature }
+func (arg *TcBuiltinProcDef) GetSignature() *Signature        { return &arg.Signature }
+func (arg *TcBuiltinGenericProcDef) GetSignature() *Signature { return &arg.Signature }
+func (arg *TcProcDef) GetSignature() *Signature               { return &arg.Signature }
+func (arg *TcGenericProcDef) GetSignature() *Signature        { return &arg.Signature }
+func (arg *TcTemplateDef) GetSignature() *Signature           { return &arg.Signature }
+func (arg *TcBuiltinMacroDef) GetSignature() *Signature       { return &arg.Signature }
+func (arg *TcErrorProcDef) GetSignature() *Signature          { return &arg.Signature }
 
 func RequireMutable(sc *SemChecker, expr TcExpr) {
 	switch arg := expr.(type) {

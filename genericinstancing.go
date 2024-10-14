@@ -47,7 +47,7 @@ func InstanciateGenericProc(proc *TcGenericProcDef, subs *Substitutions) Overloa
 	} else {
 		result = &TcProcDef{
 			Source:        proc.Source,
-			MangledName:   MangleSignature(newSignature),
+			MangledName:   MangleSignature(&newSignature),
 			Signature:     newSignature,
 			Body:          newBody,
 			InstanceCache: NewInstanceCache(N),

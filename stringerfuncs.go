@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"math/big"
-	"slices"
 	"strings"
 )
 
@@ -85,13 +84,25 @@ func mkstring(items []Expr, prefix, infix, postfix string, builder *AstPrettyPri
 }
 
 func (call *Call) PrettyPrint(builder *AstPrettyPrinter) {
-	ident, isIdent := call.Callee.(*Ident)
-	isOperator := isIdent && slices.Contains([]string{".", ":"}, ident.Source)
-	if isOperator {
-		mkstring(call.Args, "(", ident.Source, ")", builder)
-	} else {
+	if call.Braced {
 		builder.WriteNode(call.Callee)
-		mkstring(call.Args, "(", ", ", ")", builder)
+		builder.WriteString("(")
+		for i, arg := range call.Args {
+			if i != 0 {
+				builder.WriteString(", ")
+			}
+			builder.WriteNode(arg)
+		}
+		builder.WriteString(")")
+	} else {
+		for i, arg := range call.Args {
+			if i != 0 {
+				builder.WriteString(" ")
+				builder.WriteNode(call.Callee)
+				builder.WriteString(" ")
+			}
+			builder.WriteNode(arg)
+		}
 	}
 }
 
@@ -296,8 +307,8 @@ func (typeDef *TcTraitDef) PrettyPrint(builder *AstPrettyPrinter) {
 		builder.WriteNode(typ)
 	}
 	builder.WriteString(") {")
-	for _, sig := range typeDef.Signatures {
-		builder.WriteNode(sig)
+	for _, overloadable := range typeDef.Overloadables {
+		builder.WriteNode(overloadable)
 	}
 	builder.WriteString("}")
 }

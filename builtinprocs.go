@@ -259,9 +259,9 @@ var TypeAnyNumber = &TypeGroup{Name: "AnyNumber", Items: []Type{
 var TypeAnyString = &TypeGroup{Name: "AnyString", Items: []Type{TypeStr, TypeCStr}}
 
 // builtin proc signatures
-var builtinCPrintf *Signature
-var builtinAddr *Signature
-var builtinDeref *Signature
+var builtinCPrintf Overloadable
+var builtinAddr Overloadable
+var builtinDeref Overloadable
 
 func (typ *BuiltinType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
 	if typ == TypeNoReturn {
@@ -343,13 +343,13 @@ func (typ *GenericTypeSymbol) DefaultValue(sc *SemChecker, context Expr) TcExpr 
 }
 
 var builtinScope Scope = &ScopeImpl{
-	Parent:          nil,
-	CurrentPackage:  nil,
-	CurrentProc:     nil,
-	Signatures:      make(map[string][]*Signature),
-	Variables:       make(map[string]*TcSymbol),
-	Types:           make(map[string]Type),
-	TypeConstraints: make(map[string]TypeConstraint),
+	Parent:               nil,
+	CurrentPackage:       nil,
+	CurrentProcSignature: nil,
+	Signatures:           make(map[string][]Overloadable),
+	Variables:            make(map[string]*TcSymbol),
+	Types:                make(map[string]Type),
+	TypeConstraints:      make(map[string]TypeConstraint),
 }
 
 func registerBuiltinType(typ Type) {
@@ -402,7 +402,7 @@ func AstListFormat[T PrettyPrintable](syms []T) string {
 	return builder.String()
 }
 
-func makeGenericSignature(name string, genericParams []*GenericTypeSymbol, args []Type, result Type, argMutableBitmask uint64) *Signature {
+func makeGenericSignature(name string, genericParams []*GenericTypeSymbol, args []Type, result Type, argMutableBitmask uint64) Signature {
 	params := make([]*TcSymbol, len(args))
 	for i, arg := range args {
 		params[i] = &TcSymbol{Type: arg}
@@ -413,7 +413,7 @@ func makeGenericSignature(name string, genericParams []*GenericTypeSymbol, args 
 		}
 	}
 
-	return &Signature{
+	return Signature{
 		Name:          name,
 		GenericParams: genericParams,
 		Params:        params,
@@ -421,7 +421,7 @@ func makeGenericSignature(name string, genericParams []*GenericTypeSymbol, args 
 	}
 }
 
-func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []*GenericTypeSymbol, args []Type, result Type, argMutableBitmask uint64) *Signature {
+func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams []*GenericTypeSymbol, args []Type, result Type, argMutableBitmask uint64) Overloadable {
 
 	if len(genericParams) > 0 {
 		procDef := &TcBuiltinGenericProcDef{
@@ -431,9 +431,8 @@ func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams [
 			Postfix:       postfix,
 			InstanceCache: NewInstanceCache(len(genericParams)),
 		}
-		procDef.Signature.Impl = procDef
-		builtinScope.Signatures[name] = append(builtinScope.Signatures[name], procDef.Signature)
-		return procDef.Signature
+		builtinScope.Signatures[name] = append(builtinScope.Signatures[name], procDef)
+		return procDef
 	} else {
 		procDef := &TcBuiltinProcDef{
 			Signature: makeGenericSignature(name, genericParams, args, result, argMutableBitmask),
@@ -441,13 +440,12 @@ func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams [
 			Infix:     infix,
 			Postfix:   postfix,
 		}
-		procDef.Signature.Impl = procDef
-		builtinScope.Signatures[name] = append(builtinScope.Signatures[name], procDef.Signature)
-		return procDef.Signature
+		builtinScope.Signatures[name] = append(builtinScope.Signatures[name], procDef)
+		return procDef
 	}
 }
 
-func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Type, argMutableBitmask uint64) *Signature {
+func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Type, argMutableBitmask uint64) Overloadable {
 	return registerGenericBuiltin(name, prefix, infix, postfix, nil, args, result, argMutableBitmask)
 }
 
@@ -457,8 +455,7 @@ func registerGenericBuiltinMacro(name string, varargs bool, genericParams []*Gen
 		MacroFunc: macroFunc,
 	}
 	macroDef.Signature.Varargs = varargs
-	macroDef.Signature.Impl = macroDef
-	builtinScope.Signatures[name] = append(builtinScope.Signatures[name], macroDef.Signature)
+	builtinScope.Signatures[name] = append(builtinScope.Signatures[name], macroDef)
 }
 
 func registerBuiltinMacro(name string, varargs bool, args []Type, result Type, macroFunc BuiltinMacroFunc) {
@@ -468,16 +465,15 @@ func registerBuiltinMacro(name string, varargs bool, args []Type, result Type, m
 func registerSimpleTemplate(name string, params []*TcSymbol, result Type, substitution Expr) {
 	templateDef := &TcTemplateDef{
 		// TODO set Source
-		Signature: &Signature{
+		Signature: Signature{
 			Name:       name,
 			Params:     params,
 			ResultType: result,
 		},
 		Body: substitution,
 	}
-	templateDef.Signature.Impl = templateDef
 	// TODO check for signature collision
-	builtinScope.Signatures[name] = append(builtinScope.Signatures[name], templateDef.Signature)
+	builtinScope.Signatures[name] = append(builtinScope.Signatures[name], templateDef)
 }
 
 type BuiltinMacroFunc func(sc *SemChecker, scope Scope, call *TcCall) TcExpr
@@ -599,8 +595,8 @@ func ValidatePrintfCall(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 
 	result := &TcCall{Source: call.Source, Braced: call.Braced}
 	result.Sym = &TcProcRef{
-		Source:    call.Sym.Source,
-		Signature: builtinCPrintf,
+		Source:       call.Sym.Source,
+		Overloadable: builtinCPrintf,
 	}
 	result.Args = make([]TcExpr, 1, len(call.Args))
 	result.Args[0] = &TcStrLit{Source: formatStrLit.Source, Type: TypeCStr, Value: formatStrC.String()}
@@ -788,7 +784,7 @@ func BuiltinTraitDef(sc *SemChecker, scope Scope, def *TcCall) TcExpr {
 
 	for _, procDef := range signatures {
 		tcProcDef := SemCheckProcDef(sc, traitScope, procDef)
-		result.Signatures = append(result.Signatures, tcProcDef.GetSignature())
+		result.Overloadables = append(result.Overloadables, tcProcDef)
 	}
 
 	return result
@@ -880,7 +876,7 @@ func init() {
 	// printf for now. A general concept for varargs will be specified out as soon
 	// as it becomes necessary, but right now it is not planned.
 	builtinCPrintf = registerBuiltin("c_printf", "printf(", ", ", ")", []Type{TypeCStr}, TypeVoid, 0)
-	builtinCPrintf.Varargs = true
+	builtinCPrintf.GetSignature().Varargs = true
 
 	registerBuiltinMacro("printf", true, []Type{TypeStr}, TypeVoid, ValidatePrintfCall)
 	registerBuiltinMacro("addCFlags", false, []Type{TypeStr}, TypeVoid, BuiltinAddCFlags)
@@ -1025,6 +1021,7 @@ func init() {
 	{
 		// TODO: has no line information
 		T := NewGenericTypeSymbol("", "T", TypeUnspecified)
+
 		builtinAddr = registerGenericBuiltin("addr", "&(", "", ")", []*GenericTypeSymbol{T}, []Type{T}, GetPtrType(T), 1)
 
 		// TODO mark argument as mutable

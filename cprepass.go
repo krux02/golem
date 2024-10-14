@@ -6,8 +6,8 @@ import (
 
 func newAddrExpr(arg TcExpr) TcExpr {
 	sym := &TcProcRef{
-		Source:    "", // no source possible, hidden
-		Signature: builtinAddr,
+		Source:       "", // no source possible, hidden
+		Overloadable: builtinAddr,
 	}
 	call := &TcCall{
 		Source: "", // no source possible, hidden
@@ -33,8 +33,8 @@ func maybeUnrefParamSym(sym *TcSymRef) TcExpr {
 		switch sym.Type.(type) {
 		case *StructType:
 			hiddenSym := &TcProcRef{
-				Source:    "",
-				Signature: builtinDeref,
+				Source:       "",
+				Overloadable: builtinDeref,
 			}
 			call := &TcCall{
 				Source: "", // no source possible, hidden
@@ -54,7 +54,7 @@ func cgenprepassSlice(expr []TcExpr) []TcExpr {
 	return expr
 }
 
-func cgenprepassSignature(sig *Signature) *Signature {
+func cgenprepassSignature(sig Signature) Signature {
 	for i, param := range sig.Params {
 		if t, isStruct := param.Type.(*StructType); isStruct {
 			newType := GetPtrType(t)
@@ -71,8 +71,9 @@ func cgenprepass(expr TcExpr) TcExpr {
 	switch expr := expr.(type) {
 	case *TcCall:
 
-		sig := expr.Sym.Signature
-		_, isBuiltin := sig.Impl.(*TcBuiltinProcDef)
+		def := expr.Sym.Overloadable
+		sig := def.GetSignature()
+		_, isBuiltin := def.(*TcBuiltinProcDef)
 		newArgs := make([]TcExpr, len(expr.Args))
 		for i, arg := range expr.Args {
 			newArg := cgenprepass(arg)
