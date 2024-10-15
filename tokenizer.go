@@ -143,36 +143,41 @@ func LineColumnOffset(code string, offset int) (line, column int) {
 		return -1, -1
 	}
 
+	// TODO, this only works for runes, not for grapheme clusters
 	line = 1
-	lineStart := 0
 	for pos, rune := range code {
 		if offset <= pos {
-			// TODO, this only works for ASCII not for multibyte runes
-			column = pos - lineStart
 			break
 		}
 		if rune == '\n' {
 			line++
-			lineStart = pos + 1
+			column = 0
+		} else {
+			column += 1
 		}
 	}
 	return line, column
 }
 
 func LineColumnStr(str, substr string) (line, columnStart, columnEnd int) {
+	// TODO actually support multi line references
+	if idxNewLine := strings.IndexByte(substr, '\n'); idxNewLine > 0 {
+		substr = substr[0:idxNewLine]
+	}
+
 	data1 := (uintptr)(unsafe.Pointer(unsafe.StringData(str)))
 	data2 := (uintptr)(unsafe.Pointer(unsafe.StringData(substr)))
 	if data2 < data1 {
 		return -1, -1, -1
 	}
 	offset := int(data2 - data1)
-	line, columnStart = LineColumnOffset(str, offset)
-	columnEnd = columnStart + len(substr)
-	return line, columnStart, columnEnd
-}
+	line1, columnStart := LineColumnOffset(str, offset)
+	line2, columnEnd := LineColumnOffset(str, offset+len(substr))
 
-func (this *Tokenizer) LineColumnCurrent() (line, column int) {
-	return LineColumnOffset(this.code, this.offset)
+	if line1 == line2 {
+		return line1, columnStart, columnEnd
+	}
+	panic("internal error")
 }
 
 func (this *Tokenizer) LineColumnToken(token Token) (line, columnStart, columnEnd int) {
