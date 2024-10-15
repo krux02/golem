@@ -9,15 +9,6 @@ implement/test break and continue
 technically, my language allows scope local import statements. That is
 completely untested.
 
-* TODO Kontakt: Wirtschaftfördering der Stadt Bonn
-
-Kostenlose Verstaltung zum Thema Gründung
-
-IHK Köln
-Gründungskompass: Unsere Veranstantung zum Thema Gründung
-
-Fundraising
-
 * TODO untyped type
 
 Implement a constraint that when a function is registered with an argument of

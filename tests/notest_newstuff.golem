@@ -23,7 +23,7 @@ type MyStruct = struct {
 
 proc compare(x,y: MyStruct): int
 
-proc foo[HasFoo(T), CombinaTrait(T,V)](arg1,arg2: T) = {
+proc foo[HasFoo(T), CombineTrait(T,V)](arg1,arg2: T) = {
   bar(arg1, 13)
   bar(arg2, 14)
 
