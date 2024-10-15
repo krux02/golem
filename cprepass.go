@@ -103,8 +103,8 @@ func cgenprepass(expr TcExpr) TcExpr {
 			Sym:    expr.Sym,
 			Value:  cgenprepass(expr.Value),
 		}
-	case *TcReturnExpr:
-		return &TcReturnExpr{
+	case *TcReturnStmt:
+		return &TcReturnStmt{
 			Source: expr.Source,
 			Value:  cgenprepass(expr.Value),
 		}

@@ -600,7 +600,7 @@ func (stmt *TcVariableDefStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	}
 }
 
-func (returnExpr *TcReturnExpr) PrettyPrint(builder *AstPrettyPrinter) {
+func (returnExpr *TcReturnStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("return ")
 	builder.WriteNode(returnExpr.Value)
 }

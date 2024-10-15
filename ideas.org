@@ -363,7 +363,7 @@ pattern and therefore uses it more often. The pattern needs to be
 detected by the compiler more often and therefore slower
 compilation. Slower compilation frustrates the developer.
 
-The alternative is to suggest alternative patterns that that either
+The alternative is to suggest alternative patterns that either
 don't need optimizations, or can be optimized trivially by the
 compiler.
 
@@ -378,16 +378,15 @@ language.
 
 * Bindings to as many other programming languages as possible.
 
-Programming languages are often these perfect isolated worlds, where
-everything nice as long as you do everything in that
-language. You can call into other languages, most of the time it is
-just C, but then you have to write this wrapper code. And there are
-many other languages out there with huge amount of libraries. They
-should be usable as well. This is one aspect of programming that is
-extremely dirty in almost every programming language, this language
-aim to make it as seamless as possible for as many popular languages
-as possible. Even being extensible by the user, to integrate more
-languages for (manually written) wrapper free interaction.
+Programming languages are often these perfect isolated worlds, where everything
+is nice as long as you do everything within that language. You can call into other
+languages, most of the time it is just C, but then you have to write this
+wrapper code. And there are other languages out there with many libraries. They
+should be usable as well. This is one aspect of programming that is very
+dirty in almost every programming language, this language's aim is to make it as
+seamless as possible for as many popular languages as possible. Even being
+extensible by the user, to integrate more languages for (manually written)
+wrapper free interaction.
 
 An idea how wrapper free language interaction might work is elaborated
 on in  the chapter about Embedded Domain Specific Languages.

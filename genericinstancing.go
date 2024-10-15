@@ -90,8 +90,8 @@ func recursiveInstanciateGenericBody(body TcExpr, subs *Substitutions) TcExpr {
 			Sym:    newSym,
 			Value:  recursiveInstanciateGenericBody(b.Value, subs),
 		}
-	case *TcReturnExpr:
-		return &TcReturnExpr{
+	case *TcReturnStmt:
+		return &TcReturnStmt{
 			Source: b.Source,
 			Value:  recursiveInstanciateGenericBody(b.Value, subs),
 		}

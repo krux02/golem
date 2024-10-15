@@ -352,7 +352,7 @@ func (builder *CodeBuilder) CompileExprWithPrefix(context *PackageGeneratorConte
 		builder.CompileSymRef(ex)
 	case *TcVariableDefStmt:
 		builder.CompileVariableDefStmt(context, ex)
-	case *TcReturnExpr:
+	case *TcReturnStmt:
 		// ignore the value of injectReturn here
 		builder.WriteString("return ")
 		builder.CompileExpr(context, ex.Value)
@@ -535,7 +535,7 @@ func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 	body := &TcCodeBlock{Source: procDef.Body.GetSource()}
 
 	if injectReturn {
-		body.Items = append(body.Items, &TcReturnExpr{Value: procDef.Body})
+		body.Items = append(body.Items, &TcReturnStmt{Value: procDef.Body})
 	} else {
 		codeBlockBody, ok := procDef.Body.(*TcCodeBlock)
 		if ok {

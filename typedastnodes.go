@@ -185,8 +185,7 @@ type TcVariableDefStmt struct {
 	Value  TcExpr
 }
 
-// TODO this is a stmt
-type TcReturnExpr struct {
+type TcReturnStmt struct {
 	Source string
 	Value  TcExpr
 }
@@ -349,7 +348,7 @@ func (arg *TcSymbol) GetSource() string          { return arg.Source }
 func (arg *TcSymRef) GetSource() string          { return arg.Source }
 func (arg *TcProcRef) GetSource() string         { return arg.Source }
 func (arg *TcVariableDefStmt) GetSource() string { return arg.Source }
-func (arg *TcReturnExpr) GetSource() string      { return arg.Source }
+func (arg *TcReturnStmt) GetSource() string      { return arg.Source }
 func (arg *TcTypeContext) GetSource() string     { return arg.Source }
 func (arg *TcForLoopStmt) GetSource() string     { return arg.Source }
 func (arg *TcWhileLoopStmt) GetSource() string   { return arg.Source }

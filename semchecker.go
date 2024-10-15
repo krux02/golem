@@ -1419,8 +1419,8 @@ func SemCheckVariableDefStmt(sc *SemChecker, scope Scope, arg *VariableDefStmt) 
 	return result
 }
 
-func SemCheckReturnExpr(sc *SemChecker, scope Scope, arg *ReturnExpr) *TcReturnExpr {
-	result := &TcReturnExpr{Value: SemCheckExpr(sc, scope, arg.Value, UniqueTypeConstraint{scope.CurrentProcSignature.ResultType})}
+func SemCheckReturnExpr(sc *SemChecker, scope Scope, arg *ReturnExpr) *TcReturnStmt {
+	result := &TcReturnStmt{Value: SemCheckExpr(sc, scope, arg.Value, UniqueTypeConstraint{scope.CurrentProcSignature.ResultType})}
 	result.Source = arg.Source
 	return result
 }
@@ -1483,7 +1483,7 @@ func (arg *TcBuiltinMacroDef) GetType() Type    { return TypeVoid }
 func (arg *TcErrorProcDef) GetType() Type       { return TypeVoid }
 func (stmt *TcIfStmt) GetType() Type            { return TypeVoid }
 func (stmt *TcIfElseExpr) GetType() Type        { return UnifyType(stmt.Body.GetType(), stmt.Else.GetType()) }
-func (returnExpr *TcReturnExpr) GetType() Type  { return TypeNoReturn }
+func (returnExpr *TcReturnStmt) GetType() Type  { return TypeNoReturn }
 func (expr *TcTypeContext) GetType() Type       { return GetTypeType(expr.WrappedType) }
 func (expr *TcDotExpr) GetType() Type           { return expr.Rhs.GetType() }
 func (field *TcStructField) GetType() Type      { return field.Type }
