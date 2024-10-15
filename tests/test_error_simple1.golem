@@ -1,4 +1,4 @@
-# NumErrors:      25
+# NumErrors:      27
 
 proc foo(arg: i32): i64 = {
   printf("foo1: %d\n", i32(arg))
@@ -58,5 +58,8 @@ proc main():i64 = {
 }
 
 proc foo() = {} # Error: proc def needs result type specified
+
+proc shing(a,b,c: i32): i32 = a+b+c # Error: previous definition here
+proc shing(d,e,f: i32): i32 = d*e*f # Error: definition with colliding signature: shing(d: i32, e: i32, f: i32): i32
 
 # proc bar : i32 = {0} # TODO Error: "proc def requires an argument list")

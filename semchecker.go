@@ -87,10 +87,38 @@ func RegisterTrait(sc *SemChecker, scope Scope, trait *TcTraitDef, context Expr)
 	return constraint
 }
 
+func SignatureEquals(lhs, rhs *Signature) bool {
+	if len(lhs.Params) != len(rhs.Params) {
+		return false
+	}
+	for i := range lhs.Params {
+		typ1 := lhs.Params[i].Type
+		typ2 := rhs.Params[i].Type
+		if _, isGeneric := typ1.(*GenericTypeSymbol); isGeneric {
+			continue
+		}
+		if _, isGeneric := typ2.(*GenericTypeSymbol); isGeneric {
+			continue
+		}
+		if typ1 != typ2 {
+			return false
+		}
+	}
+	return true
+}
+
 func RegisterProc(sc *SemChecker, scope Scope, proc Overloadable, context Expr) {
-	name := proc.GetSignature().Name
+	sig := proc.GetSignature()
+	name := sig.Name
 	// TODO check for name collisions with the same signature
-	scope.Overloadables[name] = append(scope.Overloadables[name], proc)
+	overloadables := scope.Overloadables[name]
+	for _, it := range overloadables {
+		if SignatureEquals(it.GetSignature(), sig) {
+			ReportErrorf(sc, proc, "definition with colliding signature: %s", AstFormat(sig))
+			ReportErrorf(sc, it, "previous definition here")
+		}
+	}
+	scope.Overloadables[name] = append(overloadables, proc)
 }
 
 func (scope Scope) NewSymbol(sc *SemChecker, name *Ident, kind SymbolKind, typ Type) *TcSymbol {
