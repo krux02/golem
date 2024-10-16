@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"math/big"
-	"reflect"
 	"strings"
 )
 
@@ -253,9 +252,13 @@ var TypeAnyNumber = &TypeGroup{Name: "AnyNumber", Items: []Type{
 	TypeInt8, TypeInt16, TypeInt32, TypeInt64,
 	TypeUInt8, TypeUInt16, TypeUInt32, TypeUInt64,
 }}
+var TypeAnyNumberOrChar = &TypeGroup{Name: "AnyNumberOrChar", Items: []Type{
+	TypeFloat32, TypeFloat64,
+	TypeInt8, TypeInt16, TypeInt32, TypeInt64,
+	TypeUInt8, TypeUInt16, TypeUInt32, TypeUInt64,
+	TypeChar,
+}}
 
-// TODO: The char type is not included in there, even though it is implemented
-// as a BuiltinStringType. This is an ugly code smell.
 var TypeAnyString = &TypeGroup{Name: "AnyString", Items: []Type{TypeStr, TypeCStr}}
 
 // builtin proc signatures
@@ -346,17 +349,6 @@ var builtinScope Scope = &ScopeImpl{
 	Variables:            make(map[string]*TcSymbol),
 	Types:                make(map[string]Type),
 	TypeConstraints:      make(map[string]TypeConstraint),
-}
-
-func registerBuiltinType(typ Type) {
-
-	rValue := reflect.ValueOf(typ).Elem()
-
-	nameField := rValue.FieldByName("Name")
-	if nameField.Kind() != reflect.String {
-		panic(fmt.Errorf("internal error type %s needs Name Field of type string", rValue.Type().Name()))
-	}
-	RegisterType(nil, builtinScope, nameField.String(), typ, nil)
 }
 
 func SymSubset(setA, setB []*GenericTypeSymbol) bool {
@@ -626,20 +618,20 @@ func BuiltinPipeTransformation(sc *SemChecker, scope Scope, call *TcCall) TcExpr
 	}
 	// TODO might crash
 	lhs := call.Args[0].(*TcWrappedUntypedAst).Expr
-	rhs, isCall := call.Args[1].(*TcWrappedUntypedAst).Expr.(*Call)
-	if !isCall {
-		ReportInvalidAstNode(sc, call.Args[1], "call")
-		return newErrorNode(call)
-	}
+	rhsRaw := call.Args[1].(*TcWrappedUntypedAst).Expr
 
 	result := &Call{
 		Source: call.Source,
-		Callee: rhs.Callee,
-		Args:   make([]Expr, 0, len(rhs.Args)+1),
 	}
 
-	result.Args = append(result.Args, lhs)
-	result.Args = append(result.Args, rhs.Args...)
+	if rhsCall, rhsIsCall := rhsRaw.(*Call); rhsIsCall {
+		result.Callee = rhsCall.Callee
+		result.Args = append(result.Args, lhs)
+		result.Args = append(result.Args, rhsCall.Args...)
+	} else {
+		result.Callee = rhsRaw
+		result.Args = append(result.Args, lhs)
+	}
 
 	return SemCheckExpr(sc, scope, result, TypeUnspecified)
 }
@@ -860,7 +852,7 @@ func init() {
 	registerBuiltinMacro("import", false, []Type{TypeStr}, TypeVoid, BuiltinImportStmt)
 	registerBuiltinMacro("type", false, []Type{TypeUntyped}, TypeUntyped, BuiltinTypeExpr)
 
-	registerBuiltinMacro("|", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinPipeTransformation)
+	registerBuiltinMacro("|>", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinPipeTransformation)
 	registerBuiltinMacro(".", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinDotOperator)
 	registerBuiltinMacro(":", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinColonExpr)
 
@@ -877,25 +869,25 @@ func init() {
 
 	// registerBuiltinMacro("sizeof", false, []Type{TypeUnspecified}, TypeInt64, BuiltinSizeOf)
 
-	registerBuiltinType(TypeBoolean)
-	registerBuiltinType(TypeInt8)
-	registerBuiltinType(TypeInt16)
-	registerBuiltinType(TypeInt32)
-	registerBuiltinType(TypeInt64)
-	registerBuiltinType(TypeUInt8)
-	registerBuiltinType(TypeUInt16)
-	registerBuiltinType(TypeUInt32)
-	registerBuiltinType(TypeUInt64)
-	registerBuiltinType(TypeFloat32)
-	registerBuiltinType(TypeFloat64)
-	registerBuiltinType(TypeStr)
-	registerBuiltinType(TypeCStr)
-	registerBuiltinType(TypeChar)
-	registerBuiltinType(TypeVoid)
-	registerBuiltinType(TypeNoReturn)
-	registerBuiltinType(TypeNilPtr)
+	RegisterNamedType(nil, builtinScope, TypeBoolean, nil)
+	RegisterNamedType(nil, builtinScope, TypeInt8, nil)
+	RegisterNamedType(nil, builtinScope, TypeInt16, nil)
+	RegisterNamedType(nil, builtinScope, TypeInt32, nil)
+	RegisterNamedType(nil, builtinScope, TypeInt64, nil)
+	RegisterNamedType(nil, builtinScope, TypeUInt8, nil)
+	RegisterNamedType(nil, builtinScope, TypeUInt16, nil)
+	RegisterNamedType(nil, builtinScope, TypeUInt32, nil)
+	RegisterNamedType(nil, builtinScope, TypeUInt64, nil)
+	RegisterNamedType(nil, builtinScope, TypeFloat32, nil)
+	RegisterNamedType(nil, builtinScope, TypeFloat64, nil)
+	RegisterNamedType(nil, builtinScope, TypeStr, nil)
+	RegisterNamedType(nil, builtinScope, TypeCStr, nil)
+	RegisterNamedType(nil, builtinScope, TypeChar, nil)
+	RegisterNamedType(nil, builtinScope, TypeVoid, nil)
+	RegisterNamedType(nil, builtinScope, TypeNoReturn, nil)
+	RegisterNamedType(nil, builtinScope, TypeNilPtr, nil)
 
-	registerBuiltinType(TypeFloat32x4)
+	RegisterNamedType(nil, builtinScope, TypeFloat32x4, nil)
 
 	// type aliases
 	RegisterType(nil, builtinScope, "pointer", GetPtrType(TypeVoid), nil)

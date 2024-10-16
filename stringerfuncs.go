@@ -846,3 +846,19 @@ func (subs *Substitutions) PrettyPrint(builder *AstPrettyPrinter) {
 	}
 	builder.WriteString(")")
 }
+
+func (this *BuiltinType) GetName() string {
+	return this.Name
+}
+func (this *BuiltinIntType) GetName() string {
+	return this.Name
+}
+func (this *BuiltinFloatType) GetName() string {
+	return this.Name
+}
+func (this *BuiltinStringType) GetName() string {
+	return this.Name
+}
+func (this *StructType) GetName() string {
+	return this.Impl.Name
+}

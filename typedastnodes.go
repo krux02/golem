@@ -14,6 +14,11 @@ type Type interface {
 	DefaultValue(sc *SemChecker, context Expr) TcExpr
 }
 
+type NamedType interface {
+	Type
+	GetName() string
+}
+
 type TypeConstraint interface {
 	PrettyPrint(*AstPrettyPrinter)
 	typeconstraint()

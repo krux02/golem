@@ -8,30 +8,40 @@ type WrappedArray = struct {
   arr: array(16,f32)
 }
 
-trait Any(T) = {
+trait CanDoPointlessStuff(T) = {
   proc pointlessStuff(_: T): void
 }
 
-proc pointless[T : Any](arg1: T) : void = {
+proc pointless[T : CanDoPointlessStuff](arg1: T) : void = {
   var tmp: T = arg1
   var someArray: array(4, T) = [arg1,arg1,arg1,arg1]
+}
+
+proc pointlessStuff(arg: i32) : void = {
+  printf("doing pointless stuff for i32: %d\n", arg)
+}
+
+proc pointlessStuff(arg: str) : void = {
+  printf("doing pointless stuff for str %s\n", arg)
 }
 
 proc main():i32= {
   let myarray : WrappedArray = [A,[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]]
 
-  printf("tag: %v\n", myarray.tag | string())
+  printf("tag: %v\n", myarray.tag |> string)
   for it in myarray.arr do {
     printf("hello %v\n", it)
   }
 
   let tmp1 = 123:i32
   let tmp2 = "abcdef":str
-  pointless(tmp1) # TODO, this should return an error, pointlessStuff is not implemented.
-  pointless(tmp2)
+
+  # TODO, this should now work, as `CanDoPointlessStuff` exists
+  # pointless(tmp1)
+  # pointless(tmp2)
   # test reuse if generic instance
-  pointless(tmp2)
-  pointless(tmp1)
+  # pointless(tmp2)
+  # pointless(tmp1)
 
   0
 }

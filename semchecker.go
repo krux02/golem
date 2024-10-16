@@ -67,6 +67,10 @@ func RegisterType(sc *SemChecker, scope Scope, name string, typ Type, context Ex
 	scope.Types[name] = typ
 }
 
+func RegisterNamedType(sc *SemChecker, scope Scope, typ NamedType, context Expr) {
+	RegisterType(sc, scope, typ.GetName(), typ, context)
+}
+
 func RegisterTypeGroup(sc *SemChecker, scope Scope, tg *TypeGroup, context Expr) TypeConstraint {
 	if _, ok := builtinScope.TypeConstraints[tg.Name]; ok {
 		ReportErrorf(sc, context, "double definition of type group %s", AstFormat(tg))
@@ -344,7 +348,7 @@ func SemCheckTypeDef(sc *SemChecker, scope Scope, def *TypeDef) TcExpr {
 				}
 			}
 		}
-		RegisterType(sc, scope, structType.Impl.Name, structType, name)
+		RegisterNamedType(sc, scope, structType, name)
 		return result
 	case "enum":
 		block, isBlock := body.(*CodeBlock)
@@ -680,6 +684,9 @@ func ExpectType(sc *SemChecker, node Expr, gotten Type, expected TypeConstraint)
 		if expected.Typ == TypeError {
 			return TypeError
 		}
+	case *TypeTrait:
+		// TODO actually do something with this trait
+		// fmt.Printf("got type trait: %s\n", AstFormat(expected))
 	}
 
 	ReportUnexpectedType(sc, node, expected, gotten)
@@ -725,6 +732,13 @@ func argTypeGroupAtIndex(signatures []Signature, idx int) (result TypeConstraint
 			return TypeUnspecified
 		}
 		typ := sig.Params[idx].Type
+
+		if sym, isSym := typ.(*GenericTypeSymbol); isSym {
+			if len(signatures) == 1 {
+				return sym.Constraint
+			}
+		}
+
 		if len(openGenericsMap[typ]) > 0 {
 			// TODO this can be more precise than the most generic `TypeUnspecified`
 			return TypeUnspecified
@@ -732,6 +746,12 @@ func argTypeGroupAtIndex(signatures []Signature, idx int) (result TypeConstraint
 		builder.Items = AppendNoDuplicats(builder.Items, typ)
 	}
 	if len(builder.Items) == 1 {
+
+		typ := builder.Items[0]
+		if signatures[0].Name == "pointless" {
+			fmt.Printf("%s %T\n", AstFormat(typ), typ)
+		}
+
 		return UniqueTypeConstraint{builder.Items[0]}
 	}
 	if len(builder.Items) == 0 {

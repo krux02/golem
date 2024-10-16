@@ -81,7 +81,7 @@ proc main():i64 = {
 
   # pipe syntax for function chaining
   # don't delete this, this is the only test so far that actually tests the | syntax
-  let z = 12 | myfun1(13, 14) | myfun2(16, 17)
+  let z = 12 |> myfun1(13, 14) |> myfun2(16, 17)
   printf("z: %d\n", z)
 
   ## f1: some useless doc comment
