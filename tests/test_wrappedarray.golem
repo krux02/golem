@@ -8,8 +8,8 @@ type WrappedArray = struct {
   arr: array(16,f32)
 }
 
-trait CanDoPointlessStuff(T) = {
-  proc pointlessStuff(_: T): void
+trait CanDoPointlessStuff(U) = {
+  proc pointlessStuff(_: U): void
 }
 
 proc pointless[T : CanDoPointlessStuff](arg1: T) : void = {
@@ -36,12 +36,11 @@ proc main():i32= {
   let tmp1 = 123:i32
   let tmp2 = "abcdef":str
 
-  # TODO, this should now work, as `CanDoPointlessStuff` exists
-  # pointless(tmp1)
-  # pointless(tmp2)
+  pointless(tmp1)
+  pointless(tmp2)
   # test reuse if generic instance
-  # pointless(tmp2)
-  # pointless(tmp1)
+  pointless(tmp2)
+  pointless(tmp1)
 
   0
 }

@@ -307,9 +307,13 @@ func (typeDef *TcTraitDef) PrettyPrint(builder *AstPrettyPrinter) {
 		builder.WriteNode(typ)
 	}
 	builder.WriteString(") {")
+	builder.Indentation += 1
 	for _, overloadable := range typeDef.Overloadables {
+		builder.NewlineAndIndent()
 		builder.WriteNode(overloadable)
 	}
+	builder.Indentation -= 1
+	builder.NewlineAndIndent()
 	builder.WriteString("}")
 }
 
@@ -824,27 +828,44 @@ func (expr *TcConvExpr) PrettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (subs *Substitutions) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("subs(")
+	// builder.WriteString("subs(")
 	builder.Indentation += 1
-	for _, sub := range subs.symSubs {
+	if len(subs.symSubs) > 0 {
 		builder.NewlineAndIndent()
-		builder.WriteNode(sub.sym)
-		builder.WriteString(" -> ")
-		builder.WriteNode(sub.newSym)
+		builder.WriteString("syms:")
+		for _, sub := range subs.symSubs {
+			builder.NewlineAndIndent()
+			builder.WriteString("  ")
+			builder.WriteNode(sub.sym)
+			builder.WriteString(" -> ")
+			builder.WriteNode(sub.newSym)
+		}
 	}
-	for _, sub := range subs.typeSubs {
+	if len(subs.typeSubs) > 0 {
 		builder.NewlineAndIndent()
-		builder.WriteNode(sub.sym)
-		builder.WriteString(" -> ")
-		builder.WriteNode(sub.newType)
+		builder.WriteString("types:")
+		for _, sub := range subs.typeSubs {
+			builder.NewlineAndIndent()
+			builder.WriteString("  ")
+			builder.WriteNode(sub.sym)
+			builder.WriteString(" -> ")
+			builder.WriteNode(sub.newType)
+		}
 	}
-	for _, sub := range subs.procSubs {
+	if len(subs.procSubs) > 0 {
 		builder.NewlineAndIndent()
-		builder.WriteNode(sub.sig)
-		builder.WriteString(" -> ")
-		builder.WriteNode(sub.newSig)
+		builder.WriteString("procs:")
+		for _, sub := range subs.procSubs {
+			builder.NewlineAndIndent()
+			builder.WriteString("  ")
+			builder.WriteNode(sub.sig)
+			builder.WriteString(" -> ")
+			builder.WriteNode(sub.newSig)
+		}
 	}
-	builder.WriteString(")")
+	builder.Indentation -= 1
+	// builder.NewlineAndIndent()
+	// builder.WriteString(")")
 }
 
 func (this *BuiltinType) GetName() string {
