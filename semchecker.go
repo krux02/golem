@@ -516,8 +516,13 @@ func SemCheckSignature(sc *SemChecker, bodyScope Scope, name string, genericArgs
 
 		// the same, unless a generac parameter
 		sigTyp := LookUpType(sc, signatureScope, arg.Type)
-		bodyTyp := LookUpType(sc, bodyScope, arg.Type)
-
+		var bodyTyp Type
+		// prevent double reporting of error messages
+		if sigTyp != TypeError {
+			bodyTyp = LookUpType(sc, bodyScope, arg.Type)
+		} else {
+			bodyTyp = TypeError
+		}
 		var tcArg *TcSymbol
 		// TODO this is ugly. Refactoring `NewSymbol` to a simple `RegisterSymbol`
 		// might be a better solution.
@@ -538,13 +543,19 @@ func SemCheckSignature(sc *SemChecker, bodyScope Scope, name string, genericArgs
 		params = append(params, tcArg)
 	}
 
-	// makeGenericSignature(def.Name.Source, genericParams, params, resultType, 0)
 	signature := &Signature{
 		Name:          name,
 		GenericParams: genericParams,
 		Params:        params,
-		ResultType:    LookUpType(sc, signatureScope, resultType),
 	}
+
+	if resultType == nil {
+		ReportErrorf(sc, &Ident{Source: name}, "proc def needs result type specified")
+		signature.ResultType = TypeError
+	} else {
+		signature.ResultType = LookUpType(sc, signatureScope, resultType)
+	}
+
 	return signature
 }
 
