@@ -837,28 +837,29 @@ func GenericParamSignatureMatch(scope Scope, exprType, paramType Type, substitut
 			}
 			return false, nil
 		case *TypeTrait:
-			fmt.Printf("dependent types: [")
-			for i, typ := range constraint.Impl.DependentTypes {
-				if i != 0 {
-					fmt.Print(", ")
-				}
-				fmt.Print(typ.Name)
-			}
-			fmt.Printf("]\n")
-			fmt.Printf("expr type: %s\n", AstFormat(exprType))
-			fmt.Printf("signatures:\n")
-			for _, sig := range constraint.Impl.Signatures {
-				fmt.Printf("  %s\n", AstFormat(&sig))
-			}
+			// fmt.Printf("dependent types: [")
+			// for i, typ := range constraint.Impl.DependentTypes {
+			// 	if i != 0 {
+			// 		fmt.Print(", ")
+			// 	}
+			// 	fmt.Print(typ.Name)
+			// }
+			// fmt.Printf("]\n")
+			// fmt.Printf("expr type: %s\n", AstFormat(exprType))
+			// fmt.Printf("signatures:\n")
+			// for _, sig := range constraint.Impl.Signatures {
+			// 	fmt.Printf("  %s\n", AstFormat(&sig))
+			// }
 
 			if len(constraint.Impl.DependentTypes) != 1 {
 				panic("not implemented")
 			}
 			traitInst := typeSym.TraitInst
-			fmt.Printf("proc defs:\n")
-			for _, def := range traitInst.ProcDefs {
-				fmt.Printf("   %s\n", AstFormat(def))
-			}
+			// fmt.Printf("proc defs:\n")
+			// for _, def := range traitInst.ProcDefs {
+			// 	fmt.Printf("   %s\n", AstFormat(def))
+			// }
+			//
 			// trait CanDoPointlessStuff(U) = {
 			//   proc pointlessStuff(_: U): void
 			// }
@@ -873,22 +874,14 @@ func GenericParamSignatureMatch(scope Scope, exprType, paramType Type, substitut
 					{typeSym, exprType},
 				},
 			}
-			fmt.Printf("traitSubs: %s\n", AstFormat(traitSubs))
-
+			// fmt.Printf("traitSubs: %s\n", AstFormat(traitSubs))
 			var procSubs []ProcSubstitution
-
 			for i, sig := range constraint.Impl.Signatures {
-
 				// sig :: pointlessStuff(U): void
 				newSig := SignatureApplyTypeSubstitution(sig, traitSubs) // pointlessStuff(f32): void
-				fmt.Printf("traitSubs: %s\n", AstFormat(traitSubs))
-				fmt.Printf("sig: %s\nnewsig: %s\n", AstFormat(&sig), AstFormat(&newSig))
-
+				// fmt.Printf("traitSubs: %s\n", AstFormat(traitSubs))
+				// fmt.Printf("sig: %s\nnewsig: %s\n", AstFormat(&sig), AstFormat(&newSig))
 				candidates := LookUpProc(scope, newSig.Name, -1, nil)
-				for i, it := range candidates {
-					fmt.Printf(" i: % 4d --- %s\n", i, AstFormat(it))
-				}
-
 				var substitutionProc Overloadable
 			candidatesLoop:
 				for _, it := range candidates {
@@ -910,11 +903,7 @@ func GenericParamSignatureMatch(scope Scope, exprType, paramType Type, substitut
 				}
 
 				traitProc := traitInst.ProcDefs[i]
-
-				fmt.Printf("subst: %s\nwith: %s\n", AstFormat(traitProc), AstFormat(substitutionProc))
-				//panic("implement this")
-				//traitInstance.ProcDefs[i] = substitutionProc
-				//traitProc :=
+				//fmt.Printf("subst: %s\nwith: %s\n", AstFormat(traitProc), AstFormat(substitutionProc))
 				procSubs = append(procSubs, ProcSubstitution{traitProc, substitutionProc})
 			}
 
