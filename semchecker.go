@@ -444,10 +444,23 @@ func ParseTraitDef(sc *SemChecker, expr Expr) (name *Ident, dependentTypes []*Id
 	return
 }
 
-func SemCheckSignature(sc *SemChecker, innerScope Scope, genericArgs []GenericArgument, args []ProcArgument) *Signature {
+func NewProcPrototype(sc *SemChecker, sig *Signature) *TcProcDef {
+	// is this enough?
+	//
+	// this prototypes may not actually be uned in later compilation stages, it is
+	// only used, that the body of generic procedurs may pass the semchecking
+	// phase.
+	return &TcProcDef{
+		Signature: *sig,
+	}
+}
+
+func SemCheckSignature(sc *SemChecker, bodyScope Scope, name string, genericArgs []GenericArgument, args []ProcArgument, resultType Expr) *Signature {
 	var genericParams []*GenericTypeSymbol
 
-	parentScope := innerScope.Parent
+	parentScope := bodyScope.Parent
+	signatureScope := NewSubScope(parentScope)
+
 	if parentScope.CurrentTrait != nil {
 		genericParams = append(genericParams, parentScope.CurrentTrait.DependentTypes...)
 	}
@@ -460,15 +473,34 @@ func SemCheckSignature(sc *SemChecker, innerScope Scope, genericArgs []GenericAr
 		name := genericArg.Name
 
 		genTypeSym := NewGenericTypeSymbol(name.Source, name.Source, constraint)
+		abstractTypeSym := NewAbstractTypeSymbol(name.Source)
+		genTypeSym.AbsTypSym = abstractTypeSym
 		genericParams = append(genericParams, genTypeSym)
 		// make the generic type symbol available to look up in its body
-		RegisterType(sc, innerScope, name.Source, genTypeSym, name)
+		RegisterType(sc, bodyScope, name.Source, abstractTypeSym, name)
+		RegisterType(sc, signatureScope, name.Source, genTypeSym, name)
 
 		switch constraint := constraint.(type) {
 		case *TypeTrait:
-			for _, overloadable := range constraint.Impl.Overloadables {
-
-				RegisterProc(sc, innerScope, overloadable, genericArg.TraitName)
+			traitDef := constraint.Impl
+			if len(traitDef.DependentTypes) != 1 {
+				ReportErrorf(sc, name, "only constraints with a single argument implemented")
+			}
+			sym := traitDef.DependentTypes[0]
+			subs := &Substitutions{
+				typeSubs: []TypeSubstitution{{sym, abstractTypeSym}},
+			}
+			traitInst := &TraitInstance{}
+			genTypeSym.TraitInst = traitInst
+			//cacheKey := ComputeInstanceCacheKey(traitDef.DependentTypes, subs.typeSubs)
+			//traitDef.InstanceCache.Set(cacheKey, traitInst)
+			for _, sig := range traitDef.Signatures {
+				newSig := SignatureApplyTypeSubstitution(sig, subs)
+				// fmt.Printf("i: %d\nold: %s\nnew: %s\n", j, AstFormat(&sig), AstFormat(&newSig))
+				// traitDef.InstanceCache.Init(len(traitDef.DependentTypes))
+				overloadable := NewProcPrototype(sc, &newSig)
+				traitInst.ProcDefs = append(traitInst.ProcDefs, overloadable)
+				RegisterProc(sc, bodyScope, overloadable, genericArg.TraitName)
 			}
 		default:
 			ReportWarningf(sc, genericArg.TraitName, "currently only traits are supported in the compiler as type constraints")
@@ -482,21 +514,25 @@ func SemCheckSignature(sc *SemChecker, innerScope Scope, genericArgs []GenericAr
 			symKind = SkVarProcArg
 		}
 
-		typ := LookUpType(sc, innerScope, arg.Type)
+		// the same, unless a generac parameter
+		sigTyp := LookUpType(sc, signatureScope, arg.Type)
+		bodyTyp := LookUpType(sc, bodyScope, arg.Type)
 
 		var tcArg *TcSymbol
 		// TODO this is ugly. Refactoring `NewSymbol` to a simple `RegisterSymbol`
 		// might be a better solution.
 		if arg.Name.Source != "_" {
 			ValidNameCheck(sc, arg.Name, "proc arg")
-			tcArg = innerScope.NewSymbol(sc, arg.Name, symKind, typ)
+
+			bodyScope.NewSymbol(sc, arg.Name, symKind, bodyTyp)
+			tcArg = signatureScope.NewSymbol(sc, arg.Name, symKind, sigTyp)
 		} else {
 			// parameters with the name "_" are explicity not put in the scope.
 			tcArg = &TcSymbol{
 				Source: arg.Name.Source,
 				Kind:   symKind,
 				Value:  nil,
-				Type:   typ,
+				Type:   sigTyp,
 			}
 		}
 		params = append(params, tcArg)
@@ -504,8 +540,10 @@ func SemCheckSignature(sc *SemChecker, innerScope Scope, genericArgs []GenericAr
 
 	// makeGenericSignature(def.Name.Source, genericParams, params, resultType, 0)
 	signature := &Signature{
+		Name:          name,
 		GenericParams: genericParams,
 		Params:        params,
+		ResultType:    LookUpType(sc, signatureScope, resultType),
 	}
 	return signature
 }
@@ -514,15 +552,13 @@ func SemCheckTemplateDef(sc *SemChecker, parentScope Scope, def *ProcDef) (templ
 	innerScope := NewSubScope(parentScope)
 	name, body, resultType, genericArgs, args := MustMatchProcDef(sc, def)
 
-	LookUpType(sc, parentScope, resultType)
 	if def.Annotations != nil {
 		ReportInvalidAnnotations(sc, def.Annotations)
 	}
 
 	// the type `untyped` is a special builtin type that is not actually a type. It should only be legal to use it in the context of
 	innerScope.Types["untyped"] = TypeUntyped
-	signature := SemCheckSignature(sc, innerScope, genericArgs, args)
-	signature.Name = name.Source
+	signature := SemCheckSignature(sc, innerScope, name.Source, genericArgs, args, resultType)
 
 	N := len(signature.Params)
 	subs := make([]TemplateSubstitution, N)
@@ -549,12 +585,12 @@ func MangleSignature(signature *Signature) string {
 	return mangledNameBuilder.String()
 }
 
-func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result *TcProcDef) {
+func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) *TcProcDef {
 	innerScope := NewSubScope(parentScope)
 	name, body, resultType, genericArgs, args := MustMatchProcDef(sc, def)
+	signature := SemCheckSignature(sc, innerScope, name.Source, genericArgs, args, resultType)
 
 	var importc bool
-
 	if def.Annotations != nil {
 		if def.Annotations.Value == "importc" {
 			importc = true
@@ -563,32 +599,23 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) (result *T
 		}
 	}
 
-	signature := SemCheckSignature(sc, innerScope, genericArgs, args)
 	isGeneric := len(signature.GenericParams) > 0
 	innerScope.CurrentProcSignature = signature
-	signature.Name = name.Source
-
-	if resultType == nil {
-		ReportErrorf(sc, def, "proc def needs result type specified")
-		signature.ResultType = TypeError
-	} else {
-		signature.ResultType = LookUpType(sc, innerScope, resultType)
-	}
 
 	var mangledName string
-	if importc || name.Source == "main" {
+	if importc || signature.Name == "main" {
 		// TODO, don't special case `main` like this here
-		mangledName = name.Source
+		mangledName = signature.Name
 	} else if !isGeneric {
 		mangledName = MangleSignature(signature)
 	}
 
-	result = &TcProcDef{
+	result := &TcProcDef{
 		Source:        def.Source,
 		MangledName:   mangledName,
 		Signature:     *signature,
 		Importc:       importc,
-		InstanceCache: NewInstanceCache(len(signature.GenericParams)),
+		InstanceCache: NewInstanceCache[Overloadable](len(signature.GenericParams)),
 	}
 
 	// register proc before type checking the body to allow recursion. (TODO needs a test)
@@ -773,7 +800,7 @@ type SymbolSubstitution = struct {
 }
 
 type TypeSubstitution = struct {
-	sym     *GenericTypeSymbol
+	sym     Type
 	newType Type
 }
 
@@ -791,7 +818,10 @@ func GenericParamSignatureMatch(scope Scope, exprType, paramType Type, substitut
 		}
 
 		outSubstitutions = substitutions // TODO is this correct? It modifies input substitutions
-		outSubstitutions.typeSubs = append(outSubstitutions.typeSubs, TypeSubstitution{typeSym, exprType})
+		outSubstitutions.typeSubs = append(outSubstitutions.typeSubs,
+			TypeSubstitution{typeSym, exprType},
+			TypeSubstitution{typeSym.AbsTypSym, exprType},
+		)
 
 		switch constraint := typeSym.Constraint.(type) {
 		case UniqueTypeConstraint:
@@ -807,38 +837,62 @@ func GenericParamSignatureMatch(scope Scope, exprType, paramType Type, substitut
 			}
 			return false, nil
 		case *TypeTrait:
-
-			// test if type trait matches for
+			fmt.Printf("dependent types: [")
+			for i, typ := range constraint.Impl.DependentTypes {
+				if i != 0 {
+					fmt.Print(", ")
+				}
+				fmt.Print(typ.Name)
+			}
+			fmt.Printf("]\n")
+			fmt.Printf("expr type: %s\n", AstFormat(exprType))
+			fmt.Printf("signatures:\n")
+			for _, sig := range constraint.Impl.Signatures {
+				fmt.Printf("  %s\n", AstFormat(&sig))
+			}
 
 			if len(constraint.Impl.DependentTypes) != 1 {
 				panic("not implemented")
 			}
-
-			typeSym := constraint.Impl.DependentTypes[0]
-
+			traitInst := typeSym.TraitInst
+			fmt.Printf("proc defs:\n")
+			for _, def := range traitInst.ProcDefs {
+				fmt.Printf("   %s\n", AstFormat(def))
+			}
 			// trait CanDoPointlessStuff(U) = {
 			//   proc pointlessStuff(_: U): void
 			// }
 
 			// to convert the signatures listed in the trait to the current usage, we
 			// create a substitutions object here. in the example it would be U -> f32
+
+			typeSym := constraint.Impl.DependentTypes[0]
+
 			traitSubs := &Substitutions{
 				typeSubs: []TypeSubstitution{
 					{typeSym, exprType},
 				},
 			}
+			fmt.Printf("traitSubs: %s\n", AstFormat(traitSubs))
 
 			var procSubs []ProcSubstitution
 
-			for _, traitProc := range constraint.Impl.Overloadables {
-				sig := *traitProc.GetSignature()                         // pointlessStuff(U): void
-				newSig := SignatureApplyTypeSubstitution(sig, traitSubs) // pointlessStuff(f32): void
+			for i, sig := range constraint.Impl.Signatures {
 
-				candidates := LookUpProc(scope, newSig.Name, len(newSig.Params), nil)
+				// sig :: pointlessStuff(U): void
+				newSig := SignatureApplyTypeSubstitution(sig, traitSubs) // pointlessStuff(f32): void
+				fmt.Printf("traitSubs: %s\n", AstFormat(traitSubs))
+				fmt.Printf("sig: %s\nnewsig: %s\n", AstFormat(&sig), AstFormat(&newSig))
+
+				candidates := LookUpProc(scope, newSig.Name, -1, nil)
+				for i, it := range candidates {
+					fmt.Printf(" i: % 4d --- %s\n", i, AstFormat(it))
+				}
 
 				var substitutionProc Overloadable
 			candidatesLoop:
 				for _, it := range candidates {
+
 					itSig := it.GetSignature()
 					for i := range newSig.Params {
 						// TODO this needs to be generic parameter signature matching
@@ -855,6 +909,12 @@ func GenericParamSignatureMatch(scope Scope, exprType, paramType Type, substitut
 					return false, nil
 				}
 
+				traitProc := traitInst.ProcDefs[i]
+
+				fmt.Printf("subst: %s\nwith: %s\n", AstFormat(traitProc), AstFormat(substitutionProc))
+				//panic("implement this")
+				//traitInstance.ProcDefs[i] = substitutionProc
+				//traitProc :=
 				procSubs = append(procSubs, ProcSubstitution{traitProc, substitutionProc})
 			}
 
@@ -901,6 +961,14 @@ func GenericParamSignatureMatch(scope Scope, exprType, paramType Type, substitut
 		}
 	}
 
+	{
+		exprTypeSym, exprIsAbstractType := exprType.(*AbstractTypeSymbol)
+		paramTypeSym, paramIsAbstractType := paramType.(*AbstractTypeSymbol)
+		if exprIsAbstractType && paramIsAbstractType {
+			return exprTypeSym == paramTypeSym, substitutions
+		}
+	}
+
 	// TODO apply type substitutions to struct type
 	return false, nil
 }
@@ -921,6 +989,13 @@ func ParamSignatureMatch(scope Scope, exprType, paramType Type) (ok bool, typeSu
 func RecursiveTypeSubstitution(typ Type, substitutions []TypeSubstitution) Type {
 	switch typ := typ.(type) {
 	case *GenericTypeSymbol:
+		for _, it := range substitutions {
+			if it.sym == typ {
+				return it.newType
+			}
+		}
+		return typ
+	case *AbstractTypeSymbol:
 		for _, it := range substitutions {
 			if it.sym == typ {
 				return it.newType
@@ -951,7 +1026,7 @@ func RecursiveTypeSubstitution(typ Type, substitutions []TypeSubstitution) Type 
 	}
 }
 
-func Contains(theSet []*GenericTypeSymbol, item *GenericTypeSymbol) bool {
+func Contains(theSet []Type, item Type) bool {
 	for _, it := range theSet {
 		if it == item {
 			return true
@@ -960,7 +1035,7 @@ func Contains(theSet []*GenericTypeSymbol, item *GenericTypeSymbol) bool {
 	return false
 }
 
-func Contains2(theSet []TypeSubstitution, item *GenericTypeSymbol) bool {
+func Contains2(theSet []TypeSubstitution, item Type) bool {
 	for _, it := range theSet {
 		if it.sym == item {
 			return true
@@ -1011,7 +1086,7 @@ func ApplyTypeSubstitutions(argType Type, substitutions []TypeSubstitution) Type
 	}
 
 	// compute new open symbols
-	var newOpenSymbols []*GenericTypeSymbol = nil
+	var newOpenSymbols []Type = nil
 	for _, sym := range openSymbols {
 		if !Contains2(filteredSubstitutions, sym) {
 			newOpenSymbols = append(newOpenSymbols, sym)
@@ -1056,7 +1131,9 @@ func SignatureApplyTypeSubstitution(sig Signature, subs *Substitutions) Signatur
 		if newType, foundNewType := FindSubstitution(subs.typeSubs, it); foundNewType {
 			openGenericSyms := openGenericsMap[newType]
 			for _, openSym := range openGenericSyms {
-				newGen = AppendNoDuplicats(newGen, openSym)
+				if genSym, isGenSym := openSym.(*GenericTypeSymbol); isGenSym {
+					newGen = AppendNoDuplicats(newGen, genSym)
+				}
 			}
 		} else {
 			// generic parameter isn't substituted. keep it unchanged
@@ -1075,82 +1152,151 @@ func SignatureApplyTypeSubstitution(sig Signature, subs *Substitutions) Signatur
 	return result
 }
 
-type InstanceCache struct {
+type InstanceCache[T any] struct {
 	Map any
 }
 
-func (this *InstanceCache) Init(N int) {
+func (this *InstanceCache[T]) Debug() string {
+	builder := &strings.Builder{}
+	switch m := this.Map.(type) {
+	case map[[1]Type]T:
+		for key, value := range m {
+			fmt.Fprintf(builder, "[%s] -> %#+v\n",
+				AstFormat(key[0]),
+				value,
+			)
+		}
+	case map[[2]Type]T:
+		for key, value := range m {
+			fmt.Fprintf(builder, "[%s, %s] -> %#+v\n",
+				AstFormat(key[0]),
+				AstFormat(key[1]),
+				value,
+			)
+		}
+	case map[[3]Type]T:
+		for key, value := range m {
+			fmt.Fprintf(builder, "[%s, %s, %s] -> %v\n",
+				AstFormat(key[0]),
+				AstFormat(key[1]),
+				AstFormat(key[2]),
+				value,
+			)
+		}
+	case map[[4]Type]T:
+		for key, value := range m {
+			fmt.Fprintf(builder, "[%s, %s, %s, %s] -> %#+v\n",
+				AstFormat(key[0]),
+				AstFormat(key[1]),
+				AstFormat(key[2]),
+				AstFormat(key[3]),
+				value,
+			)
+		}
+	case map[[5]Type]T:
+		for key, value := range m {
+			fmt.Fprintf(builder, "[%s, %s, %s, %s, %s] -> %#+v\n",
+				AstFormat(key[0]),
+				AstFormat(key[1]),
+				AstFormat(key[2]),
+				AstFormat(key[3]),
+				AstFormat(key[4]),
+				value,
+			)
+		}
+	case map[[6]Type]T:
+		for key, value := range m {
+
+			fmt.Fprintf(builder, "[%s, %s, %s, %s, %s, %s] -> %#+v\n",
+				AstFormat(key[0]),
+				AstFormat(key[1]),
+				AstFormat(key[2]),
+				AstFormat(key[3]),
+				AstFormat(key[4]),
+				AstFormat(key[5]),
+				value,
+			)
+		}
+
+	default:
+		panic("not implemented")
+	}
+
+	return builder.String()
+}
+
+func (this *InstanceCache[T]) Init(N int) {
 	switch N {
 	case 1:
-		this.Map = make(map[[1]Type]Overloadable)
+		this.Map = make(map[[1]Type]T)
 	case 2:
-		this.Map = make(map[[2]Type]Overloadable)
+		this.Map = make(map[[2]Type]T)
 	case 3:
-		this.Map = make(map[[3]Type]Overloadable)
+		this.Map = make(map[[3]Type]T)
 	case 4:
-		this.Map = make(map[[4]Type]Overloadable)
+		this.Map = make(map[[4]Type]T)
 	case 5:
-		this.Map = make(map[[5]Type]Overloadable)
+		this.Map = make(map[[5]Type]T)
 	case 6:
-		this.Map = make(map[[6]Type]Overloadable)
+		this.Map = make(map[[6]Type]T)
 	default:
 		panic(fmt.Errorf("not implemented %d", N))
 	}
 }
 
-func NewInstanceCache(N int) (result *InstanceCache) {
+func NewInstanceCache[T any](N int) (result *InstanceCache[T]) {
 	if N > 0 {
-		result = &InstanceCache{}
+		result = &InstanceCache[T]{}
 		result.Init(N)
 	}
 	return result
 }
 
-func (this *InstanceCache) Set(key []Type, value Overloadable) {
+func (this *InstanceCache[T]) Set(key []Type, value T) {
 	switch len(key) {
 	case 1:
 		key2 := [...]Type{key[0]}
-		this.Map.(map[[1]Type]Overloadable)[key2] = value
+		this.Map.(map[[1]Type]T)[key2] = value
 	case 2:
 		key2 := [...]Type{key[0], key[1]}
-		this.Map.(map[[2]Type]Overloadable)[key2] = value
+		this.Map.(map[[2]Type]T)[key2] = value
 	case 3:
 		key2 := [...]Type{key[0], key[1], key[2]}
-		this.Map.(map[[3]Type]Overloadable)[key2] = value
+		this.Map.(map[[3]Type]T)[key2] = value
 	case 4:
 		key2 := [...]Type{key[0], key[1], key[2], key[3]}
-		this.Map.(map[[4]Type]Overloadable)[key2] = value
+		this.Map.(map[[4]Type]T)[key2] = value
 	case 5:
 		key2 := [...]Type{key[0], key[1], key[2], key[3], key[4]}
-		this.Map.(map[[5]Type]Overloadable)[key2] = value
+		this.Map.(map[[5]Type]T)[key2] = value
 	case 6:
 		key2 := [...]Type{key[0], key[1], key[2], key[3], key[4], key[5]}
-		this.Map.(map[[6]Type]Overloadable)[key2] = value
+		this.Map.(map[[6]Type]T)[key2] = value
 	default:
 		panic(fmt.Errorf("not implemented %d", key))
 	}
 }
 
-func (this *InstanceCache) LookUp(key []Type) Overloadable {
+func (this *InstanceCache[T]) LookUp(key []Type) T {
 	switch len(key) {
 	case 1:
 		key2 := [...]Type{key[0]}
-		return this.Map.(map[[1]Type]Overloadable)[key2]
+		return this.Map.(map[[1]Type]T)[key2]
 	case 2:
 		key2 := [...]Type{key[0], key[1]}
-		return this.Map.(map[[2]Type]Overloadable)[key2]
+		return this.Map.(map[[2]Type]T)[key2]
 	case 3:
 		key2 := [...]Type{key[0], key[1], key[2]}
-		return this.Map.(map[[3]Type]Overloadable)[key2]
+		return this.Map.(map[[3]Type]T)[key2]
 	case 4:
 		key2 := [...]Type{key[0], key[1], key[2], key[3]}
-		return this.Map.(map[[4]Type]Overloadable)[key2]
+		return this.Map.(map[[4]Type]T)[key2]
 	case 5:
 		key2 := [...]Type{key[0], key[1], key[2], key[3], key[4]}
-		return this.Map.(map[[5]Type]Overloadable)[key2]
+		return this.Map.(map[[5]Type]T)[key2]
 	case 6:
 		key2 := [...]Type{key[0], key[1], key[2], key[3], key[4], key[5]}
-		return this.Map.(map[[6]Type]Overloadable)[key2]
+		return this.Map.(map[[6]Type]T)[key2]
 	default:
 		panic(fmt.Errorf("not implemented %d", len(key)))
 	}
@@ -1793,7 +1939,7 @@ type ArrayTypeMapKey struct {
 }
 
 // Stores information that a type still has unresolved generics.
-var openGenericsMap map[Type][]*GenericTypeSymbol
+var openGenericsMap map[Type][]Type
 
 var arrayTypeMap map[ArrayTypeMapKey]*ArrayType
 

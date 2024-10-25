@@ -9,6 +9,7 @@ type Substitutions struct {
 }
 
 func InstanciateBuiltinGenericProc(proc *TcBuiltinProcDef, subs *Substitutions) *TcBuiltinProcDef {
+
 	if len(proc.Signature.GenericParams) == 0 {
 		return proc
 	}
@@ -29,6 +30,10 @@ func InstanciateBuiltinGenericProc(proc *TcBuiltinProcDef, subs *Substitutions) 
 }
 
 func InstanciateGenericProc(proc *TcProcDef, subs *Substitutions) Overloadable {
+
+	fmt.Printf("instantiate proc:\n%s\n", AstFormat(proc))
+	fmt.Println(AstFormat(subs))
+
 	if len(proc.Signature.GenericParams) == 0 {
 		return proc
 	}
@@ -49,6 +54,8 @@ func InstanciateGenericProc(proc *TcProcDef, subs *Substitutions) Overloadable {
 		Body:        newBody,
 	}
 	proc.InstanceCache.Set(cacheKey, result)
+	fmt.Printf("instantiated proc:\n%s\n", AstFormat(result))
+
 	return result
 }
 

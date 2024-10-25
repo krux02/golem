@@ -1,5 +1,6 @@
 
 * TODO loop statements
+
 implement/test break and continue
 
 * TODO reactivate validate source set internal
@@ -8,6 +9,12 @@ implement/test break and continue
 
 technically, my language allows scope local import statements. That is
 completely untested.
+
+* TODO macros that stay as macro calls in semchecked ast
+
+right now, the semchecker expands all macros to become its typechecked expanded
+ast. If sourcecode gets printed, this becomes verbose. Some macros are easier to
+process in other macros, if they stay in their unexpanded form.
 
 * TODO untyped type
 

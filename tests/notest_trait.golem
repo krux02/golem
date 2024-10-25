@@ -38,5 +38,4 @@ proc main(): void = {
   bar(myStruct)
 }
 
-# foo(myStruct)
 # bing(13:i32)

@@ -185,6 +185,10 @@ func (typ *GenericTypeSymbol) ManglePrint(builder *strings.Builder) {
 	fmt.Fprintf(builder, "?%s?", typ.Name)
 }
 
+func (typ *AbstractTypeSymbol) ManglePrint(builder *strings.Builder) {
+	fmt.Fprintf(builder, "?%s?", typ.Name)
+}
+
 func (typ *TypeGroup) GetSource() string {
 	panic("type group does not have source")
 }
@@ -341,6 +345,10 @@ func (typ *GenericTypeSymbol) DefaultValue(sc *SemChecker, context Expr) TcExpr 
 	panic("this is an abstrict type, there cannot be a default value")
 }
 
+func (typ *AbstractTypeSymbol) DefaultValue(sc *SemChecker, context Expr) TcExpr {
+	panic("this is an abstrict type, there cannot be a default value")
+}
+
 var builtinScope Scope = &ScopeImpl{
 	Parent:               nil,
 	CurrentPackage:       nil,
@@ -404,7 +412,7 @@ func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams [
 		Prefix:        prefix,
 		Infix:         infix,
 		Postfix:       postfix,
-		InstanceCache: NewInstanceCache(len(genericParams)),
+		InstanceCache: NewInstanceCache[Overloadable](len(genericParams)),
 	}
 	RegisterProc(nil, builtinScope, procDef, nil)
 	return procDef
@@ -749,9 +757,18 @@ func BuiltinTraitDef(sc *SemChecker, scope Scope, def *TcCall) TcExpr {
 		RegisterType(sc, traitScope, sym.Name, sym, sym)
 	}
 
+	// result.InstanceCache = NewInstanceCache[*TraitInstance](len(dependentTypes))
+
 	for _, procDef := range signatures {
-		tcProcDef := SemCheckProcDef(sc, traitScope, procDef)
-		result.Overloadables = append(result.Overloadables, tcProcDef)
+
+		innerScope := NewSubScope(traitScope)
+		name, body, resultType, genericArgs, args := MustMatchProcDef(sc, procDef)
+		if body != nil {
+			ReportErrorf(sc, body, "trait proc may not have an implementation body") // TODO test this error message
+		}
+		signature := SemCheckSignature(sc, innerScope, name.Source, genericArgs, args, resultType)
+
+		result.Signatures = append(result.Signatures, *signature)
 	}
 
 	return result
@@ -828,7 +845,7 @@ func BuiltinTypeExpr(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 }
 
 func init() {
-	openGenericsMap = make(map[Type][]*GenericTypeSymbol)
+	openGenericsMap = make(map[Type][]Type)
 	arrayTypeMap = make(map[ArrayTypeMapKey]*ArrayType)
 	enumSetTypeMap = make(map[*EnumType]*EnumSetType)
 	ptrTypeMap = make(map[Type]*PtrType)

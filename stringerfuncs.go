@@ -308,9 +308,9 @@ func (typeDef *TcTraitDef) PrettyPrint(builder *AstPrettyPrinter) {
 	}
 	builder.WriteString(") {")
 	builder.Indentation += 1
-	for _, overloadable := range typeDef.Overloadables {
+	for _, sig := range typeDef.Signatures {
 		builder.NewlineAndIndent()
-		builder.WriteNode(overloadable)
+		builder.WriteNode(&sig)
 	}
 	builder.Indentation -= 1
 	builder.NewlineAndIndent()
@@ -480,6 +480,10 @@ func (typ *GenericTypeSymbol) PrettyPrint(builder *AstPrettyPrinter) {
 	// builder.WriteString(" : ")
 	// typ.Constraint.PrettyPrint(builder)
 	// builder.WriteString(")")
+}
+
+func (typ *AbstractTypeSymbol) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString(typ.Name)
 }
 
 func (call *TcCall) PrettyPrint(builder *AstPrettyPrinter) {

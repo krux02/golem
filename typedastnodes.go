@@ -80,18 +80,50 @@ type TcTypeAlias struct {
 	Type   Type
 }
 
+type TraitInstance struct {
+	// to semcheck a generic proc, prototypes for each signature are required. The
+	// signature uses the generic type symbols from the trait def, while the
+	// prototypes uses the generic types signatures from the generic proc def.
+	//
+	// Each Signature maps to one proc prototype. It is represented here as a
+	// normal proc def, but without actual body.
+	//
+	// `Signatures[i]` maps to `ProcDefs[i]`.
+
+	ProcDefs []*TcProcDef
+}
+
 type TcTraitDef struct {
 	Source         string
 	Name           string
 	DependentTypes []*GenericTypeSymbol
-	Overloadables  []Overloadable
+
+	Signatures []Signature
+}
+
+// abstract TypeSymbol and GenericTypeSymbol are generated in pairs for generic
+// parameters in generic procedures. The genericTypeSymbol is for the Signature
+// that holds the type constraint. The Abstract Type Symbol is more like a
+// temporary concrete type symbol that will be injected in the scope of the
+// procedure body, so that there is a concret type for overload resolution.
+
+type AbstractTypeSymbol struct {
+	Name string
 }
 
 type GenericTypeSymbol struct {
 	// a symbol that needs later substitution on generic instantiation
 	Source     string
 	Name       string
-	Constraint TypeConstraint // TypeGroup, TypeTrait, TypeUnspecified
+	Constraint TypeConstraint      // TypeGroup, TypeTrait, TypeUnspecified
+	TraitInst  *TraitInstance      // if the Constraint is `TypeTrait` this is non nil
+	AbsTypSym  *AbstractTypeSymbol // if the Constraint is `TypeTrait` this is non nil
+}
+
+func NewAbstractTypeSymbol(Name string) *AbstractTypeSymbol {
+	result := &AbstractTypeSymbol{Name: Name}
+	openGenericsMap[result] = []Type{result}
+	return result
 }
 
 func NewGenericTypeSymbol(Source string, Name string, constraint TypeConstraint) *GenericTypeSymbol {
@@ -100,7 +132,7 @@ func NewGenericTypeSymbol(Source string, Name string, constraint TypeConstraint)
 		Name:       Name,
 		Constraint: constraint,
 	}
-	openGenericsMap[result] = []*GenericTypeSymbol{result}
+	openGenericsMap[result] = []Type{result}
 	return result
 }
 
@@ -227,7 +259,7 @@ type TcBuiltinProcDef struct {
 	// example2 "(", " + ", ")"          operator+ call
 	// example3 "somearray[", "][", "]"  array access
 	Prefix, Infix, Postfix string
-	InstanceCache          *InstanceCache
+	InstanceCache          *InstanceCache[Overloadable]
 }
 
 type TcBuiltinStaticProcDef struct {
@@ -241,7 +273,7 @@ type TcProcDef struct {
 	Signature     Signature
 	Body          TcExpr
 	Importc       bool
-	InstanceCache *InstanceCache
+	InstanceCache *InstanceCache[Overloadable]
 }
 
 type TcBuiltinMacroDef struct {

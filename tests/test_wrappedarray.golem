@@ -9,19 +9,23 @@ type WrappedArray = struct {
 }
 
 trait CanDoPointlessStuff(U) = {
-  proc pointlessStuff(_: U): void
+  proc foo(_: U): void
 }
 
 proc pointless[T : CanDoPointlessStuff](arg1: T) : void = {
   var tmp: T = arg1
   var someArray: array(4, T) = [arg1,arg1,arg1,arg1]
+  foo(tmp)
+  for it in someArray do {
+    foo(it)
+  }
 }
 
-proc pointlessStuff(arg: i32) : void = {
+proc foo(arg: i32) : void = {
   printf("doing pointless stuff for i32: %d\n", arg)
 }
 
-proc pointlessStuff(arg: str) : void = {
+proc foo(arg: str) : void = {
   printf("doing pointless stuff for str %s\n", arg)
 }
 
