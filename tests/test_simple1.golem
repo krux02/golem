@@ -100,9 +100,9 @@ proc main():i32 = {
     # test casting around
     # TODO, test more here. This is absolute minimal effort test right now
     let myFloat = 1.0:f64
-    var myIntA = myFloat |> cast(type i64)
+    var myIntA = myFloat | cast(type i64)
     assert(myIntA == 0x3ff0000000000000)
-    var myIntB = myFloat |> conv(type i64)
+    var myIntB = myFloat | conv(type i64)
     assert(myIntB == 1)
   }
 

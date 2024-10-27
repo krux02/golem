@@ -9,14 +9,13 @@ type Substitutions struct {
 }
 
 func InstanciateBuiltinGenericProc(proc *TcBuiltinProcDef, subs *Substitutions) *TcBuiltinProcDef {
-
 	if len(proc.Signature.GenericParams) == 0 {
 		return proc
 	}
 	cacheKey := ComputeInstanceCacheKey(proc.Signature.GenericParams, subs.typeSubs)
 	result := proc.InstanceCache.LookUp(cacheKey)
 	if result != nil {
-		return result.(*TcBuiltinProcDef)
+		return result
 	}
 	newSig := SignatureApplyTypeSubstitution(proc.Signature, subs)
 	result = &TcBuiltinProcDef{
@@ -26,10 +25,10 @@ func InstanciateBuiltinGenericProc(proc *TcBuiltinProcDef, subs *Substitutions) 
 		Postfix:   proc.Postfix,
 	}
 	proc.InstanceCache.Set(cacheKey, result)
-	return result.(*TcBuiltinProcDef)
+	return result
 }
 
-func InstanciateGenericProc(proc *TcProcDef, subs *Substitutions) Overloadable {
+func InstanciateGenericProc(proc *TcProcDef, subs *Substitutions) *TcProcDef {
 	// fmt.Printf("instantiate proc:\n%s\n", AstFormat(proc))
 	// fmt.Println(AstFormat(subs))
 

@@ -626,7 +626,7 @@ func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) *TcProcDef
 		MangledName:   mangledName,
 		Signature:     *signature,
 		Importc:       importc,
-		InstanceCache: NewInstanceCache[Overloadable](len(signature.GenericParams)),
+		InstanceCache: NewInstanceCache[*TcProcDef](len(signature.GenericParams)),
 	}
 
 	// register proc before type checking the body to allow recursion. (TODO needs a test)

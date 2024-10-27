@@ -186,14 +186,10 @@ proc std140AlignedWrite(dst: pointer, offset: i32, value: array(16, f32)): Offse
   result
 }
 
-
 proc std140AlignedWrite(dst: pointer, offset: i32, uniformObject: UniformBufType_436214163): OffsetAlign = {
   var result: OffsetAlign
-
   result.align = 4
   result.offset = alignFunc(offset, 4)
-
-
   # write(dst, result.offset, uint32(value))
   std140AlignedWrite(dst, offset, uniformObject.mvp)
 }
@@ -209,10 +205,23 @@ proc main(): i32 = {
 
   var running: bool = true
 
+
+  let vertices : ArrayBuffer[Vec4f] = arrayBuffer([
+    vec4f(-1,-1, 0, 1),
+    vec4f( 1,-1, 0, 1),
+    vec4f( 0, 1, 0, 1)
+  ])
+
+  let colors = arrayBuffer([
+    vec4f( 1, 0,0,1),
+    vec4f(0, 1,0,1),
+    vec4f(0,0,1,1)
+  ])
+
   # var buffers : array(2, u32)
 
   var vertexData = [-1:f32,-1,0,1, 1,-1,0,1, 0,1,0,1]
-  var colorData = [1:f32,0,0,0, 0,1,0,0, 0,0,1,0]
+  var colorData  = [ 1:f32, 0,0,0, 0, 1,0,0, 0,0,1,0]
 
   # glCreateBuffers(2, addr(buffers[0]))
   # glNamedBufferStorage(buffers[0], len(vertexData) * sizeof(vertexData[0]), pointer(addr(vertexData[0])), 0)

@@ -259,7 +259,7 @@ type TcBuiltinProcDef struct {
 	// example2 "(", " + ", ")"          operator+ call
 	// example3 "somearray[", "][", "]"  array access
 	Prefix, Infix, Postfix string
-	InstanceCache          *InstanceCache[Overloadable]
+	InstanceCache          *InstanceCache[*TcBuiltinProcDef]
 }
 
 type TcBuiltinStaticProcDef struct {
@@ -273,7 +273,7 @@ type TcProcDef struct {
 	Signature     Signature
 	Body          TcExpr
 	Importc       bool
-	InstanceCache *InstanceCache[Overloadable]
+	InstanceCache *InstanceCache[*TcProcDef]
 }
 
 type TcBuiltinMacroDef struct {

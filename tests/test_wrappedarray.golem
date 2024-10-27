@@ -32,7 +32,7 @@ proc foo(arg: str) : void = {
 proc main():i32= {
   let myarray : WrappedArray = [A,[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]]
 
-  printf("tag: %v\n", myarray.tag |> string)
+  printf("tag: %v\n", myarray.tag | string)
   for it in myarray.arr do {
     printf("hello %v\n", it)
   }

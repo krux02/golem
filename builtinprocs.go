@@ -412,7 +412,7 @@ func registerGenericBuiltin(name, prefix, infix, postfix string, genericParams [
 		Prefix:        prefix,
 		Infix:         infix,
 		Postfix:       postfix,
-		InstanceCache: NewInstanceCache[Overloadable](len(genericParams)),
+		InstanceCache: NewInstanceCache[*TcBuiltinProcDef](len(genericParams)),
 	}
 	RegisterProc(nil, builtinScope, procDef, nil)
 	return procDef
@@ -869,7 +869,7 @@ func init() {
 	registerBuiltinMacro("import", false, []Type{TypeStr}, TypeVoid, BuiltinImportStmt)
 	registerBuiltinMacro("type", false, []Type{TypeUntyped}, TypeUntyped, BuiltinTypeExpr)
 
-	registerBuiltinMacro("|>", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinPipeTransformation)
+	registerBuiltinMacro("|", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinPipeTransformation)
 	registerBuiltinMacro(".", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinDotOperator)
 	registerBuiltinMacro(":", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinColonExpr)
 

@@ -1,7 +1,7 @@
 
 template write(dst: pointer, var offset: i32, value: f32): void = {
-  indexOp((dist |> cast(type uint) + offset |> cast(type uint)) |> cast(type ptr f32)) = value
-  offset += sizeof(value) |> conv(type i32)
+  indexOp((dist | cast(type uint) + offset | cast(type uint)) | cast(type ptr f32)) = value
+  offset += sizeof(value) | conv(type i32)
 }
 
 
