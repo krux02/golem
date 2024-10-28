@@ -169,7 +169,6 @@ func compile(filename string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	mainPackage = cgenprepass(mainPackage).(*TcPackageDef)
 	sourceCodeC := compilePackageToC(currentProgram, mainPackage, true)
 
 	fileName := fmt.Sprintf("%s.c", base)

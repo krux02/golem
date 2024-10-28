@@ -11,10 +11,10 @@ trait MyMultiTrait(T,U) = {
   proc bar(_:T, _:U): i32
 }
 
-proc bar[M : MyTrait](a: M): void = {
-  foo(a, "abc":str)
-  foo(a, 234:f32)
-  foo(a, 567:f64)
+proc bar[M : MyTrait](argM: M): void = {
+  foo(argM, "abc":str)
+  foo(argM, 234:f32)
+  foo(argM, 567:f64)
 }
 
 # TODO multitrait isn't even figured out yet

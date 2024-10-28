@@ -88,7 +88,16 @@ func (builder *CodeBuilder) compileCall(context *PackageGeneratorContext, call *
 		context.markProcForGeneration(impl)
 		builder.WriteString(impl.MangledName)
 		builder.WriteString("(")
-		builder.CompileSeparatedExprList(context, call.Args, ", ")
+		if impl.Importc {
+			builder.CompileSeparatedExprList(context, call.Args, ", ")
+		} else {
+			for i, it := range call.Args {
+				if i != 0 {
+					builder.WriteString(", ")
+				}
+				builder.CompileArg(context, it, SymIsImplicitPointer(impl.Signature.Params[i]))
+			}
+		}
 		builder.WriteString(")")
 	case *TcTemplateDef:
 		panic(fmt.Errorf("internal error: templates must be resolved before code generation"))
@@ -174,14 +183,6 @@ func (builder *CodeBuilder) CompileSymbol(sym *TcSymbol) {
 	}
 }
 
-func (builder *CodeBuilder) CompileSymRef(sym *TcSymRef) {
-	builder.CompileSymbol(sym.Sym)
-}
-
-func (builder *CodeBuilder) CompileExpr(context *PackageGeneratorContext, expr TcExpr) {
-	builder.CompileExprWithPrefix(context, expr)
-}
-
 func (builder *CodeBuilder) CompileVariableDefStmt(context *PackageGeneratorContext, stmt *TcVariableDefStmt) {
 	builder.CompileTypeExpr(context, stmt.Sym.GetType())
 	builder.WriteString(" ")
@@ -224,7 +225,11 @@ func (builder *CodeBuilder) CompileIfElseExpr(context *PackageGeneratorContext, 
 func (builder *CodeBuilder) CompileDotExpr(context *PackageGeneratorContext, dotExpr *TcDotExpr) {
 	builder.WriteString("(")
 	builder.CompileExpr(context, dotExpr.Lhs)
-	builder.WriteString(").")
+	if IsImplicitPointer(dotExpr.Lhs) {
+		builder.WriteString(")->")
+	} else {
+		builder.WriteString(").")
+	}
 	builder.CompileExpr(context, dotExpr.Rhs)
 }
 
@@ -311,9 +316,28 @@ func (builder *CodeBuilder) CompileEnumSetLit(context *PackageGeneratorContext, 
 	builder.WriteString("))")
 }
 
-// lastExprPrefix is not used anymore, rename to not use prefix anymore
-// flow end in procedures, as in C code
-func (builder *CodeBuilder) CompileExprWithPrefix(context *PackageGeneratorContext, expr TcExpr) {
+func (builder *CodeBuilder) CompileArg(context *PackageGeneratorContext, arg TcExpr, requirePointer bool) {
+
+	debug := arg.GetSource() == "argM"
+
+	if symRef, isSymRef := arg.(*TcSymRef); isSymRef {
+		isImplicitPointer := SymIsImplicitPointer(symRef.Sym)
+		if isImplicitPointer == requirePointer {
+		} else if isImplicitPointer && !requirePointer {
+			builder.WriteString("*")
+		} else if !isImplicitPointer && requirePointer {
+			builder.WriteString("&")
+		}
+		if debug {
+			fmt.Printf("  %v %v\n", isImplicitPointer, requirePointer)
+			fmt.Printf("  %v %s %s\n", symRef.Sym.Kind, AstFormat(symRef.Sym.Type), AstFormat(symRef.Type))
+		}
+	}
+	builder.CompileExpr(context, arg)
+}
+
+func (builder *CodeBuilder) CompileExpr(context *PackageGeneratorContext, expr TcExpr) {
+
 	switch ex := expr.(type) {
 	case *TcCodeBlock:
 		builder.CompileCodeBlock(context, ex)
@@ -322,13 +346,12 @@ func (builder *CodeBuilder) CompileExprWithPrefix(context *PackageGeneratorConte
 	case *TcDotExpr:
 		builder.CompileDotExpr(context, ex)
 	case *TcStrLit:
-
 		switch ex.Type {
 		case TypeStr:
 			builder.compileStrLit(ex.Value, true, '"')
 		case TypeCStr:
 			builder.compileStrLit(ex.Value, false, '"')
-		case TypeChar:
+		case TypeChar: // TODO dead code, should be handled in IntLit
 			rune, _ := utf8.DecodeRuneInString(ex.Value)
 			if rune < 128 {
 				builder.compileStrLit(ex.Value, false, '\'')
@@ -349,7 +372,7 @@ func (builder *CodeBuilder) CompileExprWithPrefix(context *PackageGeneratorConte
 	case *TcSymbol:
 		builder.CompileSymbol(ex)
 	case *TcSymRef:
-		builder.CompileSymRef(ex)
+		builder.CompileSymbol(ex.Sym)
 	case *TcVariableDefStmt:
 		builder.CompileVariableDefStmt(context, ex)
 	case *TcReturnStmt:
@@ -411,20 +434,15 @@ func (builder *CodeBuilder) CompileConvExpr(context *PackageGeneratorContext, ca
 }
 
 func (builder *CodeBuilder) CompileCodeBlock(context *PackageGeneratorContext, block *TcCodeBlock) {
-	N := len(block.Items)
 	isExpr := ExprHasValue(block)
 	if isExpr {
 		builder.WriteString("(")
 	}
 	builder.WriteString("{")
 	builder.Indentation += 1
-	for i, expr := range block.Items {
+	for _, expr := range block.Items {
 		builder.NewlineAndIndent()
-		if i == N-1 {
-			builder.CompileExprWithPrefix(context, expr)
-		} else {
-			builder.CompileExpr(context, expr)
-		}
+		builder.CompileExpr(context, expr)
 		builder.WriteRune(';')
 	}
 	builder.Indentation -= 1
@@ -496,10 +514,45 @@ func compileStructDef(context *PackageGeneratorContext, structDef *TcStructDef) 
 	builder.WriteString(";")
 }
 
+func IsImplicitPointer(expr TcExpr) bool {
+	if sym, isSymRef := expr.(*TcSymRef); isSymRef {
+		return SymIsImplicitPointer(sym.Sym)
+	}
+	return false
+}
+
+func SymIsImplicitPointer(sym *TcSymbol) bool {
+	switch sym.Kind {
+	case SkInvalid:
+		panic("invalid sym kind")
+	case SkConst:
+		return false
+	case SkLet:
+		return false
+	case SkVar:
+		return false
+	case SkProcArg:
+		_, isStructType := sym.Type.(*StructType)
+		return isStructType
+	case SkVarProcArg:
+		return true
+	case SkLoopIterator:
+		return false
+	case SkVarLoopIterator:
+		return true
+	case SkEnum:
+		return false
+	}
+	panic("internal error, switch not exhaustive")
+}
+
 func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 	if len(procDef.Signature.GenericParams) != 0 {
 		panic("generic instances cannot be used here")
 	}
+
+	//procDef = cgenprepass(procDef).(*TcProcDef)
+
 	// reuse string here
 	headBuilder := &CodeBuilder{}
 	headBuilder.NewlineAndIndent()
@@ -513,7 +566,8 @@ func compileProcDef(context *PackageGeneratorContext, procDef *TcProcDef) {
 		}
 		headBuilder.CompileTypeExpr(context, arg.GetType())
 		headBuilder.WriteString(" ")
-		if arg.Kind == SkVarProcArg {
+
+		if SymIsImplicitPointer(arg) {
 			headBuilder.WriteString("*")
 		}
 		headBuilder.WriteString(arg.Source)
@@ -659,6 +713,7 @@ typedef float f32x4 __attribute__ ((vector_size(16), aligned(16)));
 	}
 
 	for procDef := context.popMarkedForGenerationProcDef(); procDef != nil; procDef = context.popMarkedForGenerationProcDef() {
+
 		compileProcDef(context, procDef)
 	}
 

@@ -841,8 +841,12 @@ func (subs *Substitutions) PrettyPrint(builder *AstPrettyPrinter) {
 			builder.NewlineAndIndent()
 			builder.WriteString("  ")
 			builder.WriteNode(sub.sym)
+			builder.WriteString(": ")
+			builder.WriteNode(sub.sym.Type)
 			builder.WriteString(" -> ")
 			builder.WriteNode(sub.newSym)
+			builder.WriteString(": ")
+			builder.WriteNode(sub.newSym.Type)
 		}
 	}
 	if len(subs.typeSubs) > 0 {

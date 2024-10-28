@@ -17,7 +17,9 @@ func newAddrExpr(arg TcExpr) TcExpr {
 	return call
 }
 
-func maybeDerefParam(expr TcExpr, isVarParam bool) TcExpr {
+func maybeRefParam(expr TcExpr, isVarParam bool) TcExpr {
+	fmt.Printf("  %#+v  %v\n", expr, isVarParam)
+
 	if isVarParam {
 		return newAddrExpr(expr)
 	}
@@ -70,7 +72,6 @@ func cgenprepassSignature(sig Signature) Signature {
 func cgenprepass(expr TcExpr) TcExpr {
 	switch expr := expr.(type) {
 	case *TcCall:
-
 		def := expr.Sym.Overloadable
 		sig := def.GetSignature()
 		_, isBuiltin := def.(*TcBuiltinProcDef)
@@ -82,7 +83,7 @@ func cgenprepass(expr TcExpr) TcExpr {
 				if !sig.Varargs || i < len(sig.Params) {
 					isVarParam = sig.Params[i].Kind == SkVarProcArg
 				}
-				newArg = maybeDerefParam(newArg, isVarParam)
+				newArg = maybeRefParam(newArg, isVarParam)
 			}
 			newArgs[i] = newArg
 		}

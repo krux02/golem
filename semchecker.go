@@ -1104,6 +1104,9 @@ func FindSubstitution(substitutions []TypeSubstitution, sym *GenericTypeSymbol) 
 	return nil, false
 }
 
+// TODO this function modifies the input argument `subs`, and appends to it new
+// symbol substitutions that should be applied. This is really bad code smell in
+// probably the reason for bugs.
 func SignatureApplyTypeSubstitution(sig Signature, subs *Substitutions) Signature {
 	if len(subs.typeSubs) == 0 {
 		return sig
