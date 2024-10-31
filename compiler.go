@@ -317,9 +317,6 @@ func (builder *CodeBuilder) CompileEnumSetLit(context *PackageGeneratorContext, 
 }
 
 func (builder *CodeBuilder) CompileArg(context *PackageGeneratorContext, arg TcExpr, requirePointer bool) {
-
-	debug := arg.GetSource() == "argM"
-
 	if symRef, isSymRef := arg.(*TcSymRef); isSymRef {
 		isImplicitPointer := SymIsImplicitPointer(symRef.Sym)
 		if isImplicitPointer == requirePointer {
@@ -327,10 +324,6 @@ func (builder *CodeBuilder) CompileArg(context *PackageGeneratorContext, arg TcE
 			builder.WriteString("*")
 		} else if !isImplicitPointer && requirePointer {
 			builder.WriteString("&")
-		}
-		if debug {
-			fmt.Printf("  %v %v\n", isImplicitPointer, requirePointer)
-			fmt.Printf("  %v %s %s\n", symRef.Sym.Kind, AstFormat(symRef.Sym.Type), AstFormat(symRef.Type))
 		}
 	}
 	builder.CompileExpr(context, arg)

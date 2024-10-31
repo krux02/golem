@@ -24,13 +24,13 @@ type MyStruct = struct {
 }
 
 proc foo(self:MyStruct, arg:str): void = {
-  printf("foo str")
+  printf("foo str\n")
 }
 proc foo(self:MyStruct, arg:f32): void = {
-  printf("foo f32")
+  printf("foo f32\n")
 }
 proc foo(self:MyStruct, arg:f64): void = {
-  printf("foo f64")
+  printf("foo f64\n")
 }
 
 proc main(): void = {

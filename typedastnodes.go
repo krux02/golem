@@ -239,7 +239,9 @@ type Signature struct {
 	Name          string
 	GenericParams []*GenericTypeSymbol
 	Params        []*TcSymbol
-	ResultType    Type
+	ParamsForBody []*TcSymbol // if parameters have a different type in the body,
+	// than in the signature, these symbol will differ from Params
+	ResultType Type
 
 	// NOTE: Varargs currently only used for printf.
 	Varargs bool

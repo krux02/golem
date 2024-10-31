@@ -17,7 +17,7 @@ func InstanciateBuiltinGenericProc(proc *TcBuiltinProcDef, subs *Substitutions) 
 	if result != nil {
 		return result
 	}
-	newSig := SignatureApplyTypeSubstitution(proc.Signature, subs)
+	newSig, _ := SignatureApplyTypeSubstitution(proc.Signature, subs)
 	result = &TcBuiltinProcDef{
 		Signature: newSig,
 		Prefix:    proc.Prefix,
@@ -40,7 +40,8 @@ func InstanciateGenericProc(proc *TcProcDef, subs *Substitutions) *TcProcDef {
 	if result != nil {
 		return result
 	}
-	newSignature := SignatureApplyTypeSubstitution(proc.Signature, subs)
+	newSignature, symSubs := SignatureApplyTypeSubstitution(proc.Signature, subs)
+	subs.symSubs = append(subs.symSubs, symSubs...)
 	newBody := recursiveInstanciateGenericBody(proc.Body, subs)
 	if len(newSignature.GenericParams) > 0 {
 		panic("internal error, generic proc not fully instanciated")

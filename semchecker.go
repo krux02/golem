@@ -455,6 +455,8 @@ func NewProcPrototype(sc *SemChecker, sig *Signature) *TcProcDef {
 	}
 }
 
+// TODO, it is a code smell that sem check signature actively injects its
+// symbols into the body scope instead of just focussing on the signature.
 func SemCheckSignature(sc *SemChecker, bodyScope Scope, name string, genericArgs []GenericArgument, args []ProcArgument, resultType Expr) *Signature {
 	var genericParams []*GenericTypeSymbol
 
@@ -495,7 +497,7 @@ func SemCheckSignature(sc *SemChecker, bodyScope Scope, name string, genericArgs
 			//cacheKey := ComputeInstanceCacheKey(traitDef.DependentTypes, subs.typeSubs)
 			//traitDef.InstanceCache.Set(cacheKey, traitInst)
 			for _, sig := range traitDef.Signatures {
-				newSig := SignatureApplyTypeSubstitution(sig, subs)
+				newSig, _ := SignatureApplyTypeSubstitution(sig, subs)
 				// fmt.Printf("i: %d\nold: %s\nnew: %s\n", j, AstFormat(&sig), AstFormat(&newSig))
 				// traitDef.InstanceCache.Init(len(traitDef.DependentTypes))
 				overloadable := NewProcPrototype(sc, &newSig)
@@ -508,6 +510,7 @@ func SemCheckSignature(sc *SemChecker, bodyScope Scope, name string, genericArgs
 	}
 
 	var params []*TcSymbol
+	var paramsForBody []*TcSymbol
 	for _, arg := range args {
 		symKind := SkProcArg
 		if arg.Mutable {
@@ -523,30 +526,38 @@ func SemCheckSignature(sc *SemChecker, bodyScope Scope, name string, genericArgs
 		} else {
 			bodyTyp = TypeError
 		}
-		var tcArg *TcSymbol
+		var sigParam *TcSymbol
+		var bodyParam *TcSymbol
 		// TODO this is ugly. Refactoring `NewSymbol` to a simple `RegisterSymbol`
 		// might be a better solution.
 		if arg.Name.Source != "_" {
 			ValidNameCheck(sc, arg.Name, "proc arg")
-
-			bodyScope.NewSymbol(sc, arg.Name, symKind, bodyTyp)
-			tcArg = signatureScope.NewSymbol(sc, arg.Name, symKind, sigTyp)
+			sigParam = signatureScope.NewSymbol(sc, arg.Name, symKind, sigTyp)
+			bodyParam = bodyScope.NewSymbol(sc, arg.Name, symKind, bodyTyp)
 		} else {
 			// parameters with the name "_" are explicity not put in the scope.
-			tcArg = &TcSymbol{
+			sigParam = &TcSymbol{
+				Source: arg.Name.Source,
+				Kind:   symKind,
+				Value:  nil,
+				Type:   sigTyp,
+			}
+			bodyParam = &TcSymbol{
 				Source: arg.Name.Source,
 				Kind:   symKind,
 				Value:  nil,
 				Type:   sigTyp,
 			}
 		}
-		params = append(params, tcArg)
+		params = append(params, sigParam)
+		paramsForBody = append(paramsForBody, bodyParam)
 	}
 
 	signature := &Signature{
 		Name:          name,
 		GenericParams: genericParams,
 		Params:        params,
+		ParamsForBody: paramsForBody,
 	}
 
 	if resultType == nil {
@@ -889,7 +900,7 @@ func GenericParamSignatureMatch(scope Scope, exprType, paramType Type, substitut
 			var procSubs []ProcSubstitution
 			for i, sig := range constraint.Impl.Signatures {
 				// sig :: pointlessStuff(U): void
-				newSig := SignatureApplyTypeSubstitution(sig, traitSubs) // pointlessStuff(f32): void
+				newSig, _ := SignatureApplyTypeSubstitution(sig, traitSubs) // pointlessStuff(f32): void
 				// fmt.Printf("traitSubs: %s\n", AstFormat(traitSubs))
 				// fmt.Printf("sig: %s\nnewsig: %s\n", AstFormat(&sig), AstFormat(&newSig))
 				candidates := LookUpProc(scope, newSig.Name, -1, nil)
@@ -1107,12 +1118,13 @@ func FindSubstitution(substitutions []TypeSubstitution, sym *GenericTypeSymbol) 
 // TODO this function modifies the input argument `subs`, and appends to it new
 // symbol substitutions that should be applied. This is really bad code smell in
 // probably the reason for bugs.
-func SignatureApplyTypeSubstitution(sig Signature, subs *Substitutions) Signature {
+func SignatureApplyTypeSubstitution(sig Signature, subs *Substitutions) (Signature, []SymbolSubstitution) {
 	if len(subs.typeSubs) == 0 {
-		return sig
+		return sig, nil
 	}
 
 	newParams := make([]*TcSymbol, len(sig.Params))
+	symSubs := make([]SymbolSubstitution, 0)
 	for j, param := range sig.Params {
 		newType := ApplyTypeSubstitutions(param.Type, subs.typeSubs)
 		if newType != param.Type {
@@ -1122,7 +1134,11 @@ func SignatureApplyTypeSubstitution(sig Signature, subs *Substitutions) Signatur
 				Value:  param.Value, // only set when symbol is `const`
 				Type:   newType,
 			}
-			subs.symSubs = append(subs.symSubs, SymbolSubstitution{param, newSym})
+			if len(sig.ParamsForBody) > j {
+				symSubs = append(subs.symSubs, SymbolSubstitution{sig.ParamsForBody[j], newSym})
+			} else {
+				symSubs = append(subs.symSubs, SymbolSubstitution{param, newSym})
+			}
 			newParams[j] = newSym
 		} else {
 			newParams[j] = param
@@ -1148,11 +1164,12 @@ func SignatureApplyTypeSubstitution(sig Signature, subs *Substitutions) Signatur
 		Name:          sig.Name,
 		GenericParams: newGen,
 		Params:        newParams,
+		ParamsForBody: sig.ParamsForBody,
 		ResultType:    ApplyTypeSubstitutions(sig.ResultType, subs.typeSubs),
 		Varargs:       sig.Varargs,
 	}
 
-	return result
+	return result, symSubs
 }
 
 type InstanceCache[T any] struct {
@@ -1373,7 +1390,7 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 				subs.typeSubs = append(subs.typeSubs, typeSubs...)
 				subs.procSubs = append(subs.procSubs, procSubs...)
 				overloadables[n] = overloadable
-				signatures[n] = SignatureApplyTypeSubstitution(sig, &subs)
+				signatures[n], _ = SignatureApplyTypeSubstitution(sig, &subs)
 				sigSubstitutions[n] = subs
 				n++
 				continue
