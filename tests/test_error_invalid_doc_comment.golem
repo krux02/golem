@@ -3,7 +3,7 @@
 
 ## doc comment
 ## argX: this argument doesn't exist # Error: invalid doc comment key: argX
-proc foo(argY: str): str = argY
+proc foo(argY: str) -> str = argY
 
 
-proc main(): i32 = { return 0 }
+proc main() -> i32 = { return 0 }

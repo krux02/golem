@@ -49,16 +49,24 @@ func MatchVariableDefStatement(sc *SemChecker, arg *VariableDefStmt) (kind Symbo
 	return kind, name, typeExpr, value, kind != SkInvalid && isIdent
 }
 
-func MatchColonExpr(expr Expr) (lhs Expr, rhs Expr, ok bool) {
+func MatchBinaryOperator(expr Expr, operator string) (lhs Expr, rhs Expr, ok bool) {
 	call, ok := expr.(*Call)
 	if !ok {
 		return nil, nil, false
 	}
 	op, ok := call.Callee.(*Ident)
-	if !ok || op.Source != ":" || len(call.Args) != 2 {
+	if !ok || op.Source != operator || len(call.Args) != 2 {
 		return nil, nil, false
 	}
 	return call.Args[0], call.Args[1], true
+}
+
+func MatchColonExpr(expr Expr) (lhs Expr, rhs Expr, ok bool) {
+	return MatchBinaryOperator(expr, ":")
+}
+
+func MatchArrowExpr(expr Expr) (lhs Expr, rhs Expr, ok bool) {
+	return MatchBinaryOperator(expr, "->")
 }
 
 func MatchAssign(expr Expr) (lhs, rhs Expr, ok bool) {
@@ -110,7 +118,7 @@ func MustMatchProcDef(sc *SemChecker, def *ProcDef) (name *Ident, body, resultTy
 		expr = lhs
 	}
 
-	if lhs, rhs, isColonExpr := MatchColonExpr(expr); isColonExpr {
+	if lhs, rhs, isArrowExpr := MatchArrowExpr(expr); isArrowExpr {
 		resultType = rhs
 		expr = lhs
 	}

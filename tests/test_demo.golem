@@ -9,13 +9,13 @@ type MyStruct = struct {
   c: str
 }
 
-proc myfun1(a, b, c: i64): i64 = {
+proc myfun1(a, b, c: i64) -> i64 = {
   return a + b * c
   # a + b * c
 }
 
-proc myfun2(a,b:i64, c: i64): i64 = a * b + a * c
-#proc myfun2(a,b,c: i64): i64 = a * b + a * c
+proc myfun2(a,b:i64, c: i64) -> i64 = a * b + a * c
+#proc myfun2(a,b,c: i64) -> i64 = a * b + a * c
 
 ## an empty function with nothing in it
 ## a: first argument
@@ -24,19 +24,19 @@ proc myfun2(a,b:i64, c: i64): i64 = a * b + a * c
 ## d: even more arugment that is very very importanti
 ## e: yabadabaduditaaa
 ## f:
-proc myfun3(a,b,c,d,e,f: str): void = {
+proc myfun3(a,b,c,d,e,f: str) -> void = {
 }
 
-proc foobar(arg: MyStruct): void = {
+proc foobar(arg: MyStruct) -> void = {
   printf("a: %d\n", arg.a)
   printf("b: %f\n", arg.b)
   printf("c: %s\n", arg.c)
 }
 
-proc max(a,b: i64): i64 = if a > b do a else b
+proc max(a,b: i64) -> i64 = if a > b do a else b
 
 
-proc max(a,b: f64): f64 = {
+proc max(a,b: f64) -> f64 = {
   if a < b do {
     return b
   } else {
@@ -45,7 +45,7 @@ proc max(a,b: f64): f64 = {
 }
 
 ## Tests side effects behavior of `and` and `or` operators.
-proc testBooleanOpsWithBlockExpr(): void = {
+proc testBooleanOpsWithBlockExpr() -> void = {
   var arr: array(2, bool) = [true, false]
   for c4 in arr do {
     for c3 in arr do {
@@ -61,7 +61,7 @@ proc testBooleanOpsWithBlockExpr(): void = {
   }
 }
 
-proc maxParenDepth(expr: str): i64 = {
+proc maxParenDepth(expr: str) -> i64 = {
   var depth: i64 = 0
   var maxDepth: i64 = 0
   for c in expr do {
@@ -73,7 +73,7 @@ proc maxParenDepth(expr: str): i64 = {
 }
 
 ## this should be a doc comment.
-proc main():i64 = {
+proc main() -> i64 = {
   let x = myfun1(12, 13, 14)
   let y = myfun2(15, 16, 17)
   printf("Hallo Welt!\n")

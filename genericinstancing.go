@@ -249,6 +249,8 @@ func recursiveInstanciateGenericBody(body TcExpr, subs *Substitutions) TcExpr {
 			Type:   ApplyTypeSubstitutions(b.Type, subs.typeSubs),
 		}
 	case *AbstractDefaultValue:
+		// abstract types don't yet have a default value. It's instanciation of the
+		// default value is delayed to, when the generic procedure is implemented.
 		return ApplyTypeSubstitutions(b.Type, subs.typeSubs).DefaultValue(nil, b)
 	}
 	panic(fmt.Errorf("compiler bug, node not handled in instanciate generic body %T", body))

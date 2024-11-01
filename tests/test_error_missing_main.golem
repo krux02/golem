@@ -1,7 +1,7 @@
 # Error: package 'test_error_missing_main' misses main proc
 # NumErrors: 1
 
-proc fainuiaet(): i32 = {
+proc fainuiaet() -> i32 = {
   printf("Hello World!\n")
   return 0
 }

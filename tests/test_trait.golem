@@ -1,15 +1,15 @@
 
 trait MyTrait(T) = {
-  proc foo(_:T, _:str): void
-  proc foo(_:T, _:f32): void
-  proc foo(_:T, _:f64): void
+  proc foo(_:T, _:str) -> void
+  proc foo(_:T, _:f32) -> void
+  proc foo(_:T, _:f64) -> void
 }
 
 trait MyMultiTrait(T,U) = {
-  proc bar(_:T, _:U): i32
+  proc bar(_:T, _:U) -> i32
 }
 
-proc bar[MyTrait(M)](argM: M): void = {
+proc bar[MyTrait(M)](argM: M) -> void = {
   foo(argM, "abc":str)
   foo(argM, 234:f32)
   foo(argM, 567:f64)
@@ -24,17 +24,17 @@ type MyStruct = struct {
   b: str
 }
 
-proc foo(self:MyStruct, arg:str): void = {
+proc foo(self:MyStruct, arg:str) -> void = {
   printf("foo str: %d %s %s\n", self.a, self.b, arg)
 }
-proc foo(self:MyStruct, arg:f32): void = {
+proc foo(self:MyStruct, arg:f32) -> void = {
   printf("foo f32: %d %s %f\n", self.a, self.b, arg)
 }
-proc foo(self:MyStruct, arg:f64): void = {
+proc foo(self:MyStruct, arg:f64) -> void = {
   printf("foo f64: %d %s %f\n", self.a, self.b, arg)
 }
 
-proc main(): void = {
+proc main() -> void = {
   var myStruct: MyStruct = [123, "xyz"]
   bar(myStruct)
 }

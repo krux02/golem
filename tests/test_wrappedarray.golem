@@ -9,10 +9,10 @@ type WrappedArray = struct {
 }
 
 trait CanDoPointlessStuff(U) = {
-  proc foo(_: U): void
+  proc foo(_: U) -> void
 }
 
-proc pointless[CanDoPointlessStuff(T)](arg1: T) : void = {
+proc pointless[CanDoPointlessStuff(T)](arg1: T) -> void = {
   var tmp: T = arg1
   var someArray: array(4, T) = [arg1,arg1,arg1,arg1]
   foo(tmp)
@@ -21,15 +21,15 @@ proc pointless[CanDoPointlessStuff(T)](arg1: T) : void = {
   }
 }
 
-proc foo(arg: i32) : void = {
+proc foo(arg: i32) -> void = {
   printf("doing pointless stuff for i32: %d\n", arg)
 }
 
-proc foo(arg: str) : void = {
+proc foo(arg: str) -> void = {
   printf("doing pointless stuff for str %s\n", arg)
 }
 
-proc main():i32= {
+proc main() -> i32= {
   let myarray : WrappedArray = [A,[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]]
 
   printf("tag: %v\n", myarray.tag | string)

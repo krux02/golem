@@ -6,10 +6,10 @@ emit(
 
 
 const LC_CTYPE = 0:i32
-proc "importc" setlocale(category: i32, locale: cstr): cstr
+proc "importc" setlocale(category: i32, locale: cstr) -> cstr
 
 
-proc main(): i32 = {
+proc main() -> i32 = {
   var i1 : i8 = low(type i8)
   var i2 : i16 = low(type i16)
   var i3 : i32 = low(type i32)

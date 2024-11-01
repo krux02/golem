@@ -177,7 +177,9 @@ func LineColumnStr(str, substr string) (line, columnStart, columnEnd int) {
 	if line1 == line2 {
 		return line1, columnStart, columnEnd
 	}
-	panic("internal error")
+
+	// multiline error messages not yet supported
+	return line1, columnStart, -1
 }
 
 func (this *Tokenizer) LineColumnToken(token Token) (line, columnStart, columnEnd int) {

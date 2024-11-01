@@ -1,6 +1,6 @@
 
 
-proc main():i32 = {
+proc main() -> i32 = {
   # use keyword as identifier when in `backticks`
   # use string literal with escaped quotes inside
   let `proc`: str = "hello \"something quoted\" end"

@@ -1,6 +1,6 @@
 
 
-proc main(): i32 = {
+proc main() -> i32 = {
   var arr1: array(20, i32) = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
   var arr2: array(3, array(20, i32)) = [arr1,arr1,arr1]
   printf("%d %d %d\n", arr2[0][0], arr2[1][1], arr2[2][2])

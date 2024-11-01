@@ -18,7 +18,7 @@
      (cons (rx (+ "\t")) font-lock-warning-face)
      (list (rx bow (or "true" "false") eow) 0 font-lock-constant-face)
      ;; anchored pattern to match `in' keyword in a for loop
-     (list (rx ":" (* " ") (group ident)) 1 font-lock-type-face)
+     (list (rx (or ":" "->") (* " ") (group ident)) 1 font-lock-type-face)
      (list (rx (group ident) "(") 1 font-lock-function-name-face)
      (list 'golem-string-escape-matcher 0 font-lock-preprocessor-face 'prepend)
      (list 'golem-multiline-string-matcher

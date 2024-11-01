@@ -672,7 +672,13 @@ func ReportMessagef(sc *SemChecker, node Expr, kind string, msg string, args ...
 			fmt.Println(msg)
 		} else {
 			line, columnStart, columnEnd := LineColumnStr(sc.code, node.GetSource())
-			fmt.Printf("%s(%d, %d-%d) %s: %s\n", sc.filename, line, columnStart, columnEnd, kind, newMsg)
+			if line < 0 {
+				fmt.Printf("%s %s: %s\n", sc.filename, kind, newMsg)
+			} else if columnEnd < 0 {
+				fmt.Printf("%s(%d, %d) %s: %s\n", sc.filename, line, columnStart, kind, newMsg)
+			} else {
+				fmt.Printf("%s(%d, %d-%d) %s: %s\n", sc.filename, line, columnStart, columnEnd, kind, newMsg)
+			}
 		}
 	}
 }

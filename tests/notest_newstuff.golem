@@ -1,50 +1,47 @@
 
 
 trait HasFoo(T) = {
-  proc bar(T, i32)
-  proc baz(str, f32, T)
+  proc bar(_:T, _:i32) -> void
+  proc baz(_:str, _:f32, _:T) -> void
 }
 
 trait CombineTrait(T,V) = {
-  bar(T,V): int
+  proc bar(_:T,_:V) -> int
 }
 
 trait Ord(T) = {
-  compare(x: T, y: T): int
+  proc compare(_: T, _: T) -> int
 }
 
-proc >[Ord(T)](x, y: T):bool = compare(x, y) > 0
+proc `>`[Ord(T)](x, y: T) -> bool = compare(x, y) > 0
 
-proc <[T](x, y: T):bool = compare(x, y):int < 0 # <- falls nicht praktikabel
+proc `<`[Ord(T)](x, y: T) -> bool = compare(x, y) < 0 # <- falls nicht praktikabel
 
 type MyStruct = struct {
   a: int
 }
 
-proc compare(x,y: MyStruct): int
+proc compare(x,y: int) -> int = {
+  y-x
+}
 
-proc foo[HasFoo(T), CombineTrait(T,V)](arg1,arg2: T) = {
+proc compare(x,y: MyStruct) -> int = {
+  compare(x.a, y.a)
+}
+
+proc foo[HasFoo(T), CombineTrait(T,V)](arg1,arg2: T) -> void = {
   bar(arg1, 13)
   bar(arg2, 14)
 
   let myint = 123:i32
 
-  myint == 12
-  12 == myint # <- fehler myint is not of type 12
-
-
-
   let tmp1: str = "abcdef"
   let tmp2: f32 = 123
 
   baz(tmp1, tmp2, arg1)
-
-
-
 }
 
-
-proc main() = {
+proc main() -> int = {
    var a: int = 1337
    var b: int = 4711
 

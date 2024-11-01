@@ -1,11 +1,11 @@
 # NumErrors:      27
 
-proc foo(arg: i32): i64 = {
+proc foo(arg: i32) -> i64 = {
   printf("foo1: %d\n", i32(arg))
   i64(arg) * i64(arg)
 }
 
-proc foo(arg: i64): i64 = {
+proc foo(arg: i64) -> i64 = {
   printf("foo2: %d\n", i32(arg))
   arg * arg
 }
@@ -13,18 +13,18 @@ proc foo(arg: i64): i64 = {
 ## this should be a doc comment
 ## spanning multiple lines
 
-proc _foo(arg: i64): i64 = 0     # Error: proc identifier may not start or end with _ (underscore), reserved for internal usage
-proc foo_(arg: i64): i64 = 0     # Error: proc identifier may not start or end with _ (underscore), reserved for internal usage
-proc foo__bar(arg: i64): i64 = 0 # Error: proc identifier may not use __ (double underscore), reserved for internal usage
+proc _foo(arg: i64) -> i64 = 0     # Error: proc identifier may not start or end with _ (underscore), reserved for internal usage
+proc foo_(arg: i64) -> i64 = 0     # Error: proc identifier may not start or end with _ (underscore), reserved for internal usage
+proc foo__bar(arg: i64) -> i64 = 0 # Error: proc identifier may not use __ (double underscore), reserved for internal usage
 
-proc bar1(_arg: i64): i64 = 0     # Error: proc arg identifier may not start or end with _ (underscore), reserved for internal usage
-proc bar2(arg_: i64): i64 = 0     # Error: proc arg identifier may not start or end with _ (underscore), reserved for internal usage
-proc bar3(arg__0: i64): i64 = 0   # Error: proc arg identifier may not use __ (double underscore), reserved for internal usage
+proc bar1(_arg: i64) -> i64 = 0     # Error: proc arg identifier may not start or end with _ (underscore), reserved for internal usage
+proc bar2(arg_: i64) -> i64 = 0     # Error: proc arg identifier may not start or end with _ (underscore), reserved for internal usage
+proc bar3(arg__0: i64) -> i64 = 0   # Error: proc arg identifier may not use __ (double underscore), reserved for internal usage
 
 # `untyped` shall not be allowed outside the macro/template context.
-proc bar3(arg0: untyped): i64 = 0 # Error: Type not found: untyped
+proc bar3(arg0: untyped) -> i64 = 0 # Error: Type not found: untyped
 
-proc main():i64 = {
+proc main() -> i64 = {
   let tmp0 = 321 # Error: int literal needs to have a unique type constraint, but got 'no constraint'
   let tmp1 = 45.67 # Error: float literal needs to have a unique type constraint, but got 'no constraint'
   let tmp2 = "abcdef" # Error: string literal needs to have a unique type constraint, but got 'no constraint'
@@ -59,7 +59,7 @@ proc main():i64 = {
 
 proc foo() = {} # Error: proc def needs result type specified
 
-proc shing(a,b,c: i32): i32 = a+b+c # Error: previous definition here
-proc shing(d,e,f: i32): i32 = d*e*f # Error: definition with colliding signature: shing(d: i32, e: i32, f: i32): i32
+proc shing(a,b,c: i32) -> i32 = a+b+c # Error: previous definition here
+proc shing(d,e,f: i32) -> i32 = d*e*f # Error: definition with colliding signature: shing(d: i32, e: i32, f: i32): i32
 
 # proc bar : i32 = {0} # TODO Error: "proc def requires an argument list")

@@ -1,2 +1,2 @@
 
-proc foobar(a,b,c: f32): f32 = a*b+c
+proc foobar(a,b,c: f32) -> f32 = a*b+c

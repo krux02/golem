@@ -1,13 +1,13 @@
 #proc assert(cond: Bool)
 
-proc mutableArgFunc(var arg: f32, somearg: f32):void = {
+proc mutableArgFunc(var arg: f32, somearg: f32) -> void = {
   arg += somearg
   arg *= somearg
 }
 
-proc foo(a,b,c,d: f32): f32 = a*b+c*d
+proc foo(a,b,c,d: f32) -> f32 = a*b+c*d
 
-proc main():i32 = {
+proc main() -> i32 = {
   {
     let x = 1:i32
     let y = 2:i32

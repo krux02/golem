@@ -1,6 +1,6 @@
 # NumErrors: 3
 
-proc main() : i32 = {
+proc main() -> i32 = {
   let i:i32 = 123
   let mystr: str = "abc123"
   printf("%d %d %d\n", i, i) # Error: not enough arguments for "%d %d %d\n"

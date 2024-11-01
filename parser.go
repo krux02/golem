@@ -12,6 +12,8 @@ import (
 func OperatorPrecedence(op string) int {
 	switch op {
 	case ".":
+		return 11
+	case "->":
 		return 10
 	case ":":
 		return 9
