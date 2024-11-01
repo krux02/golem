@@ -111,6 +111,11 @@ type AbstractTypeSymbol struct {
 	Name string
 }
 
+// the default value for values of AbstractTypeSymbol
+type AbstractDefaultValue struct {
+	Type Type
+}
+
 type GenericTypeSymbol struct {
 	// a symbol that needs later substitution on generic instantiation
 	Source     string
@@ -409,14 +414,15 @@ func (arg *TcEmitExpr) GetSource() string        { return arg.Source }
 func (arg *TcCastExpr) GetSource() string        { return arg.Source }
 func (arg *TcConvExpr) GetSource() string        { return arg.Source }
 
-func (arg *TcStructDef) GetSource() string         { return arg.Source }
-func (arg *TcEnumDef) GetSource() string           { return arg.Source }
-func (arg *TcTypeAlias) GetSource() string         { return arg.Source }
-func (arg *TcTraitDef) GetSource() string          { return arg.Source }
-func (arg *GenericTypeSymbol) GetSource() string   { return arg.Source }
-func (arg *TcBuiltinMacroDef) GetSource() string   { return "" } // builtins have no source
-func (arg *TcErrorProcDef) GetSource() string      { return "" } // non existing proc def has no source
-func (arg *TcWrappedUntypedAst) GetSource() string { return arg.Expr.GetSource() }
+func (arg *TcStructDef) GetSource() string          { return arg.Source }
+func (arg *TcEnumDef) GetSource() string            { return arg.Source }
+func (arg *TcTypeAlias) GetSource() string          { return arg.Source }
+func (arg *TcTraitDef) GetSource() string           { return arg.Source }
+func (arg *GenericTypeSymbol) GetSource() string    { return arg.Source }
+func (arg *TcBuiltinMacroDef) GetSource() string    { return "" } // builtins have no source
+func (arg *TcErrorProcDef) GetSource() string       { return "" } // non existing proc def has no source
+func (arg *AbstractDefaultValue) GetSource() string { return "" } // there literally is no source for this
+func (arg *TcWrappedUntypedAst) GetSource() string  { return arg.Expr.GetSource() }
 
 func (arg *TcBuiltinProcDef) GetSignature() *Signature  { return &arg.Signature }
 func (arg *TcProcDef) GetSignature() *Signature         { return &arg.Signature }

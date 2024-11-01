@@ -248,6 +248,8 @@ func recursiveInstanciateGenericBody(body TcExpr, subs *Substitutions) TcExpr {
 			Expr:   recursiveInstanciateGenericBody(b.Expr, subs),
 			Type:   ApplyTypeSubstitutions(b.Type, subs.typeSubs),
 		}
+	case *AbstractDefaultValue:
+		return ApplyTypeSubstitutions(b.Type, subs.typeSubs).DefaultValue(nil, b)
 	}
 	panic(fmt.Errorf("compiler bug, node not handled in instanciate generic body %T", body))
 }

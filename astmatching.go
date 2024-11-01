@@ -129,22 +129,22 @@ func MustMatchProcDef(sc *SemChecker, def *ProcDef) (name *Ident, body, resultTy
 		genericArgs = make([]GenericArgument, 0, len(bracketExpr.Args))
 		// TODO do something with args
 		for _, arg := range bracketExpr.Args {
-			lhs, rhs, isColonExpr := MatchColonExpr(arg)
-			if !isColonExpr {
+			call, isCall := arg.(*Call)
+			if !isCall || len(call.Args) != 1 {
 				// TODO test error message
-				ReportErrorf(sc, arg, "generic argument must be a colon expr")
+				ReportErrorf(sc, arg, "generic argument must be a call expr")
 				continue
 			}
-			name, isIdent := lhs.(*Ident)
+			name, isIdent := call.Args[0].(*Ident)
 			if !isIdent {
 				// TODO test error message
-				ReportErrorf(sc, lhs, "generic argument name must be an Identifire, but it is %T", lhs)
+				ReportErrorf(sc, call.Args[0], "generic argument name must be an Identifire, but it is %T", call.Args[0])
 				continue
 			}
-			traitName, isIdent := rhs.(*Ident)
+			traitName, isIdent := call.Callee.(*Ident)
 			if !isIdent {
 				// TODO firstToken is not the right code location
-				ReportErrorf(sc, rhs, "generic argument constraint must be an Identifire, but it is %T", rhs)
+				ReportErrorf(sc, call.Callee, "generic argument constraint must be an Identifire, but it is %T", call.Callee)
 				continue
 			}
 

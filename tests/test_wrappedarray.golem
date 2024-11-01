@@ -12,7 +12,7 @@ trait CanDoPointlessStuff(U) = {
   proc foo(_: U): void
 }
 
-proc pointless[T : CanDoPointlessStuff](arg1: T) : void = {
+proc pointless[CanDoPointlessStuff(T)](arg1: T) : void = {
   var tmp: T = arg1
   var someArray: array(4, T) = [arg1,arg1,arg1,arg1]
   foo(tmp)

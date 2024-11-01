@@ -1,6 +1,4 @@
 
-
-
 trait MyTrait(T) = {
   proc foo(_:T, _:str): void
   proc foo(_:T, _:f32): void
@@ -11,10 +9,13 @@ trait MyMultiTrait(T,U) = {
   proc bar(_:T, _:U): i32
 }
 
-proc bar[M : MyTrait](argM: M): void = {
+proc bar[MyTrait(M)](argM: M): void = {
   foo(argM, "abc":str)
   foo(argM, 234:f32)
   foo(argM, 567:f64)
+
+  var someDefaultVar: M
+  foo(someDefaultVar, 123456:f32)
 }
 
 # TODO multitrait isn't even figured out yet
@@ -24,17 +25,17 @@ type MyStruct = struct {
 }
 
 proc foo(self:MyStruct, arg:str): void = {
-  printf("foo str\n")
+  printf("foo str: %d %s %s\n", self.a, self.b, arg)
 }
 proc foo(self:MyStruct, arg:f32): void = {
-  printf("foo f32\n")
+  printf("foo f32: %d %s %f\n", self.a, self.b, arg)
 }
 proc foo(self:MyStruct, arg:f64): void = {
-  printf("foo f64\n")
+  printf("foo f64: %d %s %f\n", self.a, self.b, arg)
 }
 
 proc main(): void = {
-  var myStruct: MyStruct
+  var myStruct: MyStruct = [123, "xyz"]
   bar(myStruct)
 }
 

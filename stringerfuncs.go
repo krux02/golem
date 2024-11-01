@@ -876,6 +876,10 @@ func (subs *Substitutions) PrettyPrint(builder *AstPrettyPrinter) {
 	// builder.WriteString(")")
 }
 
+func (this *AbstractDefaultValue) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("~~~abstract default value~~~")
+}
+
 func (this *BuiltinType) GetName() string {
 	return this.Name
 }

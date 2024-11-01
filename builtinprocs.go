@@ -346,7 +346,7 @@ func (typ *GenericTypeSymbol) DefaultValue(sc *SemChecker, context Expr) TcExpr 
 }
 
 func (typ *AbstractTypeSymbol) DefaultValue(sc *SemChecker, context Expr) TcExpr {
-	panic("this is an abstrict type, there cannot be a default value")
+	return &AbstractDefaultValue{typ}
 }
 
 var builtinScope Scope = &ScopeImpl{

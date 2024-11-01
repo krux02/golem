@@ -1726,6 +1726,7 @@ func (lit *NilLit) GetType() Type {
 	return lit.Type
 }
 
+func (lit *AbstractDefaultValue) GetType() Type { return lit.Type }
 func (_ *TcErrorNode) GetType() Type            { return TypeError }
 func (call *TcCall) GetType() Type              { return call.Sym.Overloadable.GetSignature().ResultType }
 func (lit *TcStrLit) GetType() Type             { return lit.Type }
