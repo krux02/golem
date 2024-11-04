@@ -84,7 +84,13 @@ func mkstring(items []Expr, prefix, infix, postfix string, builder *AstPrettyPri
 }
 
 func (call *Call) PrettyPrint(builder *AstPrettyPrinter) {
-	if call.Braced {
+	if call.Command {
+		builder.WriteNode(call.Callee)
+		for _, arg := range call.Args {
+			builder.WriteString(" ")
+			builder.WriteNode(arg)
+		}
+	} else if call.Braced {
 		builder.WriteNode(call.Callee)
 		builder.WriteString("(")
 		for i, arg := range call.Args {
@@ -315,15 +321,6 @@ func (typeDef *TcTraitDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.Indentation -= 1
 	builder.NewlineAndIndent()
 	builder.WriteString("}")
-}
-
-func (procDef *ProcDef) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("proc ")
-	if procDef.Annotations.Value != "" {
-		procDef.Annotations.PrettyPrint(builder)
-		builder.WriteString(" ")
-	}
-	builder.WriteNode(procDef.Expr)
 }
 
 func (returnExpr *ReturnExpr) PrettyPrint(builder *AstPrettyPrinter) {

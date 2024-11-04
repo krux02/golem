@@ -61,17 +61,19 @@ type TcStructField struct {
 }
 
 type TcEnumDef struct {
-	Source  string
-	Name    string
-	Values  []*TcSymbol
-	Importc bool
+	Source     string
+	Name       string
+	Values     []*TcSymbol
+	Importc    bool
+	DocComment *PrefixDocComment
 }
 
 type TcStructDef struct {
-	Source  string
-	Name    string
-	Fields  []*TcStructField
-	Importc bool
+	Source     string
+	Name       string
+	Fields     []*TcStructField
+	Importc    bool
+	DocComment *PrefixDocComment
 }
 
 type TcTypeAlias struct {
@@ -168,10 +170,11 @@ const (
 )
 
 type TcSymbol struct {
-	Source string
-	Kind   SymbolKind
-	Value  TcExpr // only set when symbol is `const`
-	Type   Type
+	Source  string
+	Kind    SymbolKind
+	Value   TcExpr // only set when symbol is `const`
+	Type    Type
+	Comment DocLines
 }
 
 // whenever a variable is used
@@ -280,6 +283,7 @@ type TcProcDef struct {
 	Signature     Signature
 	Body          TcExpr
 	Importc       bool
+	DocComment    *PrefixDocComment
 	InstanceCache *InstanceCache[*TcProcDef]
 }
 

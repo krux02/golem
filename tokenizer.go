@@ -29,9 +29,6 @@ const (
 
 	// keywords
 	TkType
-	TkProc
-	TkTemplate
-	TkMacro
 	TkVar
 	TkLet
 	TkConst
@@ -77,9 +74,6 @@ var TokenKindNames = [...]string{
 	TkPrefixDocComment:  "PrefixDocComment",
 	TkPostfixDocComment: "PostfixDocComment",
 	TkType:              "Type",
-	TkProc:              "Proc",
-	TkTemplate:          "Template",
-	TkMacro:             "Macro",
 	TkVar:               "Var",
 	TkLet:               "Let",
 	TkConst:             "Const",
@@ -398,12 +392,6 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			result.kind = TkOperator
 		case "type":
 			result.kind = TkType
-		case "proc":
-			result.kind = TkProc
-		case "macro":
-			result.kind = TkMacro
-		case "template":
-			result.kind = TkTemplate
 		case "var":
 			result.kind = TkVar
 		case "let":
@@ -589,7 +577,14 @@ func (tokenizer *Tokenizer) reportError(token Token, msg string, args ...interfa
 	if !tokenizer.silentErrors {
 		line, columnStart, columnEnd := LineColumnStr(tokenizer.code, token.value)
 		// LineColumnStr(tokenizer.code, token.value)
-		fmt.Printf("%s(%d, %d-%d) Error: %s\n", tokenizer.filename, line, columnStart, columnEnd, newMsg)
+
+		if line < 0 {
+			fmt.Printf("%s Error: %s\n", tokenizer.filename, newMsg)
+		} else if columnEnd < 0 {
+			fmt.Printf("%s(%d, %d) Error: %s\n", tokenizer.filename, line, columnStart, newMsg)
+		} else {
+			fmt.Printf("%s(%d, %d-%d) Error: %s\n", tokenizer.filename, line, columnStart, columnEnd, newMsg)
+		}
 	}
 	if fatalError {
 		panic("error caused here")

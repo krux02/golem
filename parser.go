@@ -368,6 +368,23 @@ func parseCall(tokenizer *Tokenizer, callee Expr) *Call {
 	return result
 }
 
+func parseCommand(tokenizer *Tokenizer, callee Expr) Expr {
+	// parse call expr
+	result := &Call{Callee: callee, Command: true}
+	tk := &tokenizer.lookAheadToken.kind
+	for *tk != TkNewLine &&
+		*tk != TkSemicolon &&
+		*tk != TkCloseCurly &&
+		*tk != TkPrefixDocComment {
+		result.Args = append(result.Args, parseExpr(tokenizer, false))
+	}
+	if len(result.Args) == 0 {
+		return result.Callee
+	}
+	result.Source = joinSubstr(tokenizer.code, callee.GetSource(), tokenizer.token.value)
+	return result
+}
+
 func parseBracketExpr(tokenizer *Tokenizer, callee Expr) *BracketExpr {
 	// parse call expr
 	result := &BracketExpr{
@@ -401,12 +418,14 @@ func parseStmtOrExpr(tokenizer *Tokenizer) Expr {
 		return (Expr)(parseForLoop(tokenizer))
 	case TkWhile:
 		return (Expr)(parseWhileLoop(tokenizer))
-	case TkProc, TkMacro, TkTemplate:
-		return (Expr)(parseProcDef(tokenizer))
 	case TkType:
 		return (Expr)(parseTypeDef(tokenizer))
 	}
-	return parseExpr(tokenizer, false)
+	result := parseExpr(tokenizer, false)
+	if ident, isIdent := result.(*Ident); isIdent {
+		result = parseCommand(tokenizer, ident)
+	}
+	return result
 }
 
 func parsePrefixCall(tokenizer *Tokenizer, preventInfixOperatorInArgument bool) Expr {
@@ -683,19 +702,6 @@ func parseTypeDef(tokenizer *Tokenizer) Expr {
 	expr := parseExpr(tokenizer, false)
 	source := joinSubstr(tokenizer.code, firstToken.value, expr.GetSource())
 	return &TypeDef{Source: source, Expr: expr, Annotations: annotations}
-}
-
-func parseProcDef(tokenizer *Tokenizer) *ProcDef {
-	result := &ProcDef{}
-	firstToken := tokenizer.Next()
-	tokenizer.expectKind3(firstToken, TkProc, TkTemplate, TkMacro)
-	result.Kind = firstToken.kind
-	if tokenizer.lookAheadToken.kind == TkStrLit {
-		result.Annotations = parseStrLit(tokenizer)
-	}
-	result.Expr = parseExpr(tokenizer, false)
-	result.Source = joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value)
-	return result
 }
 
 func parsePackage(tokenizer *Tokenizer) (result *PackageDef, errors []ParseError) {

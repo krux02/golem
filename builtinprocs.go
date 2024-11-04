@@ -762,7 +762,7 @@ func BuiltinTraitDef(sc *SemChecker, scope Scope, def *TcCall) TcExpr {
 	for _, procDef := range signatures {
 
 		innerScope := NewSubScope(traitScope)
-		name, body, resultType, genericArgs, args := MustMatchProcDef(sc, procDef)
+		name, body, resultType, genericArgs, args, _ := MustMatchProcDef(sc, procDef)
 		if body != nil {
 			ReportErrorf(sc, body, "trait proc may not have an implementation body") // TODO test this error message
 		}

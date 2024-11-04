@@ -131,22 +131,15 @@ type Call struct {
 	Args   []Expr
 	// `Braced` true for (a+b) +(a,b), false for a+b. This property is used to
 	// check if applyOperatorPrecedence may rehang this ast.
-	Braced bool
-	Prefix bool // true for -a ++x etc, false for everything else
+	Braced  bool
+	Prefix  bool // true for -a ++x etc, false for everything else
+	Command bool // true for stmt level commands
 }
 
 type BracketExpr struct {
 	Source string
 	Callee Expr
 	Args   []Expr
-}
-
-type ProcDef struct {
-	Source      string
-	Kind        TokenKind
-	Expr        Expr
-	Annotations *StrLit
-	DocComment  *PrefixDocComment
 }
 
 type PackageDef struct {
@@ -166,7 +159,6 @@ type ContinueStmt struct {
 
 func (arg *InvalidTokenExpr) GetSource() string { return arg.Source }
 func (arg *ExprList) GetSource() string         { return arg.Source }
-func (arg *ProcDef) GetSource() string          { return arg.Source }
 func (arg *TypeDef) GetSource() string          { return arg.Source }
 func (arg *PrefixDocComment) GetSource() string { return arg.Source }
 func (arg *NamedDocSection) GetSource() string  { return arg.Source }

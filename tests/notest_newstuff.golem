@@ -33,10 +33,10 @@ proc foo[HasFoo(T), CombineTrait(T,V)](arg1,arg2: T) -> void = {
   bar(arg1, 13)
   bar(arg2, 14)
 
-  let myint = 123:i32
+  let myint:i32 = 123
 
-  let tmp1: str = "abcdef"
-  let tmp2: f32 = 123
+  let tmp1:str = "abcdef"
+  let tmp2:f32 = 123
 
   baz(tmp1, tmp2, arg1)
 }

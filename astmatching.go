@@ -110,8 +110,12 @@ type ProcArgument struct {
 	Type    Expr
 }
 
-func MustMatchProcDef(sc *SemChecker, def *ProcDef) (name *Ident, body, resultType Expr, genericArgs []GenericArgument, args []ProcArgument) {
-	var expr = def.Expr
+func MustMatchProcDef(sc *SemChecker, def *Call) (name *Ident, body, resultType Expr, genericArgs []GenericArgument, args []ProcArgument, annotations *StrLit) {
+	var expr = def.Args[0]
+	if strLit, isStrLit := expr.(*StrLit); isStrLit {
+		annotations = strLit
+		expr = def.Args[1]
+	}
 
 	if lhs, rhs, isAssign := MatchAssign(expr); isAssign {
 		body = rhs
@@ -138,9 +142,13 @@ func MustMatchProcDef(sc *SemChecker, def *ProcDef) (name *Ident, body, resultTy
 		// TODO do something with args
 		for _, arg := range bracketExpr.Args {
 			call, isCall := arg.(*Call)
-			if !isCall || len(call.Args) != 1 {
+			if !isCall {
 				// TODO test error message
 				ReportErrorf(sc, arg, "generic argument must be a call expr")
+				continue
+			}
+			if len(call.Args) != 1 {
+				ReportErrorf(sc, arg, "Trait on multiple types not yet implemented")
 				continue
 			}
 			name, isIdent := call.Args[0].(*Ident)
@@ -208,24 +216,5 @@ func MustMatchProcDef(sc *SemChecker, def *ProcDef) (name *Ident, body, resultTy
 
 	ValidNameCheck(sc, name, "proc")
 
-	// apply doc section
-	if def.DocComment != nil {
-		name.Comment = append(name.Comment, def.DocComment.BaseDoc...)
-
-	DOCSECTIONS1:
-		for _, it := range def.DocComment.NamedDocSections {
-			key := it.Name
-			value := it.Lines
-
-			for i := range args {
-				if args[i].Name.Source == key {
-					commentRef := &args[i].Name.Comment
-					*commentRef = append(*commentRef, value...)
-					continue DOCSECTIONS1
-				}
-			}
-			ReportInvalidDocCommentKey(sc, it)
-		}
-	}
 	return
 }

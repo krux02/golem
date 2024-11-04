@@ -137,6 +137,17 @@ func compileFileToPackage(currentProgram *ProgramContext, filename string, mainP
 		return nil, err
 	}
 	source := string(bytes)
+
+	// testTokenizer := NewTokenizer(source, filename)
+	// // TODO, here is clearely a newline token missing between `Ident -- c` and `PrefixDocComment -- c`
+	// for {
+	// 	token := testTokenizer.Next()
+	// 	fmt.Printf("%s  --  %s\n", TokenKindNames[token.kind], token.value)
+	// 	if token.kind == TkEof {
+	// 		break
+	// 	}
+	// }
+
 	tokenizer := NewTokenizer(source, filename)
 	pak, parseErrors := parsePackage(tokenizer)
 	if len(parseErrors) > 0 {

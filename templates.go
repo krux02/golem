@@ -18,13 +18,7 @@ func (arg *CodeBlock) RecSubSyms(substitutions []TemplateSubstitution) Expr {
 		Items:  MapSliceForSyms(arg.Items, substitutions),
 	}
 }
-func (arg *ProcDef) RecSubSyms(substitutions []TemplateSubstitution) Expr {
-	result := &ProcDef{
-		Source: arg.Source,
-		Expr:   arg.Expr.RecSubSyms(substitutions),
-	}
-	return result
-}
+
 func (arg *TypeDef) RecSubSyms(substitutions []TemplateSubstitution) Expr {
 	result := &TypeDef{
 		Source: arg.Source,
@@ -41,11 +35,12 @@ func (arg *ArrayLit) RecSubSyms(substitutions []TemplateSubstitution) Expr {
 }
 func (arg *Call) RecSubSyms(substitutions []TemplateSubstitution) Expr {
 	return &Call{
-		Source: arg.Source,
-		Callee: arg.Callee.RecSubSyms(substitutions),
-		Args:   MapSliceForSyms(arg.Args, substitutions),
-		Braced: arg.Braced,
-		Prefix: arg.Prefix,
+		Source:  arg.Source,
+		Callee:  arg.Callee.RecSubSyms(substitutions),
+		Args:    MapSliceForSyms(arg.Args, substitutions),
+		Braced:  arg.Braced,
+		Prefix:  arg.Prefix,
+		Command: arg.Command,
 	}
 }
 func (arg *BracketExpr) RecSubSyms(substitutions []TemplateSubstitution) Expr {

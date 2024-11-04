@@ -128,7 +128,7 @@ func RegisterProc(sc *SemChecker, scope Scope, proc Overloadable, context Expr) 
 func (scope Scope) NewSymbol(sc *SemChecker, name *Ident, kind SymbolKind, typ Type) *TcSymbol {
 	//result := TcSymbol{Name: name.source, Kind: kind, Typ: typ}
 	rawName := name.Source
-	result := &TcSymbol{Source: rawName, Kind: kind, Value: nil, Type: typ}
+	result := &TcSymbol{Source: rawName, Kind: kind, Value: nil, Type: typ, Comment: name.Comment}
 	_, alreadyExists := scope.Variables[rawName]
 	if alreadyExists {
 		ReportErrorf(sc, name, "redefinition of %s", rawName)
@@ -404,7 +404,7 @@ func SemCheckTypeDef(sc *SemChecker, scope Scope, def *TypeDef) TcExpr {
 	return &TcErrorNode{Source: def.Source, SourceNode: def}
 }
 
-func ParseTraitDef(sc *SemChecker, expr Expr) (name *Ident, dependentTypes []*Ident, signatures []*ProcDef) {
+func ParseTraitDef(sc *SemChecker, expr Expr) (name *Ident, dependentTypes []*Ident, signatures []*Call) {
 	if lhs, rhs, isAssign := MatchAssign(expr); isAssign {
 		switch x := lhs.(type) {
 		case *Call:
@@ -428,9 +428,10 @@ func ParseTraitDef(sc *SemChecker, expr Expr) (name *Ident, dependentTypes []*Id
 
 		if block, isBlock := rhs.(*CodeBlock); isBlock {
 			for _, it := range block.Items {
-				if procDef, isProcDef := it.(*ProcDef); isProcDef {
+				if procDef, isProcDef := it.(*Call); isProcDef && procDef.Command && procDef.Callee.GetSource() == "proc" {
 					signatures = append(signatures, procDef)
 				} else {
+					fmt.Printf("proc def: %+#v\n", it)
 					ReportErrorf(sc, it, "expect proc def here")
 				}
 			}
@@ -570,12 +571,12 @@ func SemCheckSignature(sc *SemChecker, bodyScope Scope, name string, genericArgs
 	return signature
 }
 
-func SemCheckTemplateDef(sc *SemChecker, parentScope Scope, def *ProcDef) (templateDef *TcTemplateDef) {
+func SemCheckTemplateDef(sc *SemChecker, parentScope Scope, def *Call) (templateDef *TcTemplateDef) {
 	innerScope := NewSubScope(parentScope)
-	name, body, resultType, genericArgs, args := MustMatchProcDef(sc, def)
+	name, body, resultType, genericArgs, args, annotations := MustMatchProcDef(sc, def)
 
-	if def.Annotations != nil {
-		ReportInvalidAnnotations(sc, def.Annotations)
+	if annotations != nil {
+		ReportInvalidAnnotations(sc, annotations)
 	}
 
 	// the type `untyped` is a special builtin type that is not actually a type. It should only be legal to use it in the context of
@@ -607,17 +608,17 @@ func MangleSignature(signature *Signature) string {
 	return mangledNameBuilder.String()
 }
 
-func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *ProcDef) *TcProcDef {
+func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *Call) *TcProcDef {
 	innerScope := NewSubScope(parentScope)
-	name, body, resultType, genericArgs, args := MustMatchProcDef(sc, def)
+	name, body, resultType, genericArgs, args, annotations := MustMatchProcDef(sc, def)
 	signature := SemCheckSignature(sc, innerScope, name.Source, genericArgs, args, resultType)
 
 	var importc bool
-	if def.Annotations != nil {
-		if def.Annotations.Value == "importc" {
+	if annotations != nil {
+		if annotations.Value == "importc" {
 			importc = true
 		} else {
-			ReportInvalidAnnotations(sc, def.Annotations)
+			ReportInvalidAnnotations(sc, annotations)
 		}
 	}
 
@@ -1529,10 +1530,12 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 	return result
 }
 
-func (sc *SemChecker) ApplyDocComment(expr Expr, doc *PrefixDocComment) Expr {
+func (sc *SemChecker) ApplyDocComment(expr TcExpr, doc *PrefixDocComment) TcExpr {
 	switch expr2 := expr.(type) {
-	case *VariableDefStmt:
-		_, name, _, _, _ := MatchVariableDefStatement(sc, expr2)
+	case *TcVariableDefStmt:
+		//_, name, _, _, _ := MatchVariableDefStatement(sc, expr2)
+		//
+		name := expr2.Sym
 		name.Comment = append(name.Comment, doc.BaseDoc...)
 		for _, it := range doc.NamedDocSections {
 			key := it.Name
@@ -1542,51 +1545,58 @@ func (sc *SemChecker) ApplyDocComment(expr Expr, doc *PrefixDocComment) Expr {
 				ReportInvalidDocCommentKey(sc, it)
 				continue
 			}
-
 			name.Comment = append(name.Comment, value...)
 		}
 		return expr2
-	case *ProcDef:
-		expr2.DocComment = doc
-		return expr2
-	case *TypeDef:
-		// TODO this pattern matching code is code duplication from sem checkTypeDef. This is bad
-		lhs, rhs, isAssignment := MatchAssign(expr2.Expr)
-		if !isAssignment {
-			return expr2
-		}
-		name, isIdent := lhs.(*Ident)
-		if !isIdent {
-			return expr2
-		}
-		_, body, isPrefixCall := MatchPrefixCall(rhs)
-		if !isPrefixCall {
-			return expr2
-		}
-		block, isBlock := body.(*CodeBlock)
-		if !isBlock {
-			return expr2
-		}
-		name.Comment = append(name.Comment, doc.BaseDoc...)
-	DOCSECTIONS2:
+	case *TcProcDef:
+		// validate doc section
+		// name.Comment = append(name.Comment, def.DocComment.BaseDoc...)
+	DOCSECTIONS1:
 		for _, it := range doc.NamedDocSections {
 			key := it.Name
 			value := it.Lines
-			for _, it := range block.Items {
-				if lhs, _, isColonExpr := MatchColonExpr(it); isColonExpr {
-					it = lhs
+			for _, arg := range expr2.Signature.Params {
+				if arg.Source == key {
+					arg.Comment = append(arg.Comment, value...)
+					continue DOCSECTIONS1
 				}
-				ident, isIdent := it.(*Ident)
-				if !isIdent {
-					continue
-				}
-				if ident.Source == key {
-					ident.Comment = append(ident.Comment, value...)
+			}
+			ReportInvalidDocCommentKey(sc, it)
+		}
+		expr2.DocComment = doc
+		return expr2
+	case *TcStructDef:
+		expr2.DocComment = doc
+	DOCSECTIONS2:
+		for _, it := range doc.NamedDocSections {
+			key := it.Name
+			// value := it.Lines
+			for _, it := range expr2.Fields {
+				if it.Name == key {
+					// TODO do something with value ? Store it in the field?
 					continue DOCSECTIONS2
 				}
 			}
 			ReportInvalidDocCommentKey(sc, it)
 		}
+		return expr2
+	case *TcEnumDef:
+		expr2.DocComment = doc
+	DOCSECTIONS3:
+		for _, it := range doc.NamedDocSections {
+			key := it.Name
+			// value := it.Lines
+			for _, it := range expr2.Values {
+				if it.Source == key {
+					// TODO do something with value ? Store it in the field?
+					continue DOCSECTIONS3
+				}
+			}
+			ReportInvalidDocCommentKey(sc, it)
+		}
+		return expr2
+	case *TcTypeAlias:
+		ReportErrorf(sc, expr2, "type alias has no support for doc comments yet")
 		return expr2
 	default:
 		fmt.Printf("typ: %T\n", expr2)
@@ -1607,15 +1617,17 @@ func SemCheckCodeBlock(sc *SemChecker, scope Scope, arg *CodeBlock, expected Typ
 				docComment = comment
 				continue
 			} else {
+				var tcItem TcExpr
+				if i == N-1 {
+					tcItem = SemCheckExpr(sc, scope, item, expected)
+				} else {
+					tcItem = SemCheckExpr(sc, scope, item, UniqueTypeConstraint{TypeVoid})
+				}
 				if docComment != nil {
-					item = sc.ApplyDocComment(item, docComment)
+					item = sc.ApplyDocComment(tcItem, docComment)
 					docComment = nil
 				}
-				if i == N-1 {
-					resultItems = append(resultItems, SemCheckExpr(sc, scope, item, expected))
-				} else {
-					resultItems = append(resultItems, SemCheckExpr(sc, scope, item, UniqueTypeConstraint{TypeVoid}))
-				}
+				resultItems = append(resultItems, tcItem)
 			}
 		}
 		result.Items = resultItems
@@ -2255,13 +2267,11 @@ func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *Packag
 
 	var docComment *PrefixDocComment = nil
 	for _, stmt := range arg.TopLevelStmts {
-		if docComment != nil {
-			stmt = sc.ApplyDocComment(stmt, docComment)
-			docComment = nil
-		}
+		var tcStmt TcExpr
 		switch stmt := stmt.(type) {
 		case *TypeDef:
-			switch td := SemCheckTypeDef(sc, pkgScope, stmt).(type) {
+			tcStmt = SemCheckTypeDef(sc, pkgScope, stmt)
+			switch td := tcStmt.(type) {
 			case *TcStructDef:
 				result.StructDefs = append(result.StructDefs, td)
 			case *TcEnumDef:
@@ -2273,48 +2283,69 @@ func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *Packag
 			default:
 				panic(fmt.Errorf("internal error, %T", td))
 			}
-		case *ProcDef:
-			switch stmt.Kind {
-			case TkProc:
-				def := SemCheckProcDef(sc, pkgScope, stmt)
-				result.ProcDefs = append(result.ProcDefs, def)
-				if mainPackage && def.Signature.Name == "main" {
-					if len(def.Signature.GenericParams) > 0 {
-						ReportErrorf(sc, def, "main proc may not be generic")
-					}
-					currentProgram.Main = def
-
-				}
-			case TkTemplate:
-				def := SemCheckTemplateDef(sc, pkgScope, stmt)
-				result.TemplateDefs = append(result.TemplateDefs, def)
-			default:
-				ReportErrorf(sc, stmt, "%s kind not implemented in the compiler", TokenKindNames[stmt.Kind])
-			}
-
-			// TODO, verify compatible signature for main
 		case *VariableDefStmt:
 			varDef := SemCheckVariableDefStmt(sc, pkgScope, stmt)
+			tcStmt = varDef
 			result.VarDefs = append(result.VarDefs, varDef)
 		case *PrefixDocComment:
+			if docComment != nil {
+				panic("internal error, doc comment should be nil here")
+			}
 			docComment = stmt
+			// continue preventsn that the doc comment will be applied to nothing
+			continue
 		case *Call:
-			tcExpr := SemCheckCall(sc, pkgScope, stmt, UniqueTypeConstraint{TypeVoid})
-			switch x := tcExpr.(type) {
-			case *TcCodeBlock:
-				if len(x.Items) == 0 {
+			if stmt.Command {
+				switch stmt.Callee.GetSource() {
+				case "proc":
+					def := SemCheckProcDef(sc, pkgScope, stmt)
+					tcStmt = def
+					result.ProcDefs = append(result.ProcDefs, def)
+					if mainPackage && def.Signature.Name == "main" {
+						if len(def.Signature.GenericParams) > 0 {
+							ReportErrorf(sc, def, "main proc may not be generic")
+						}
+						currentProgram.Main = def
+						// TODO, verify compatible signature for main
+					}
+				case "template":
+					def := SemCheckTemplateDef(sc, pkgScope, stmt)
+					tcStmt = def
+					if docComment != nil {
+						sc.ApplyDocComment(def, docComment)
+						docComment = nil
+					}
+					result.TemplateDefs = append(result.TemplateDefs, def)
+				default:
+					ReportErrorf(sc, stmt, "%s command not implemented in the compiler", stmt.Callee.GetSource())
+				}
+			} else {
+				tcStmt = SemCheckCall(sc, pkgScope, stmt, UniqueTypeConstraint{TypeVoid})
+				switch x := tcStmt.(type) {
+				case *TcCodeBlock:
+					if len(x.Items) == 0 {
+						continue
+					}
+				case *TcEmitExpr:
+					result.EmitStatements = append(result.EmitStatements, x)
+					continue
+				case *TcTraitDef:
+					result.TraitDefs = append(result.TraitDefs, x)
 					continue
 				}
-			case *TcEmitExpr:
-				result.EmitStatements = append(result.EmitStatements, x)
-				continue
-			case *TcTraitDef:
-				result.TraitDefs = append(result.TraitDefs, x)
-				continue
+				ReportErrorf(sc, tcStmt, "top level function calls are not allowed: %s", AstFormat(tcStmt))
 			}
-			ReportErrorf(sc, stmt, "top level function calls are not allowed: %s", AstFormat(tcExpr))
 		default:
 			ReportInvalidAstNode(sc, stmt, "top level statement")
+		}
+		if docComment != nil {
+			if tcStmt != nil {
+				sc.ApplyDocComment(tcStmt, docComment)
+				docComment = nil
+			} else {
+				// TODO ensure somehow that this is dead code and doesn't happen.
+				ReportErrorf(sc, docComment, "interal error, trying to apply doc comment to something that is nil")
+			}
 		}
 	}
 	if mainPackage && currentProgram.Main == nil {
