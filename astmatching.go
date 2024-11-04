@@ -110,12 +110,7 @@ type ProcArgument struct {
 	Type    Expr
 }
 
-func MustMatchProcDef(sc *SemChecker, def *Call) (name *Ident, body, resultType Expr, genericArgs []GenericArgument, args []ProcArgument, annotations *StrLit) {
-	var expr = def.Args[0]
-	if strLit, isStrLit := expr.(*StrLit); isStrLit {
-		annotations = strLit
-		expr = def.Args[1]
-	}
+func MustMatchProcDef(sc *SemChecker, expr Expr) (name *Ident, body, resultType Expr, genericArgs []GenericArgument, args []ProcArgument) {
 
 	if lhs, rhs, isAssign := MatchAssign(expr); isAssign {
 		body = rhs

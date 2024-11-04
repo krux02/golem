@@ -760,9 +760,8 @@ func BuiltinTraitDef(sc *SemChecker, scope Scope, def *TcCall) TcExpr {
 	// result.InstanceCache = NewInstanceCache[*TraitInstance](len(dependentTypes))
 
 	for _, procDef := range signatures {
-
 		innerScope := NewSubScope(traitScope)
-		name, body, resultType, genericArgs, args, _ := MustMatchProcDef(sc, procDef)
+		name, body, resultType, genericArgs, args := MustMatchProcDef(sc, procDef.Args[0])
 		if body != nil {
 			ReportErrorf(sc, body, "trait proc may not have an implementation body") // TODO test this error message
 		}
@@ -889,6 +888,107 @@ func BuiltinWhileLoop(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	}
 }
 
+func BuiltinProcDef(sc *SemChecker, parentScope Scope, call *TcCall) TcExpr {
+	innerScope := NewSubScope(parentScope)
+
+	var annotations *StrLit
+	var expr = call.Args[0].(*TcWrappedUntypedAst).Expr
+	if strLit, isStrLit := expr.(*StrLit); isStrLit {
+		annotations = strLit
+		expr = call.Args[1].(*TcWrappedUntypedAst).Expr
+	}
+
+	name, body, resultType, genericArgs, args := MustMatchProcDef(sc, expr)
+	signature := SemCheckSignature(sc, innerScope, name.Source, genericArgs, args, resultType)
+
+	var importc bool
+	if annotations != nil {
+		if annotations.Value == "importc" {
+			importc = true
+		} else {
+			ReportInvalidAnnotations(sc, annotations)
+		}
+	}
+
+	isGeneric := len(signature.GenericParams) > 0
+	innerScope.CurrentProcSignature = signature
+
+	var mangledName string
+	if importc || signature.Name == "main" {
+		// TODO, don't special case `main` like this here
+		mangledName = signature.Name
+	} else if !isGeneric {
+		mangledName = MangleSignature(signature)
+	}
+
+	result := &TcProcDef{
+		Source:        call.Source,
+		MangledName:   mangledName,
+		Signature:     *signature,
+		Importc:       importc,
+		InstanceCache: NewInstanceCache[*TcProcDef](len(signature.GenericParams)),
+	}
+
+	// register proc before type checking the body to allow recursion. (TODO needs a test)
+	RegisterProc(sc, parentScope, result, name)
+
+	var tcBody TcExpr
+	if importc {
+		if body != nil {
+			ReportErrorf(sc, body, "proc is importc, it may not have a body")
+		}
+	} else if parentScope.CurrentTrait != nil {
+		if body != nil {
+			ReportErrorf(sc, body, "proc is importc, it may not have a body")
+		}
+	} else {
+		if body == nil {
+			ReportErrorf(sc, call, "proc def misses a body")
+		} else {
+			tcBody = SemCheckExpr(sc, innerScope, body, UniqueTypeConstraint{signature.ResultType})
+		}
+	}
+
+	result.Body = tcBody
+	return result
+}
+
+func BuiltinTemplateDef(sc *SemChecker, parentScope Scope, call *TcCall) TcExpr {
+
+	var annotations *StrLit
+	var expr = call.Args[0].(*TcWrappedUntypedAst).Expr
+	if strLit, isStrLit := expr.(*StrLit); isStrLit {
+		annotations = strLit
+		expr = call.Args[1].(*TcWrappedUntypedAst).Expr
+	}
+
+	innerScope := NewSubScope(parentScope)
+	name, body, resultType, genericArgs, args := MustMatchProcDef(sc, expr)
+
+	if annotations != nil {
+		ReportInvalidAnnotations(sc, annotations)
+	}
+
+	// the type `untyped` is a special builtin type that is not actually a type. It should only be legal to use it in the context of
+	innerScope.Types["untyped"] = TypeUntyped
+	signature := SemCheckSignature(sc, innerScope, name.Source, genericArgs, args, resultType)
+
+	N := len(signature.Params)
+	subs := make([]TemplateSubstitution, N)
+	for i, it := range signature.Params {
+		subs[i] = TemplateSubstitution{&Ident{Source: it.Source}, it}
+	}
+	templateDef := &TcTemplateDef{
+		// TODO set Source
+		Signature: *signature,
+		Body:      body.RecSubSyms(subs),
+	}
+	// TODO check for signature collision
+	//
+	return templateDef
+
+}
+
 func init() {
 	openGenericsMap = make(map[Type][]Type)
 	arrayTypeMap = make(map[ArrayTypeMapKey]*ArrayType)
@@ -916,6 +1016,10 @@ func init() {
 	registerBuiltinMacro("type", false, []Type{TypeUntyped}, TypeUntyped, BuiltinTypeExpr)
 	registerBuiltinMacro("for", false, []Type{TypeUntyped}, TypeVoid, BuiltinForLoop)
 	registerBuiltinMacro("while", false, []Type{TypeUntyped}, TypeVoid, BuiltinWhileLoop)
+	registerBuiltinMacro("proc", false, []Type{TypeUntyped}, TypeVoid, BuiltinProcDef)
+	registerBuiltinMacro("proc", false, []Type{TypeUntyped, TypeUntyped}, TypeVoid, BuiltinProcDef)
+	registerBuiltinMacro("template", false, []Type{TypeUntyped}, TypeVoid, BuiltinTemplateDef)
+	registerBuiltinMacro("template", false, []Type{TypeUntyped, TypeUntyped}, TypeVoid, BuiltinTemplateDef)
 
 	registerBuiltinMacro("|", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinPipeTransformation)
 	registerBuiltinMacro(".", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinDotOperator)

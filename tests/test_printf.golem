@@ -4,10 +4,8 @@ emit(
 \\ #include <locale.h>
 )
 
-
 const LC_CTYPE = 0:i32
 proc "importc" setlocale(category: i32, locale: cstr) -> cstr
-
 
 proc main() -> i32 = {
   var i1 : i8 = low(type i8)

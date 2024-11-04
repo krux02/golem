@@ -569,33 +569,6 @@ func SemCheckSignature(sc *SemChecker, bodyScope Scope, name string, genericArgs
 	return signature
 }
 
-func SemCheckTemplateDef(sc *SemChecker, parentScope Scope, def *Call) (templateDef *TcTemplateDef) {
-	innerScope := NewSubScope(parentScope)
-	name, body, resultType, genericArgs, args, annotations := MustMatchProcDef(sc, def)
-
-	if annotations != nil {
-		ReportInvalidAnnotations(sc, annotations)
-	}
-
-	// the type `untyped` is a special builtin type that is not actually a type. It should only be legal to use it in the context of
-	innerScope.Types["untyped"] = TypeUntyped
-	signature := SemCheckSignature(sc, innerScope, name.Source, genericArgs, args, resultType)
-
-	N := len(signature.Params)
-	subs := make([]TemplateSubstitution, N)
-	for i, it := range signature.Params {
-		subs[i] = TemplateSubstitution{&Ident{Source: it.Source}, it}
-	}
-	templateDef = &TcTemplateDef{
-		// TODO set Source
-		Signature: *signature,
-		Body:      body.RecSubSyms(subs),
-	}
-	// TODO check for signature collision
-	//
-	return templateDef
-}
-
 func MangleSignature(signature *Signature) string {
 	mangledNameBuilder := &strings.Builder{}
 	mangledNameBuilder.WriteString(signature.Name)
@@ -604,63 +577,6 @@ func MangleSignature(signature *Signature) string {
 		arg.Type.ManglePrint(mangledNameBuilder)
 	}
 	return mangledNameBuilder.String()
-}
-
-func SemCheckProcDef(sc *SemChecker, parentScope Scope, def *Call) *TcProcDef {
-	innerScope := NewSubScope(parentScope)
-	name, body, resultType, genericArgs, args, annotations := MustMatchProcDef(sc, def)
-	signature := SemCheckSignature(sc, innerScope, name.Source, genericArgs, args, resultType)
-
-	var importc bool
-	if annotations != nil {
-		if annotations.Value == "importc" {
-			importc = true
-		} else {
-			ReportInvalidAnnotations(sc, annotations)
-		}
-	}
-
-	isGeneric := len(signature.GenericParams) > 0
-	innerScope.CurrentProcSignature = signature
-
-	var mangledName string
-	if importc || signature.Name == "main" {
-		// TODO, don't special case `main` like this here
-		mangledName = signature.Name
-	} else if !isGeneric {
-		mangledName = MangleSignature(signature)
-	}
-
-	result := &TcProcDef{
-		Source:        def.Source,
-		MangledName:   mangledName,
-		Signature:     *signature,
-		Importc:       importc,
-		InstanceCache: NewInstanceCache[*TcProcDef](len(signature.GenericParams)),
-	}
-
-	// register proc before type checking the body to allow recursion. (TODO needs a test)
-	RegisterProc(sc, parentScope, result, name)
-
-	var tcBody TcExpr
-	if importc {
-		if body != nil {
-			ReportErrorf(sc, body, "proc is importc, it may not have a body")
-		}
-	} else if parentScope.CurrentTrait != nil {
-		if body != nil {
-			ReportErrorf(sc, body, "proc is importc, it may not have a body")
-		}
-	} else {
-		if body == nil {
-			ReportErrorf(sc, def, "proc def misses a body")
-		} else {
-			tcBody = SemCheckExpr(sc, innerScope, body, UniqueTypeConstraint{signature.ResultType})
-		}
-	}
-
-	result.Body = tcBody
-	return result
 }
 
 func ReportMessagef(sc *SemChecker, node Expr, kind string, msg string, args ...interface{}) {
@@ -2265,57 +2181,42 @@ func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *Packag
 			// continue preventsn that the doc comment will be applied to nothing
 			continue
 		case *Call:
-			if stmt.Command {
-				switch stmt.Callee.GetSource() {
-				case "proc":
-					def := SemCheckProcDef(sc, pkgScope, stmt)
-					tcStmt = def
-					result.ProcDefs = append(result.ProcDefs, def)
-					if mainPackage && def.Signature.Name == "main" {
-						if len(def.Signature.GenericParams) > 0 {
-							ReportErrorf(sc, def, "main proc may not be generic")
-						}
-						currentProgram.Main = def
-						// TODO, verify compatible signature for main
-					}
-				case "template":
-					def := SemCheckTemplateDef(sc, pkgScope, stmt)
-					tcStmt = def
-					if docComment != nil {
-						sc.ApplyDocComment(def, docComment)
-						docComment = nil
-					}
-					result.TemplateDefs = append(result.TemplateDefs, def)
-				default:
-					ReportErrorf(sc, stmt, "%s command not implemented in the compiler", stmt.Callee.GetSource())
+			tcStmt = SemCheckCall(sc, pkgScope, stmt, UniqueTypeConstraint{TypeVoid})
+			switch x := tcStmt.(type) {
+			case *TcCodeBlock:
+				if len(x.Items) != 0 {
+					ReportErrorf(sc, tcStmt, "top level code blocks are not allowed")
 				}
-			} else {
-				tcStmt = SemCheckCall(sc, pkgScope, stmt, UniqueTypeConstraint{TypeVoid})
-				switch x := tcStmt.(type) {
-				case *TcCodeBlock:
-					if len(x.Items) == 0 {
-						continue
+			case *TcEmitExpr:
+				result.EmitStatements = append(result.EmitStatements, x)
+			case *TcTraitDef:
+				result.TraitDefs = append(result.TraitDefs, x)
+			case *TcProcDef:
+				result.ProcDefs = append(result.ProcDefs, x)
+				if mainPackage && x.Signature.Name == "main" {
+					if len(x.Signature.GenericParams) > 0 {
+						ReportErrorf(sc, x, "main proc may not be generic")
 					}
-				case *TcEmitExpr:
-					result.EmitStatements = append(result.EmitStatements, x)
-					continue
-				case *TcTraitDef:
-					result.TraitDefs = append(result.TraitDefs, x)
-					continue
+					if currentProgram.Main != nil {
+						ReportErrorf(sc, x, "double definition of main proc")
+						ReportErrorf(sc, currentProgram.Main, "previously defined here")
+					}
+					currentProgram.Main = x
+					// TODO, verify compatible signature for main
 				}
+			case *TcTemplateDef:
+				result.TemplateDefs = append(result.TemplateDefs, x)
+			case *TcCall:
 				ReportErrorf(sc, tcStmt, "top level function calls are not allowed: %s", AstFormat(tcStmt))
+			default:
+				ReportErrorf(sc, tcStmt, "internal error, node type not handled: %T", tcStmt)
 			}
 		default:
 			ReportInvalidAstNode(sc, stmt, "top level statement")
 		}
 		if docComment != nil {
-			if tcStmt != nil {
-				sc.ApplyDocComment(tcStmt, docComment)
-				docComment = nil
-			} else {
-				// TODO ensure somehow that this is dead code and doesn't happen.
-				ReportErrorf(sc, docComment, "interal error, trying to apply doc comment to something that is nil")
-			}
+			sc.ApplyDocComment(tcStmt, docComment)
+			docComment = nil
 		}
 	}
 	if mainPackage && currentProgram.Main == nil {
