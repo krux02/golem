@@ -47,19 +47,6 @@ type VariableDefStmt struct {
 	Expr   Expr  // everything else
 }
 
-type ForLoopStmt struct {
-	Source     string
-	LoopIdent  *Ident
-	Collection Expr
-	Body       Expr
-}
-
-type WhileLoopStmt struct {
-	Source    string
-	Condition Expr
-	Body      Expr
-}
-
 type IfExpr struct {
 	Source    string
 	Condition Expr
@@ -171,8 +158,6 @@ func (arg *ArrayLit) GetSource() string         { return arg.Source }
 func (arg *Call) GetSource() string             { return arg.Source }
 func (arg *BracketExpr) GetSource() string      { return arg.Source }
 func (arg *VariableDefStmt) GetSource() string  { return arg.Source }
-func (arg *ForLoopStmt) GetSource() string      { return arg.Source }
-func (arg *WhileLoopStmt) GetSource() string    { return arg.Source }
 func (arg *IfExpr) GetSource() string           { return arg.Source }
 func (arg *IfElseExpr) GetSource() string       { return arg.Source }
 func (arg *ReturnExpr) GetSource() string       { return arg.Source }

@@ -12,26 +12,28 @@ import (
 func OperatorPrecedence(op string) int {
 	switch op {
 	case ".":
-		return 11
+		return 12
 	case "->":
-		return 10
+		return 11
 	case ":":
-		return 9
+		return 10
 	case "|":
-		return 8
+		return 9
 	case "*", "/":
-		return 7
+		return 8
 	case "+", "-":
-		return 6
+		return 7
 	case ">", "<", ">=", "<=":
-		return 5
+		return 6
 	case "in", "notin":
-		return 4
+		return 5
 	case "==", "!=":
-		return 3
+		return 4
 	case "and", "or":
-		return 2
+		return 3
 	case "=", "+=", "-=", "*=", "/=":
+		return 2
+	case "do":
 		return 1
 	}
 	// operator precedence does not exist
@@ -114,46 +116,48 @@ func parseContinueStmt(tokenizer *Tokenizer) *ContinueStmt {
 	return &ContinueStmt{Source: token.value}
 }
 
-func parseForLoop(tokenizer *Tokenizer) *ForLoopStmt {
-	result := &ForLoopStmt{}
-	firstToken := tokenizer.Next()
-	tokenizer.expectKind(firstToken, TkFor)
-	result.LoopIdent = parseIdent(tokenizer)
-	token := tokenizer.Next()
-	tokenizer.expectOperator(token, "in")
-	result.Collection = parseExpr(tokenizer, false)
-	token = tokenizer.Next()
-	tokenizer.expectKind(token, TkDo)
-	result.Body = parseExpr(tokenizer, false)
-	lastToken := tokenizer.token
-	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
-	return result
-}
+// func parseForLoop(tokenizer *Tokenizer) *ForLoopStmt {
+// 	result := &ForLoopStmt{}
+// 	firstToken := tokenizer.Next()
+// 	tokenizer.expectKind(firstToken, TkFor)
+// 	result.LoopIdent = parseIdent(tokenizer)
+// 	token := tokenizer.Next()
+// 	tokenizer.expectOperator(token, "in")
+// 	result.Collection = parseExpr(tokenizer, false)
+// 	token = tokenizer.Next()
+// 	tokenizer.expectKind(token, TkDo)
+// 	result.Body = parseExpr(tokenizer, false)
+// 	lastToken := tokenizer.token
+// 	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
+// 	return result
+// }
 
-func parseWhileLoop(tokenizer *Tokenizer) *WhileLoopStmt {
-	result := &WhileLoopStmt{}
-	firstToken := tokenizer.Next()
-	tokenizer.expectKind(firstToken, TkWhile)
-	result.Condition = parseExpr(tokenizer, false)
-	token := tokenizer.Next()
-	tokenizer.expectKind(token, TkDo)
-	result.Body = parseExpr(tokenizer, false)
-	lastToken := tokenizer.token
-	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
-	return result
-}
+// func parseWhileLoop(tokenizer *Tokenizer) *WhileLoopStmt {
+// 	result := &WhileLoopStmt{}
+// 	firstToken := tokenizer.Next()
+// 	tokenizer.expectKind(firstToken, TkWhile)
+// 	result.Condition = parseExpr(tokenizer, false)
+// 	token := tokenizer.Next()
+// 	tokenizer.expectKind(token, TkDo)
+// 	result.Body = parseExpr(tokenizer, false)
+// 	lastToken := tokenizer.token
+// 	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
+// 	return result
+// }
 
 func parseIfStmt(tokenizer *Tokenizer) Expr {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkIf)
-	condition := parseExpr(tokenizer, false)
-	token := tokenizer.Next()
-	tokenizer.expectKind(token, TkDo)
-	body := parseExpr(tokenizer, false)
+	conditionBodyTokenStart := tokenizer.token
+	conditionBody := parseExpr(tokenizer, false)
+	condition, body, ok := MatchBinaryOperator(conditionBody, "do")
+	if !ok {
+		tokenizer.reportError(conditionBodyTokenStart, "if statatement requires infix `do` operator")
+	}
+
 	if tokenizer.lookAheadToken.kind == TkElse {
 		tokenizer.Next()
 		elseExpr := parseExpr(tokenizer, false)
-
 		result := &IfElseExpr{Condition: condition, Body: body, Else: elseExpr}
 		lastToken := tokenizer.token
 		result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
@@ -414,10 +418,6 @@ func parseStmtOrExpr(tokenizer *Tokenizer) Expr {
 		return (Expr)(parseBreakStmt(tokenizer))
 	case TkContinue:
 		return (Expr)(parseContinueStmt(tokenizer))
-	case TkFor:
-		return (Expr)(parseForLoop(tokenizer))
-	case TkWhile:
-		return (Expr)(parseWhileLoop(tokenizer))
 	case TkType:
 		return (Expr)(parseTypeDef(tokenizer))
 	}
@@ -565,8 +565,6 @@ func attachDocComment(expr Expr, target string, value string) bool {
 		return result
 	case *VariableDefStmt:
 		return attachDocComment(ex.Expr, target, value)
-	case *ForLoopStmt:
-		return false
 	case *IfExpr:
 		return false
 	case *IfElseExpr:

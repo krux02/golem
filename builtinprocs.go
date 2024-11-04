@@ -844,6 +844,51 @@ func BuiltinTypeExpr(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	})
 }
 
+func BuiltinForLoop(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+	expr := call.Args[0].(*TcWrappedUntypedAst).Expr
+	loopIdentCollection, body, ok := MatchBinaryOperator(expr, "do")
+	if !ok {
+		ReportErrorf(sc, expr, "expect do operator")
+		return newErrorNode(call)
+	}
+	loopIdentExpr, collection, ok := MatchBinaryOperator(loopIdentCollection, "in")
+	if !ok {
+		ReportErrorf(sc, expr, "expect in operator")
+		return newErrorNode(call)
+	}
+	loopIdent, ok := loopIdentExpr.(*Ident)
+	if !ok {
+		ReportErrorf(sc, expr, "expect identifier")
+		return newErrorNode(call)
+	}
+	scope = NewSubScope(scope)
+
+	tcCollection := SemCheckExpr(sc, scope, collection, TypeUnspecified)
+	elementType := sc.ElementType(tcCollection)
+	return &TcForLoopStmt{
+		Source:     call.Source,
+		Collection: tcCollection,
+		LoopSym:    scope.NewSymbol(sc, loopIdent, SkLoopIterator, elementType),
+		Body:       SemCheckExpr(sc, scope, body, UniqueTypeConstraint{TypeVoid}),
+	}
+}
+
+func BuiltinWhileLoop(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+	expr := call.Args[0].(*TcWrappedUntypedAst).Expr
+
+	condition, body, ok := MatchBinaryOperator(expr, "do")
+	if !ok {
+		ReportErrorf(sc, expr, "expect do operator")
+		return newErrorNode(call)
+	}
+	scope = NewSubScope(scope)
+	return &TcWhileLoopStmt{
+		Source:    call.Source,
+		Condition: SemCheckExpr(sc, scope, condition, UniqueTypeConstraint{TypeBoolean}),
+		Body:      SemCheckExpr(sc, scope, body, UniqueTypeConstraint{TypeVoid}),
+	}
+}
+
 func init() {
 	openGenericsMap = make(map[Type][]Type)
 	arrayTypeMap = make(map[ArrayTypeMapKey]*ArrayType)
@@ -862,12 +907,15 @@ func init() {
 	builtinCPrintf = registerBuiltin("c_printf", "printf(", ", ", ")", []Type{TypeCStr}, TypeVoid, 0)
 	builtinCPrintf.GetSignature().Varargs = true
 
+	// TODO rename the builtin macros proces with better names
 	registerBuiltinMacro("printf", true, []Type{TypeStr}, TypeVoid, ValidatePrintfCall)
 	registerBuiltinMacro("addCFlags", false, []Type{TypeStr}, TypeVoid, BuiltinAddCFlags)
 	registerBuiltinMacro("addLinkerFlags", false, []Type{TypeStr}, TypeVoid, BuiltinAddLinkerFlags)
 	registerBuiltinMacro("emit", false, []Type{TypeStr}, TypeVoid, BuiltinEmitStmt)
 	registerBuiltinMacro("import", false, []Type{TypeStr}, TypeVoid, BuiltinImportStmt)
 	registerBuiltinMacro("type", false, []Type{TypeUntyped}, TypeUntyped, BuiltinTypeExpr)
+	registerBuiltinMacro("for", false, []Type{TypeUntyped}, TypeVoid, BuiltinForLoop)
+	registerBuiltinMacro("while", false, []Type{TypeUntyped}, TypeVoid, BuiltinWhileLoop)
 
 	registerBuiltinMacro("|", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinPipeTransformation)
 	registerBuiltinMacro(".", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinDotOperator)

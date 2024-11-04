@@ -59,21 +59,7 @@ func (arg *VariableDefStmt) RecSubSyms(substitutions []TemplateSubstitution) Exp
 	}
 	return result
 }
-func (arg *ForLoopStmt) RecSubSyms(substitutions []TemplateSubstitution) Expr {
-	return &ForLoopStmt{
-		Source:     arg.Source,
-		LoopIdent:  arg.LoopIdent.RecSubSyms(substitutions).(*Ident),
-		Collection: arg.Collection.RecSubSyms(substitutions),
-		Body:       arg.Body.RecSubSyms(substitutions),
-	}
-}
-func (arg *WhileLoopStmt) RecSubSyms(substitutions []TemplateSubstitution) Expr {
-	return &WhileLoopStmt{
-		Source:    arg.Source,
-		Condition: arg.Condition.RecSubSyms(substitutions),
-		Body:      arg.Body.RecSubSyms(substitutions),
-	}
-}
+
 func (arg *IfExpr) RecSubSyms(substitutions []TemplateSubstitution) Expr {
 	return &IfExpr{
 		Source:    arg.Source,
@@ -81,6 +67,7 @@ func (arg *IfExpr) RecSubSyms(substitutions []TemplateSubstitution) Expr {
 		Body:      arg.Body.RecSubSyms(substitutions),
 	}
 }
+
 func (arg *IfElseExpr) RecSubSyms(substitutions []TemplateSubstitution) Expr {
 	return &IfElseExpr{
 		Source:    arg.Source,

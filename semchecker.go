@@ -356,7 +356,6 @@ func SemCheckTypeDef(sc *SemChecker, scope Scope, def *TypeDef) TcExpr {
 			ReportErrorf(sc, body, "expect code block")
 			return &TcErrorNode{Source: def.Source, SourceNode: def}
 		}
-
 		result := &TcEnumDef{
 			Source:  def.Source,
 			Name:    name.Source,
@@ -431,7 +430,6 @@ func ParseTraitDef(sc *SemChecker, expr Expr) (name *Ident, dependentTypes []*Id
 				if procDef, isProcDef := it.(*Call); isProcDef && procDef.Command && procDef.Callee.GetSource() == "proc" {
 					signatures = append(signatures, procDef)
 				} else {
-					fmt.Printf("proc def: %+#v\n", it)
 					ReportErrorf(sc, it, "expect proc def here")
 				}
 			}
@@ -1950,9 +1948,6 @@ func SemCheckExpr(sc *SemChecker, scope Scope, arg Expr, expected TypeConstraint
 	case *VariableDefStmt:
 		ExpectType(sc, arg, TypeVoid, expected)
 		return (TcExpr)(SemCheckVariableDefStmt(sc, scope, arg))
-	case *ForLoopStmt:
-		ExpectType(sc, arg, TypeVoid, expected)
-		return (TcExpr)(SemCheckForLoopStmt(sc, scope, arg))
 	case *IfExpr:
 		ExpectType(sc, arg, TypeVoid, expected)
 		return (TcExpr)(SemCheckIfExpr(sc, scope, arg))
@@ -1962,8 +1957,6 @@ func SemCheckExpr(sc *SemChecker, scope Scope, arg Expr, expected TypeConstraint
 		return (TcExpr)(SemCheckArrayLit(sc, scope, arg, expected))
 	case *NilLit:
 		return (TcExpr)(SemCheckNilLit(sc, scope, arg, expected))
-	case *WhileLoopStmt:
-		return (TcExpr)(SemCheckWhileLoopStmt(sc, scope, arg))
 	case TcExpr:
 		ExpectType(sc, arg, arg.GetType(), expected)
 		return arg
@@ -2230,29 +2223,6 @@ func (sc *SemChecker) ElementType(expr TcExpr) Type {
 	}
 	ReportErrorf(sc, expr, "expect type with elements to iterate over")
 	return TypeError
-}
-
-func SemCheckForLoopStmt(sc *SemChecker, scope Scope, loopArg *ForLoopStmt) *TcForLoopStmt {
-	scope = NewSubScope(scope)
-	// currently only iteration on strings in possible (of course that is not final)
-	collection := SemCheckExpr(sc, scope, loopArg.Collection, TypeUnspecified)
-	elementType := sc.ElementType(collection)
-	return &TcForLoopStmt{
-		Source:     loopArg.Source,
-		Collection: collection,
-		LoopSym:    scope.NewSymbol(sc, loopArg.LoopIdent, SkLoopIterator, elementType),
-		Body:       SemCheckExpr(sc, scope, loopArg.Body, UniqueTypeConstraint{TypeVoid}),
-	}
-}
-
-func SemCheckWhileLoopStmt(sc *SemChecker, scope Scope, loopArg *WhileLoopStmt) *TcWhileLoopStmt {
-	scope = NewSubScope(scope)
-
-	return &TcWhileLoopStmt{
-		Source:    loopArg.Source,
-		Condition: SemCheckExpr(sc, scope, loopArg.Condition, UniqueTypeConstraint{TypeBoolean}),
-		Body:      SemCheckExpr(sc, scope, loopArg.Body, UniqueTypeConstraint{TypeVoid}),
-	}
 }
 
 func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *PackageDef, mainPackage bool) (result *TcPackageDef) {

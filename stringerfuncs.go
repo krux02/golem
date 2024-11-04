@@ -339,27 +339,11 @@ func (stmt *VariableDefStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteNode(stmt.Expr)
 }
 
-func (loopStmt *ForLoopStmt) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("for ")
-	builder.WriteNode(loopStmt.LoopIdent)
-	builder.WriteString(" in ")
-	builder.WriteNode(loopStmt.Collection)
-	builder.WriteString(" do ")
-	builder.WriteNode(loopStmt.Body)
-}
-
 func (loopStmt *TcForLoopStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("for ")
 	builder.WriteString(loopStmt.LoopSym.Source)
 	builder.WriteString(" in ")
 	builder.WriteNode(loopStmt.Collection)
-	builder.WriteString(" do ")
-	builder.WriteNode(loopStmt.Body)
-}
-
-func (loopStmt *WhileLoopStmt) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("while ")
-	builder.WriteNode(loopStmt.Condition)
 	builder.WriteString(" do ")
 	builder.WriteNode(loopStmt.Body)
 }
