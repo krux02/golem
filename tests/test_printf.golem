@@ -8,20 +8,20 @@ const LC_CTYPE = 0:i32
 proc "importc" setlocale(category: i32, locale: cstr) -> cstr
 
 proc main() -> i32 = {
-  var i1 : i8 = low(type i8)
-  var i2 : i16 = low(type i16)
-  var i3 : i32 = low(type i32)
-  var i4 : i64 = low(type i64)
+  var i1 : i8 = low(type(i8))
+  var i2 : i16 = low(type(i16))
+  var i3 : i32 = low(type(i32))
+  var i4 : i64 = low(type(i64))
 
   assert(i1 == -0x80)
   assert(i2 == -0x8000)
   assert(i3 == -0x80000000)
   assert(i4 == -0x8000000000000000)
 
-  var i5 : u8 = high(type u8)
-  var i6 : u16 = high(type u16)
-  var i7 : u32 = high(type u32)
-  var i8 : u64 = high(type u64)
+  var i5 : u8 = high(type(u8))
+  var i6 : u16 = high(type(u16))
+  var i7 : u32 = high(type(u32))
+  var i8 : u64 = high(type(u64))
 
   assert(i5 == 0xff)
   assert(i6 == 0xffff)

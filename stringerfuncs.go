@@ -294,14 +294,6 @@ func (lit *NilLit) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("nullptr")
 }
 
-func (typeDef *TypeDef) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("type ")
-	if typeDef.Annotations != nil {
-		builder.WriteNode(typeDef.Annotations)
-	}
-	builder.WriteNode(typeDef.Expr)
-}
-
 func (typeDef *TcTraitDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("trait ")
 	builder.WriteString(typeDef.Name)

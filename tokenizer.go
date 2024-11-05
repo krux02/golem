@@ -28,7 +28,6 @@ const (
 	TkPostfixDocComment
 
 	// keywords
-	TkType
 	TkVar
 	TkLet
 	TkConst
@@ -70,7 +69,6 @@ var TokenKindNames = [...]string{
 	TkNilLit:            "NilLit",
 	TkPrefixDocComment:  "PrefixDocComment",
 	TkPostfixDocComment: "PostfixDocComment",
-	TkType:              "Type",
 	TkVar:               "Var",
 	TkLet:               "Let",
 	TkConst:             "Const",
@@ -384,8 +382,6 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 		// builtin word operators
 		case "and", "or", "not", "in", "notin", "ptr", "addr", "do": // , "conv", "cast":
 			result.kind = TkOperator
-		case "type":
-			result.kind = TkType
 		case "var":
 			result.kind = TkVar
 		case "let":

@@ -70,12 +70,6 @@ type VarExpr struct {
 	Expr   Expr
 }
 
-type TypeDef struct {
-	Source      string
-	Expr        Expr
-	Annotations *StrLit
-}
-
 type CodeBlock struct {
 	Source string
 	Items  []Expr
@@ -146,7 +140,6 @@ type ContinueStmt struct {
 
 func (arg *InvalidTokenExpr) GetSource() string { return arg.Source }
 func (arg *ExprList) GetSource() string         { return arg.Source }
-func (arg *TypeDef) GetSource() string          { return arg.Source }
 func (arg *PrefixDocComment) GetSource() string { return arg.Source }
 func (arg *NamedDocSection) GetSource() string  { return arg.Source }
 func (arg *Ident) GetSource() string            { return arg.Source }

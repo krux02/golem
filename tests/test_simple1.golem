@@ -41,20 +41,20 @@ proc main() -> i32 = {
   }
 
   {
-    let high1 = high(type i8)
-    let high2 = high(type i16)
-    let high3 = high(type i32)
-    let high4 = high(type i64)
+    let high1 = high(type(i8))
+    let high2 = high(type(i16))
+    let high3 = high(type(i32))
+    let high4 = high(type(i64))
 
     assert(high1 == 127)
     assert(high2 == 32767)
     assert(high3 == 2147483647)
     assert(high4 == 9223372036854775807)
 
-    assert(low(type i8) == -128)
-    assert(low(type i16) == -32768)
-    assert(low(type i32) == -2147483648)
-    assert(low(type i64) == -9223372036854775808)
+    assert(low(type(i8)) == -128)
+    assert(low(type(i16)) == -32768)
+    assert(low(type(i32)) == -2147483648)
+    assert(low(type(i64)) == -9223372036854775808)
   }
 
   {
@@ -100,9 +100,9 @@ proc main() -> i32 = {
     # test casting around
     # TODO, test more here. This is absolute minimal effort test right now
     let myFloat = 1.0:f64
-    var myIntA = myFloat | cast(type i64)
+    var myIntA = myFloat | cast(type(i64))
     assert(myIntA == 0x3ff0000000000000)
-    var myIntB = myFloat | conv(type i64)
+    var myIntB = myFloat | conv(type(i64))
     assert(myIntB == 1)
   }
 

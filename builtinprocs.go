@@ -835,14 +835,6 @@ func BuiltinImportStmt(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	return &TcCodeBlock{Source: call.Source}
 }
 
-func BuiltinTypeExpr(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
-	expr := call.Args[0].(*TcWrappedUntypedAst).Expr
-	return (TcExpr)(&TcTypeContext{
-		Source:      call.Source,
-		WrappedType: LookUpType(sc, scope, expr),
-	})
-}
-
 func BuiltinForLoop(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	expr := call.Args[0].(*TcWrappedUntypedAst).Expr
 	loopIdentCollection, body, ok := MatchBinaryOperator(expr, "do")
@@ -989,6 +981,130 @@ func BuiltinTemplateDef(sc *SemChecker, parentScope Scope, call *TcCall) TcExpr 
 
 }
 
+func BuiltinTypeDef(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+	//SemCheckTypeDef(sc *SemChecker, scope Scope, expr Expr) TcExpr {
+	expr := call.Args[0].(*TcWrappedUntypedAst).Expr
+	var importc bool
+
+	if strLit, isStrLit := expr.(*StrLit); isStrLit {
+		// annotations
+		if strLit.Value == "importc" {
+			importc = true
+		} else {
+			ReportInvalidAnnotations(sc, strLit)
+		}
+		expr = call.Args[1].(*TcWrappedUntypedAst).Expr
+	}
+
+	lhs, rhs, isAssignment := MatchAssign(expr)
+	if !isAssignment {
+		// TODO, this is really ugly code. Creating a type context is a branch in
+		// this macro really shouldn't be the case. This should be its own macro with its own name.
+		expr := call.Args[0].(*TcWrappedUntypedAst).Expr
+		return (TcExpr)(&TcTypeContext{
+			Source:      call.Source,
+			WrappedType: LookUpType(sc, scope, expr),
+		})
+	}
+	name, isIdent := lhs.(*Ident)
+	if !isIdent {
+		ReportErrorf(sc, lhs, "expect ident")
+		return &TcErrorNode{Source: call.Source, SourceNode: call}
+	}
+	callee, body, isPrefixCall := MatchPrefixCall(rhs)
+	if !isPrefixCall {
+		ReportErrorf(sc, rhs, "expect prefix call")
+		return &TcErrorNode{Source: call.Source, SourceNode: call}
+	}
+	ValidNameCheck(sc, name, "type")
+
+	switch callee.Source {
+	case "struct":
+		block, isBlock := body.(*CodeBlock)
+		if !isBlock {
+			ReportErrorf(sc, body, "expect code block")
+			return &TcErrorNode{Source: call.Source, SourceNode: call}
+		}
+
+		result := &TcStructDef{
+			Source:  call.Source,
+			Name:    name.Source,
+			Importc: importc,
+		}
+		structType := &StructType{Impl: result}
+		// TODO: test when Importc that all fields are also Importc (or importc compatible, like builtin integer types)
+
+		for _, field := range block.Items {
+			if lhs, rhs, ok := MatchColonExpr(field); !ok {
+				ReportErrorf(sc, field, "expect colon expr")
+			} else {
+				if nameIdent, ok := lhs.(*Ident); !ok {
+					ReportErrorf(sc, lhs, "expect Ident, but got %T", lhs)
+				} else {
+					ValidNameCheck(sc, nameIdent, "struct field")
+					tcField := &TcStructField{
+						Name: nameIdent.Source,
+						Type: LookUpType(sc, scope, rhs),
+					}
+					result.Fields = append(result.Fields, tcField)
+				}
+			}
+		}
+		RegisterNamedType(sc, scope, structType, name)
+		return result
+	case "enum":
+		block, isBlock := body.(*CodeBlock)
+		if !isBlock {
+			ReportErrorf(sc, body, "expect code block")
+			return &TcErrorNode{Source: call.Source, SourceNode: call}
+		}
+		result := &TcEnumDef{
+			Source:  call.Source,
+			Name:    name.Source,
+			Importc: importc,
+		}
+		enumType := &EnumType{Impl: result}
+		for _, value := range block.Items {
+			ident, isIdent := value.(*Ident)
+			if !isIdent {
+				ReportErrorf(sc, value, "enum entry must be an identifier")
+				continue
+			}
+
+			ValidNameCheck(sc, ident, "enum value")
+			sym := &TcSymbol{
+				Source: ident.Source,
+				Kind:   SkEnum,
+				Type:   enumType,
+			}
+			result.Values = append(result.Values, sym)
+		}
+		RegisterType(sc, scope, enumType.Impl.Name, enumType, name)
+		registerBuiltin("string", fmt.Sprintf("%s_names_array[", result.Name), "", "]", []Type{enumType}, TypeStr, 0)
+		for _, intType := range TypeAnyInt.Items {
+			builtinType := intType.(*BuiltinIntType)
+			registerBuiltin(builtinType.Name, fmt.Sprintf("(%s)", builtinType.InternalName), "", "", []Type{enumType}, intType, 0)
+			registerBuiltin(result.Name, fmt.Sprintf("(%s)", result.Name), "", "", []Type{intType}, enumType, 0)
+		}
+		registerBuiltin("contains", "(((", ") & (1 << (", "))) != 0)", []Type{GetEnumSetType(enumType), enumType}, TypeBoolean, 0)
+		return result
+	case "type":
+		// a very primitive type alias implementation
+		typ := LookUpType(sc, scope, body)
+
+		result := &TcTypeAlias{
+			Source: call.Source,
+			Name:   name.Source,
+			Type:   typ,
+		}
+		RegisterType(sc, scope, name.Source, typ, name)
+		return result
+	default:
+		ReportErrorf(sc, callee, "type must be struct or enum")
+	}
+	return &TcErrorNode{Source: call.Source, SourceNode: call}
+}
+
 func init() {
 	openGenericsMap = make(map[Type][]Type)
 	arrayTypeMap = make(map[ArrayTypeMapKey]*ArrayType)
@@ -1013,13 +1129,14 @@ func init() {
 	registerBuiltinMacro("addLinkerFlags", false, []Type{TypeStr}, TypeVoid, BuiltinAddLinkerFlags)
 	registerBuiltinMacro("emit", false, []Type{TypeStr}, TypeVoid, BuiltinEmitStmt)
 	registerBuiltinMacro("import", false, []Type{TypeStr}, TypeVoid, BuiltinImportStmt)
-	registerBuiltinMacro("type", false, []Type{TypeUntyped}, TypeUntyped, BuiltinTypeExpr)
 	registerBuiltinMacro("for", false, []Type{TypeUntyped}, TypeVoid, BuiltinForLoop)
 	registerBuiltinMacro("while", false, []Type{TypeUntyped}, TypeVoid, BuiltinWhileLoop)
 	registerBuiltinMacro("proc", false, []Type{TypeUntyped}, TypeVoid, BuiltinProcDef)
 	registerBuiltinMacro("proc", false, []Type{TypeUntyped, TypeUntyped}, TypeVoid, BuiltinProcDef)
 	registerBuiltinMacro("template", false, []Type{TypeUntyped}, TypeVoid, BuiltinTemplateDef)
 	registerBuiltinMacro("template", false, []Type{TypeUntyped, TypeUntyped}, TypeVoid, BuiltinTemplateDef)
+	registerBuiltinMacro("type", false, []Type{TypeUntyped}, TypeUntyped, BuiltinTypeDef)
+	registerBuiltinMacro("type", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinTypeDef)
 
 	registerBuiltinMacro("|", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinPipeTransformation)
 	registerBuiltinMacro(".", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinDotOperator)

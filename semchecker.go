@@ -287,122 +287,6 @@ func LookUpLetSym(sc *SemChecker, scope Scope, ident *Ident, expected TypeConstr
 	return LookUpLetSymRecursive(sc, scope, ident, expected)
 }
 
-func SemCheckTypeDef(sc *SemChecker, scope Scope, def *TypeDef) TcExpr {
-
-	lhs, rhs, isAssignment := MatchAssign(def.Expr)
-	if !isAssignment {
-		ReportErrorf(sc, def.Expr, "expect assignment")
-		return &TcErrorNode{Source: def.Source, SourceNode: def}
-	}
-	name, isIdent := lhs.(*Ident)
-	if !isIdent {
-		ReportErrorf(sc, lhs, "expect ident")
-		return &TcErrorNode{Source: def.Source, SourceNode: def}
-	}
-	callee, body, isPrefixCall := MatchPrefixCall(rhs)
-	if !isPrefixCall {
-		ReportErrorf(sc, rhs, "expect prefix call")
-		return &TcErrorNode{Source: def.Source, SourceNode: def}
-	}
-
-	ValidNameCheck(sc, name, "type")
-
-	var importc bool
-	if def.Annotations != nil {
-		if def.Annotations.Value == "importc" {
-			importc = true
-		} else {
-			ReportInvalidAnnotations(sc, def.Annotations)
-		}
-	}
-
-	switch callee.Source {
-	case "struct":
-		block, isBlock := body.(*CodeBlock)
-		if !isBlock {
-			ReportErrorf(sc, body, "expect code block")
-			return &TcErrorNode{Source: def.Source, SourceNode: def}
-		}
-
-		result := &TcStructDef{
-			Source:  def.Source,
-			Name:    name.Source,
-			Importc: importc,
-		}
-		structType := &StructType{Impl: result}
-		// TODO: test when Importc that all fields are also Importc (or importc compatible, like builtin integer types)
-
-		for _, field := range block.Items {
-			if lhs, rhs, ok := MatchColonExpr(field); !ok {
-				ReportErrorf(sc, field, "expect colon expr")
-			} else {
-				if nameIdent, ok := lhs.(*Ident); !ok {
-					ReportErrorf(sc, lhs, "expect Ident, but got %T", lhs)
-				} else {
-					ValidNameCheck(sc, nameIdent, "struct field")
-					tcField := &TcStructField{
-						Name: nameIdent.Source,
-						Type: LookUpType(sc, scope, rhs),
-					}
-					result.Fields = append(result.Fields, tcField)
-				}
-			}
-		}
-		RegisterNamedType(sc, scope, structType, name)
-		return result
-	case "enum":
-		block, isBlock := body.(*CodeBlock)
-		if !isBlock {
-			ReportErrorf(sc, body, "expect code block")
-			return &TcErrorNode{Source: def.Source, SourceNode: def}
-		}
-		result := &TcEnumDef{
-			Source:  def.Source,
-			Name:    name.Source,
-			Importc: importc,
-		}
-		enumType := &EnumType{Impl: result}
-		for _, value := range block.Items {
-			ident, isIdent := value.(*Ident)
-			if !isIdent {
-				ReportErrorf(sc, value, "enum entry must be an identifier")
-				continue
-			}
-
-			ValidNameCheck(sc, ident, "enum value")
-			sym := &TcSymbol{
-				Source: ident.Source,
-				Kind:   SkEnum,
-				Type:   enumType,
-			}
-			result.Values = append(result.Values, sym)
-		}
-		RegisterType(sc, scope, enumType.Impl.Name, enumType, name)
-		registerBuiltin("string", fmt.Sprintf("%s_names_array[", result.Name), "", "]", []Type{enumType}, TypeStr, 0)
-		for _, intType := range TypeAnyInt.Items {
-			builtinType := intType.(*BuiltinIntType)
-			registerBuiltin(builtinType.Name, fmt.Sprintf("(%s)", builtinType.InternalName), "", "", []Type{enumType}, intType, 0)
-			registerBuiltin(result.Name, fmt.Sprintf("(%s)", result.Name), "", "", []Type{intType}, enumType, 0)
-		}
-		registerBuiltin("contains", "(((", ") & (1 << (", "))) != 0)", []Type{GetEnumSetType(enumType), enumType}, TypeBoolean, 0)
-		return result
-	case "type":
-		// a very primitive type alias implementation
-		typ := LookUpType(sc, scope, body)
-
-		result := &TcTypeAlias{
-			Source: def.Source,
-			Name:   name.Source,
-			Type:   typ,
-		}
-		RegisterType(sc, scope, name.Source, typ, name)
-		return result
-	default:
-		ReportErrorf(sc, callee, "type must be struct or enum")
-	}
-	return &TcErrorNode{Source: def.Source, SourceNode: def}
-}
-
 func ParseTraitDef(sc *SemChecker, expr Expr) (name *Ident, dependentTypes []*Ident, signatures []*Call) {
 	if lhs, rhs, isAssign := MatchAssign(expr); isAssign {
 		switch x := lhs.(type) {
@@ -2155,20 +2039,6 @@ func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *Packag
 	for _, stmt := range arg.TopLevelStmts {
 		var tcStmt TcExpr
 		switch stmt := stmt.(type) {
-		case *TypeDef:
-			tcStmt = SemCheckTypeDef(sc, pkgScope, stmt)
-			switch td := tcStmt.(type) {
-			case *TcStructDef:
-				result.StructDefs = append(result.StructDefs, td)
-			case *TcEnumDef:
-				result.EnumDefs = append(result.EnumDefs, td)
-			case *TcTypeAlias:
-				result.TypeAliases = append(result.TypeAliases, td)
-			case *TcErrorNode:
-				// ignore, error already reported
-			default:
-				panic(fmt.Errorf("internal error, %T", td))
-			}
 		case *VariableDefStmt:
 			varDef := SemCheckVariableDefStmt(sc, pkgScope, stmt)
 			tcStmt = varDef
@@ -2191,6 +2061,12 @@ func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *Packag
 				result.EmitStatements = append(result.EmitStatements, x)
 			case *TcTraitDef:
 				result.TraitDefs = append(result.TraitDefs, x)
+			case *TcStructDef:
+				result.StructDefs = append(result.StructDefs, x)
+			case *TcEnumDef:
+				result.EnumDefs = append(result.EnumDefs, x)
+			case *TcTypeAlias:
+				result.TypeAliases = append(result.TypeAliases, x)
 			case *TcProcDef:
 				result.ProcDefs = append(result.ProcDefs, x)
 				if mainPackage && x.Signature.Name == "main" {
@@ -2206,6 +2082,8 @@ func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *Packag
 				}
 			case *TcTemplateDef:
 				result.TemplateDefs = append(result.TemplateDefs, x)
+			case *TcErrorNode:
+				// ignore, error already reported
 			case *TcCall:
 				ReportErrorf(sc, tcStmt, "top level function calls are not allowed: %s", AstFormat(tcStmt))
 			default:

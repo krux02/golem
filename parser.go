@@ -418,8 +418,6 @@ func parseStmtOrExpr(tokenizer *Tokenizer) Expr {
 		return (Expr)(parseBreakStmt(tokenizer))
 	case TkContinue:
 		return (Expr)(parseContinueStmt(tokenizer))
-	case TkType:
-		return (Expr)(parseTypeDef(tokenizer))
 	}
 	result := parseExpr(tokenizer, false)
 	if ident, isIdent := result.(*Ident); isIdent {
@@ -624,7 +622,7 @@ func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
 		}
 	case TkOperator:
 		result = (Expr)(parsePrefixCall(tokenizer, true))
-	case TkDiscard, TkStruct, TkUnion, TkEnum, TkType, TkTrait:
+	case TkDiscard, TkStruct, TkUnion, TkEnum, TkTrait:
 		result = (Expr)(parsePrefixCall(tokenizer, false))
 	case TkReturn:
 		result = (Expr)(parseReturnExpr(tokenizer))
@@ -688,18 +686,6 @@ func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
 	}
 
 	return result
-}
-
-func parseTypeDef(tokenizer *Tokenizer) Expr {
-	firstToken := tokenizer.Next()
-	tokenizer.expectKind(firstToken, TkType)
-	var annotations *StrLit
-	if tokenizer.lookAheadToken.kind == TkStrLit {
-		annotations = parseStrLit(tokenizer)
-	}
-	expr := parseExpr(tokenizer, false)
-	source := joinSubstr(tokenizer.code, firstToken.value, expr.GetSource())
-	return &TypeDef{Source: source, Expr: expr, Annotations: annotations}
 }
 
 func parsePackage(tokenizer *Tokenizer) (result *PackageDef, errors []ParseError) {

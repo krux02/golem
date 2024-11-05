@@ -19,14 +19,6 @@ func (arg *CodeBlock) RecSubSyms(substitutions []TemplateSubstitution) Expr {
 	}
 }
 
-func (arg *TypeDef) RecSubSyms(substitutions []TemplateSubstitution) Expr {
-	result := &TypeDef{
-		Source: arg.Source,
-		Expr:   arg.Expr.RecSubSyms(substitutions),
-	}
-	return result
-}
-
 func (arg *ArrayLit) RecSubSyms(substitutions []TemplateSubstitution) Expr {
 	return &ArrayLit{
 		Source: arg.Source,
