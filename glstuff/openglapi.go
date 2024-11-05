@@ -236,24 +236,24 @@ emit(
 \\ #include <GL/gl.h>
 )
 
-type GLenum =     type u32
-type GLboolean =  type bool
-type GLbitfield = type u32
-type GLvoid =     type void
-type GLubyte =    type u8
-type GLchar =     type i8
-type GLbyte =     type i8
-type GLushort =   type u16
-type GLshort =    type i16
-type GLuint =     type u32
-type GLuint64 =   type u64
-type GLint64 =    type i64
-type GLfloat =    type f32
-type GLdouble =   type f64
-type GLintptr =   type int
-type GLsizeiptr = type int
-type GLsizei =    type i32
-type GLint =      type i32
+type GLenum =     type(u32)
+type GLboolean =  type(bool)
+type GLbitfield = type(u32)
+type GLvoid =     type(void)
+type GLubyte =    type(u8)
+type GLchar =     type(i8)
+type GLbyte =     type(i8)
+type GLushort =   type(u16)
+type GLshort =    type(i16)
+type GLuint =     type(u32)
+type GLuint64 =   type(u64)
+type GLint64 =    type(i64)
+type GLfloat =    type(f32)
+type GLdouble =   type(f64)
+type GLintptr =   type(int)
+type GLsizeiptr = type(int)
+type GLsizei =    type(i32)
+type GLint =      type(i32)
 # type GLsync =     <not implemented GLsync>
 # type DEBUGPROC = <not implemented GLDEBUGPROC>
 `)
@@ -342,11 +342,11 @@ type GLint =      type i32
 				// 	panic(fmt.Errorf("\n%d:  %s", ii, command.Type))
 				// }
 				// fmt.Printf("): %s\n", typemap[command.Type])
-				fmt.Printf("): %s\n", command.Type)
+				fmt.Printf(") -> %s\n", command.Type)
 			} else if command.Name[0:5] == "glMap" {
-				fmt.Printf("): pointer\n")
+				fmt.Printf(") -> pointer\n")
 			} else {
-				fmt.Printf("): void\n")
+				fmt.Printf(") -> void\n")
 			}
 		}
 	}

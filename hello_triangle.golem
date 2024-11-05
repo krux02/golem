@@ -46,33 +46,33 @@ type Pipeline = struct {
 }
 
 
-proc "importc" strlen(str: cstr): uint;
-proc "importc" malloc(size: uint): pointer;
+proc "importc" strlen(str: cstr) -> uint;
+proc "importc" malloc(size: uint) -> pointer;
 
-proc makeString(cstr: cstr): str = {
+proc makeString(cstr: cstr) -> str = {
   # TODO not implemented
   ""
 }
 
-proc shaderSource(shader: Shader, source: cstr) : void = {
+proc shaderSource(shader: Shader, source: cstr) -> void = {
   var source: cstr = source
   var length: i32 = i32(strlen(source))
   glShaderSource(shader.handle, 1, addr(source), addr(length))
 }
 
-proc compileStatus(shader: Shader): bool = {
+proc compileStatus(shader: Shader) -> bool = {
   var status: i32
   glGetShaderiv(shader.handle, GL_COMPILE_STATUS, addr(status))
   status != 0
 }
 
-proc linkStatus(program: Program): bool = {
+proc linkStatus(program: Program) -> bool = {
   var status: i32 # GLint
   glGetProgramiv(program.handle, GL_LINK_STATUS, addr(status))
   status != 0
 }
 
-proc shaderInfoLog(shader: Shader): str = {
+proc shaderInfoLog(shader: Shader) -> str = {
   var length: i32 = 0
   glGetShaderiv(shader.handle, GL_INFO_LOG_LENGTH, addr(length))
   # let result = newString(length.int)
@@ -82,9 +82,9 @@ proc shaderInfoLog(shader: Shader): str = {
 
 # type GLenum = u32
 
-proc showError(a: str, b: cstr, d: LineInfo): void = {}
+proc showError(a: str, b: cstr, d: LineInfo) -> void = {}
 
-proc compileShader(shaderType: u32, source: cstr, lineinfo: LineInfo): Shader = {
+proc compileShader(shaderType: u32, source: cstr, lineinfo: LineInfo) -> Shader = {
   var result: Shader
 
   result.handle = glCreateShader(shaderType)
@@ -97,12 +97,12 @@ proc compileShader(shaderType: u32, source: cstr, lineinfo: LineInfo): Shader = 
   result
 }
 
-proc attachAndDeleteShader(program: Program, shader: Shader): void = {
+proc attachAndDeleteShader(program: Program, shader: Shader) -> void = {
   glAttachShader(program.handle, shader.handle)
   glDeleteShader(shader.handle)
 }
 
-proc infoLog(program: Program): str = {
+proc infoLog(program: Program) -> str = {
   var length = 0:i32  #GLint = 0
   glGetProgramiv(program.handle, GL_INFO_LOG_LENGTH, addr(length));
   #result = newString(length.int)
@@ -110,7 +110,7 @@ proc infoLog(program: Program): str = {
   "TODO *infoLog* not yet implemented"
 }
 
-proc linkOrDelete(program: Program): void = {
+proc linkOrDelete(program: Program) -> void = {
   glLinkProgram(program.handle)
   if not linkStatus(program) do {
     printf("Log: %s\n", infoLog(program))
@@ -119,7 +119,7 @@ proc linkOrDelete(program: Program): void = {
 }
 
 ## Typed wrapper around `glCreateVertexArrays`.
-proc createVertexArrayObject(label: str): VertexArrayObject = {
+proc createVertexArrayObject(label: str) -> VertexArrayObject = {
   var result: VertexArrayObject
   glCreateVertexArrays(1, addr(result.handle))
   if len(label) > 0 do {
@@ -128,7 +128,7 @@ proc createVertexArrayObject(label: str): VertexArrayObject = {
   result
 }
 
-proc attributeLocation(program: Program, name: str) : Location = [index = glGetAttribLocation(program.handle, cstr(name))]
+proc attributeLocation(program: Program, name: str) -> Location = [index = glGetAttribLocation(program.handle, cstr(name))]
 
 type OffsetAlign = struct {
   offset: i32
@@ -136,11 +136,11 @@ type OffsetAlign = struct {
 }
 
 trait HasSizeOf(T) = {
-  proc sizeof(_: T): i64
+  proc sizeof(_: T) -> i64
 }
 
 # TODO enable this
-# proc write[T : HasSizeOf](dst: pointer, var offset: i32, value: T): void = {
+# proc write[T : HasSizeOf](dst: pointer, var offset: i32, value: T) -> void = {
 #   (cast(type ptr T, cast(type uint, dst) + cast(type uint, offset)))[] = value
 #   offset += i32(sizeof(value))
 # }
@@ -150,18 +150,18 @@ trait HasSizeOf(T) = {
 #   offset += sizeof(value) | conv(type i32)
 # }
 
-proc write(dst: pointer, var offset: i32, value: array(16, f32)): void = {
-  indexOp((dst | cast(type uint) + offset | cast(type uint)) | cast(type ptr array(16, f32))) = value
-  offset += sizeof(value) | conv(type i32)
+proc write(dst: pointer, var offset: i32, value: array(16, f32)) -> void = {
+  indexOp((dst | cast(type(uint)) + offset | cast(type(uint))) | cast(type(ptr array(16, f32)))) = value
+  offset += sizeof(value) | conv(type(i32))
 }
 
-proc write(dst: pointer, var offset: i32, value: f32): void = {
-  indexOp((dst | cast(type uint) + offset | cast(type uint)) | cast(type ptr f32)) = value
-  offset += sizeof(value) | conv(type i32)
+proc write(dst: pointer, var offset: i32, value: f32) -> void = {
+  indexOp((dst | cast(type(uint)) + offset | cast(type(uint))) | cast(type(ptr f32))) = value
+  offset += sizeof(value) | conv(type(i32))
 }
 
 
-proc alignFunc(address, alignment: i32): i32 = bitand(address + (alignment - 1), bitnot(alignment - 1))
+proc alignFunc(address, alignment: i32) -> i32 = bitand(address + (alignment - 1), bitnot(alignment - 1))
 
 # proc std140AlignedWrite(dst: pointer, offset: i32, value: f32): OffsetAlign = {
 #   var result: OffsetAlign = [offset = alignFunc(offset, 4), align = 4]
@@ -176,9 +176,9 @@ proc alignFunc(address, alignment: i32): i32 = bitand(address + (alignment - 1),
 #   dst.write(result.offset, value)
 
 #proc max(a,b: i64): i64 = if a > b do a else b
-proc max(a,b: i32): i32 = if a > b do a else b
+proc max(a,b: i32) -> i32 = if a > b do a else b
 
-proc std140AlignedWrite(dst: pointer, offset: i32, value: array(16, f32)): OffsetAlign = {
+proc std140AlignedWrite(dst: pointer, offset: i32, value: array(16, f32)) -> OffsetAlign = {
   var result: OffsetAlign
   result.align = 16
   result.offset = alignFunc(offset, result.align)
@@ -186,7 +186,7 @@ proc std140AlignedWrite(dst: pointer, offset: i32, value: array(16, f32)): Offse
   result
 }
 
-proc std140AlignedWrite(dst: pointer, offset: i32, uniformObject: UniformBufType_436214163): OffsetAlign = {
+proc std140AlignedWrite(dst: pointer, offset: i32, uniformObject: UniformBufType_436214163) -> OffsetAlign = {
   var result: OffsetAlign
   result.align = 4
   result.offset = alignFunc(offset, 4)
@@ -194,7 +194,7 @@ proc std140AlignedWrite(dst: pointer, offset: i32, uniformObject: UniformBufType
   std140AlignedWrite(dst, offset, uniformObject.mvp)
 }
 
-proc main(): i32 = {
+proc main() -> i32 = {
   let window = SDL_CreateWindow("hello triangle", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_OPENGL)
   assert(window != nil)
   # SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4)

@@ -1,4 +1,9 @@
+* TODO better error message for syntax error in proc def
 
+espectially when the return type is passed in with : instead of ->
+the = is missing
+
+* TODO pattern matching for enums, integer, constants, simply for the sdl main loop.
 * TODO loop statements
 
 implement/test break and continue

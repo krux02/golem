@@ -36,24 +36,24 @@ emit(
 \\ #include <GL/gl.h>
 )
 
-type GLenum =     type u32
-type GLboolean =  type bool
-type GLbitfield = type u32
-type GLvoid =     type void
-type GLubyte =    type u8
-type GLchar =     type i8
-type GLbyte =     type i8
-type GLushort =   type u16
-type GLshort =    type i16
-type GLuint =     type u32
-type GLuint64 =   type u64
-type GLint64 =    type i64
-type GLfloat =    type f32
-type GLdouble =   type f64
-type GLintptr =   type int
-type GLsizeiptr = type int
-type GLsizei =    type i32
-type GLint =      type i32
+type GLenum =     type(u32)
+type GLboolean =  type(bool)
+type GLbitfield = type(u32)
+type GLvoid =     type(void)
+type GLubyte =    type(u8)
+type GLchar =     type(i8)
+type GLbyte =     type(i8)
+type GLushort =   type(u16)
+type GLshort =    type(i16)
+type GLuint =     type(u32)
+type GLuint64 =   type(u64)
+type GLint64 =    type(i64)
+type GLfloat =    type(f32)
+type GLdouble =   type(f64)
+type GLintptr =   type(int)
+type GLsizeiptr = type(int)
+type GLsizei =    type(i32)
+type GLint =      type(i32)
 # type GLsync =     <not implemented GLsync>
 # type DEBUGPROC = <not implemented GLDEBUGPROC>
 
@@ -1834,1040 +1834,1040 @@ const GL_NEGATIVE_ONE_TO_ONE:GLenum = 0x935E
 const GL_ZERO_TO_ONE:GLenum = 0x935F
 const GL_CLEAR_TEXTURE:GLenum = 0x9365
 const GL_NUM_SAMPLE_COUNTS:GLenum = 0x9380
-proc "importc" glAccum(op: GLenum, value: GLfloat): void
-proc "importc" glActiveShaderProgram(pipeline: GLuint, program: GLuint): void
-proc "importc" glActiveTexture(texture: GLenum): void
-proc "importc" glAlphaFunc(func: GLenum, ref: GLfloat): void
-proc "importc" glAreTexturesResident(n: GLsizei, textures: ptr(GLuint), residences: ptr(GLboolean)): GLboolean
-proc "importc" glArrayElement(i: GLint): void
-proc "importc" glAttachShader(program: GLuint, shader: GLuint): void
-proc "importc" glBegin(mode: GLenum): void
-proc "importc" glBeginConditionalRender(id: GLuint, mode: GLenum): void
-proc "importc" glBeginQuery(target: GLenum, id: GLuint): void
-proc "importc" glBeginQueryIndexed(target: GLenum, index: GLuint, id: GLuint): void
-proc "importc" glBeginTransformFeedback(primitiveMode: GLenum): void
-proc "importc" glBindAttribLocation(program: GLuint, index: GLuint, name: cstr): void
-proc "importc" glBindBuffer(target: GLenum, buffer: GLuint): void
-proc "importc" glBindBufferBase(target: GLenum, index: GLuint, buffer: GLuint): void
-proc "importc" glBindBufferRange(target: GLenum, index: GLuint, buffer: GLuint, offset: GLintptr, size: GLsizeiptr): void
-proc "importc" glBindBuffersBase(target: GLenum, first: GLuint, count: GLsizei, buffers: ptr(GLuint)): void
-proc "importc" glBindBuffersRange(target: GLenum, first: GLuint, count: GLsizei, buffers: ptr(GLuint), offsets: ptr(GLintptr), sizes: ptr(GLsizeiptr)): void
-proc "importc" glBindFragDataLocation(program: GLuint, color: GLuint, name: cstr): void
-proc "importc" glBindFragDataLocationIndexed(program: GLuint, colorNumber: GLuint, index: GLuint, name: cstr): void
-proc "importc" glBindFramebuffer(target: GLenum, framebuffer: GLuint): void
-proc "importc" glBindImageTexture(unit: GLuint, texture: GLuint, level: GLint, layered: GLboolean, layer: GLint, access: GLenum, format: GLenum): void
-proc "importc" glBindImageTextures(first: GLuint, count: GLsizei, textures: ptr(GLuint)): void
-proc "importc" glBindProgramPipeline(pipeline: GLuint): void
-proc "importc" glBindRenderbuffer(target: GLenum, renderbuffer: GLuint): void
-proc "importc" glBindSampler(unit: GLuint, sampler: GLuint): void
-proc "importc" glBindSamplers(first: GLuint, count: GLsizei, samplers: ptr(GLuint)): void
-proc "importc" glBindTexture(target: GLenum, texture: GLuint): void
-proc "importc" glBindTextureUnit(unit: GLuint, texture: GLuint): void
-proc "importc" glBindTextures(first: GLuint, count: GLsizei, textures: ptr(GLuint)): void
-proc "importc" glBindTransformFeedback(target: GLenum, id: GLuint): void
-proc "importc" glBindVertexArray(array: GLuint): void
-proc "importc" glBindVertexBuffer(bindingindex: GLuint, buffer: GLuint, offset: GLintptr, stride: GLsizei): void
-proc "importc" glBindVertexBuffers(first: GLuint, count: GLsizei, buffers: ptr(GLuint), offsets: ptr(GLintptr), strides: ptr(GLsizei)): void
-proc "importc" glBitmap(width: GLsizei, height: GLsizei, xorig: GLfloat, yorig: GLfloat, xmove: GLfloat, ymove: GLfloat, bitmap: ptr(GLubyte)): void
-proc "importc" glBlendColor(red: GLfloat, green: GLfloat, blue: GLfloat, alpha: GLfloat): void
-proc "importc" glBlendEquation(mode: GLenum): void
-proc "importc" glBlendEquationSeparate(modeRGB: GLenum, modeAlpha: GLenum): void
-proc "importc" glBlendEquationSeparatei(buf: GLuint, modeRGB: GLenum, modeAlpha: GLenum): void
-proc "importc" glBlendEquationi(buf: GLuint, mode: GLenum): void
-proc "importc" glBlendFunc(sfactor: GLenum, dfactor: GLenum): void
-proc "importc" glBlendFuncSeparate(sfactorRGB: GLenum, dfactorRGB: GLenum, sfactorAlpha: GLenum, dfactorAlpha: GLenum): void
-proc "importc" glBlendFuncSeparatei(buf: GLuint, srcRGB: GLenum, dstRGB: GLenum, srcAlpha: GLenum, dstAlpha: GLenum): void
-proc "importc" glBlendFunci(buf: GLuint, src: GLenum, dst: GLenum): void
-proc "importc" glBlitFramebuffer(srcX0: GLint, srcY0: GLint, srcX1: GLint, srcY1: GLint, dstX0: GLint, dstY0: GLint, dstX1: GLint, dstY1: GLint, mask: GLbitfield, filter: GLenum): void
-proc "importc" glBlitNamedFramebuffer(readFramebuffer: GLuint, drawFramebuffer: GLuint, srcX0: GLint, srcY0: GLint, srcX1: GLint, srcY1: GLint, dstX0: GLint, dstY0: GLint, dstX1: GLint, dstY1: GLint, mask: GLbitfield, filter: GLenum): void
-proc "importc" glBufferData(target: GLenum, size: GLsizeiptr, data: pointer, usage: GLenum): void
-proc "importc" glBufferStorage(target: GLenum, size: GLsizeiptr, data: pointer, flags: GLbitfield): void
-proc "importc" glBufferSubData(target: GLenum, offset: GLintptr, size: GLsizeiptr, data: pointer): void
-proc "importc" glCallList(list: GLuint): void
-proc "importc" glCallLists(n: GLsizei, typ: GLenum, lists: pointer): void
-proc "importc" glCheckFramebufferStatus(target: GLenum): GLenum
-proc "importc" glCheckNamedFramebufferStatus(framebuffer: GLuint, target: GLenum): GLenum
-proc "importc" glClampColor(target: GLenum, clamp: GLenum): void
-proc "importc" glClear(mask: GLbitfield): void
-proc "importc" glClearAccum(red: GLfloat, green: GLfloat, blue: GLfloat, alpha: GLfloat): void
-proc "importc" glClearBufferData(target: GLenum, internalformat: GLenum, format: GLenum, typ: GLenum, data: pointer): void
-proc "importc" glClearBufferSubData(target: GLenum, internalformat: GLenum, offset: GLintptr, size: GLsizeiptr, format: GLenum, typ: GLenum, data: pointer): void
-proc "importc" glClearBufferfi(buffer: GLenum, drawbuffer: GLint, depth: GLfloat, stencil: GLint): void
-proc "importc" glClearBufferfv(buffer: GLenum, drawbuffer: GLint, value: ptr(GLfloat)): void
-proc "importc" glClearBufferiv(buffer: GLenum, drawbuffer: GLint, value: ptr(GLint)): void
-proc "importc" glClearBufferuiv(buffer: GLenum, drawbuffer: GLint, value: ptr(GLuint)): void
-proc "importc" glClearColor(red: GLfloat, green: GLfloat, blue: GLfloat, alpha: GLfloat): void
-proc "importc" glClearDepth(depth: GLdouble): void
-proc "importc" glClearDepthf(d: GLfloat): void
-proc "importc" glClearIndex(c: GLfloat): void
-proc "importc" glClearNamedBufferData(buffer: GLuint, internalformat: GLenum, format: GLenum, typ: GLenum, data: pointer): void
-proc "importc" glClearNamedBufferSubData(buffer: GLuint, internalformat: GLenum, offset: GLintptr, size: GLsizeiptr, format: GLenum, typ: GLenum, data: pointer): void
-proc "importc" glClearNamedFramebufferfi(framebuffer: GLuint, buffer: GLenum, drawbuffer: GLint, depth: GLfloat, stencil: GLint): void
-proc "importc" glClearNamedFramebufferfv(framebuffer: GLuint, buffer: GLenum, drawbuffer: GLint, value: ptr(GLfloat)): void
-proc "importc" glClearNamedFramebufferiv(framebuffer: GLuint, buffer: GLenum, drawbuffer: GLint, value: ptr(GLint)): void
-proc "importc" glClearNamedFramebufferuiv(framebuffer: GLuint, buffer: GLenum, drawbuffer: GLint, value: ptr(GLuint)): void
-proc "importc" glClearStencil(s: GLint): void
-proc "importc" glClearTexImage(texture: GLuint, level: GLint, format: GLenum, typ: GLenum, data: pointer): void
-proc "importc" glClearTexSubImage(texture: GLuint, level: GLint, xoffset: GLint, yoffset: GLint, zoffset: GLint, width: GLsizei, height: GLsizei, depth: GLsizei, format: GLenum, typ: GLenum, data: pointer): void
-proc "importc" glClientActiveTexture(texture: GLenum): void
-proc "importc" glClipControl(origin: GLenum, depth: GLenum): void
-proc "importc" glClipPlane(plane: GLenum, equation: ptr(GLdouble)): void
-proc "importc" glColor3b(red: GLbyte, green: GLbyte, blue: GLbyte): void
-proc "importc" glColor3bv(v: ptr(GLbyte)): void
-proc "importc" glColor3d(red: GLdouble, green: GLdouble, blue: GLdouble): void
-proc "importc" glColor3dv(v: ptr(GLdouble)): void
-proc "importc" glColor3f(red: GLfloat, green: GLfloat, blue: GLfloat): void
-proc "importc" glColor3fv(v: ptr(GLfloat)): void
-proc "importc" glColor3i(red: GLint, green: GLint, blue: GLint): void
-proc "importc" glColor3iv(v: ptr(GLint)): void
-proc "importc" glColor3s(red: GLshort, green: GLshort, blue: GLshort): void
-proc "importc" glColor3sv(v: ptr(GLshort)): void
-proc "importc" glColor3ub(red: GLubyte, green: GLubyte, blue: GLubyte): void
-proc "importc" glColor3ubv(v: ptr(GLubyte)): void
-proc "importc" glColor3ui(red: GLuint, green: GLuint, blue: GLuint): void
-proc "importc" glColor3uiv(v: ptr(GLuint)): void
-proc "importc" glColor3us(red: GLushort, green: GLushort, blue: GLushort): void
-proc "importc" glColor3usv(v: ptr(GLushort)): void
-proc "importc" glColor4b(red: GLbyte, green: GLbyte, blue: GLbyte, alpha: GLbyte): void
-proc "importc" glColor4bv(v: ptr(GLbyte)): void
-proc "importc" glColor4d(red: GLdouble, green: GLdouble, blue: GLdouble, alpha: GLdouble): void
-proc "importc" glColor4dv(v: ptr(GLdouble)): void
-proc "importc" glColor4f(red: GLfloat, green: GLfloat, blue: GLfloat, alpha: GLfloat): void
-proc "importc" glColor4fv(v: ptr(GLfloat)): void
-proc "importc" glColor4i(red: GLint, green: GLint, blue: GLint, alpha: GLint): void
-proc "importc" glColor4iv(v: ptr(GLint)): void
-proc "importc" glColor4s(red: GLshort, green: GLshort, blue: GLshort, alpha: GLshort): void
-proc "importc" glColor4sv(v: ptr(GLshort)): void
-proc "importc" glColor4ub(red: GLubyte, green: GLubyte, blue: GLubyte, alpha: GLubyte): void
-proc "importc" glColor4ubv(v: ptr(GLubyte)): void
-proc "importc" glColor4ui(red: GLuint, green: GLuint, blue: GLuint, alpha: GLuint): void
-proc "importc" glColor4uiv(v: ptr(GLuint)): void
-proc "importc" glColor4us(red: GLushort, green: GLushort, blue: GLushort, alpha: GLushort): void
-proc "importc" glColor4usv(v: ptr(GLushort)): void
-proc "importc" glColorMask(red: GLboolean, green: GLboolean, blue: GLboolean, alpha: GLboolean): void
-proc "importc" glColorMaski(index: GLuint, r: GLboolean, g: GLboolean, b: GLboolean, a: GLboolean): void
-proc "importc" glColorMaterial(face: GLenum, mode: GLenum): void
-proc "importc" glColorP3ui(typ: GLenum, color: GLuint): void
-proc "importc" glColorP3uiv(typ: GLenum, color: ptr(GLuint)): void
-proc "importc" glColorP4ui(typ: GLenum, color: GLuint): void
-proc "importc" glColorP4uiv(typ: GLenum, color: ptr(GLuint)): void
-proc "importc" glColorPointer(size: GLint, typ: GLenum, stride: GLsizei, pointer: pointer): void
-proc "importc" glCompileShader(shader: GLuint): void
-proc "importc" glCompressedTexImage1D(target: GLenum, level: GLint, internalformat: GLenum, width: GLsizei, border: GLint, imageSize: GLsizei, data: pointer): void
-proc "importc" glCompressedTexImage2D(target: GLenum, level: GLint, internalformat: GLenum, width: GLsizei, height: GLsizei, border: GLint, imageSize: GLsizei, data: pointer): void
-proc "importc" glCompressedTexImage3D(target: GLenum, level: GLint, internalformat: GLenum, width: GLsizei, height: GLsizei, depth: GLsizei, border: GLint, imageSize: GLsizei, data: pointer): void
-proc "importc" glCompressedTexSubImage1D(target: GLenum, level: GLint, xoffset: GLint, width: GLsizei, format: GLenum, imageSize: GLsizei, data: pointer): void
-proc "importc" glCompressedTexSubImage2D(target: GLenum, level: GLint, xoffset: GLint, yoffset: GLint, width: GLsizei, height: GLsizei, format: GLenum, imageSize: GLsizei, data: pointer): void
-proc "importc" glCompressedTexSubImage3D(target: GLenum, level: GLint, xoffset: GLint, yoffset: GLint, zoffset: GLint, width: GLsizei, height: GLsizei, depth: GLsizei, format: GLenum, imageSize: GLsizei, data: pointer): void
-proc "importc" glCompressedTextureSubImage1D(texture: GLuint, level: GLint, xoffset: GLint, width: GLsizei, format: GLenum, imageSize: GLsizei, data: pointer): void
-proc "importc" glCompressedTextureSubImage2D(texture: GLuint, level: GLint, xoffset: GLint, yoffset: GLint, width: GLsizei, height: GLsizei, format: GLenum, imageSize: GLsizei, data: pointer): void
-proc "importc" glCompressedTextureSubImage3D(texture: GLuint, level: GLint, xoffset: GLint, yoffset: GLint, zoffset: GLint, width: GLsizei, height: GLsizei, depth: GLsizei, format: GLenum, imageSize: GLsizei, data: pointer): void
-proc "importc" glCopyBufferSubData(readTarget: GLenum, writeTarget: GLenum, readOffset: GLintptr, writeOffset: GLintptr, size: GLsizeiptr): void
-proc "importc" glCopyImageSubData(srcName: GLuint, srcTarget: GLenum, srcLevel: GLint, srcX: GLint, srcY: GLint, srcZ: GLint, dstName: GLuint, dstTarget: GLenum, dstLevel: GLint, dstX: GLint, dstY: GLint, dstZ: GLint, srcWidth: GLsizei, srcHeight: GLsizei, srcDepth: GLsizei): void
-proc "importc" glCopyNamedBufferSubData(readBuffer: GLuint, writeBuffer: GLuint, readOffset: GLintptr, writeOffset: GLintptr, size: GLsizeiptr): void
-proc "importc" glCopyPixels(x: GLint, y: GLint, width: GLsizei, height: GLsizei, typ: GLenum): void
-proc "importc" glCopyTexImage1D(target: GLenum, level: GLint, internalformat: GLenum, x: GLint, y: GLint, width: GLsizei, border: GLint): void
-proc "importc" glCopyTexImage2D(target: GLenum, level: GLint, internalformat: GLenum, x: GLint, y: GLint, width: GLsizei, height: GLsizei, border: GLint): void
-proc "importc" glCopyTexSubImage1D(target: GLenum, level: GLint, xoffset: GLint, x: GLint, y: GLint, width: GLsizei): void
-proc "importc" glCopyTexSubImage2D(target: GLenum, level: GLint, xoffset: GLint, yoffset: GLint, x: GLint, y: GLint, width: GLsizei, height: GLsizei): void
-proc "importc" glCopyTexSubImage3D(target: GLenum, level: GLint, xoffset: GLint, yoffset: GLint, zoffset: GLint, x: GLint, y: GLint, width: GLsizei, height: GLsizei): void
-proc "importc" glCopyTextureSubImage1D(texture: GLuint, level: GLint, xoffset: GLint, x: GLint, y: GLint, width: GLsizei): void
-proc "importc" glCopyTextureSubImage2D(texture: GLuint, level: GLint, xoffset: GLint, yoffset: GLint, x: GLint, y: GLint, width: GLsizei, height: GLsizei): void
-proc "importc" glCopyTextureSubImage3D(texture: GLuint, level: GLint, xoffset: GLint, yoffset: GLint, zoffset: GLint, x: GLint, y: GLint, width: GLsizei, height: GLsizei): void
-proc "importc" glCreateBuffers(n: GLsizei, buffers: ptr(GLuint)): void
-proc "importc" glCreateFramebuffers(n: GLsizei, framebuffers: ptr(GLuint)): void
-proc "importc" glCreateProgram(): GLuint
-proc "importc" glCreateProgramPipelines(n: GLsizei, pipelines: ptr(GLuint)): void
-proc "importc" glCreateQueries(target: GLenum, n: GLsizei, ids: ptr(GLuint)): void
-proc "importc" glCreateRenderbuffers(n: GLsizei, renderbuffers: ptr(GLuint)): void
-proc "importc" glCreateSamplers(n: GLsizei, samplers: ptr(GLuint)): void
-proc "importc" glCreateShader(typ: GLenum): GLuint
-proc "importc" glCreateShaderProgramv(typ: GLenum, count: GLsizei, strings: ptr(cstr)): GLuint
-proc "importc" glCreateTextures(target: GLenum, n: GLsizei, textures: ptr(GLuint)): void
-proc "importc" glCreateTransformFeedbacks(n: GLsizei, ids: ptr(GLuint)): void
-proc "importc" glCreateVertexArrays(n: GLsizei, arrays: ptr(GLuint)): void
-proc "importc" glCullFace(mode: GLenum): void
-proc "importc" glDebugMessageControl(source: GLenum, typ: GLenum, severity: GLenum, count: GLsizei, ids: ptr(GLuint), enabled: GLboolean): void
-proc "importc" glDebugMessageInsert(source: GLenum, typ: GLenum, id: GLuint, severity: GLenum, length: GLsizei, buf: cstr): void
-proc "importc" glDeleteBuffers(n: GLsizei, buffers: ptr(GLuint)): void
-proc "importc" glDeleteFramebuffers(n: GLsizei, framebuffers: ptr(GLuint)): void
-proc "importc" glDeleteLists(list: GLuint, range: GLsizei): void
-proc "importc" glDeleteProgram(program: GLuint): void
-proc "importc" glDeleteProgramPipelines(n: GLsizei, pipelines: ptr(GLuint)): void
-proc "importc" glDeleteQueries(n: GLsizei, ids: ptr(GLuint)): void
-proc "importc" glDeleteRenderbuffers(n: GLsizei, renderbuffers: ptr(GLuint)): void
-proc "importc" glDeleteSamplers(count: GLsizei, samplers: ptr(GLuint)): void
-proc "importc" glDeleteShader(shader: GLuint): void
-proc "importc" glDeleteTextures(n: GLsizei, textures: ptr(GLuint)): void
-proc "importc" glDeleteTransformFeedbacks(n: GLsizei, ids: ptr(GLuint)): void
-proc "importc" glDeleteVertexArrays(n: GLsizei, arrays: ptr(GLuint)): void
-proc "importc" glDepthFunc(func: GLenum): void
-proc "importc" glDepthMask(flag: GLboolean): void
-proc "importc" glDepthRange(near: GLdouble, far: GLdouble): void
-proc "importc" glDepthRangeArrayv(first: GLuint, count: GLsizei, v: ptr(GLdouble)): void
-proc "importc" glDepthRangeIndexed(index: GLuint, n: GLdouble, f: GLdouble): void
-proc "importc" glDepthRangef(n: GLfloat, f: GLfloat): void
-proc "importc" glDetachShader(program: GLuint, shader: GLuint): void
-proc "importc" glDisable(cap: GLenum): void
-proc "importc" glDisableClientState(array: GLenum): void
-proc "importc" glDisableVertexArrayAttrib(vaobj: GLuint, index: GLuint): void
-proc "importc" glDisableVertexAttribArray(index: GLuint): void
-proc "importc" glDisablei(target: GLenum, index: GLuint): void
-proc "importc" glDispatchCompute(num_groups_x: GLuint, num_groups_y: GLuint, num_groups_z: GLuint): void
-proc "importc" glDispatchComputeIndirect(indirect: GLintptr): void
-proc "importc" glDrawArrays(mode: GLenum, first: GLint, count: GLsizei): void
-proc "importc" glDrawArraysIndirect(mode: GLenum, indirect: pointer): void
-proc "importc" glDrawArraysInstanced(mode: GLenum, first: GLint, count: GLsizei, instancecount: GLsizei): void
-proc "importc" glDrawArraysInstancedBaseInstance(mode: GLenum, first: GLint, count: GLsizei, instancecount: GLsizei, baseinstance: GLuint): void
-proc "importc" glDrawBuffer(buf: GLenum): void
-proc "importc" glDrawBuffers(n: GLsizei, bufs: ptr(GLenum)): void
-proc "importc" glDrawElements(mode: GLenum, count: GLsizei, typ: GLenum, indices: pointer): void
-proc "importc" glDrawElementsBaseVertex(mode: GLenum, count: GLsizei, typ: GLenum, indices: pointer, basevertex: GLint): void
-proc "importc" glDrawElementsIndirect(mode: GLenum, typ: GLenum, indirect: pointer): void
-proc "importc" glDrawElementsInstanced(mode: GLenum, count: GLsizei, typ: GLenum, indices: pointer, instancecount: GLsizei): void
-proc "importc" glDrawElementsInstancedBaseInstance(mode: GLenum, count: GLsizei, typ: GLenum, indices: pointer, instancecount: GLsizei, baseinstance: GLuint): void
-proc "importc" glDrawElementsInstancedBaseVertex(mode: GLenum, count: GLsizei, typ: GLenum, indices: pointer, instancecount: GLsizei, basevertex: GLint): void
-proc "importc" glDrawElementsInstancedBaseVertexBaseInstance(mode: GLenum, count: GLsizei, typ: GLenum, indices: pointer, instancecount: GLsizei, basevertex: GLint, baseinstance: GLuint): void
-proc "importc" glDrawPixels(width: GLsizei, height: GLsizei, format: GLenum, typ: GLenum, pixels: pointer): void
-proc "importc" glDrawRangeElements(mode: GLenum, start: GLuint, end: GLuint, count: GLsizei, typ: GLenum, indices: pointer): void
-proc "importc" glDrawRangeElementsBaseVertex(mode: GLenum, start: GLuint, end: GLuint, count: GLsizei, typ: GLenum, indices: pointer, basevertex: GLint): void
-proc "importc" glDrawTransformFeedback(mode: GLenum, id: GLuint): void
-proc "importc" glDrawTransformFeedbackInstanced(mode: GLenum, id: GLuint, instancecount: GLsizei): void
-proc "importc" glDrawTransformFeedbackStream(mode: GLenum, id: GLuint, stream: GLuint): void
-proc "importc" glDrawTransformFeedbackStreamInstanced(mode: GLenum, id: GLuint, stream: GLuint, instancecount: GLsizei): void
-proc "importc" glEdgeFlag(flag: GLboolean): void
-proc "importc" glEdgeFlagPointer(stride: GLsizei, pointer: pointer): void
-proc "importc" glEdgeFlagv(flag: ptr(GLboolean)): void
-proc "importc" glEnable(cap: GLenum): void
-proc "importc" glEnableClientState(array: GLenum): void
-proc "importc" glEnableVertexArrayAttrib(vaobj: GLuint, index: GLuint): void
-proc "importc" glEnableVertexAttribArray(index: GLuint): void
-proc "importc" glEnablei(target: GLenum, index: GLuint): void
-proc "importc" glEnd(): void
-proc "importc" glEndConditionalRender(): void
-proc "importc" glEndList(): void
-proc "importc" glEndQuery(target: GLenum): void
-proc "importc" glEndQueryIndexed(target: GLenum, index: GLuint): void
-proc "importc" glEndTransformFeedback(): void
-proc "importc" glEvalCoord1d(u: GLdouble): void
-proc "importc" glEvalCoord1dv(u: ptr(GLdouble)): void
-proc "importc" glEvalCoord1f(u: GLfloat): void
-proc "importc" glEvalCoord1fv(u: ptr(GLfloat)): void
-proc "importc" glEvalCoord2d(u: GLdouble, v: GLdouble): void
-proc "importc" glEvalCoord2dv(u: ptr(GLdouble)): void
-proc "importc" glEvalCoord2f(u: GLfloat, v: GLfloat): void
-proc "importc" glEvalCoord2fv(u: ptr(GLfloat)): void
-proc "importc" glEvalMesh1(mode: GLenum, i1: GLint, i2: GLint): void
-proc "importc" glEvalMesh2(mode: GLenum, i1: GLint, i2: GLint, j1: GLint, j2: GLint): void
-proc "importc" glEvalPoint1(i: GLint): void
-proc "importc" glEvalPoint2(i: GLint, j: GLint): void
-proc "importc" glFeedbackBuffer(size: GLsizei, typ: GLenum, buffer: ptr(GLfloat)): void
-proc "importc" glFinish(): void
-proc "importc" glFlush(): void
-proc "importc" glFlushMappedBufferRange(target: GLenum, offset: GLintptr, length: GLsizeiptr): void
-proc "importc" glFlushMappedNamedBufferRange(buffer: GLuint, offset: GLintptr, length: GLsizeiptr): void
-proc "importc" glFogCoordPointer(typ: GLenum, stride: GLsizei, pointer: pointer): void
-proc "importc" glFogCoordd(coord: GLdouble): void
-proc "importc" glFogCoorddv(coord: ptr(GLdouble)): void
-proc "importc" glFogCoordf(coord: GLfloat): void
-proc "importc" glFogCoordfv(coord: ptr(GLfloat)): void
-proc "importc" glFogf(pname: GLenum, param: GLfloat): void
-proc "importc" glFogfv(pname: GLenum, params: ptr(GLfloat)): void
-proc "importc" glFogi(pname: GLenum, param: GLint): void
-proc "importc" glFogiv(pname: GLenum, params: ptr(GLint)): void
-proc "importc" glFramebufferParameteri(target: GLenum, pname: GLenum, param: GLint): void
-proc "importc" glFramebufferRenderbuffer(target: GLenum, attachment: GLenum, renderbuffertarget: GLenum, renderbuffer: GLuint): void
-proc "importc" glFramebufferTexture(target: GLenum, attachment: GLenum, texture: GLuint, level: GLint): void
-proc "importc" glFramebufferTexture1D(target: GLenum, attachment: GLenum, textarget: GLenum, texture: GLuint, level: GLint): void
-proc "importc" glFramebufferTexture2D(target: GLenum, attachment: GLenum, textarget: GLenum, texture: GLuint, level: GLint): void
-proc "importc" glFramebufferTexture3D(target: GLenum, attachment: GLenum, textarget: GLenum, texture: GLuint, level: GLint, zoffset: GLint): void
-proc "importc" glFramebufferTextureLayer(target: GLenum, attachment: GLenum, texture: GLuint, level: GLint, layer: GLint): void
-proc "importc" glFrontFace(mode: GLenum): void
-proc "importc" glFrustum(left: GLdouble, right: GLdouble, bottom: GLdouble, top: GLdouble, zNear: GLdouble, zFar: GLdouble): void
-proc "importc" glGenBuffers(n: GLsizei, buffers: ptr(GLuint)): void
-proc "importc" glGenFramebuffers(n: GLsizei, framebuffers: ptr(GLuint)): void
-proc "importc" glGenLists(range: GLsizei): GLuint
-proc "importc" glGenProgramPipelines(n: GLsizei, pipelines: ptr(GLuint)): void
-proc "importc" glGenQueries(n: GLsizei, ids: ptr(GLuint)): void
-proc "importc" glGenRenderbuffers(n: GLsizei, renderbuffers: ptr(GLuint)): void
-proc "importc" glGenSamplers(count: GLsizei, samplers: ptr(GLuint)): void
-proc "importc" glGenTextures(n: GLsizei, textures: ptr(GLuint)): void
-proc "importc" glGenTransformFeedbacks(n: GLsizei, ids: ptr(GLuint)): void
-proc "importc" glGenVertexArrays(n: GLsizei, arrays: ptr(GLuint)): void
-proc "importc" glGenerateMipmap(target: GLenum): void
-proc "importc" glGenerateTextureMipmap(texture: GLuint): void
-proc "importc" glGetActiveAtomicCounterBufferiv(program: GLuint, bufferIndex: GLuint, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetActiveAttrib(program: GLuint, index: GLuint, bufSize: GLsizei, length: ptr(GLsizei), size: ptr(GLint), typ: ptr(GLenum), name: cstr): void
-proc "importc" glGetActiveSubroutineName(program: GLuint, shadertype: GLenum, index: GLuint, bufsize: GLsizei, length: ptr(GLsizei), name: cstr): void
-proc "importc" glGetActiveSubroutineUniformName(program: GLuint, shadertype: GLenum, index: GLuint, bufsize: GLsizei, length: ptr(GLsizei), name: cstr): void
-proc "importc" glGetActiveSubroutineUniformiv(program: GLuint, shadertype: GLenum, index: GLuint, pname: GLenum, values: ptr(GLint)): void
-proc "importc" glGetActiveUniform(program: GLuint, index: GLuint, bufSize: GLsizei, length: ptr(GLsizei), size: ptr(GLint), typ: ptr(GLenum), name: cstr): void
-proc "importc" glGetActiveUniformBlockName(program: GLuint, uniformBlockIndex: GLuint, bufSize: GLsizei, length: ptr(GLsizei), uniformBlockName: cstr): void
-proc "importc" glGetActiveUniformBlockiv(program: GLuint, uniformBlockIndex: GLuint, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetActiveUniformName(program: GLuint, uniformIndex: GLuint, bufSize: GLsizei, length: ptr(GLsizei), uniformName: cstr): void
-proc "importc" glGetActiveUniformsiv(program: GLuint, uniformCount: GLsizei, uniformIndices: ptr(GLuint), pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetAttachedShaders(program: GLuint, maxCount: GLsizei, count: ptr(GLsizei), shaders: ptr(GLuint)): void
-proc "importc" glGetAttribLocation(program: GLuint, name: cstr): GLint
-proc "importc" glGetBooleani_v(target: GLenum, index: GLuint, data: ptr(GLboolean)): void
-proc "importc" glGetBooleanv(pname: GLenum, data: ptr(GLboolean)): void
-proc "importc" glGetBufferParameteri64v(target: GLenum, pname: GLenum, params: ptr(GLint64)): void
-proc "importc" glGetBufferParameteriv(target: GLenum, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetBufferPointerv(target: GLenum, pname: GLenum, params: pointer): void
-proc "importc" glGetBufferSubData(target: GLenum, offset: GLintptr, size: GLsizeiptr, data: pointer): void
-proc "importc" glGetClipPlane(plane: GLenum, equation: ptr(GLdouble)): void
-proc "importc" glGetCompressedTexImage(target: GLenum, level: GLint, img: pointer): void
-proc "importc" glGetCompressedTextureImage(texture: GLuint, level: GLint, bufSize: GLsizei, pixels: pointer): void
-proc "importc" glGetCompressedTextureSubImage(texture: GLuint, level: GLint, xoffset: GLint, yoffset: GLint, zoffset: GLint, width: GLsizei, height: GLsizei, depth: GLsizei, bufSize: GLsizei, pixels: pointer): void
-proc "importc" glGetDebugMessageLog(count: GLuint, bufSize: GLsizei, sources: ptr(GLenum), types: ptr(GLenum), ids: ptr(GLuint), severities: ptr(GLenum), lengths: ptr(GLsizei), messageLog: cstr): GLuint
-proc "importc" glGetDoublei_v(target: GLenum, index: GLuint, data: ptr(GLdouble)): void
-proc "importc" glGetDoublev(pname: GLenum, data: ptr(GLdouble)): void
-proc "importc" glGetError(): GLenum
-proc "importc" glGetFloati_v(target: GLenum, index: GLuint, data: ptr(GLfloat)): void
-proc "importc" glGetFloatv(pname: GLenum, data: ptr(GLfloat)): void
-proc "importc" glGetFragDataIndex(program: GLuint, name: cstr): GLint
-proc "importc" glGetFragDataLocation(program: GLuint, name: cstr): GLint
-proc "importc" glGetFramebufferAttachmentParameteriv(target: GLenum, attachment: GLenum, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetFramebufferParameteriv(target: GLenum, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetGraphicsResetStatus(): GLenum
-proc "importc" glGetInteger64i_v(target: GLenum, index: GLuint, data: ptr(GLint64)): void
-proc "importc" glGetInteger64v(pname: GLenum, data: ptr(GLint64)): void
-proc "importc" glGetIntegeri_v(target: GLenum, index: GLuint, data: ptr(GLint)): void
-proc "importc" glGetIntegerv(pname: GLenum, data: ptr(GLint)): void
-proc "importc" glGetInternalformati64v(target: GLenum, internalformat: GLenum, pname: GLenum, bufSize: GLsizei, params: ptr(GLint64)): void
-proc "importc" glGetInternalformativ(target: GLenum, internalformat: GLenum, pname: GLenum, bufSize: GLsizei, params: ptr(GLint)): void
-proc "importc" glGetLightfv(light: GLenum, pname: GLenum, params: ptr(GLfloat)): void
-proc "importc" glGetLightiv(light: GLenum, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetMapdv(target: GLenum, query: GLenum, v: ptr(GLdouble)): void
-proc "importc" glGetMapfv(target: GLenum, query: GLenum, v: ptr(GLfloat)): void
-proc "importc" glGetMapiv(target: GLenum, query: GLenum, v: ptr(GLint)): void
-proc "importc" glGetMaterialfv(face: GLenum, pname: GLenum, params: ptr(GLfloat)): void
-proc "importc" glGetMaterialiv(face: GLenum, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetMultisamplefv(pname: GLenum, index: GLuint, val: ptr(GLfloat)): void
-proc "importc" glGetNamedBufferParameteri64v(buffer: GLuint, pname: GLenum, params: ptr(GLint64)): void
-proc "importc" glGetNamedBufferParameteriv(buffer: GLuint, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetNamedBufferPointerv(buffer: GLuint, pname: GLenum, params: pointer): void
-proc "importc" glGetNamedBufferSubData(buffer: GLuint, offset: GLintptr, size: GLsizeiptr, data: pointer): void
-proc "importc" glGetNamedFramebufferAttachmentParameteriv(framebuffer: GLuint, attachment: GLenum, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetNamedFramebufferParameteriv(framebuffer: GLuint, pname: GLenum, param: ptr(GLint)): void
-proc "importc" glGetNamedRenderbufferParameteriv(renderbuffer: GLuint, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetObjectLabel(identifier: GLenum, name: GLuint, bufSize: GLsizei, length: ptr(GLsizei), label: cstr): void
-proc "importc" glGetObjectPtrLabel(`ptr`: pointer, bufSize: GLsizei, length: ptr(GLsizei), label: cstr): void
-proc "importc" glGetPixelMapfv(map: GLenum, values: ptr(GLfloat)): void
-proc "importc" glGetPixelMapuiv(map: GLenum, values: ptr(GLuint)): void
-proc "importc" glGetPixelMapusv(map: GLenum, values: ptr(GLushort)): void
-proc "importc" glGetPointerv(pname: GLenum, params: pointer): void
-proc "importc" glGetPolygonStipple(mask: ptr(GLubyte)): void
-proc "importc" glGetProgramBinary(program: GLuint, bufSize: GLsizei, length: ptr(GLsizei), binaryFormat: ptr(GLenum), binary: pointer): void
-proc "importc" glGetProgramInfoLog(program: GLuint, bufSize: GLsizei, length: ptr(GLsizei), infoLog: cstr): void
-proc "importc" glGetProgramInterfaceiv(program: GLuint, programInterface: GLenum, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetProgramPipelineInfoLog(pipeline: GLuint, bufSize: GLsizei, length: ptr(GLsizei), infoLog: cstr): void
-proc "importc" glGetProgramPipelineiv(pipeline: GLuint, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetProgramResourceIndex(program: GLuint, programInterface: GLenum, name: cstr): GLuint
-proc "importc" glGetProgramResourceLocation(program: GLuint, programInterface: GLenum, name: cstr): GLint
-proc "importc" glGetProgramResourceLocationIndex(program: GLuint, programInterface: GLenum, name: cstr): GLint
-proc "importc" glGetProgramResourceName(program: GLuint, programInterface: GLenum, index: GLuint, bufSize: GLsizei, length: ptr(GLsizei), name: cstr): void
-proc "importc" glGetProgramResourceiv(program: GLuint, programInterface: GLenum, index: GLuint, propCount: GLsizei, props: ptr(GLenum), bufSize: GLsizei, length: ptr(GLsizei), params: ptr(GLint)): void
-proc "importc" glGetProgramStageiv(program: GLuint, shadertype: GLenum, pname: GLenum, values: ptr(GLint)): void
-proc "importc" glGetProgramiv(program: GLuint, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetQueryBufferObjecti64v(id: GLuint, buffer: GLuint, pname: GLenum, offset: GLintptr): void
-proc "importc" glGetQueryBufferObjectiv(id: GLuint, buffer: GLuint, pname: GLenum, offset: GLintptr): void
-proc "importc" glGetQueryBufferObjectui64v(id: GLuint, buffer: GLuint, pname: GLenum, offset: GLintptr): void
-proc "importc" glGetQueryBufferObjectuiv(id: GLuint, buffer: GLuint, pname: GLenum, offset: GLintptr): void
-proc "importc" glGetQueryIndexediv(target: GLenum, index: GLuint, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetQueryObjecti64v(id: GLuint, pname: GLenum, params: ptr(GLint64)): void
-proc "importc" glGetQueryObjectiv(id: GLuint, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetQueryObjectui64v(id: GLuint, pname: GLenum, params: ptr(GLuint64)): void
-proc "importc" glGetQueryObjectuiv(id: GLuint, pname: GLenum, params: ptr(GLuint)): void
-proc "importc" glGetQueryiv(target: GLenum, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetRenderbufferParameteriv(target: GLenum, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetSamplerParameterIiv(sampler: GLuint, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetSamplerParameterIuiv(sampler: GLuint, pname: GLenum, params: ptr(GLuint)): void
-proc "importc" glGetSamplerParameterfv(sampler: GLuint, pname: GLenum, params: ptr(GLfloat)): void
-proc "importc" glGetSamplerParameteriv(sampler: GLuint, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetShaderInfoLog(shader: GLuint, bufSize: GLsizei, length: ptr(GLsizei), infoLog: cstr): void
-proc "importc" glGetShaderPrecisionFormat(shadertype: GLenum, precisiontype: GLenum, range: ptr(GLint), precision: ptr(GLint)): void
-proc "importc" glGetShaderSource(shader: GLuint, bufSize: GLsizei, length: ptr(GLsizei), source: cstr): void
-proc "importc" glGetShaderiv(shader: GLuint, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetString(name: GLenum): GLubyte
-proc "importc" glGetStringi(name: GLenum, index: GLuint): GLubyte
-proc "importc" glGetSubroutineIndex(program: GLuint, shadertype: GLenum, name: cstr): GLuint
-proc "importc" glGetSubroutineUniformLocation(program: GLuint, shadertype: GLenum, name: cstr): GLint
-proc "importc" glGetTexEnvfv(target: GLenum, pname: GLenum, params: ptr(GLfloat)): void
-proc "importc" glGetTexEnviv(target: GLenum, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetTexGendv(coord: GLenum, pname: GLenum, params: ptr(GLdouble)): void
-proc "importc" glGetTexGenfv(coord: GLenum, pname: GLenum, params: ptr(GLfloat)): void
-proc "importc" glGetTexGeniv(coord: GLenum, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetTexImage(target: GLenum, level: GLint, format: GLenum, typ: GLenum, pixels: pointer): void
-proc "importc" glGetTexLevelParameterfv(target: GLenum, level: GLint, pname: GLenum, params: ptr(GLfloat)): void
-proc "importc" glGetTexLevelParameteriv(target: GLenum, level: GLint, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetTexParameterIiv(target: GLenum, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetTexParameterIuiv(target: GLenum, pname: GLenum, params: ptr(GLuint)): void
-proc "importc" glGetTexParameterfv(target: GLenum, pname: GLenum, params: ptr(GLfloat)): void
-proc "importc" glGetTexParameteriv(target: GLenum, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetTextureImage(texture: GLuint, level: GLint, format: GLenum, typ: GLenum, bufSize: GLsizei, pixels: pointer): void
-proc "importc" glGetTextureLevelParameterfv(texture: GLuint, level: GLint, pname: GLenum, params: ptr(GLfloat)): void
-proc "importc" glGetTextureLevelParameteriv(texture: GLuint, level: GLint, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetTextureParameterIiv(texture: GLuint, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetTextureParameterIuiv(texture: GLuint, pname: GLenum, params: ptr(GLuint)): void
-proc "importc" glGetTextureParameterfv(texture: GLuint, pname: GLenum, params: ptr(GLfloat)): void
-proc "importc" glGetTextureParameteriv(texture: GLuint, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetTextureSubImage(texture: GLuint, level: GLint, xoffset: GLint, yoffset: GLint, zoffset: GLint, width: GLsizei, height: GLsizei, depth: GLsizei, format: GLenum, typ: GLenum, bufSize: GLsizei, pixels: pointer): void
-proc "importc" glGetTransformFeedbackVarying(program: GLuint, index: GLuint, bufSize: GLsizei, length: ptr(GLsizei), size: ptr(GLsizei), typ: ptr(GLenum), name: cstr): void
-proc "importc" glGetTransformFeedbacki64_v(xfb: GLuint, pname: GLenum, index: GLuint, param: ptr(GLint64)): void
-proc "importc" glGetTransformFeedbacki_v(xfb: GLuint, pname: GLenum, index: GLuint, param: ptr(GLint)): void
-proc "importc" glGetTransformFeedbackiv(xfb: GLuint, pname: GLenum, param: ptr(GLint)): void
-proc "importc" glGetUniformBlockIndex(program: GLuint, uniformBlockName: cstr): GLuint
-proc "importc" glGetUniformIndices(program: GLuint, uniformCount: GLsizei, uniformNames: ptr(cstr), uniformIndices: ptr(GLuint)): void
-proc "importc" glGetUniformLocation(program: GLuint, name: cstr): GLint
-proc "importc" glGetUniformSubroutineuiv(shadertype: GLenum, location: GLint, params: ptr(GLuint)): void
-proc "importc" glGetUniformdv(program: GLuint, location: GLint, params: ptr(GLdouble)): void
-proc "importc" glGetUniformfv(program: GLuint, location: GLint, params: ptr(GLfloat)): void
-proc "importc" glGetUniformiv(program: GLuint, location: GLint, params: ptr(GLint)): void
-proc "importc" glGetUniformuiv(program: GLuint, location: GLint, params: ptr(GLuint)): void
-proc "importc" glGetVertexArrayIndexed64iv(vaobj: GLuint, index: GLuint, pname: GLenum, param: ptr(GLint64)): void
-proc "importc" glGetVertexArrayIndexediv(vaobj: GLuint, index: GLuint, pname: GLenum, param: ptr(GLint)): void
-proc "importc" glGetVertexArrayiv(vaobj: GLuint, pname: GLenum, param: ptr(GLint)): void
-proc "importc" glGetVertexAttribIiv(index: GLuint, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetVertexAttribIuiv(index: GLuint, pname: GLenum, params: ptr(GLuint)): void
-proc "importc" glGetVertexAttribLdv(index: GLuint, pname: GLenum, params: ptr(GLdouble)): void
-proc "importc" glGetVertexAttribPointerv(index: GLuint, pname: GLenum, pointer: pointer): void
-proc "importc" glGetVertexAttribdv(index: GLuint, pname: GLenum, params: ptr(GLdouble)): void
-proc "importc" glGetVertexAttribfv(index: GLuint, pname: GLenum, params: ptr(GLfloat)): void
-proc "importc" glGetVertexAttribiv(index: GLuint, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glGetnColorTable(target: GLenum, format: GLenum, typ: GLenum, bufSize: GLsizei, table: pointer): void
-proc "importc" glGetnCompressedTexImage(target: GLenum, lod: GLint, bufSize: GLsizei, pixels: pointer): void
-proc "importc" glGetnConvolutionFilter(target: GLenum, format: GLenum, typ: GLenum, bufSize: GLsizei, image: pointer): void
-proc "importc" glGetnHistogram(target: GLenum, reset: GLboolean, format: GLenum, typ: GLenum, bufSize: GLsizei, values: pointer): void
-proc "importc" glGetnMapdv(target: GLenum, query: GLenum, bufSize: GLsizei, v: ptr(GLdouble)): void
-proc "importc" glGetnMapfv(target: GLenum, query: GLenum, bufSize: GLsizei, v: ptr(GLfloat)): void
-proc "importc" glGetnMapiv(target: GLenum, query: GLenum, bufSize: GLsizei, v: ptr(GLint)): void
-proc "importc" glGetnMinmax(target: GLenum, reset: GLboolean, format: GLenum, typ: GLenum, bufSize: GLsizei, values: pointer): void
-proc "importc" glGetnPixelMapfv(map: GLenum, bufSize: GLsizei, values: ptr(GLfloat)): void
-proc "importc" glGetnPixelMapuiv(map: GLenum, bufSize: GLsizei, values: ptr(GLuint)): void
-proc "importc" glGetnPixelMapusv(map: GLenum, bufSize: GLsizei, values: ptr(GLushort)): void
-proc "importc" glGetnPolygonStipple(bufSize: GLsizei, pattern: ptr(GLubyte)): void
-proc "importc" glGetnSeparableFilter(target: GLenum, format: GLenum, typ: GLenum, rowBufSize: GLsizei, row: pointer, columnBufSize: GLsizei, column: pointer, span: pointer): void
-proc "importc" glGetnTexImage(target: GLenum, level: GLint, format: GLenum, typ: GLenum, bufSize: GLsizei, pixels: pointer): void
-proc "importc" glGetnUniformdv(program: GLuint, location: GLint, bufSize: GLsizei, params: ptr(GLdouble)): void
-proc "importc" glGetnUniformfv(program: GLuint, location: GLint, bufSize: GLsizei, params: ptr(GLfloat)): void
-proc "importc" glGetnUniformiv(program: GLuint, location: GLint, bufSize: GLsizei, params: ptr(GLint)): void
-proc "importc" glGetnUniformuiv(program: GLuint, location: GLint, bufSize: GLsizei, params: ptr(GLuint)): void
-proc "importc" glHint(target: GLenum, mode: GLenum): void
-proc "importc" glIndexMask(mask: GLuint): void
-proc "importc" glIndexPointer(typ: GLenum, stride: GLsizei, pointer: pointer): void
-proc "importc" glIndexd(c: GLdouble): void
-proc "importc" glIndexdv(c: ptr(GLdouble)): void
-proc "importc" glIndexf(c: GLfloat): void
-proc "importc" glIndexfv(c: ptr(GLfloat)): void
-proc "importc" glIndexi(c: GLint): void
-proc "importc" glIndexiv(c: ptr(GLint)): void
-proc "importc" glIndexs(c: GLshort): void
-proc "importc" glIndexsv(c: ptr(GLshort)): void
-proc "importc" glIndexub(c: GLubyte): void
-proc "importc" glIndexubv(c: ptr(GLubyte)): void
-proc "importc" glInitNames(): void
-proc "importc" glInterleavedArrays(format: GLenum, stride: GLsizei, pointer: pointer): void
-proc "importc" glInvalidateBufferData(buffer: GLuint): void
-proc "importc" glInvalidateBufferSubData(buffer: GLuint, offset: GLintptr, length: GLsizeiptr): void
-proc "importc" glInvalidateFramebuffer(target: GLenum, numAttachments: GLsizei, attachments: ptr(GLenum)): void
-proc "importc" glInvalidateNamedFramebufferData(framebuffer: GLuint, numAttachments: GLsizei, attachments: ptr(GLenum)): void
-proc "importc" glInvalidateNamedFramebufferSubData(framebuffer: GLuint, numAttachments: GLsizei, attachments: ptr(GLenum), x: GLint, y: GLint, width: GLsizei, height: GLsizei): void
-proc "importc" glInvalidateSubFramebuffer(target: GLenum, numAttachments: GLsizei, attachments: ptr(GLenum), x: GLint, y: GLint, width: GLsizei, height: GLsizei): void
-proc "importc" glInvalidateTexImage(texture: GLuint, level: GLint): void
-proc "importc" glInvalidateTexSubImage(texture: GLuint, level: GLint, xoffset: GLint, yoffset: GLint, zoffset: GLint, width: GLsizei, height: GLsizei, depth: GLsizei): void
-proc "importc" glIsBuffer(buffer: GLuint): GLboolean
-proc "importc" glIsEnabled(cap: GLenum): GLboolean
-proc "importc" glIsEnabledi(target: GLenum, index: GLuint): GLboolean
-proc "importc" glIsFramebuffer(framebuffer: GLuint): GLboolean
-proc "importc" glIsList(list: GLuint): GLboolean
-proc "importc" glIsProgram(program: GLuint): GLboolean
-proc "importc" glIsProgramPipeline(pipeline: GLuint): GLboolean
-proc "importc" glIsQuery(id: GLuint): GLboolean
-proc "importc" glIsRenderbuffer(renderbuffer: GLuint): GLboolean
-proc "importc" glIsSampler(sampler: GLuint): GLboolean
-proc "importc" glIsShader(shader: GLuint): GLboolean
-proc "importc" glIsTexture(texture: GLuint): GLboolean
-proc "importc" glIsTransformFeedback(id: GLuint): GLboolean
-proc "importc" glIsVertexArray(array: GLuint): GLboolean
-proc "importc" glLightModelf(pname: GLenum, param: GLfloat): void
-proc "importc" glLightModelfv(pname: GLenum, params: ptr(GLfloat)): void
-proc "importc" glLightModeli(pname: GLenum, param: GLint): void
-proc "importc" glLightModeliv(pname: GLenum, params: ptr(GLint)): void
-proc "importc" glLightf(light: GLenum, pname: GLenum, param: GLfloat): void
-proc "importc" glLightfv(light: GLenum, pname: GLenum, params: ptr(GLfloat)): void
-proc "importc" glLighti(light: GLenum, pname: GLenum, param: GLint): void
-proc "importc" glLightiv(light: GLenum, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glLineStipple(factor: GLint, pattern: GLushort): void
-proc "importc" glLineWidth(width: GLfloat): void
-proc "importc" glLinkProgram(program: GLuint): void
-proc "importc" glListBase(base: GLuint): void
-proc "importc" glLoadIdentity(): void
-proc "importc" glLoadMatrixd(m: ptr(GLdouble)): void
-proc "importc" glLoadMatrixf(m: ptr(GLfloat)): void
-proc "importc" glLoadName(name: GLuint): void
-proc "importc" glLoadTransposeMatrixd(m: ptr(GLdouble)): void
-proc "importc" glLoadTransposeMatrixf(m: ptr(GLfloat)): void
-proc "importc" glLogicOp(opcode: GLenum): void
-proc "importc" glMap1d(target: GLenum, u1: GLdouble, u2: GLdouble, stride: GLint, order: GLint, points: ptr(GLdouble)): pointer
-proc "importc" glMap1f(target: GLenum, u1: GLfloat, u2: GLfloat, stride: GLint, order: GLint, points: ptr(GLfloat)): pointer
-proc "importc" glMap2d(target: GLenum, u1: GLdouble, u2: GLdouble, ustride: GLint, uorder: GLint, v1: GLdouble, v2: GLdouble, vstride: GLint, vorder: GLint, points: ptr(GLdouble)): pointer
-proc "importc" glMap2f(target: GLenum, u1: GLfloat, u2: GLfloat, ustride: GLint, uorder: GLint, v1: GLfloat, v2: GLfloat, vstride: GLint, vorder: GLint, points: ptr(GLfloat)): pointer
-proc "importc" glMapBuffer(target: GLenum, access: GLenum): pointer
-proc "importc" glMapBufferRange(target: GLenum, offset: GLintptr, length: GLsizeiptr, access: GLbitfield): pointer
-proc "importc" glMapGrid1d(un: GLint, u1: GLdouble, u2: GLdouble): pointer
-proc "importc" glMapGrid1f(un: GLint, u1: GLfloat, u2: GLfloat): pointer
-proc "importc" glMapGrid2d(un: GLint, u1: GLdouble, u2: GLdouble, vn: GLint, v1: GLdouble, v2: GLdouble): pointer
-proc "importc" glMapGrid2f(un: GLint, u1: GLfloat, u2: GLfloat, vn: GLint, v1: GLfloat, v2: GLfloat): pointer
-proc "importc" glMapNamedBuffer(buffer: GLuint, access: GLenum): pointer
-proc "importc" glMapNamedBufferRange(buffer: GLuint, offset: GLintptr, length: GLsizeiptr, access: GLbitfield): pointer
-proc "importc" glMaterialf(face: GLenum, pname: GLenum, param: GLfloat): void
-proc "importc" glMaterialfv(face: GLenum, pname: GLenum, params: ptr(GLfloat)): void
-proc "importc" glMateriali(face: GLenum, pname: GLenum, param: GLint): void
-proc "importc" glMaterialiv(face: GLenum, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glMatrixMode(mode: GLenum): void
-proc "importc" glMemoryBarrier(barriers: GLbitfield): void
-proc "importc" glMemoryBarrierByRegion(barriers: GLbitfield): void
-proc "importc" glMinSampleShading(value: GLfloat): void
-proc "importc" glMultMatrixd(m: ptr(GLdouble)): void
-proc "importc" glMultMatrixf(m: ptr(GLfloat)): void
-proc "importc" glMultTransposeMatrixd(m: ptr(GLdouble)): void
-proc "importc" glMultTransposeMatrixf(m: ptr(GLfloat)): void
-proc "importc" glMultiDrawArrays(mode: GLenum, first: ptr(GLint), count: ptr(GLsizei), drawcount: GLsizei): void
-proc "importc" glMultiDrawArraysIndirect(mode: GLenum, indirect: pointer, drawcount: GLsizei, stride: GLsizei): void
-proc "importc" glMultiDrawElements(mode: GLenum, count: ptr(GLsizei), typ: GLenum, indices: pointer, drawcount: GLsizei): void
-proc "importc" glMultiDrawElementsBaseVertex(mode: GLenum, count: ptr(GLsizei), typ: GLenum, indices: pointer, drawcount: GLsizei, basevertex: ptr(GLint)): void
-proc "importc" glMultiDrawElementsIndirect(mode: GLenum, typ: GLenum, indirect: pointer, drawcount: GLsizei, stride: GLsizei): void
-proc "importc" glMultiTexCoord1d(target: GLenum, s: GLdouble): void
-proc "importc" glMultiTexCoord1dv(target: GLenum, v: ptr(GLdouble)): void
-proc "importc" glMultiTexCoord1f(target: GLenum, s: GLfloat): void
-proc "importc" glMultiTexCoord1fv(target: GLenum, v: ptr(GLfloat)): void
-proc "importc" glMultiTexCoord1i(target: GLenum, s: GLint): void
-proc "importc" glMultiTexCoord1iv(target: GLenum, v: ptr(GLint)): void
-proc "importc" glMultiTexCoord1s(target: GLenum, s: GLshort): void
-proc "importc" glMultiTexCoord1sv(target: GLenum, v: ptr(GLshort)): void
-proc "importc" glMultiTexCoord2d(target: GLenum, s: GLdouble, t: GLdouble): void
-proc "importc" glMultiTexCoord2dv(target: GLenum, v: ptr(GLdouble)): void
-proc "importc" glMultiTexCoord2f(target: GLenum, s: GLfloat, t: GLfloat): void
-proc "importc" glMultiTexCoord2fv(target: GLenum, v: ptr(GLfloat)): void
-proc "importc" glMultiTexCoord2i(target: GLenum, s: GLint, t: GLint): void
-proc "importc" glMultiTexCoord2iv(target: GLenum, v: ptr(GLint)): void
-proc "importc" glMultiTexCoord2s(target: GLenum, s: GLshort, t: GLshort): void
-proc "importc" glMultiTexCoord2sv(target: GLenum, v: ptr(GLshort)): void
-proc "importc" glMultiTexCoord3d(target: GLenum, s: GLdouble, t: GLdouble, r: GLdouble): void
-proc "importc" glMultiTexCoord3dv(target: GLenum, v: ptr(GLdouble)): void
-proc "importc" glMultiTexCoord3f(target: GLenum, s: GLfloat, t: GLfloat, r: GLfloat): void
-proc "importc" glMultiTexCoord3fv(target: GLenum, v: ptr(GLfloat)): void
-proc "importc" glMultiTexCoord3i(target: GLenum, s: GLint, t: GLint, r: GLint): void
-proc "importc" glMultiTexCoord3iv(target: GLenum, v: ptr(GLint)): void
-proc "importc" glMultiTexCoord3s(target: GLenum, s: GLshort, t: GLshort, r: GLshort): void
-proc "importc" glMultiTexCoord3sv(target: GLenum, v: ptr(GLshort)): void
-proc "importc" glMultiTexCoord4d(target: GLenum, s: GLdouble, t: GLdouble, r: GLdouble, q: GLdouble): void
-proc "importc" glMultiTexCoord4dv(target: GLenum, v: ptr(GLdouble)): void
-proc "importc" glMultiTexCoord4f(target: GLenum, s: GLfloat, t: GLfloat, r: GLfloat, q: GLfloat): void
-proc "importc" glMultiTexCoord4fv(target: GLenum, v: ptr(GLfloat)): void
-proc "importc" glMultiTexCoord4i(target: GLenum, s: GLint, t: GLint, r: GLint, q: GLint): void
-proc "importc" glMultiTexCoord4iv(target: GLenum, v: ptr(GLint)): void
-proc "importc" glMultiTexCoord4s(target: GLenum, s: GLshort, t: GLshort, r: GLshort, q: GLshort): void
-proc "importc" glMultiTexCoord4sv(target: GLenum, v: ptr(GLshort)): void
-proc "importc" glMultiTexCoordP1ui(texture: GLenum, typ: GLenum, coords: GLuint): void
-proc "importc" glMultiTexCoordP1uiv(texture: GLenum, typ: GLenum, coords: ptr(GLuint)): void
-proc "importc" glMultiTexCoordP2ui(texture: GLenum, typ: GLenum, coords: GLuint): void
-proc "importc" glMultiTexCoordP2uiv(texture: GLenum, typ: GLenum, coords: ptr(GLuint)): void
-proc "importc" glMultiTexCoordP3ui(texture: GLenum, typ: GLenum, coords: GLuint): void
-proc "importc" glMultiTexCoordP3uiv(texture: GLenum, typ: GLenum, coords: ptr(GLuint)): void
-proc "importc" glMultiTexCoordP4ui(texture: GLenum, typ: GLenum, coords: GLuint): void
-proc "importc" glMultiTexCoordP4uiv(texture: GLenum, typ: GLenum, coords: ptr(GLuint)): void
-proc "importc" glNamedBufferData(buffer: GLuint, size: GLsizeiptr, data: pointer, usage: GLenum): void
-proc "importc" glNamedBufferStorage(buffer: GLuint, size: GLsizeiptr, data: pointer, flags: GLbitfield): void
-proc "importc" glNamedBufferSubData(buffer: GLuint, offset: GLintptr, size: GLsizeiptr, data: pointer): void
-proc "importc" glNamedFramebufferDrawBuffer(framebuffer: GLuint, buf: GLenum): void
-proc "importc" glNamedFramebufferDrawBuffers(framebuffer: GLuint, n: GLsizei, bufs: ptr(GLenum)): void
-proc "importc" glNamedFramebufferParameteri(framebuffer: GLuint, pname: GLenum, param: GLint): void
-proc "importc" glNamedFramebufferReadBuffer(framebuffer: GLuint, src: GLenum): void
-proc "importc" glNamedFramebufferRenderbuffer(framebuffer: GLuint, attachment: GLenum, renderbuffertarget: GLenum, renderbuffer: GLuint): void
-proc "importc" glNamedFramebufferTexture(framebuffer: GLuint, attachment: GLenum, texture: GLuint, level: GLint): void
-proc "importc" glNamedFramebufferTextureLayer(framebuffer: GLuint, attachment: GLenum, texture: GLuint, level: GLint, layer: GLint): void
-proc "importc" glNamedRenderbufferStorage(renderbuffer: GLuint, internalformat: GLenum, width: GLsizei, height: GLsizei): void
-proc "importc" glNamedRenderbufferStorageMultisample(renderbuffer: GLuint, samples: GLsizei, internalformat: GLenum, width: GLsizei, height: GLsizei): void
-proc "importc" glNewList(list: GLuint, mode: GLenum): void
-proc "importc" glNormal3b(nx: GLbyte, ny: GLbyte, nz: GLbyte): void
-proc "importc" glNormal3bv(v: ptr(GLbyte)): void
-proc "importc" glNormal3d(nx: GLdouble, ny: GLdouble, nz: GLdouble): void
-proc "importc" glNormal3dv(v: ptr(GLdouble)): void
-proc "importc" glNormal3f(nx: GLfloat, ny: GLfloat, nz: GLfloat): void
-proc "importc" glNormal3fv(v: ptr(GLfloat)): void
-proc "importc" glNormal3i(nx: GLint, ny: GLint, nz: GLint): void
-proc "importc" glNormal3iv(v: ptr(GLint)): void
-proc "importc" glNormal3s(nx: GLshort, ny: GLshort, nz: GLshort): void
-proc "importc" glNormal3sv(v: ptr(GLshort)): void
-proc "importc" glNormalP3ui(typ: GLenum, coords: GLuint): void
-proc "importc" glNormalP3uiv(typ: GLenum, coords: ptr(GLuint)): void
-proc "importc" glNormalPointer(typ: GLenum, stride: GLsizei, pointer: pointer): void
-proc "importc" glObjectLabel(identifier: GLenum, name: GLuint, length: GLsizei, label: cstr): void
-proc "importc" glObjectPtrLabel(`ptr`: pointer, length: GLsizei, label: cstr): void
-proc "importc" glOrtho(left: GLdouble, right: GLdouble, bottom: GLdouble, top: GLdouble, zNear: GLdouble, zFar: GLdouble): void
-proc "importc" glPassThrough(token: GLfloat): void
-proc "importc" glPatchParameterfv(pname: GLenum, values: ptr(GLfloat)): void
-proc "importc" glPatchParameteri(pname: GLenum, value: GLint): void
-proc "importc" glPauseTransformFeedback(): void
-proc "importc" glPixelMapfv(map: GLenum, mapsize: GLsizei, values: ptr(GLfloat)): void
-proc "importc" glPixelMapuiv(map: GLenum, mapsize: GLsizei, values: ptr(GLuint)): void
-proc "importc" glPixelMapusv(map: GLenum, mapsize: GLsizei, values: ptr(GLushort)): void
-proc "importc" glPixelStoref(pname: GLenum, param: GLfloat): void
-proc "importc" glPixelStorei(pname: GLenum, param: GLint): void
-proc "importc" glPixelTransferf(pname: GLenum, param: GLfloat): void
-proc "importc" glPixelTransferi(pname: GLenum, param: GLint): void
-proc "importc" glPixelZoom(xfactor: GLfloat, yfactor: GLfloat): void
-proc "importc" glPointParameterf(pname: GLenum, param: GLfloat): void
-proc "importc" glPointParameterfv(pname: GLenum, params: ptr(GLfloat)): void
-proc "importc" glPointParameteri(pname: GLenum, param: GLint): void
-proc "importc" glPointParameteriv(pname: GLenum, params: ptr(GLint)): void
-proc "importc" glPointSize(size: GLfloat): void
-proc "importc" glPolygonMode(face: GLenum, mode: GLenum): void
-proc "importc" glPolygonOffset(factor: GLfloat, units: GLfloat): void
-proc "importc" glPolygonStipple(mask: ptr(GLubyte)): void
-proc "importc" glPopAttrib(): void
-proc "importc" glPopClientAttrib(): void
-proc "importc" glPopDebugGroup(): void
-proc "importc" glPopMatrix(): void
-proc "importc" glPopName(): void
-proc "importc" glPrimitiveRestartIndex(index: GLuint): void
-proc "importc" glPrioritizeTextures(n: GLsizei, textures: ptr(GLuint), priorities: ptr(GLfloat)): void
-proc "importc" glProgramBinary(program: GLuint, binaryFormat: GLenum, binary: pointer, length: GLsizei): void
-proc "importc" glProgramParameteri(program: GLuint, pname: GLenum, value: GLint): void
-proc "importc" glProgramUniform1d(program: GLuint, location: GLint, v0: GLdouble): void
-proc "importc" glProgramUniform1dv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLdouble)): void
-proc "importc" glProgramUniform1f(program: GLuint, location: GLint, v0: GLfloat): void
-proc "importc" glProgramUniform1fv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLfloat)): void
-proc "importc" glProgramUniform1i(program: GLuint, location: GLint, v0: GLint): void
-proc "importc" glProgramUniform1iv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLint)): void
-proc "importc" glProgramUniform1ui(program: GLuint, location: GLint, v0: GLuint): void
-proc "importc" glProgramUniform1uiv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLuint)): void
-proc "importc" glProgramUniform2d(program: GLuint, location: GLint, v0: GLdouble, v1: GLdouble): void
-proc "importc" glProgramUniform2dv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLdouble)): void
-proc "importc" glProgramUniform2f(program: GLuint, location: GLint, v0: GLfloat, v1: GLfloat): void
-proc "importc" glProgramUniform2fv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLfloat)): void
-proc "importc" glProgramUniform2i(program: GLuint, location: GLint, v0: GLint, v1: GLint): void
-proc "importc" glProgramUniform2iv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLint)): void
-proc "importc" glProgramUniform2ui(program: GLuint, location: GLint, v0: GLuint, v1: GLuint): void
-proc "importc" glProgramUniform2uiv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLuint)): void
-proc "importc" glProgramUniform3d(program: GLuint, location: GLint, v0: GLdouble, v1: GLdouble, v2: GLdouble): void
-proc "importc" glProgramUniform3dv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLdouble)): void
-proc "importc" glProgramUniform3f(program: GLuint, location: GLint, v0: GLfloat, v1: GLfloat, v2: GLfloat): void
-proc "importc" glProgramUniform3fv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLfloat)): void
-proc "importc" glProgramUniform3i(program: GLuint, location: GLint, v0: GLint, v1: GLint, v2: GLint): void
-proc "importc" glProgramUniform3iv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLint)): void
-proc "importc" glProgramUniform3ui(program: GLuint, location: GLint, v0: GLuint, v1: GLuint, v2: GLuint): void
-proc "importc" glProgramUniform3uiv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLuint)): void
-proc "importc" glProgramUniform4d(program: GLuint, location: GLint, v0: GLdouble, v1: GLdouble, v2: GLdouble, v3: GLdouble): void
-proc "importc" glProgramUniform4dv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLdouble)): void
-proc "importc" glProgramUniform4f(program: GLuint, location: GLint, v0: GLfloat, v1: GLfloat, v2: GLfloat, v3: GLfloat): void
-proc "importc" glProgramUniform4fv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLfloat)): void
-proc "importc" glProgramUniform4i(program: GLuint, location: GLint, v0: GLint, v1: GLint, v2: GLint, v3: GLint): void
-proc "importc" glProgramUniform4iv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLint)): void
-proc "importc" glProgramUniform4ui(program: GLuint, location: GLint, v0: GLuint, v1: GLuint, v2: GLuint, v3: GLuint): void
-proc "importc" glProgramUniform4uiv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLuint)): void
-proc "importc" glProgramUniformMatrix2dv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)): void
-proc "importc" glProgramUniformMatrix2fv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)): void
-proc "importc" glProgramUniformMatrix2x3dv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)): void
-proc "importc" glProgramUniformMatrix2x3fv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)): void
-proc "importc" glProgramUniformMatrix2x4dv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)): void
-proc "importc" glProgramUniformMatrix2x4fv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)): void
-proc "importc" glProgramUniformMatrix3dv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)): void
-proc "importc" glProgramUniformMatrix3fv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)): void
-proc "importc" glProgramUniformMatrix3x2dv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)): void
-proc "importc" glProgramUniformMatrix3x2fv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)): void
-proc "importc" glProgramUniformMatrix3x4dv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)): void
-proc "importc" glProgramUniformMatrix3x4fv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)): void
-proc "importc" glProgramUniformMatrix4dv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)): void
-proc "importc" glProgramUniformMatrix4fv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)): void
-proc "importc" glProgramUniformMatrix4x2dv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)): void
-proc "importc" glProgramUniformMatrix4x2fv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)): void
-proc "importc" glProgramUniformMatrix4x3dv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)): void
-proc "importc" glProgramUniformMatrix4x3fv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)): void
-proc "importc" glProvokingVertex(mode: GLenum): void
-proc "importc" glPushAttrib(mask: GLbitfield): void
-proc "importc" glPushClientAttrib(mask: GLbitfield): void
-proc "importc" glPushDebugGroup(source: GLenum, id: GLuint, length: GLsizei, message: cstr): void
-proc "importc" glPushMatrix(): void
-proc "importc" glPushName(name: GLuint): void
-proc "importc" glQueryCounter(id: GLuint, target: GLenum): void
-proc "importc" glRasterPos2d(x: GLdouble, y: GLdouble): void
-proc "importc" glRasterPos2dv(v: ptr(GLdouble)): void
-proc "importc" glRasterPos2f(x: GLfloat, y: GLfloat): void
-proc "importc" glRasterPos2fv(v: ptr(GLfloat)): void
-proc "importc" glRasterPos2i(x: GLint, y: GLint): void
-proc "importc" glRasterPos2iv(v: ptr(GLint)): void
-proc "importc" glRasterPos2s(x: GLshort, y: GLshort): void
-proc "importc" glRasterPos2sv(v: ptr(GLshort)): void
-proc "importc" glRasterPos3d(x: GLdouble, y: GLdouble, z: GLdouble): void
-proc "importc" glRasterPos3dv(v: ptr(GLdouble)): void
-proc "importc" glRasterPos3f(x: GLfloat, y: GLfloat, z: GLfloat): void
-proc "importc" glRasterPos3fv(v: ptr(GLfloat)): void
-proc "importc" glRasterPos3i(x: GLint, y: GLint, z: GLint): void
-proc "importc" glRasterPos3iv(v: ptr(GLint)): void
-proc "importc" glRasterPos3s(x: GLshort, y: GLshort, z: GLshort): void
-proc "importc" glRasterPos3sv(v: ptr(GLshort)): void
-proc "importc" glRasterPos4d(x: GLdouble, y: GLdouble, z: GLdouble, w: GLdouble): void
-proc "importc" glRasterPos4dv(v: ptr(GLdouble)): void
-proc "importc" glRasterPos4f(x: GLfloat, y: GLfloat, z: GLfloat, w: GLfloat): void
-proc "importc" glRasterPos4fv(v: ptr(GLfloat)): void
-proc "importc" glRasterPos4i(x: GLint, y: GLint, z: GLint, w: GLint): void
-proc "importc" glRasterPos4iv(v: ptr(GLint)): void
-proc "importc" glRasterPos4s(x: GLshort, y: GLshort, z: GLshort, w: GLshort): void
-proc "importc" glRasterPos4sv(v: ptr(GLshort)): void
-proc "importc" glReadBuffer(src: GLenum): void
-proc "importc" glReadPixels(x: GLint, y: GLint, width: GLsizei, height: GLsizei, format: GLenum, typ: GLenum, pixels: pointer): void
-proc "importc" glReadnPixels(x: GLint, y: GLint, width: GLsizei, height: GLsizei, format: GLenum, typ: GLenum, bufSize: GLsizei, data: pointer): void
-proc "importc" glRectd(x1: GLdouble, y1: GLdouble, x2: GLdouble, y2: GLdouble): void
-proc "importc" glRectdv(v1: ptr(GLdouble), v2: ptr(GLdouble)): void
-proc "importc" glRectf(x1: GLfloat, y1: GLfloat, x2: GLfloat, y2: GLfloat): void
-proc "importc" glRectfv(v1: ptr(GLfloat), v2: ptr(GLfloat)): void
-proc "importc" glRecti(x1: GLint, y1: GLint, x2: GLint, y2: GLint): void
-proc "importc" glRectiv(v1: ptr(GLint), v2: ptr(GLint)): void
-proc "importc" glRects(x1: GLshort, y1: GLshort, x2: GLshort, y2: GLshort): void
-proc "importc" glRectsv(v1: ptr(GLshort), v2: ptr(GLshort)): void
-proc "importc" glReleaseShaderCompiler(): void
-proc "importc" glRenderMode(mode: GLenum): GLint
-proc "importc" glRenderbufferStorage(target: GLenum, internalformat: GLenum, width: GLsizei, height: GLsizei): void
-proc "importc" glRenderbufferStorageMultisample(target: GLenum, samples: GLsizei, internalformat: GLenum, width: GLsizei, height: GLsizei): void
-proc "importc" glResumeTransformFeedback(): void
-proc "importc" glRotated(angle: GLdouble, x: GLdouble, y: GLdouble, z: GLdouble): void
-proc "importc" glRotatef(angle: GLfloat, x: GLfloat, y: GLfloat, z: GLfloat): void
-proc "importc" glSampleCoverage(value: GLfloat, invert: GLboolean): void
-proc "importc" glSampleMaski(maskNumber: GLuint, mask: GLbitfield): void
-proc "importc" glSamplerParameterIiv(sampler: GLuint, pname: GLenum, param: ptr(GLint)): void
-proc "importc" glSamplerParameterIuiv(sampler: GLuint, pname: GLenum, param: ptr(GLuint)): void
-proc "importc" glSamplerParameterf(sampler: GLuint, pname: GLenum, param: GLfloat): void
-proc "importc" glSamplerParameterfv(sampler: GLuint, pname: GLenum, param: ptr(GLfloat)): void
-proc "importc" glSamplerParameteri(sampler: GLuint, pname: GLenum, param: GLint): void
-proc "importc" glSamplerParameteriv(sampler: GLuint, pname: GLenum, param: ptr(GLint)): void
-proc "importc" glScaled(x: GLdouble, y: GLdouble, z: GLdouble): void
-proc "importc" glScalef(x: GLfloat, y: GLfloat, z: GLfloat): void
-proc "importc" glScissor(x: GLint, y: GLint, width: GLsizei, height: GLsizei): void
-proc "importc" glScissorArrayv(first: GLuint, count: GLsizei, v: ptr(GLint)): void
-proc "importc" glScissorIndexed(index: GLuint, left: GLint, bottom: GLint, width: GLsizei, height: GLsizei): void
-proc "importc" glScissorIndexedv(index: GLuint, v: ptr(GLint)): void
-proc "importc" glSecondaryColor3b(red: GLbyte, green: GLbyte, blue: GLbyte): void
-proc "importc" glSecondaryColor3bv(v: ptr(GLbyte)): void
-proc "importc" glSecondaryColor3d(red: GLdouble, green: GLdouble, blue: GLdouble): void
-proc "importc" glSecondaryColor3dv(v: ptr(GLdouble)): void
-proc "importc" glSecondaryColor3f(red: GLfloat, green: GLfloat, blue: GLfloat): void
-proc "importc" glSecondaryColor3fv(v: ptr(GLfloat)): void
-proc "importc" glSecondaryColor3i(red: GLint, green: GLint, blue: GLint): void
-proc "importc" glSecondaryColor3iv(v: ptr(GLint)): void
-proc "importc" glSecondaryColor3s(red: GLshort, green: GLshort, blue: GLshort): void
-proc "importc" glSecondaryColor3sv(v: ptr(GLshort)): void
-proc "importc" glSecondaryColor3ub(red: GLubyte, green: GLubyte, blue: GLubyte): void
-proc "importc" glSecondaryColor3ubv(v: ptr(GLubyte)): void
-proc "importc" glSecondaryColor3ui(red: GLuint, green: GLuint, blue: GLuint): void
-proc "importc" glSecondaryColor3uiv(v: ptr(GLuint)): void
-proc "importc" glSecondaryColor3us(red: GLushort, green: GLushort, blue: GLushort): void
-proc "importc" glSecondaryColor3usv(v: ptr(GLushort)): void
-proc "importc" glSecondaryColorP3ui(typ: GLenum, color: GLuint): void
-proc "importc" glSecondaryColorP3uiv(typ: GLenum, color: ptr(GLuint)): void
-proc "importc" glSecondaryColorPointer(size: GLint, typ: GLenum, stride: GLsizei, pointer: pointer): void
-proc "importc" glSelectBuffer(size: GLsizei, buffer: ptr(GLuint)): void
-proc "importc" glShadeModel(mode: GLenum): void
-proc "importc" glShaderBinary(count: GLsizei, shaders: ptr(GLuint), binaryformat: GLenum, binary: pointer, length: GLsizei): void
-proc "importc" glShaderSource(shader: GLuint, count: GLsizei, string: ptr(cstr), length: ptr(GLint)): void
-proc "importc" glShaderStorageBlockBinding(program: GLuint, storageBlockIndex: GLuint, storageBlockBinding: GLuint): void
-proc "importc" glStencilFunc(func: GLenum, ref: GLint, mask: GLuint): void
-proc "importc" glStencilFuncSeparate(face: GLenum, func: GLenum, ref: GLint, mask: GLuint): void
-proc "importc" glStencilMask(mask: GLuint): void
-proc "importc" glStencilMaskSeparate(face: GLenum, mask: GLuint): void
-proc "importc" glStencilOp(fail: GLenum, zfail: GLenum, zpass: GLenum): void
-proc "importc" glStencilOpSeparate(face: GLenum, sfail: GLenum, dpfail: GLenum, dppass: GLenum): void
-proc "importc" glTexBuffer(target: GLenum, internalformat: GLenum, buffer: GLuint): void
-proc "importc" glTexBufferRange(target: GLenum, internalformat: GLenum, buffer: GLuint, offset: GLintptr, size: GLsizeiptr): void
-proc "importc" glTexCoord1d(s: GLdouble): void
-proc "importc" glTexCoord1dv(v: ptr(GLdouble)): void
-proc "importc" glTexCoord1f(s: GLfloat): void
-proc "importc" glTexCoord1fv(v: ptr(GLfloat)): void
-proc "importc" glTexCoord1i(s: GLint): void
-proc "importc" glTexCoord1iv(v: ptr(GLint)): void
-proc "importc" glTexCoord1s(s: GLshort): void
-proc "importc" glTexCoord1sv(v: ptr(GLshort)): void
-proc "importc" glTexCoord2d(s: GLdouble, t: GLdouble): void
-proc "importc" glTexCoord2dv(v: ptr(GLdouble)): void
-proc "importc" glTexCoord2f(s: GLfloat, t: GLfloat): void
-proc "importc" glTexCoord2fv(v: ptr(GLfloat)): void
-proc "importc" glTexCoord2i(s: GLint, t: GLint): void
-proc "importc" glTexCoord2iv(v: ptr(GLint)): void
-proc "importc" glTexCoord2s(s: GLshort, t: GLshort): void
-proc "importc" glTexCoord2sv(v: ptr(GLshort)): void
-proc "importc" glTexCoord3d(s: GLdouble, t: GLdouble, r: GLdouble): void
-proc "importc" glTexCoord3dv(v: ptr(GLdouble)): void
-proc "importc" glTexCoord3f(s: GLfloat, t: GLfloat, r: GLfloat): void
-proc "importc" glTexCoord3fv(v: ptr(GLfloat)): void
-proc "importc" glTexCoord3i(s: GLint, t: GLint, r: GLint): void
-proc "importc" glTexCoord3iv(v: ptr(GLint)): void
-proc "importc" glTexCoord3s(s: GLshort, t: GLshort, r: GLshort): void
-proc "importc" glTexCoord3sv(v: ptr(GLshort)): void
-proc "importc" glTexCoord4d(s: GLdouble, t: GLdouble, r: GLdouble, q: GLdouble): void
-proc "importc" glTexCoord4dv(v: ptr(GLdouble)): void
-proc "importc" glTexCoord4f(s: GLfloat, t: GLfloat, r: GLfloat, q: GLfloat): void
-proc "importc" glTexCoord4fv(v: ptr(GLfloat)): void
-proc "importc" glTexCoord4i(s: GLint, t: GLint, r: GLint, q: GLint): void
-proc "importc" glTexCoord4iv(v: ptr(GLint)): void
-proc "importc" glTexCoord4s(s: GLshort, t: GLshort, r: GLshort, q: GLshort): void
-proc "importc" glTexCoord4sv(v: ptr(GLshort)): void
-proc "importc" glTexCoordP1ui(typ: GLenum, coords: GLuint): void
-proc "importc" glTexCoordP1uiv(typ: GLenum, coords: ptr(GLuint)): void
-proc "importc" glTexCoordP2ui(typ: GLenum, coords: GLuint): void
-proc "importc" glTexCoordP2uiv(typ: GLenum, coords: ptr(GLuint)): void
-proc "importc" glTexCoordP3ui(typ: GLenum, coords: GLuint): void
-proc "importc" glTexCoordP3uiv(typ: GLenum, coords: ptr(GLuint)): void
-proc "importc" glTexCoordP4ui(typ: GLenum, coords: GLuint): void
-proc "importc" glTexCoordP4uiv(typ: GLenum, coords: ptr(GLuint)): void
-proc "importc" glTexCoordPointer(size: GLint, typ: GLenum, stride: GLsizei, pointer: pointer): void
-proc "importc" glTexEnvf(target: GLenum, pname: GLenum, param: GLfloat): void
-proc "importc" glTexEnvfv(target: GLenum, pname: GLenum, params: ptr(GLfloat)): void
-proc "importc" glTexEnvi(target: GLenum, pname: GLenum, param: GLint): void
-proc "importc" glTexEnviv(target: GLenum, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glTexGend(coord: GLenum, pname: GLenum, param: GLdouble): void
-proc "importc" glTexGendv(coord: GLenum, pname: GLenum, params: ptr(GLdouble)): void
-proc "importc" glTexGenf(coord: GLenum, pname: GLenum, param: GLfloat): void
-proc "importc" glTexGenfv(coord: GLenum, pname: GLenum, params: ptr(GLfloat)): void
-proc "importc" glTexGeni(coord: GLenum, pname: GLenum, param: GLint): void
-proc "importc" glTexGeniv(coord: GLenum, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glTexImage1D(target: GLenum, level: GLint, internalformat: GLint, width: GLsizei, border: GLint, format: GLenum, typ: GLenum, pixels: pointer): void
-proc "importc" glTexImage2D(target: GLenum, level: GLint, internalformat: GLint, width: GLsizei, height: GLsizei, border: GLint, format: GLenum, typ: GLenum, pixels: pointer): void
-proc "importc" glTexImage2DMultisample(target: GLenum, samples: GLsizei, internalformat: GLenum, width: GLsizei, height: GLsizei, fixedsamplelocations: GLboolean): void
-proc "importc" glTexImage3D(target: GLenum, level: GLint, internalformat: GLint, width: GLsizei, height: GLsizei, depth: GLsizei, border: GLint, format: GLenum, typ: GLenum, pixels: pointer): void
-proc "importc" glTexImage3DMultisample(target: GLenum, samples: GLsizei, internalformat: GLenum, width: GLsizei, height: GLsizei, depth: GLsizei, fixedsamplelocations: GLboolean): void
-proc "importc" glTexParameterIiv(target: GLenum, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glTexParameterIuiv(target: GLenum, pname: GLenum, params: ptr(GLuint)): void
-proc "importc" glTexParameterf(target: GLenum, pname: GLenum, param: GLfloat): void
-proc "importc" glTexParameterfv(target: GLenum, pname: GLenum, params: ptr(GLfloat)): void
-proc "importc" glTexParameteri(target: GLenum, pname: GLenum, param: GLint): void
-proc "importc" glTexParameteriv(target: GLenum, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glTexStorage1D(target: GLenum, levels: GLsizei, internalformat: GLenum, width: GLsizei): void
-proc "importc" glTexStorage2D(target: GLenum, levels: GLsizei, internalformat: GLenum, width: GLsizei, height: GLsizei): void
-proc "importc" glTexStorage2DMultisample(target: GLenum, samples: GLsizei, internalformat: GLenum, width: GLsizei, height: GLsizei, fixedsamplelocations: GLboolean): void
-proc "importc" glTexStorage3D(target: GLenum, levels: GLsizei, internalformat: GLenum, width: GLsizei, height: GLsizei, depth: GLsizei): void
-proc "importc" glTexStorage3DMultisample(target: GLenum, samples: GLsizei, internalformat: GLenum, width: GLsizei, height: GLsizei, depth: GLsizei, fixedsamplelocations: GLboolean): void
-proc "importc" glTexSubImage1D(target: GLenum, level: GLint, xoffset: GLint, width: GLsizei, format: GLenum, typ: GLenum, pixels: pointer): void
-proc "importc" glTexSubImage2D(target: GLenum, level: GLint, xoffset: GLint, yoffset: GLint, width: GLsizei, height: GLsizei, format: GLenum, typ: GLenum, pixels: pointer): void
-proc "importc" glTexSubImage3D(target: GLenum, level: GLint, xoffset: GLint, yoffset: GLint, zoffset: GLint, width: GLsizei, height: GLsizei, depth: GLsizei, format: GLenum, typ: GLenum, pixels: pointer): void
-proc "importc" glTextureBarrier(): void
-proc "importc" glTextureBuffer(texture: GLuint, internalformat: GLenum, buffer: GLuint): void
-proc "importc" glTextureBufferRange(texture: GLuint, internalformat: GLenum, buffer: GLuint, offset: GLintptr, size: GLsizeiptr): void
-proc "importc" glTextureParameterIiv(texture: GLuint, pname: GLenum, params: ptr(GLint)): void
-proc "importc" glTextureParameterIuiv(texture: GLuint, pname: GLenum, params: ptr(GLuint)): void
-proc "importc" glTextureParameterf(texture: GLuint, pname: GLenum, param: GLfloat): void
-proc "importc" glTextureParameterfv(texture: GLuint, pname: GLenum, param: ptr(GLfloat)): void
-proc "importc" glTextureParameteri(texture: GLuint, pname: GLenum, param: GLint): void
-proc "importc" glTextureParameteriv(texture: GLuint, pname: GLenum, param: ptr(GLint)): void
-proc "importc" glTextureStorage1D(texture: GLuint, levels: GLsizei, internalformat: GLenum, width: GLsizei): void
-proc "importc" glTextureStorage2D(texture: GLuint, levels: GLsizei, internalformat: GLenum, width: GLsizei, height: GLsizei): void
-proc "importc" glTextureStorage2DMultisample(texture: GLuint, samples: GLsizei, internalformat: GLenum, width: GLsizei, height: GLsizei, fixedsamplelocations: GLboolean): void
-proc "importc" glTextureStorage3D(texture: GLuint, levels: GLsizei, internalformat: GLenum, width: GLsizei, height: GLsizei, depth: GLsizei): void
-proc "importc" glTextureStorage3DMultisample(texture: GLuint, samples: GLsizei, internalformat: GLenum, width: GLsizei, height: GLsizei, depth: GLsizei, fixedsamplelocations: GLboolean): void
-proc "importc" glTextureSubImage1D(texture: GLuint, level: GLint, xoffset: GLint, width: GLsizei, format: GLenum, typ: GLenum, pixels: pointer): void
-proc "importc" glTextureSubImage2D(texture: GLuint, level: GLint, xoffset: GLint, yoffset: GLint, width: GLsizei, height: GLsizei, format: GLenum, typ: GLenum, pixels: pointer): void
-proc "importc" glTextureSubImage3D(texture: GLuint, level: GLint, xoffset: GLint, yoffset: GLint, zoffset: GLint, width: GLsizei, height: GLsizei, depth: GLsizei, format: GLenum, typ: GLenum, pixels: pointer): void
-proc "importc" glTextureView(texture: GLuint, target: GLenum, origtexture: GLuint, internalformat: GLenum, minlevel: GLuint, numlevels: GLuint, minlayer: GLuint, numlayers: GLuint): void
-proc "importc" glTransformFeedbackBufferBase(xfb: GLuint, index: GLuint, buffer: GLuint): void
-proc "importc" glTransformFeedbackBufferRange(xfb: GLuint, index: GLuint, buffer: GLuint, offset: GLintptr, size: GLsizeiptr): void
-proc "importc" glTransformFeedbackVaryings(program: GLuint, count: GLsizei, varyings: ptr(cstr), bufferMode: GLenum): void
-proc "importc" glTranslated(x: GLdouble, y: GLdouble, z: GLdouble): void
-proc "importc" glTranslatef(x: GLfloat, y: GLfloat, z: GLfloat): void
-proc "importc" glUniform1d(location: GLint, x: GLdouble): void
-proc "importc" glUniform1dv(location: GLint, count: GLsizei, value: ptr(GLdouble)): void
-proc "importc" glUniform1f(location: GLint, v0: GLfloat): void
-proc "importc" glUniform1fv(location: GLint, count: GLsizei, value: ptr(GLfloat)): void
-proc "importc" glUniform1i(location: GLint, v0: GLint): void
-proc "importc" glUniform1iv(location: GLint, count: GLsizei, value: ptr(GLint)): void
-proc "importc" glUniform1ui(location: GLint, v0: GLuint): void
-proc "importc" glUniform1uiv(location: GLint, count: GLsizei, value: ptr(GLuint)): void
-proc "importc" glUniform2d(location: GLint, x: GLdouble, y: GLdouble): void
-proc "importc" glUniform2dv(location: GLint, count: GLsizei, value: ptr(GLdouble)): void
-proc "importc" glUniform2f(location: GLint, v0: GLfloat, v1: GLfloat): void
-proc "importc" glUniform2fv(location: GLint, count: GLsizei, value: ptr(GLfloat)): void
-proc "importc" glUniform2i(location: GLint, v0: GLint, v1: GLint): void
-proc "importc" glUniform2iv(location: GLint, count: GLsizei, value: ptr(GLint)): void
-proc "importc" glUniform2ui(location: GLint, v0: GLuint, v1: GLuint): void
-proc "importc" glUniform2uiv(location: GLint, count: GLsizei, value: ptr(GLuint)): void
-proc "importc" glUniform3d(location: GLint, x: GLdouble, y: GLdouble, z: GLdouble): void
-proc "importc" glUniform3dv(location: GLint, count: GLsizei, value: ptr(GLdouble)): void
-proc "importc" glUniform3f(location: GLint, v0: GLfloat, v1: GLfloat, v2: GLfloat): void
-proc "importc" glUniform3fv(location: GLint, count: GLsizei, value: ptr(GLfloat)): void
-proc "importc" glUniform3i(location: GLint, v0: GLint, v1: GLint, v2: GLint): void
-proc "importc" glUniform3iv(location: GLint, count: GLsizei, value: ptr(GLint)): void
-proc "importc" glUniform3ui(location: GLint, v0: GLuint, v1: GLuint, v2: GLuint): void
-proc "importc" glUniform3uiv(location: GLint, count: GLsizei, value: ptr(GLuint)): void
-proc "importc" glUniform4d(location: GLint, x: GLdouble, y: GLdouble, z: GLdouble, w: GLdouble): void
-proc "importc" glUniform4dv(location: GLint, count: GLsizei, value: ptr(GLdouble)): void
-proc "importc" glUniform4f(location: GLint, v0: GLfloat, v1: GLfloat, v2: GLfloat, v3: GLfloat): void
-proc "importc" glUniform4fv(location: GLint, count: GLsizei, value: ptr(GLfloat)): void
-proc "importc" glUniform4i(location: GLint, v0: GLint, v1: GLint, v2: GLint, v3: GLint): void
-proc "importc" glUniform4iv(location: GLint, count: GLsizei, value: ptr(GLint)): void
-proc "importc" glUniform4ui(location: GLint, v0: GLuint, v1: GLuint, v2: GLuint, v3: GLuint): void
-proc "importc" glUniform4uiv(location: GLint, count: GLsizei, value: ptr(GLuint)): void
-proc "importc" glUniformBlockBinding(program: GLuint, uniformBlockIndex: GLuint, uniformBlockBinding: GLuint): void
-proc "importc" glUniformMatrix2dv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)): void
-proc "importc" glUniformMatrix2fv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)): void
-proc "importc" glUniformMatrix2x3dv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)): void
-proc "importc" glUniformMatrix2x3fv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)): void
-proc "importc" glUniformMatrix2x4dv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)): void
-proc "importc" glUniformMatrix2x4fv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)): void
-proc "importc" glUniformMatrix3dv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)): void
-proc "importc" glUniformMatrix3fv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)): void
-proc "importc" glUniformMatrix3x2dv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)): void
-proc "importc" glUniformMatrix3x2fv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)): void
-proc "importc" glUniformMatrix3x4dv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)): void
-proc "importc" glUniformMatrix3x4fv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)): void
-proc "importc" glUniformMatrix4dv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)): void
-proc "importc" glUniformMatrix4fv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)): void
-proc "importc" glUniformMatrix4x2dv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)): void
-proc "importc" glUniformMatrix4x2fv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)): void
-proc "importc" glUniformMatrix4x3dv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)): void
-proc "importc" glUniformMatrix4x3fv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)): void
-proc "importc" glUniformSubroutinesuiv(shadertype: GLenum, count: GLsizei, indices: ptr(GLuint)): void
-proc "importc" glUnmapBuffer(target: GLenum): GLboolean
-proc "importc" glUnmapNamedBuffer(buffer: GLuint): GLboolean
-proc "importc" glUseProgram(program: GLuint): void
-proc "importc" glUseProgramStages(pipeline: GLuint, stages: GLbitfield, program: GLuint): void
-proc "importc" glValidateProgram(program: GLuint): void
-proc "importc" glValidateProgramPipeline(pipeline: GLuint): void
-proc "importc" glVertex2d(x: GLdouble, y: GLdouble): void
-proc "importc" glVertex2dv(v: ptr(GLdouble)): void
-proc "importc" glVertex2f(x: GLfloat, y: GLfloat): void
-proc "importc" glVertex2fv(v: ptr(GLfloat)): void
-proc "importc" glVertex2i(x: GLint, y: GLint): void
-proc "importc" glVertex2iv(v: ptr(GLint)): void
-proc "importc" glVertex2s(x: GLshort, y: GLshort): void
-proc "importc" glVertex2sv(v: ptr(GLshort)): void
-proc "importc" glVertex3d(x: GLdouble, y: GLdouble, z: GLdouble): void
-proc "importc" glVertex3dv(v: ptr(GLdouble)): void
-proc "importc" glVertex3f(x: GLfloat, y: GLfloat, z: GLfloat): void
-proc "importc" glVertex3fv(v: ptr(GLfloat)): void
-proc "importc" glVertex3i(x: GLint, y: GLint, z: GLint): void
-proc "importc" glVertex3iv(v: ptr(GLint)): void
-proc "importc" glVertex3s(x: GLshort, y: GLshort, z: GLshort): void
-proc "importc" glVertex3sv(v: ptr(GLshort)): void
-proc "importc" glVertex4d(x: GLdouble, y: GLdouble, z: GLdouble, w: GLdouble): void
-proc "importc" glVertex4dv(v: ptr(GLdouble)): void
-proc "importc" glVertex4f(x: GLfloat, y: GLfloat, z: GLfloat, w: GLfloat): void
-proc "importc" glVertex4fv(v: ptr(GLfloat)): void
-proc "importc" glVertex4i(x: GLint, y: GLint, z: GLint, w: GLint): void
-proc "importc" glVertex4iv(v: ptr(GLint)): void
-proc "importc" glVertex4s(x: GLshort, y: GLshort, z: GLshort, w: GLshort): void
-proc "importc" glVertex4sv(v: ptr(GLshort)): void
-proc "importc" glVertexArrayAttribBinding(vaobj: GLuint, attribindex: GLuint, bindingindex: GLuint): void
-proc "importc" glVertexArrayAttribFormat(vaobj: GLuint, attribindex: GLuint, size: GLint, typ: GLenum, normalized: GLboolean, relativeoffset: GLuint): void
-proc "importc" glVertexArrayAttribIFormat(vaobj: GLuint, attribindex: GLuint, size: GLint, typ: GLenum, relativeoffset: GLuint): void
-proc "importc" glVertexArrayAttribLFormat(vaobj: GLuint, attribindex: GLuint, size: GLint, typ: GLenum, relativeoffset: GLuint): void
-proc "importc" glVertexArrayBindingDivisor(vaobj: GLuint, bindingindex: GLuint, divisor: GLuint): void
-proc "importc" glVertexArrayElementBuffer(vaobj: GLuint, buffer: GLuint): void
-proc "importc" glVertexArrayVertexBuffer(vaobj: GLuint, bindingindex: GLuint, buffer: GLuint, offset: GLintptr, stride: GLsizei): void
-proc "importc" glVertexArrayVertexBuffers(vaobj: GLuint, first: GLuint, count: GLsizei, buffers: ptr(GLuint), offsets: ptr(GLintptr), strides: ptr(GLsizei)): void
-proc "importc" glVertexAttrib1d(index: GLuint, x: GLdouble): void
-proc "importc" glVertexAttrib1dv(index: GLuint, v: ptr(GLdouble)): void
-proc "importc" glVertexAttrib1f(index: GLuint, x: GLfloat): void
-proc "importc" glVertexAttrib1fv(index: GLuint, v: ptr(GLfloat)): void
-proc "importc" glVertexAttrib1s(index: GLuint, x: GLshort): void
-proc "importc" glVertexAttrib1sv(index: GLuint, v: ptr(GLshort)): void
-proc "importc" glVertexAttrib2d(index: GLuint, x: GLdouble, y: GLdouble): void
-proc "importc" glVertexAttrib2dv(index: GLuint, v: ptr(GLdouble)): void
-proc "importc" glVertexAttrib2f(index: GLuint, x: GLfloat, y: GLfloat): void
-proc "importc" glVertexAttrib2fv(index: GLuint, v: ptr(GLfloat)): void
-proc "importc" glVertexAttrib2s(index: GLuint, x: GLshort, y: GLshort): void
-proc "importc" glVertexAttrib2sv(index: GLuint, v: ptr(GLshort)): void
-proc "importc" glVertexAttrib3d(index: GLuint, x: GLdouble, y: GLdouble, z: GLdouble): void
-proc "importc" glVertexAttrib3dv(index: GLuint, v: ptr(GLdouble)): void
-proc "importc" glVertexAttrib3f(index: GLuint, x: GLfloat, y: GLfloat, z: GLfloat): void
-proc "importc" glVertexAttrib3fv(index: GLuint, v: ptr(GLfloat)): void
-proc "importc" glVertexAttrib3s(index: GLuint, x: GLshort, y: GLshort, z: GLshort): void
-proc "importc" glVertexAttrib3sv(index: GLuint, v: ptr(GLshort)): void
-proc "importc" glVertexAttrib4Nbv(index: GLuint, v: ptr(GLbyte)): void
-proc "importc" glVertexAttrib4Niv(index: GLuint, v: ptr(GLint)): void
-proc "importc" glVertexAttrib4Nsv(index: GLuint, v: ptr(GLshort)): void
-proc "importc" glVertexAttrib4Nub(index: GLuint, x: GLubyte, y: GLubyte, z: GLubyte, w: GLubyte): void
-proc "importc" glVertexAttrib4Nubv(index: GLuint, v: ptr(GLubyte)): void
-proc "importc" glVertexAttrib4Nuiv(index: GLuint, v: ptr(GLuint)): void
-proc "importc" glVertexAttrib4Nusv(index: GLuint, v: ptr(GLushort)): void
-proc "importc" glVertexAttrib4bv(index: GLuint, v: ptr(GLbyte)): void
-proc "importc" glVertexAttrib4d(index: GLuint, x: GLdouble, y: GLdouble, z: GLdouble, w: GLdouble): void
-proc "importc" glVertexAttrib4dv(index: GLuint, v: ptr(GLdouble)): void
-proc "importc" glVertexAttrib4f(index: GLuint, x: GLfloat, y: GLfloat, z: GLfloat, w: GLfloat): void
-proc "importc" glVertexAttrib4fv(index: GLuint, v: ptr(GLfloat)): void
-proc "importc" glVertexAttrib4iv(index: GLuint, v: ptr(GLint)): void
-proc "importc" glVertexAttrib4s(index: GLuint, x: GLshort, y: GLshort, z: GLshort, w: GLshort): void
-proc "importc" glVertexAttrib4sv(index: GLuint, v: ptr(GLshort)): void
-proc "importc" glVertexAttrib4ubv(index: GLuint, v: ptr(GLubyte)): void
-proc "importc" glVertexAttrib4uiv(index: GLuint, v: ptr(GLuint)): void
-proc "importc" glVertexAttrib4usv(index: GLuint, v: ptr(GLushort)): void
-proc "importc" glVertexAttribBinding(attribindex: GLuint, bindingindex: GLuint): void
-proc "importc" glVertexAttribDivisor(index: GLuint, divisor: GLuint): void
-proc "importc" glVertexAttribFormat(attribindex: GLuint, size: GLint, typ: GLenum, normalized: GLboolean, relativeoffset: GLuint): void
-proc "importc" glVertexAttribI1i(index: GLuint, x: GLint): void
-proc "importc" glVertexAttribI1iv(index: GLuint, v: ptr(GLint)): void
-proc "importc" glVertexAttribI1ui(index: GLuint, x: GLuint): void
-proc "importc" glVertexAttribI1uiv(index: GLuint, v: ptr(GLuint)): void
-proc "importc" glVertexAttribI2i(index: GLuint, x: GLint, y: GLint): void
-proc "importc" glVertexAttribI2iv(index: GLuint, v: ptr(GLint)): void
-proc "importc" glVertexAttribI2ui(index: GLuint, x: GLuint, y: GLuint): void
-proc "importc" glVertexAttribI2uiv(index: GLuint, v: ptr(GLuint)): void
-proc "importc" glVertexAttribI3i(index: GLuint, x: GLint, y: GLint, z: GLint): void
-proc "importc" glVertexAttribI3iv(index: GLuint, v: ptr(GLint)): void
-proc "importc" glVertexAttribI3ui(index: GLuint, x: GLuint, y: GLuint, z: GLuint): void
-proc "importc" glVertexAttribI3uiv(index: GLuint, v: ptr(GLuint)): void
-proc "importc" glVertexAttribI4bv(index: GLuint, v: ptr(GLbyte)): void
-proc "importc" glVertexAttribI4i(index: GLuint, x: GLint, y: GLint, z: GLint, w: GLint): void
-proc "importc" glVertexAttribI4iv(index: GLuint, v: ptr(GLint)): void
-proc "importc" glVertexAttribI4sv(index: GLuint, v: ptr(GLshort)): void
-proc "importc" glVertexAttribI4ubv(index: GLuint, v: ptr(GLubyte)): void
-proc "importc" glVertexAttribI4ui(index: GLuint, x: GLuint, y: GLuint, z: GLuint, w: GLuint): void
-proc "importc" glVertexAttribI4uiv(index: GLuint, v: ptr(GLuint)): void
-proc "importc" glVertexAttribI4usv(index: GLuint, v: ptr(GLushort)): void
-proc "importc" glVertexAttribIFormat(attribindex: GLuint, size: GLint, typ: GLenum, relativeoffset: GLuint): void
-proc "importc" glVertexAttribIPointer(index: GLuint, size: GLint, typ: GLenum, stride: GLsizei, pointer: pointer): void
-proc "importc" glVertexAttribL1d(index: GLuint, x: GLdouble): void
-proc "importc" glVertexAttribL1dv(index: GLuint, v: ptr(GLdouble)): void
-proc "importc" glVertexAttribL2d(index: GLuint, x: GLdouble, y: GLdouble): void
-proc "importc" glVertexAttribL2dv(index: GLuint, v: ptr(GLdouble)): void
-proc "importc" glVertexAttribL3d(index: GLuint, x: GLdouble, y: GLdouble, z: GLdouble): void
-proc "importc" glVertexAttribL3dv(index: GLuint, v: ptr(GLdouble)): void
-proc "importc" glVertexAttribL4d(index: GLuint, x: GLdouble, y: GLdouble, z: GLdouble, w: GLdouble): void
-proc "importc" glVertexAttribL4dv(index: GLuint, v: ptr(GLdouble)): void
-proc "importc" glVertexAttribLFormat(attribindex: GLuint, size: GLint, typ: GLenum, relativeoffset: GLuint): void
-proc "importc" glVertexAttribLPointer(index: GLuint, size: GLint, typ: GLenum, stride: GLsizei, pointer: pointer): void
-proc "importc" glVertexAttribP1ui(index: GLuint, typ: GLenum, normalized: GLboolean, value: GLuint): void
-proc "importc" glVertexAttribP1uiv(index: GLuint, typ: GLenum, normalized: GLboolean, value: ptr(GLuint)): void
-proc "importc" glVertexAttribP2ui(index: GLuint, typ: GLenum, normalized: GLboolean, value: GLuint): void
-proc "importc" glVertexAttribP2uiv(index: GLuint, typ: GLenum, normalized: GLboolean, value: ptr(GLuint)): void
-proc "importc" glVertexAttribP3ui(index: GLuint, typ: GLenum, normalized: GLboolean, value: GLuint): void
-proc "importc" glVertexAttribP3uiv(index: GLuint, typ: GLenum, normalized: GLboolean, value: ptr(GLuint)): void
-proc "importc" glVertexAttribP4ui(index: GLuint, typ: GLenum, normalized: GLboolean, value: GLuint): void
-proc "importc" glVertexAttribP4uiv(index: GLuint, typ: GLenum, normalized: GLboolean, value: ptr(GLuint)): void
-proc "importc" glVertexAttribPointer(index: GLuint, size: GLint, typ: GLenum, normalized: GLboolean, stride: GLsizei, pointer: pointer): void
-proc "importc" glVertexBindingDivisor(bindingindex: GLuint, divisor: GLuint): void
-proc "importc" glVertexP2ui(typ: GLenum, value: GLuint): void
-proc "importc" glVertexP2uiv(typ: GLenum, value: ptr(GLuint)): void
-proc "importc" glVertexP3ui(typ: GLenum, value: GLuint): void
-proc "importc" glVertexP3uiv(typ: GLenum, value: ptr(GLuint)): void
-proc "importc" glVertexP4ui(typ: GLenum, value: GLuint): void
-proc "importc" glVertexP4uiv(typ: GLenum, value: ptr(GLuint)): void
-proc "importc" glVertexPointer(size: GLint, typ: GLenum, stride: GLsizei, pointer: pointer): void
-proc "importc" glViewport(x: GLint, y: GLint, width: GLsizei, height: GLsizei): void
-proc "importc" glViewportArrayv(first: GLuint, count: GLsizei, v: ptr(GLfloat)): void
-proc "importc" glViewportIndexedf(index: GLuint, x: GLfloat, y: GLfloat, w: GLfloat, h: GLfloat): void
-proc "importc" glViewportIndexedfv(index: GLuint, v: ptr(GLfloat)): void
-proc "importc" glWindowPos2d(x: GLdouble, y: GLdouble): void
-proc "importc" glWindowPos2dv(v: ptr(GLdouble)): void
-proc "importc" glWindowPos2f(x: GLfloat, y: GLfloat): void
-proc "importc" glWindowPos2fv(v: ptr(GLfloat)): void
-proc "importc" glWindowPos2i(x: GLint, y: GLint): void
-proc "importc" glWindowPos2iv(v: ptr(GLint)): void
-proc "importc" glWindowPos2s(x: GLshort, y: GLshort): void
-proc "importc" glWindowPos2sv(v: ptr(GLshort)): void
-proc "importc" glWindowPos3d(x: GLdouble, y: GLdouble, z: GLdouble): void
-proc "importc" glWindowPos3dv(v: ptr(GLdouble)): void
-proc "importc" glWindowPos3f(x: GLfloat, y: GLfloat, z: GLfloat): void
-proc "importc" glWindowPos3fv(v: ptr(GLfloat)): void
-proc "importc" glWindowPos3i(x: GLint, y: GLint, z: GLint): void
-proc "importc" glWindowPos3iv(v: ptr(GLint)): void
-proc "importc" glWindowPos3s(x: GLshort, y: GLshort, z: GLshort): void
-proc "importc" glWindowPos3sv(v: ptr(GLshort)): void
+proc "importc" glAccum(op: GLenum, value: GLfloat) -> void
+proc "importc" glActiveShaderProgram(pipeline: GLuint, program: GLuint) -> void
+proc "importc" glActiveTexture(texture: GLenum) -> void
+proc "importc" glAlphaFunc(func: GLenum, ref: GLfloat) -> void
+proc "importc" glAreTexturesResident(n: GLsizei, textures: ptr(GLuint), residences: ptr(GLboolean)) -> GLboolean
+proc "importc" glArrayElement(i: GLint) -> void
+proc "importc" glAttachShader(program: GLuint, shader: GLuint) -> void
+proc "importc" glBegin(mode: GLenum) -> void
+proc "importc" glBeginConditionalRender(id: GLuint, mode: GLenum) -> void
+proc "importc" glBeginQuery(target: GLenum, id: GLuint) -> void
+proc "importc" glBeginQueryIndexed(target: GLenum, index: GLuint, id: GLuint) -> void
+proc "importc" glBeginTransformFeedback(primitiveMode: GLenum) -> void
+proc "importc" glBindAttribLocation(program: GLuint, index: GLuint, name: cstr) -> void
+proc "importc" glBindBuffer(target: GLenum, buffer: GLuint) -> void
+proc "importc" glBindBufferBase(target: GLenum, index: GLuint, buffer: GLuint) -> void
+proc "importc" glBindBufferRange(target: GLenum, index: GLuint, buffer: GLuint, offset: GLintptr, size: GLsizeiptr) -> void
+proc "importc" glBindBuffersBase(target: GLenum, first: GLuint, count: GLsizei, buffers: ptr(GLuint)) -> void
+proc "importc" glBindBuffersRange(target: GLenum, first: GLuint, count: GLsizei, buffers: ptr(GLuint), offsets: ptr(GLintptr), sizes: ptr(GLsizeiptr)) -> void
+proc "importc" glBindFragDataLocation(program: GLuint, color: GLuint, name: cstr) -> void
+proc "importc" glBindFragDataLocationIndexed(program: GLuint, colorNumber: GLuint, index: GLuint, name: cstr) -> void
+proc "importc" glBindFramebuffer(target: GLenum, framebuffer: GLuint) -> void
+proc "importc" glBindImageTexture(unit: GLuint, texture: GLuint, level: GLint, layered: GLboolean, layer: GLint, access: GLenum, format: GLenum) -> void
+proc "importc" glBindImageTextures(first: GLuint, count: GLsizei, textures: ptr(GLuint)) -> void
+proc "importc" glBindProgramPipeline(pipeline: GLuint) -> void
+proc "importc" glBindRenderbuffer(target: GLenum, renderbuffer: GLuint) -> void
+proc "importc" glBindSampler(unit: GLuint, sampler: GLuint) -> void
+proc "importc" glBindSamplers(first: GLuint, count: GLsizei, samplers: ptr(GLuint)) -> void
+proc "importc" glBindTexture(target: GLenum, texture: GLuint) -> void
+proc "importc" glBindTextureUnit(unit: GLuint, texture: GLuint) -> void
+proc "importc" glBindTextures(first: GLuint, count: GLsizei, textures: ptr(GLuint)) -> void
+proc "importc" glBindTransformFeedback(target: GLenum, id: GLuint) -> void
+proc "importc" glBindVertexArray(array: GLuint) -> void
+proc "importc" glBindVertexBuffer(bindingindex: GLuint, buffer: GLuint, offset: GLintptr, stride: GLsizei) -> void
+proc "importc" glBindVertexBuffers(first: GLuint, count: GLsizei, buffers: ptr(GLuint), offsets: ptr(GLintptr), strides: ptr(GLsizei)) -> void
+proc "importc" glBitmap(width: GLsizei, height: GLsizei, xorig: GLfloat, yorig: GLfloat, xmove: GLfloat, ymove: GLfloat, bitmap: ptr(GLubyte)) -> void
+proc "importc" glBlendColor(red: GLfloat, green: GLfloat, blue: GLfloat, alpha: GLfloat) -> void
+proc "importc" glBlendEquation(mode: GLenum) -> void
+proc "importc" glBlendEquationSeparate(modeRGB: GLenum, modeAlpha: GLenum) -> void
+proc "importc" glBlendEquationSeparatei(buf: GLuint, modeRGB: GLenum, modeAlpha: GLenum) -> void
+proc "importc" glBlendEquationi(buf: GLuint, mode: GLenum) -> void
+proc "importc" glBlendFunc(sfactor: GLenum, dfactor: GLenum) -> void
+proc "importc" glBlendFuncSeparate(sfactorRGB: GLenum, dfactorRGB: GLenum, sfactorAlpha: GLenum, dfactorAlpha: GLenum) -> void
+proc "importc" glBlendFuncSeparatei(buf: GLuint, srcRGB: GLenum, dstRGB: GLenum, srcAlpha: GLenum, dstAlpha: GLenum) -> void
+proc "importc" glBlendFunci(buf: GLuint, src: GLenum, dst: GLenum) -> void
+proc "importc" glBlitFramebuffer(srcX0: GLint, srcY0: GLint, srcX1: GLint, srcY1: GLint, dstX0: GLint, dstY0: GLint, dstX1: GLint, dstY1: GLint, mask: GLbitfield, filter: GLenum) -> void
+proc "importc" glBlitNamedFramebuffer(readFramebuffer: GLuint, drawFramebuffer: GLuint, srcX0: GLint, srcY0: GLint, srcX1: GLint, srcY1: GLint, dstX0: GLint, dstY0: GLint, dstX1: GLint, dstY1: GLint, mask: GLbitfield, filter: GLenum) -> void
+proc "importc" glBufferData(target: GLenum, size: GLsizeiptr, data: pointer, usage: GLenum) -> void
+proc "importc" glBufferStorage(target: GLenum, size: GLsizeiptr, data: pointer, flags: GLbitfield) -> void
+proc "importc" glBufferSubData(target: GLenum, offset: GLintptr, size: GLsizeiptr, data: pointer) -> void
+proc "importc" glCallList(list: GLuint) -> void
+proc "importc" glCallLists(n: GLsizei, typ: GLenum, lists: pointer) -> void
+proc "importc" glCheckFramebufferStatus(target: GLenum) -> GLenum
+proc "importc" glCheckNamedFramebufferStatus(framebuffer: GLuint, target: GLenum) -> GLenum
+proc "importc" glClampColor(target: GLenum, clamp: GLenum) -> void
+proc "importc" glClear(mask: GLbitfield) -> void
+proc "importc" glClearAccum(red: GLfloat, green: GLfloat, blue: GLfloat, alpha: GLfloat) -> void
+proc "importc" glClearBufferData(target: GLenum, internalformat: GLenum, format: GLenum, typ: GLenum, data: pointer) -> void
+proc "importc" glClearBufferSubData(target: GLenum, internalformat: GLenum, offset: GLintptr, size: GLsizeiptr, format: GLenum, typ: GLenum, data: pointer) -> void
+proc "importc" glClearBufferfi(buffer: GLenum, drawbuffer: GLint, depth: GLfloat, stencil: GLint) -> void
+proc "importc" glClearBufferfv(buffer: GLenum, drawbuffer: GLint, value: ptr(GLfloat)) -> void
+proc "importc" glClearBufferiv(buffer: GLenum, drawbuffer: GLint, value: ptr(GLint)) -> void
+proc "importc" glClearBufferuiv(buffer: GLenum, drawbuffer: GLint, value: ptr(GLuint)) -> void
+proc "importc" glClearColor(red: GLfloat, green: GLfloat, blue: GLfloat, alpha: GLfloat) -> void
+proc "importc" glClearDepth(depth: GLdouble) -> void
+proc "importc" glClearDepthf(d: GLfloat) -> void
+proc "importc" glClearIndex(c: GLfloat) -> void
+proc "importc" glClearNamedBufferData(buffer: GLuint, internalformat: GLenum, format: GLenum, typ: GLenum, data: pointer) -> void
+proc "importc" glClearNamedBufferSubData(buffer: GLuint, internalformat: GLenum, offset: GLintptr, size: GLsizeiptr, format: GLenum, typ: GLenum, data: pointer) -> void
+proc "importc" glClearNamedFramebufferfi(framebuffer: GLuint, buffer: GLenum, drawbuffer: GLint, depth: GLfloat, stencil: GLint) -> void
+proc "importc" glClearNamedFramebufferfv(framebuffer: GLuint, buffer: GLenum, drawbuffer: GLint, value: ptr(GLfloat)) -> void
+proc "importc" glClearNamedFramebufferiv(framebuffer: GLuint, buffer: GLenum, drawbuffer: GLint, value: ptr(GLint)) -> void
+proc "importc" glClearNamedFramebufferuiv(framebuffer: GLuint, buffer: GLenum, drawbuffer: GLint, value: ptr(GLuint)) -> void
+proc "importc" glClearStencil(s: GLint) -> void
+proc "importc" glClearTexImage(texture: GLuint, level: GLint, format: GLenum, typ: GLenum, data: pointer) -> void
+proc "importc" glClearTexSubImage(texture: GLuint, level: GLint, xoffset: GLint, yoffset: GLint, zoffset: GLint, width: GLsizei, height: GLsizei, depth: GLsizei, format: GLenum, typ: GLenum, data: pointer) -> void
+proc "importc" glClientActiveTexture(texture: GLenum) -> void
+proc "importc" glClipControl(origin: GLenum, depth: GLenum) -> void
+proc "importc" glClipPlane(plane: GLenum, equation: ptr(GLdouble)) -> void
+proc "importc" glColor3b(red: GLbyte, green: GLbyte, blue: GLbyte) -> void
+proc "importc" glColor3bv(v: ptr(GLbyte)) -> void
+proc "importc" glColor3d(red: GLdouble, green: GLdouble, blue: GLdouble) -> void
+proc "importc" glColor3dv(v: ptr(GLdouble)) -> void
+proc "importc" glColor3f(red: GLfloat, green: GLfloat, blue: GLfloat) -> void
+proc "importc" glColor3fv(v: ptr(GLfloat)) -> void
+proc "importc" glColor3i(red: GLint, green: GLint, blue: GLint) -> void
+proc "importc" glColor3iv(v: ptr(GLint)) -> void
+proc "importc" glColor3s(red: GLshort, green: GLshort, blue: GLshort) -> void
+proc "importc" glColor3sv(v: ptr(GLshort)) -> void
+proc "importc" glColor3ub(red: GLubyte, green: GLubyte, blue: GLubyte) -> void
+proc "importc" glColor3ubv(v: ptr(GLubyte)) -> void
+proc "importc" glColor3ui(red: GLuint, green: GLuint, blue: GLuint) -> void
+proc "importc" glColor3uiv(v: ptr(GLuint)) -> void
+proc "importc" glColor3us(red: GLushort, green: GLushort, blue: GLushort) -> void
+proc "importc" glColor3usv(v: ptr(GLushort)) -> void
+proc "importc" glColor4b(red: GLbyte, green: GLbyte, blue: GLbyte, alpha: GLbyte) -> void
+proc "importc" glColor4bv(v: ptr(GLbyte)) -> void
+proc "importc" glColor4d(red: GLdouble, green: GLdouble, blue: GLdouble, alpha: GLdouble) -> void
+proc "importc" glColor4dv(v: ptr(GLdouble)) -> void
+proc "importc" glColor4f(red: GLfloat, green: GLfloat, blue: GLfloat, alpha: GLfloat) -> void
+proc "importc" glColor4fv(v: ptr(GLfloat)) -> void
+proc "importc" glColor4i(red: GLint, green: GLint, blue: GLint, alpha: GLint) -> void
+proc "importc" glColor4iv(v: ptr(GLint)) -> void
+proc "importc" glColor4s(red: GLshort, green: GLshort, blue: GLshort, alpha: GLshort) -> void
+proc "importc" glColor4sv(v: ptr(GLshort)) -> void
+proc "importc" glColor4ub(red: GLubyte, green: GLubyte, blue: GLubyte, alpha: GLubyte) -> void
+proc "importc" glColor4ubv(v: ptr(GLubyte)) -> void
+proc "importc" glColor4ui(red: GLuint, green: GLuint, blue: GLuint, alpha: GLuint) -> void
+proc "importc" glColor4uiv(v: ptr(GLuint)) -> void
+proc "importc" glColor4us(red: GLushort, green: GLushort, blue: GLushort, alpha: GLushort) -> void
+proc "importc" glColor4usv(v: ptr(GLushort)) -> void
+proc "importc" glColorMask(red: GLboolean, green: GLboolean, blue: GLboolean, alpha: GLboolean) -> void
+proc "importc" glColorMaski(index: GLuint, r: GLboolean, g: GLboolean, b: GLboolean, a: GLboolean) -> void
+proc "importc" glColorMaterial(face: GLenum, mode: GLenum) -> void
+proc "importc" glColorP3ui(typ: GLenum, color: GLuint) -> void
+proc "importc" glColorP3uiv(typ: GLenum, color: ptr(GLuint)) -> void
+proc "importc" glColorP4ui(typ: GLenum, color: GLuint) -> void
+proc "importc" glColorP4uiv(typ: GLenum, color: ptr(GLuint)) -> void
+proc "importc" glColorPointer(size: GLint, typ: GLenum, stride: GLsizei, pointer: pointer) -> void
+proc "importc" glCompileShader(shader: GLuint) -> void
+proc "importc" glCompressedTexImage1D(target: GLenum, level: GLint, internalformat: GLenum, width: GLsizei, border: GLint, imageSize: GLsizei, data: pointer) -> void
+proc "importc" glCompressedTexImage2D(target: GLenum, level: GLint, internalformat: GLenum, width: GLsizei, height: GLsizei, border: GLint, imageSize: GLsizei, data: pointer) -> void
+proc "importc" glCompressedTexImage3D(target: GLenum, level: GLint, internalformat: GLenum, width: GLsizei, height: GLsizei, depth: GLsizei, border: GLint, imageSize: GLsizei, data: pointer) -> void
+proc "importc" glCompressedTexSubImage1D(target: GLenum, level: GLint, xoffset: GLint, width: GLsizei, format: GLenum, imageSize: GLsizei, data: pointer) -> void
+proc "importc" glCompressedTexSubImage2D(target: GLenum, level: GLint, xoffset: GLint, yoffset: GLint, width: GLsizei, height: GLsizei, format: GLenum, imageSize: GLsizei, data: pointer) -> void
+proc "importc" glCompressedTexSubImage3D(target: GLenum, level: GLint, xoffset: GLint, yoffset: GLint, zoffset: GLint, width: GLsizei, height: GLsizei, depth: GLsizei, format: GLenum, imageSize: GLsizei, data: pointer) -> void
+proc "importc" glCompressedTextureSubImage1D(texture: GLuint, level: GLint, xoffset: GLint, width: GLsizei, format: GLenum, imageSize: GLsizei, data: pointer) -> void
+proc "importc" glCompressedTextureSubImage2D(texture: GLuint, level: GLint, xoffset: GLint, yoffset: GLint, width: GLsizei, height: GLsizei, format: GLenum, imageSize: GLsizei, data: pointer) -> void
+proc "importc" glCompressedTextureSubImage3D(texture: GLuint, level: GLint, xoffset: GLint, yoffset: GLint, zoffset: GLint, width: GLsizei, height: GLsizei, depth: GLsizei, format: GLenum, imageSize: GLsizei, data: pointer) -> void
+proc "importc" glCopyBufferSubData(readTarget: GLenum, writeTarget: GLenum, readOffset: GLintptr, writeOffset: GLintptr, size: GLsizeiptr) -> void
+proc "importc" glCopyImageSubData(srcName: GLuint, srcTarget: GLenum, srcLevel: GLint, srcX: GLint, srcY: GLint, srcZ: GLint, dstName: GLuint, dstTarget: GLenum, dstLevel: GLint, dstX: GLint, dstY: GLint, dstZ: GLint, srcWidth: GLsizei, srcHeight: GLsizei, srcDepth: GLsizei) -> void
+proc "importc" glCopyNamedBufferSubData(readBuffer: GLuint, writeBuffer: GLuint, readOffset: GLintptr, writeOffset: GLintptr, size: GLsizeiptr) -> void
+proc "importc" glCopyPixels(x: GLint, y: GLint, width: GLsizei, height: GLsizei, typ: GLenum) -> void
+proc "importc" glCopyTexImage1D(target: GLenum, level: GLint, internalformat: GLenum, x: GLint, y: GLint, width: GLsizei, border: GLint) -> void
+proc "importc" glCopyTexImage2D(target: GLenum, level: GLint, internalformat: GLenum, x: GLint, y: GLint, width: GLsizei, height: GLsizei, border: GLint) -> void
+proc "importc" glCopyTexSubImage1D(target: GLenum, level: GLint, xoffset: GLint, x: GLint, y: GLint, width: GLsizei) -> void
+proc "importc" glCopyTexSubImage2D(target: GLenum, level: GLint, xoffset: GLint, yoffset: GLint, x: GLint, y: GLint, width: GLsizei, height: GLsizei) -> void
+proc "importc" glCopyTexSubImage3D(target: GLenum, level: GLint, xoffset: GLint, yoffset: GLint, zoffset: GLint, x: GLint, y: GLint, width: GLsizei, height: GLsizei) -> void
+proc "importc" glCopyTextureSubImage1D(texture: GLuint, level: GLint, xoffset: GLint, x: GLint, y: GLint, width: GLsizei) -> void
+proc "importc" glCopyTextureSubImage2D(texture: GLuint, level: GLint, xoffset: GLint, yoffset: GLint, x: GLint, y: GLint, width: GLsizei, height: GLsizei) -> void
+proc "importc" glCopyTextureSubImage3D(texture: GLuint, level: GLint, xoffset: GLint, yoffset: GLint, zoffset: GLint, x: GLint, y: GLint, width: GLsizei, height: GLsizei) -> void
+proc "importc" glCreateBuffers(n: GLsizei, buffers: ptr(GLuint)) -> void
+proc "importc" glCreateFramebuffers(n: GLsizei, framebuffers: ptr(GLuint)) -> void
+proc "importc" glCreateProgram() -> GLuint
+proc "importc" glCreateProgramPipelines(n: GLsizei, pipelines: ptr(GLuint)) -> void
+proc "importc" glCreateQueries(target: GLenum, n: GLsizei, ids: ptr(GLuint)) -> void
+proc "importc" glCreateRenderbuffers(n: GLsizei, renderbuffers: ptr(GLuint)) -> void
+proc "importc" glCreateSamplers(n: GLsizei, samplers: ptr(GLuint)) -> void
+proc "importc" glCreateShader(typ: GLenum) -> GLuint
+proc "importc" glCreateShaderProgramv(typ: GLenum, count: GLsizei, strings: ptr(cstr)) -> GLuint
+proc "importc" glCreateTextures(target: GLenum, n: GLsizei, textures: ptr(GLuint)) -> void
+proc "importc" glCreateTransformFeedbacks(n: GLsizei, ids: ptr(GLuint)) -> void
+proc "importc" glCreateVertexArrays(n: GLsizei, arrays: ptr(GLuint)) -> void
+proc "importc" glCullFace(mode: GLenum) -> void
+proc "importc" glDebugMessageControl(source: GLenum, typ: GLenum, severity: GLenum, count: GLsizei, ids: ptr(GLuint), enabled: GLboolean) -> void
+proc "importc" glDebugMessageInsert(source: GLenum, typ: GLenum, id: GLuint, severity: GLenum, length: GLsizei, buf: cstr) -> void
+proc "importc" glDeleteBuffers(n: GLsizei, buffers: ptr(GLuint)) -> void
+proc "importc" glDeleteFramebuffers(n: GLsizei, framebuffers: ptr(GLuint)) -> void
+proc "importc" glDeleteLists(list: GLuint, range: GLsizei) -> void
+proc "importc" glDeleteProgram(program: GLuint) -> void
+proc "importc" glDeleteProgramPipelines(n: GLsizei, pipelines: ptr(GLuint)) -> void
+proc "importc" glDeleteQueries(n: GLsizei, ids: ptr(GLuint)) -> void
+proc "importc" glDeleteRenderbuffers(n: GLsizei, renderbuffers: ptr(GLuint)) -> void
+proc "importc" glDeleteSamplers(count: GLsizei, samplers: ptr(GLuint)) -> void
+proc "importc" glDeleteShader(shader: GLuint) -> void
+proc "importc" glDeleteTextures(n: GLsizei, textures: ptr(GLuint)) -> void
+proc "importc" glDeleteTransformFeedbacks(n: GLsizei, ids: ptr(GLuint)) -> void
+proc "importc" glDeleteVertexArrays(n: GLsizei, arrays: ptr(GLuint)) -> void
+proc "importc" glDepthFunc(func: GLenum) -> void
+proc "importc" glDepthMask(flag: GLboolean) -> void
+proc "importc" glDepthRange(near: GLdouble, far: GLdouble) -> void
+proc "importc" glDepthRangeArrayv(first: GLuint, count: GLsizei, v: ptr(GLdouble)) -> void
+proc "importc" glDepthRangeIndexed(index: GLuint, n: GLdouble, f: GLdouble) -> void
+proc "importc" glDepthRangef(n: GLfloat, f: GLfloat) -> void
+proc "importc" glDetachShader(program: GLuint, shader: GLuint) -> void
+proc "importc" glDisable(cap: GLenum) -> void
+proc "importc" glDisableClientState(array: GLenum) -> void
+proc "importc" glDisableVertexArrayAttrib(vaobj: GLuint, index: GLuint) -> void
+proc "importc" glDisableVertexAttribArray(index: GLuint) -> void
+proc "importc" glDisablei(target: GLenum, index: GLuint) -> void
+proc "importc" glDispatchCompute(num_groups_x: GLuint, num_groups_y: GLuint, num_groups_z: GLuint) -> void
+proc "importc" glDispatchComputeIndirect(indirect: GLintptr) -> void
+proc "importc" glDrawArrays(mode: GLenum, first: GLint, count: GLsizei) -> void
+proc "importc" glDrawArraysIndirect(mode: GLenum, indirect: pointer) -> void
+proc "importc" glDrawArraysInstanced(mode: GLenum, first: GLint, count: GLsizei, instancecount: GLsizei) -> void
+proc "importc" glDrawArraysInstancedBaseInstance(mode: GLenum, first: GLint, count: GLsizei, instancecount: GLsizei, baseinstance: GLuint) -> void
+proc "importc" glDrawBuffer(buf: GLenum) -> void
+proc "importc" glDrawBuffers(n: GLsizei, bufs: ptr(GLenum)) -> void
+proc "importc" glDrawElements(mode: GLenum, count: GLsizei, typ: GLenum, indices: pointer) -> void
+proc "importc" glDrawElementsBaseVertex(mode: GLenum, count: GLsizei, typ: GLenum, indices: pointer, basevertex: GLint) -> void
+proc "importc" glDrawElementsIndirect(mode: GLenum, typ: GLenum, indirect: pointer) -> void
+proc "importc" glDrawElementsInstanced(mode: GLenum, count: GLsizei, typ: GLenum, indices: pointer, instancecount: GLsizei) -> void
+proc "importc" glDrawElementsInstancedBaseInstance(mode: GLenum, count: GLsizei, typ: GLenum, indices: pointer, instancecount: GLsizei, baseinstance: GLuint) -> void
+proc "importc" glDrawElementsInstancedBaseVertex(mode: GLenum, count: GLsizei, typ: GLenum, indices: pointer, instancecount: GLsizei, basevertex: GLint) -> void
+proc "importc" glDrawElementsInstancedBaseVertexBaseInstance(mode: GLenum, count: GLsizei, typ: GLenum, indices: pointer, instancecount: GLsizei, basevertex: GLint, baseinstance: GLuint) -> void
+proc "importc" glDrawPixels(width: GLsizei, height: GLsizei, format: GLenum, typ: GLenum, pixels: pointer) -> void
+proc "importc" glDrawRangeElements(mode: GLenum, start: GLuint, end: GLuint, count: GLsizei, typ: GLenum, indices: pointer) -> void
+proc "importc" glDrawRangeElementsBaseVertex(mode: GLenum, start: GLuint, end: GLuint, count: GLsizei, typ: GLenum, indices: pointer, basevertex: GLint) -> void
+proc "importc" glDrawTransformFeedback(mode: GLenum, id: GLuint) -> void
+proc "importc" glDrawTransformFeedbackInstanced(mode: GLenum, id: GLuint, instancecount: GLsizei) -> void
+proc "importc" glDrawTransformFeedbackStream(mode: GLenum, id: GLuint, stream: GLuint) -> void
+proc "importc" glDrawTransformFeedbackStreamInstanced(mode: GLenum, id: GLuint, stream: GLuint, instancecount: GLsizei) -> void
+proc "importc" glEdgeFlag(flag: GLboolean) -> void
+proc "importc" glEdgeFlagPointer(stride: GLsizei, pointer: pointer) -> void
+proc "importc" glEdgeFlagv(flag: ptr(GLboolean)) -> void
+proc "importc" glEnable(cap: GLenum) -> void
+proc "importc" glEnableClientState(array: GLenum) -> void
+proc "importc" glEnableVertexArrayAttrib(vaobj: GLuint, index: GLuint) -> void
+proc "importc" glEnableVertexAttribArray(index: GLuint) -> void
+proc "importc" glEnablei(target: GLenum, index: GLuint) -> void
+proc "importc" glEnd() -> void
+proc "importc" glEndConditionalRender() -> void
+proc "importc" glEndList() -> void
+proc "importc" glEndQuery(target: GLenum) -> void
+proc "importc" glEndQueryIndexed(target: GLenum, index: GLuint) -> void
+proc "importc" glEndTransformFeedback() -> void
+proc "importc" glEvalCoord1d(u: GLdouble) -> void
+proc "importc" glEvalCoord1dv(u: ptr(GLdouble)) -> void
+proc "importc" glEvalCoord1f(u: GLfloat) -> void
+proc "importc" glEvalCoord1fv(u: ptr(GLfloat)) -> void
+proc "importc" glEvalCoord2d(u: GLdouble, v: GLdouble) -> void
+proc "importc" glEvalCoord2dv(u: ptr(GLdouble)) -> void
+proc "importc" glEvalCoord2f(u: GLfloat, v: GLfloat) -> void
+proc "importc" glEvalCoord2fv(u: ptr(GLfloat)) -> void
+proc "importc" glEvalMesh1(mode: GLenum, i1: GLint, i2: GLint) -> void
+proc "importc" glEvalMesh2(mode: GLenum, i1: GLint, i2: GLint, j1: GLint, j2: GLint) -> void
+proc "importc" glEvalPoint1(i: GLint) -> void
+proc "importc" glEvalPoint2(i: GLint, j: GLint) -> void
+proc "importc" glFeedbackBuffer(size: GLsizei, typ: GLenum, buffer: ptr(GLfloat)) -> void
+proc "importc" glFinish() -> void
+proc "importc" glFlush() -> void
+proc "importc" glFlushMappedBufferRange(target: GLenum, offset: GLintptr, length: GLsizeiptr) -> void
+proc "importc" glFlushMappedNamedBufferRange(buffer: GLuint, offset: GLintptr, length: GLsizeiptr) -> void
+proc "importc" glFogCoordPointer(typ: GLenum, stride: GLsizei, pointer: pointer) -> void
+proc "importc" glFogCoordd(coord: GLdouble) -> void
+proc "importc" glFogCoorddv(coord: ptr(GLdouble)) -> void
+proc "importc" glFogCoordf(coord: GLfloat) -> void
+proc "importc" glFogCoordfv(coord: ptr(GLfloat)) -> void
+proc "importc" glFogf(pname: GLenum, param: GLfloat) -> void
+proc "importc" glFogfv(pname: GLenum, params: ptr(GLfloat)) -> void
+proc "importc" glFogi(pname: GLenum, param: GLint) -> void
+proc "importc" glFogiv(pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glFramebufferParameteri(target: GLenum, pname: GLenum, param: GLint) -> void
+proc "importc" glFramebufferRenderbuffer(target: GLenum, attachment: GLenum, renderbuffertarget: GLenum, renderbuffer: GLuint) -> void
+proc "importc" glFramebufferTexture(target: GLenum, attachment: GLenum, texture: GLuint, level: GLint) -> void
+proc "importc" glFramebufferTexture1D(target: GLenum, attachment: GLenum, textarget: GLenum, texture: GLuint, level: GLint) -> void
+proc "importc" glFramebufferTexture2D(target: GLenum, attachment: GLenum, textarget: GLenum, texture: GLuint, level: GLint) -> void
+proc "importc" glFramebufferTexture3D(target: GLenum, attachment: GLenum, textarget: GLenum, texture: GLuint, level: GLint, zoffset: GLint) -> void
+proc "importc" glFramebufferTextureLayer(target: GLenum, attachment: GLenum, texture: GLuint, level: GLint, layer: GLint) -> void
+proc "importc" glFrontFace(mode: GLenum) -> void
+proc "importc" glFrustum(left: GLdouble, right: GLdouble, bottom: GLdouble, top: GLdouble, zNear: GLdouble, zFar: GLdouble) -> void
+proc "importc" glGenBuffers(n: GLsizei, buffers: ptr(GLuint)) -> void
+proc "importc" glGenFramebuffers(n: GLsizei, framebuffers: ptr(GLuint)) -> void
+proc "importc" glGenLists(range: GLsizei) -> GLuint
+proc "importc" glGenProgramPipelines(n: GLsizei, pipelines: ptr(GLuint)) -> void
+proc "importc" glGenQueries(n: GLsizei, ids: ptr(GLuint)) -> void
+proc "importc" glGenRenderbuffers(n: GLsizei, renderbuffers: ptr(GLuint)) -> void
+proc "importc" glGenSamplers(count: GLsizei, samplers: ptr(GLuint)) -> void
+proc "importc" glGenTextures(n: GLsizei, textures: ptr(GLuint)) -> void
+proc "importc" glGenTransformFeedbacks(n: GLsizei, ids: ptr(GLuint)) -> void
+proc "importc" glGenVertexArrays(n: GLsizei, arrays: ptr(GLuint)) -> void
+proc "importc" glGenerateMipmap(target: GLenum) -> void
+proc "importc" glGenerateTextureMipmap(texture: GLuint) -> void
+proc "importc" glGetActiveAtomicCounterBufferiv(program: GLuint, bufferIndex: GLuint, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetActiveAttrib(program: GLuint, index: GLuint, bufSize: GLsizei, length: ptr(GLsizei), size: ptr(GLint), typ: ptr(GLenum), name: cstr) -> void
+proc "importc" glGetActiveSubroutineName(program: GLuint, shadertype: GLenum, index: GLuint, bufsize: GLsizei, length: ptr(GLsizei), name: cstr) -> void
+proc "importc" glGetActiveSubroutineUniformName(program: GLuint, shadertype: GLenum, index: GLuint, bufsize: GLsizei, length: ptr(GLsizei), name: cstr) -> void
+proc "importc" glGetActiveSubroutineUniformiv(program: GLuint, shadertype: GLenum, index: GLuint, pname: GLenum, values: ptr(GLint)) -> void
+proc "importc" glGetActiveUniform(program: GLuint, index: GLuint, bufSize: GLsizei, length: ptr(GLsizei), size: ptr(GLint), typ: ptr(GLenum), name: cstr) -> void
+proc "importc" glGetActiveUniformBlockName(program: GLuint, uniformBlockIndex: GLuint, bufSize: GLsizei, length: ptr(GLsizei), uniformBlockName: cstr) -> void
+proc "importc" glGetActiveUniformBlockiv(program: GLuint, uniformBlockIndex: GLuint, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetActiveUniformName(program: GLuint, uniformIndex: GLuint, bufSize: GLsizei, length: ptr(GLsizei), uniformName: cstr) -> void
+proc "importc" glGetActiveUniformsiv(program: GLuint, uniformCount: GLsizei, uniformIndices: ptr(GLuint), pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetAttachedShaders(program: GLuint, maxCount: GLsizei, count: ptr(GLsizei), shaders: ptr(GLuint)) -> void
+proc "importc" glGetAttribLocation(program: GLuint, name: cstr) -> GLint
+proc "importc" glGetBooleani_v(target: GLenum, index: GLuint, data: ptr(GLboolean)) -> void
+proc "importc" glGetBooleanv(pname: GLenum, data: ptr(GLboolean)) -> void
+proc "importc" glGetBufferParameteri64v(target: GLenum, pname: GLenum, params: ptr(GLint64)) -> void
+proc "importc" glGetBufferParameteriv(target: GLenum, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetBufferPointerv(target: GLenum, pname: GLenum, params: pointer) -> void
+proc "importc" glGetBufferSubData(target: GLenum, offset: GLintptr, size: GLsizeiptr, data: pointer) -> void
+proc "importc" glGetClipPlane(plane: GLenum, equation: ptr(GLdouble)) -> void
+proc "importc" glGetCompressedTexImage(target: GLenum, level: GLint, img: pointer) -> void
+proc "importc" glGetCompressedTextureImage(texture: GLuint, level: GLint, bufSize: GLsizei, pixels: pointer) -> void
+proc "importc" glGetCompressedTextureSubImage(texture: GLuint, level: GLint, xoffset: GLint, yoffset: GLint, zoffset: GLint, width: GLsizei, height: GLsizei, depth: GLsizei, bufSize: GLsizei, pixels: pointer) -> void
+proc "importc" glGetDebugMessageLog(count: GLuint, bufSize: GLsizei, sources: ptr(GLenum), types: ptr(GLenum), ids: ptr(GLuint), severities: ptr(GLenum), lengths: ptr(GLsizei), messageLog: cstr) -> GLuint
+proc "importc" glGetDoublei_v(target: GLenum, index: GLuint, data: ptr(GLdouble)) -> void
+proc "importc" glGetDoublev(pname: GLenum, data: ptr(GLdouble)) -> void
+proc "importc" glGetError() -> GLenum
+proc "importc" glGetFloati_v(target: GLenum, index: GLuint, data: ptr(GLfloat)) -> void
+proc "importc" glGetFloatv(pname: GLenum, data: ptr(GLfloat)) -> void
+proc "importc" glGetFragDataIndex(program: GLuint, name: cstr) -> GLint
+proc "importc" glGetFragDataLocation(program: GLuint, name: cstr) -> GLint
+proc "importc" glGetFramebufferAttachmentParameteriv(target: GLenum, attachment: GLenum, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetFramebufferParameteriv(target: GLenum, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetGraphicsResetStatus() -> GLenum
+proc "importc" glGetInteger64i_v(target: GLenum, index: GLuint, data: ptr(GLint64)) -> void
+proc "importc" glGetInteger64v(pname: GLenum, data: ptr(GLint64)) -> void
+proc "importc" glGetIntegeri_v(target: GLenum, index: GLuint, data: ptr(GLint)) -> void
+proc "importc" glGetIntegerv(pname: GLenum, data: ptr(GLint)) -> void
+proc "importc" glGetInternalformati64v(target: GLenum, internalformat: GLenum, pname: GLenum, bufSize: GLsizei, params: ptr(GLint64)) -> void
+proc "importc" glGetInternalformativ(target: GLenum, internalformat: GLenum, pname: GLenum, bufSize: GLsizei, params: ptr(GLint)) -> void
+proc "importc" glGetLightfv(light: GLenum, pname: GLenum, params: ptr(GLfloat)) -> void
+proc "importc" glGetLightiv(light: GLenum, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetMapdv(target: GLenum, query: GLenum, v: ptr(GLdouble)) -> void
+proc "importc" glGetMapfv(target: GLenum, query: GLenum, v: ptr(GLfloat)) -> void
+proc "importc" glGetMapiv(target: GLenum, query: GLenum, v: ptr(GLint)) -> void
+proc "importc" glGetMaterialfv(face: GLenum, pname: GLenum, params: ptr(GLfloat)) -> void
+proc "importc" glGetMaterialiv(face: GLenum, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetMultisamplefv(pname: GLenum, index: GLuint, val: ptr(GLfloat)) -> void
+proc "importc" glGetNamedBufferParameteri64v(buffer: GLuint, pname: GLenum, params: ptr(GLint64)) -> void
+proc "importc" glGetNamedBufferParameteriv(buffer: GLuint, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetNamedBufferPointerv(buffer: GLuint, pname: GLenum, params: pointer) -> void
+proc "importc" glGetNamedBufferSubData(buffer: GLuint, offset: GLintptr, size: GLsizeiptr, data: pointer) -> void
+proc "importc" glGetNamedFramebufferAttachmentParameteriv(framebuffer: GLuint, attachment: GLenum, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetNamedFramebufferParameteriv(framebuffer: GLuint, pname: GLenum, param: ptr(GLint)) -> void
+proc "importc" glGetNamedRenderbufferParameteriv(renderbuffer: GLuint, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetObjectLabel(identifier: GLenum, name: GLuint, bufSize: GLsizei, length: ptr(GLsizei), label: cstr) -> void
+proc "importc" glGetObjectPtrLabel(`ptr`: pointer, bufSize: GLsizei, length: ptr(GLsizei), label: cstr) -> void
+proc "importc" glGetPixelMapfv(map: GLenum, values: ptr(GLfloat)) -> void
+proc "importc" glGetPixelMapuiv(map: GLenum, values: ptr(GLuint)) -> void
+proc "importc" glGetPixelMapusv(map: GLenum, values: ptr(GLushort)) -> void
+proc "importc" glGetPointerv(pname: GLenum, params: pointer) -> void
+proc "importc" glGetPolygonStipple(mask: ptr(GLubyte)) -> void
+proc "importc" glGetProgramBinary(program: GLuint, bufSize: GLsizei, length: ptr(GLsizei), binaryFormat: ptr(GLenum), binary: pointer) -> void
+proc "importc" glGetProgramInfoLog(program: GLuint, bufSize: GLsizei, length: ptr(GLsizei), infoLog: cstr) -> void
+proc "importc" glGetProgramInterfaceiv(program: GLuint, programInterface: GLenum, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetProgramPipelineInfoLog(pipeline: GLuint, bufSize: GLsizei, length: ptr(GLsizei), infoLog: cstr) -> void
+proc "importc" glGetProgramPipelineiv(pipeline: GLuint, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetProgramResourceIndex(program: GLuint, programInterface: GLenum, name: cstr) -> GLuint
+proc "importc" glGetProgramResourceLocation(program: GLuint, programInterface: GLenum, name: cstr) -> GLint
+proc "importc" glGetProgramResourceLocationIndex(program: GLuint, programInterface: GLenum, name: cstr) -> GLint
+proc "importc" glGetProgramResourceName(program: GLuint, programInterface: GLenum, index: GLuint, bufSize: GLsizei, length: ptr(GLsizei), name: cstr) -> void
+proc "importc" glGetProgramResourceiv(program: GLuint, programInterface: GLenum, index: GLuint, propCount: GLsizei, props: ptr(GLenum), bufSize: GLsizei, length: ptr(GLsizei), params: ptr(GLint)) -> void
+proc "importc" glGetProgramStageiv(program: GLuint, shadertype: GLenum, pname: GLenum, values: ptr(GLint)) -> void
+proc "importc" glGetProgramiv(program: GLuint, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetQueryBufferObjecti64v(id: GLuint, buffer: GLuint, pname: GLenum, offset: GLintptr) -> void
+proc "importc" glGetQueryBufferObjectiv(id: GLuint, buffer: GLuint, pname: GLenum, offset: GLintptr) -> void
+proc "importc" glGetQueryBufferObjectui64v(id: GLuint, buffer: GLuint, pname: GLenum, offset: GLintptr) -> void
+proc "importc" glGetQueryBufferObjectuiv(id: GLuint, buffer: GLuint, pname: GLenum, offset: GLintptr) -> void
+proc "importc" glGetQueryIndexediv(target: GLenum, index: GLuint, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetQueryObjecti64v(id: GLuint, pname: GLenum, params: ptr(GLint64)) -> void
+proc "importc" glGetQueryObjectiv(id: GLuint, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetQueryObjectui64v(id: GLuint, pname: GLenum, params: ptr(GLuint64)) -> void
+proc "importc" glGetQueryObjectuiv(id: GLuint, pname: GLenum, params: ptr(GLuint)) -> void
+proc "importc" glGetQueryiv(target: GLenum, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetRenderbufferParameteriv(target: GLenum, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetSamplerParameterIiv(sampler: GLuint, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetSamplerParameterIuiv(sampler: GLuint, pname: GLenum, params: ptr(GLuint)) -> void
+proc "importc" glGetSamplerParameterfv(sampler: GLuint, pname: GLenum, params: ptr(GLfloat)) -> void
+proc "importc" glGetSamplerParameteriv(sampler: GLuint, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetShaderInfoLog(shader: GLuint, bufSize: GLsizei, length: ptr(GLsizei), infoLog: cstr) -> void
+proc "importc" glGetShaderPrecisionFormat(shadertype: GLenum, precisiontype: GLenum, range: ptr(GLint), precision: ptr(GLint)) -> void
+proc "importc" glGetShaderSource(shader: GLuint, bufSize: GLsizei, length: ptr(GLsizei), source: cstr) -> void
+proc "importc" glGetShaderiv(shader: GLuint, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetString(name: GLenum) -> GLubyte
+proc "importc" glGetStringi(name: GLenum, index: GLuint) -> GLubyte
+proc "importc" glGetSubroutineIndex(program: GLuint, shadertype: GLenum, name: cstr) -> GLuint
+proc "importc" glGetSubroutineUniformLocation(program: GLuint, shadertype: GLenum, name: cstr) -> GLint
+proc "importc" glGetTexEnvfv(target: GLenum, pname: GLenum, params: ptr(GLfloat)) -> void
+proc "importc" glGetTexEnviv(target: GLenum, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetTexGendv(coord: GLenum, pname: GLenum, params: ptr(GLdouble)) -> void
+proc "importc" glGetTexGenfv(coord: GLenum, pname: GLenum, params: ptr(GLfloat)) -> void
+proc "importc" glGetTexGeniv(coord: GLenum, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetTexImage(target: GLenum, level: GLint, format: GLenum, typ: GLenum, pixels: pointer) -> void
+proc "importc" glGetTexLevelParameterfv(target: GLenum, level: GLint, pname: GLenum, params: ptr(GLfloat)) -> void
+proc "importc" glGetTexLevelParameteriv(target: GLenum, level: GLint, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetTexParameterIiv(target: GLenum, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetTexParameterIuiv(target: GLenum, pname: GLenum, params: ptr(GLuint)) -> void
+proc "importc" glGetTexParameterfv(target: GLenum, pname: GLenum, params: ptr(GLfloat)) -> void
+proc "importc" glGetTexParameteriv(target: GLenum, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetTextureImage(texture: GLuint, level: GLint, format: GLenum, typ: GLenum, bufSize: GLsizei, pixels: pointer) -> void
+proc "importc" glGetTextureLevelParameterfv(texture: GLuint, level: GLint, pname: GLenum, params: ptr(GLfloat)) -> void
+proc "importc" glGetTextureLevelParameteriv(texture: GLuint, level: GLint, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetTextureParameterIiv(texture: GLuint, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetTextureParameterIuiv(texture: GLuint, pname: GLenum, params: ptr(GLuint)) -> void
+proc "importc" glGetTextureParameterfv(texture: GLuint, pname: GLenum, params: ptr(GLfloat)) -> void
+proc "importc" glGetTextureParameteriv(texture: GLuint, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetTextureSubImage(texture: GLuint, level: GLint, xoffset: GLint, yoffset: GLint, zoffset: GLint, width: GLsizei, height: GLsizei, depth: GLsizei, format: GLenum, typ: GLenum, bufSize: GLsizei, pixels: pointer) -> void
+proc "importc" glGetTransformFeedbackVarying(program: GLuint, index: GLuint, bufSize: GLsizei, length: ptr(GLsizei), size: ptr(GLsizei), typ: ptr(GLenum), name: cstr) -> void
+proc "importc" glGetTransformFeedbacki64_v(xfb: GLuint, pname: GLenum, index: GLuint, param: ptr(GLint64)) -> void
+proc "importc" glGetTransformFeedbacki_v(xfb: GLuint, pname: GLenum, index: GLuint, param: ptr(GLint)) -> void
+proc "importc" glGetTransformFeedbackiv(xfb: GLuint, pname: GLenum, param: ptr(GLint)) -> void
+proc "importc" glGetUniformBlockIndex(program: GLuint, uniformBlockName: cstr) -> GLuint
+proc "importc" glGetUniformIndices(program: GLuint, uniformCount: GLsizei, uniformNames: ptr(cstr), uniformIndices: ptr(GLuint)) -> void
+proc "importc" glGetUniformLocation(program: GLuint, name: cstr) -> GLint
+proc "importc" glGetUniformSubroutineuiv(shadertype: GLenum, location: GLint, params: ptr(GLuint)) -> void
+proc "importc" glGetUniformdv(program: GLuint, location: GLint, params: ptr(GLdouble)) -> void
+proc "importc" glGetUniformfv(program: GLuint, location: GLint, params: ptr(GLfloat)) -> void
+proc "importc" glGetUniformiv(program: GLuint, location: GLint, params: ptr(GLint)) -> void
+proc "importc" glGetUniformuiv(program: GLuint, location: GLint, params: ptr(GLuint)) -> void
+proc "importc" glGetVertexArrayIndexed64iv(vaobj: GLuint, index: GLuint, pname: GLenum, param: ptr(GLint64)) -> void
+proc "importc" glGetVertexArrayIndexediv(vaobj: GLuint, index: GLuint, pname: GLenum, param: ptr(GLint)) -> void
+proc "importc" glGetVertexArrayiv(vaobj: GLuint, pname: GLenum, param: ptr(GLint)) -> void
+proc "importc" glGetVertexAttribIiv(index: GLuint, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetVertexAttribIuiv(index: GLuint, pname: GLenum, params: ptr(GLuint)) -> void
+proc "importc" glGetVertexAttribLdv(index: GLuint, pname: GLenum, params: ptr(GLdouble)) -> void
+proc "importc" glGetVertexAttribPointerv(index: GLuint, pname: GLenum, pointer: pointer) -> void
+proc "importc" glGetVertexAttribdv(index: GLuint, pname: GLenum, params: ptr(GLdouble)) -> void
+proc "importc" glGetVertexAttribfv(index: GLuint, pname: GLenum, params: ptr(GLfloat)) -> void
+proc "importc" glGetVertexAttribiv(index: GLuint, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glGetnColorTable(target: GLenum, format: GLenum, typ: GLenum, bufSize: GLsizei, table: pointer) -> void
+proc "importc" glGetnCompressedTexImage(target: GLenum, lod: GLint, bufSize: GLsizei, pixels: pointer) -> void
+proc "importc" glGetnConvolutionFilter(target: GLenum, format: GLenum, typ: GLenum, bufSize: GLsizei, image: pointer) -> void
+proc "importc" glGetnHistogram(target: GLenum, reset: GLboolean, format: GLenum, typ: GLenum, bufSize: GLsizei, values: pointer) -> void
+proc "importc" glGetnMapdv(target: GLenum, query: GLenum, bufSize: GLsizei, v: ptr(GLdouble)) -> void
+proc "importc" glGetnMapfv(target: GLenum, query: GLenum, bufSize: GLsizei, v: ptr(GLfloat)) -> void
+proc "importc" glGetnMapiv(target: GLenum, query: GLenum, bufSize: GLsizei, v: ptr(GLint)) -> void
+proc "importc" glGetnMinmax(target: GLenum, reset: GLboolean, format: GLenum, typ: GLenum, bufSize: GLsizei, values: pointer) -> void
+proc "importc" glGetnPixelMapfv(map: GLenum, bufSize: GLsizei, values: ptr(GLfloat)) -> void
+proc "importc" glGetnPixelMapuiv(map: GLenum, bufSize: GLsizei, values: ptr(GLuint)) -> void
+proc "importc" glGetnPixelMapusv(map: GLenum, bufSize: GLsizei, values: ptr(GLushort)) -> void
+proc "importc" glGetnPolygonStipple(bufSize: GLsizei, pattern: ptr(GLubyte)) -> void
+proc "importc" glGetnSeparableFilter(target: GLenum, format: GLenum, typ: GLenum, rowBufSize: GLsizei, row: pointer, columnBufSize: GLsizei, column: pointer, span: pointer) -> void
+proc "importc" glGetnTexImage(target: GLenum, level: GLint, format: GLenum, typ: GLenum, bufSize: GLsizei, pixels: pointer) -> void
+proc "importc" glGetnUniformdv(program: GLuint, location: GLint, bufSize: GLsizei, params: ptr(GLdouble)) -> void
+proc "importc" glGetnUniformfv(program: GLuint, location: GLint, bufSize: GLsizei, params: ptr(GLfloat)) -> void
+proc "importc" glGetnUniformiv(program: GLuint, location: GLint, bufSize: GLsizei, params: ptr(GLint)) -> void
+proc "importc" glGetnUniformuiv(program: GLuint, location: GLint, bufSize: GLsizei, params: ptr(GLuint)) -> void
+proc "importc" glHint(target: GLenum, mode: GLenum) -> void
+proc "importc" glIndexMask(mask: GLuint) -> void
+proc "importc" glIndexPointer(typ: GLenum, stride: GLsizei, pointer: pointer) -> void
+proc "importc" glIndexd(c: GLdouble) -> void
+proc "importc" glIndexdv(c: ptr(GLdouble)) -> void
+proc "importc" glIndexf(c: GLfloat) -> void
+proc "importc" glIndexfv(c: ptr(GLfloat)) -> void
+proc "importc" glIndexi(c: GLint) -> void
+proc "importc" glIndexiv(c: ptr(GLint)) -> void
+proc "importc" glIndexs(c: GLshort) -> void
+proc "importc" glIndexsv(c: ptr(GLshort)) -> void
+proc "importc" glIndexub(c: GLubyte) -> void
+proc "importc" glIndexubv(c: ptr(GLubyte)) -> void
+proc "importc" glInitNames() -> void
+proc "importc" glInterleavedArrays(format: GLenum, stride: GLsizei, pointer: pointer) -> void
+proc "importc" glInvalidateBufferData(buffer: GLuint) -> void
+proc "importc" glInvalidateBufferSubData(buffer: GLuint, offset: GLintptr, length: GLsizeiptr) -> void
+proc "importc" glInvalidateFramebuffer(target: GLenum, numAttachments: GLsizei, attachments: ptr(GLenum)) -> void
+proc "importc" glInvalidateNamedFramebufferData(framebuffer: GLuint, numAttachments: GLsizei, attachments: ptr(GLenum)) -> void
+proc "importc" glInvalidateNamedFramebufferSubData(framebuffer: GLuint, numAttachments: GLsizei, attachments: ptr(GLenum), x: GLint, y: GLint, width: GLsizei, height: GLsizei) -> void
+proc "importc" glInvalidateSubFramebuffer(target: GLenum, numAttachments: GLsizei, attachments: ptr(GLenum), x: GLint, y: GLint, width: GLsizei, height: GLsizei) -> void
+proc "importc" glInvalidateTexImage(texture: GLuint, level: GLint) -> void
+proc "importc" glInvalidateTexSubImage(texture: GLuint, level: GLint, xoffset: GLint, yoffset: GLint, zoffset: GLint, width: GLsizei, height: GLsizei, depth: GLsizei) -> void
+proc "importc" glIsBuffer(buffer: GLuint) -> GLboolean
+proc "importc" glIsEnabled(cap: GLenum) -> GLboolean
+proc "importc" glIsEnabledi(target: GLenum, index: GLuint) -> GLboolean
+proc "importc" glIsFramebuffer(framebuffer: GLuint) -> GLboolean
+proc "importc" glIsList(list: GLuint) -> GLboolean
+proc "importc" glIsProgram(program: GLuint) -> GLboolean
+proc "importc" glIsProgramPipeline(pipeline: GLuint) -> GLboolean
+proc "importc" glIsQuery(id: GLuint) -> GLboolean
+proc "importc" glIsRenderbuffer(renderbuffer: GLuint) -> GLboolean
+proc "importc" glIsSampler(sampler: GLuint) -> GLboolean
+proc "importc" glIsShader(shader: GLuint) -> GLboolean
+proc "importc" glIsTexture(texture: GLuint) -> GLboolean
+proc "importc" glIsTransformFeedback(id: GLuint) -> GLboolean
+proc "importc" glIsVertexArray(array: GLuint) -> GLboolean
+proc "importc" glLightModelf(pname: GLenum, param: GLfloat) -> void
+proc "importc" glLightModelfv(pname: GLenum, params: ptr(GLfloat)) -> void
+proc "importc" glLightModeli(pname: GLenum, param: GLint) -> void
+proc "importc" glLightModeliv(pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glLightf(light: GLenum, pname: GLenum, param: GLfloat) -> void
+proc "importc" glLightfv(light: GLenum, pname: GLenum, params: ptr(GLfloat)) -> void
+proc "importc" glLighti(light: GLenum, pname: GLenum, param: GLint) -> void
+proc "importc" glLightiv(light: GLenum, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glLineStipple(factor: GLint, pattern: GLushort) -> void
+proc "importc" glLineWidth(width: GLfloat) -> void
+proc "importc" glLinkProgram(program: GLuint) -> void
+proc "importc" glListBase(base: GLuint) -> void
+proc "importc" glLoadIdentity() -> void
+proc "importc" glLoadMatrixd(m: ptr(GLdouble)) -> void
+proc "importc" glLoadMatrixf(m: ptr(GLfloat)) -> void
+proc "importc" glLoadName(name: GLuint) -> void
+proc "importc" glLoadTransposeMatrixd(m: ptr(GLdouble)) -> void
+proc "importc" glLoadTransposeMatrixf(m: ptr(GLfloat)) -> void
+proc "importc" glLogicOp(opcode: GLenum) -> void
+proc "importc" glMap1d(target: GLenum, u1: GLdouble, u2: GLdouble, stride: GLint, order: GLint, points: ptr(GLdouble)) -> pointer
+proc "importc" glMap1f(target: GLenum, u1: GLfloat, u2: GLfloat, stride: GLint, order: GLint, points: ptr(GLfloat)) -> pointer
+proc "importc" glMap2d(target: GLenum, u1: GLdouble, u2: GLdouble, ustride: GLint, uorder: GLint, v1: GLdouble, v2: GLdouble, vstride: GLint, vorder: GLint, points: ptr(GLdouble)) -> pointer
+proc "importc" glMap2f(target: GLenum, u1: GLfloat, u2: GLfloat, ustride: GLint, uorder: GLint, v1: GLfloat, v2: GLfloat, vstride: GLint, vorder: GLint, points: ptr(GLfloat)) -> pointer
+proc "importc" glMapBuffer(target: GLenum, access: GLenum) -> pointer
+proc "importc" glMapBufferRange(target: GLenum, offset: GLintptr, length: GLsizeiptr, access: GLbitfield) -> pointer
+proc "importc" glMapGrid1d(un: GLint, u1: GLdouble, u2: GLdouble) -> pointer
+proc "importc" glMapGrid1f(un: GLint, u1: GLfloat, u2: GLfloat) -> pointer
+proc "importc" glMapGrid2d(un: GLint, u1: GLdouble, u2: GLdouble, vn: GLint, v1: GLdouble, v2: GLdouble) -> pointer
+proc "importc" glMapGrid2f(un: GLint, u1: GLfloat, u2: GLfloat, vn: GLint, v1: GLfloat, v2: GLfloat) -> pointer
+proc "importc" glMapNamedBuffer(buffer: GLuint, access: GLenum) -> pointer
+proc "importc" glMapNamedBufferRange(buffer: GLuint, offset: GLintptr, length: GLsizeiptr, access: GLbitfield) -> pointer
+proc "importc" glMaterialf(face: GLenum, pname: GLenum, param: GLfloat) -> void
+proc "importc" glMaterialfv(face: GLenum, pname: GLenum, params: ptr(GLfloat)) -> void
+proc "importc" glMateriali(face: GLenum, pname: GLenum, param: GLint) -> void
+proc "importc" glMaterialiv(face: GLenum, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glMatrixMode(mode: GLenum) -> void
+proc "importc" glMemoryBarrier(barriers: GLbitfield) -> void
+proc "importc" glMemoryBarrierByRegion(barriers: GLbitfield) -> void
+proc "importc" glMinSampleShading(value: GLfloat) -> void
+proc "importc" glMultMatrixd(m: ptr(GLdouble)) -> void
+proc "importc" glMultMatrixf(m: ptr(GLfloat)) -> void
+proc "importc" glMultTransposeMatrixd(m: ptr(GLdouble)) -> void
+proc "importc" glMultTransposeMatrixf(m: ptr(GLfloat)) -> void
+proc "importc" glMultiDrawArrays(mode: GLenum, first: ptr(GLint), count: ptr(GLsizei), drawcount: GLsizei) -> void
+proc "importc" glMultiDrawArraysIndirect(mode: GLenum, indirect: pointer, drawcount: GLsizei, stride: GLsizei) -> void
+proc "importc" glMultiDrawElements(mode: GLenum, count: ptr(GLsizei), typ: GLenum, indices: pointer, drawcount: GLsizei) -> void
+proc "importc" glMultiDrawElementsBaseVertex(mode: GLenum, count: ptr(GLsizei), typ: GLenum, indices: pointer, drawcount: GLsizei, basevertex: ptr(GLint)) -> void
+proc "importc" glMultiDrawElementsIndirect(mode: GLenum, typ: GLenum, indirect: pointer, drawcount: GLsizei, stride: GLsizei) -> void
+proc "importc" glMultiTexCoord1d(target: GLenum, s: GLdouble) -> void
+proc "importc" glMultiTexCoord1dv(target: GLenum, v: ptr(GLdouble)) -> void
+proc "importc" glMultiTexCoord1f(target: GLenum, s: GLfloat) -> void
+proc "importc" glMultiTexCoord1fv(target: GLenum, v: ptr(GLfloat)) -> void
+proc "importc" glMultiTexCoord1i(target: GLenum, s: GLint) -> void
+proc "importc" glMultiTexCoord1iv(target: GLenum, v: ptr(GLint)) -> void
+proc "importc" glMultiTexCoord1s(target: GLenum, s: GLshort) -> void
+proc "importc" glMultiTexCoord1sv(target: GLenum, v: ptr(GLshort)) -> void
+proc "importc" glMultiTexCoord2d(target: GLenum, s: GLdouble, t: GLdouble) -> void
+proc "importc" glMultiTexCoord2dv(target: GLenum, v: ptr(GLdouble)) -> void
+proc "importc" glMultiTexCoord2f(target: GLenum, s: GLfloat, t: GLfloat) -> void
+proc "importc" glMultiTexCoord2fv(target: GLenum, v: ptr(GLfloat)) -> void
+proc "importc" glMultiTexCoord2i(target: GLenum, s: GLint, t: GLint) -> void
+proc "importc" glMultiTexCoord2iv(target: GLenum, v: ptr(GLint)) -> void
+proc "importc" glMultiTexCoord2s(target: GLenum, s: GLshort, t: GLshort) -> void
+proc "importc" glMultiTexCoord2sv(target: GLenum, v: ptr(GLshort)) -> void
+proc "importc" glMultiTexCoord3d(target: GLenum, s: GLdouble, t: GLdouble, r: GLdouble) -> void
+proc "importc" glMultiTexCoord3dv(target: GLenum, v: ptr(GLdouble)) -> void
+proc "importc" glMultiTexCoord3f(target: GLenum, s: GLfloat, t: GLfloat, r: GLfloat) -> void
+proc "importc" glMultiTexCoord3fv(target: GLenum, v: ptr(GLfloat)) -> void
+proc "importc" glMultiTexCoord3i(target: GLenum, s: GLint, t: GLint, r: GLint) -> void
+proc "importc" glMultiTexCoord3iv(target: GLenum, v: ptr(GLint)) -> void
+proc "importc" glMultiTexCoord3s(target: GLenum, s: GLshort, t: GLshort, r: GLshort) -> void
+proc "importc" glMultiTexCoord3sv(target: GLenum, v: ptr(GLshort)) -> void
+proc "importc" glMultiTexCoord4d(target: GLenum, s: GLdouble, t: GLdouble, r: GLdouble, q: GLdouble) -> void
+proc "importc" glMultiTexCoord4dv(target: GLenum, v: ptr(GLdouble)) -> void
+proc "importc" glMultiTexCoord4f(target: GLenum, s: GLfloat, t: GLfloat, r: GLfloat, q: GLfloat) -> void
+proc "importc" glMultiTexCoord4fv(target: GLenum, v: ptr(GLfloat)) -> void
+proc "importc" glMultiTexCoord4i(target: GLenum, s: GLint, t: GLint, r: GLint, q: GLint) -> void
+proc "importc" glMultiTexCoord4iv(target: GLenum, v: ptr(GLint)) -> void
+proc "importc" glMultiTexCoord4s(target: GLenum, s: GLshort, t: GLshort, r: GLshort, q: GLshort) -> void
+proc "importc" glMultiTexCoord4sv(target: GLenum, v: ptr(GLshort)) -> void
+proc "importc" glMultiTexCoordP1ui(texture: GLenum, typ: GLenum, coords: GLuint) -> void
+proc "importc" glMultiTexCoordP1uiv(texture: GLenum, typ: GLenum, coords: ptr(GLuint)) -> void
+proc "importc" glMultiTexCoordP2ui(texture: GLenum, typ: GLenum, coords: GLuint) -> void
+proc "importc" glMultiTexCoordP2uiv(texture: GLenum, typ: GLenum, coords: ptr(GLuint)) -> void
+proc "importc" glMultiTexCoordP3ui(texture: GLenum, typ: GLenum, coords: GLuint) -> void
+proc "importc" glMultiTexCoordP3uiv(texture: GLenum, typ: GLenum, coords: ptr(GLuint)) -> void
+proc "importc" glMultiTexCoordP4ui(texture: GLenum, typ: GLenum, coords: GLuint) -> void
+proc "importc" glMultiTexCoordP4uiv(texture: GLenum, typ: GLenum, coords: ptr(GLuint)) -> void
+proc "importc" glNamedBufferData(buffer: GLuint, size: GLsizeiptr, data: pointer, usage: GLenum) -> void
+proc "importc" glNamedBufferStorage(buffer: GLuint, size: GLsizeiptr, data: pointer, flags: GLbitfield) -> void
+proc "importc" glNamedBufferSubData(buffer: GLuint, offset: GLintptr, size: GLsizeiptr, data: pointer) -> void
+proc "importc" glNamedFramebufferDrawBuffer(framebuffer: GLuint, buf: GLenum) -> void
+proc "importc" glNamedFramebufferDrawBuffers(framebuffer: GLuint, n: GLsizei, bufs: ptr(GLenum)) -> void
+proc "importc" glNamedFramebufferParameteri(framebuffer: GLuint, pname: GLenum, param: GLint) -> void
+proc "importc" glNamedFramebufferReadBuffer(framebuffer: GLuint, src: GLenum) -> void
+proc "importc" glNamedFramebufferRenderbuffer(framebuffer: GLuint, attachment: GLenum, renderbuffertarget: GLenum, renderbuffer: GLuint) -> void
+proc "importc" glNamedFramebufferTexture(framebuffer: GLuint, attachment: GLenum, texture: GLuint, level: GLint) -> void
+proc "importc" glNamedFramebufferTextureLayer(framebuffer: GLuint, attachment: GLenum, texture: GLuint, level: GLint, layer: GLint) -> void
+proc "importc" glNamedRenderbufferStorage(renderbuffer: GLuint, internalformat: GLenum, width: GLsizei, height: GLsizei) -> void
+proc "importc" glNamedRenderbufferStorageMultisample(renderbuffer: GLuint, samples: GLsizei, internalformat: GLenum, width: GLsizei, height: GLsizei) -> void
+proc "importc" glNewList(list: GLuint, mode: GLenum) -> void
+proc "importc" glNormal3b(nx: GLbyte, ny: GLbyte, nz: GLbyte) -> void
+proc "importc" glNormal3bv(v: ptr(GLbyte)) -> void
+proc "importc" glNormal3d(nx: GLdouble, ny: GLdouble, nz: GLdouble) -> void
+proc "importc" glNormal3dv(v: ptr(GLdouble)) -> void
+proc "importc" glNormal3f(nx: GLfloat, ny: GLfloat, nz: GLfloat) -> void
+proc "importc" glNormal3fv(v: ptr(GLfloat)) -> void
+proc "importc" glNormal3i(nx: GLint, ny: GLint, nz: GLint) -> void
+proc "importc" glNormal3iv(v: ptr(GLint)) -> void
+proc "importc" glNormal3s(nx: GLshort, ny: GLshort, nz: GLshort) -> void
+proc "importc" glNormal3sv(v: ptr(GLshort)) -> void
+proc "importc" glNormalP3ui(typ: GLenum, coords: GLuint) -> void
+proc "importc" glNormalP3uiv(typ: GLenum, coords: ptr(GLuint)) -> void
+proc "importc" glNormalPointer(typ: GLenum, stride: GLsizei, pointer: pointer) -> void
+proc "importc" glObjectLabel(identifier: GLenum, name: GLuint, length: GLsizei, label: cstr) -> void
+proc "importc" glObjectPtrLabel(`ptr`: pointer, length: GLsizei, label: cstr) -> void
+proc "importc" glOrtho(left: GLdouble, right: GLdouble, bottom: GLdouble, top: GLdouble, zNear: GLdouble, zFar: GLdouble) -> void
+proc "importc" glPassThrough(token: GLfloat) -> void
+proc "importc" glPatchParameterfv(pname: GLenum, values: ptr(GLfloat)) -> void
+proc "importc" glPatchParameteri(pname: GLenum, value: GLint) -> void
+proc "importc" glPauseTransformFeedback() -> void
+proc "importc" glPixelMapfv(map: GLenum, mapsize: GLsizei, values: ptr(GLfloat)) -> void
+proc "importc" glPixelMapuiv(map: GLenum, mapsize: GLsizei, values: ptr(GLuint)) -> void
+proc "importc" glPixelMapusv(map: GLenum, mapsize: GLsizei, values: ptr(GLushort)) -> void
+proc "importc" glPixelStoref(pname: GLenum, param: GLfloat) -> void
+proc "importc" glPixelStorei(pname: GLenum, param: GLint) -> void
+proc "importc" glPixelTransferf(pname: GLenum, param: GLfloat) -> void
+proc "importc" glPixelTransferi(pname: GLenum, param: GLint) -> void
+proc "importc" glPixelZoom(xfactor: GLfloat, yfactor: GLfloat) -> void
+proc "importc" glPointParameterf(pname: GLenum, param: GLfloat) -> void
+proc "importc" glPointParameterfv(pname: GLenum, params: ptr(GLfloat)) -> void
+proc "importc" glPointParameteri(pname: GLenum, param: GLint) -> void
+proc "importc" glPointParameteriv(pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glPointSize(size: GLfloat) -> void
+proc "importc" glPolygonMode(face: GLenum, mode: GLenum) -> void
+proc "importc" glPolygonOffset(factor: GLfloat, units: GLfloat) -> void
+proc "importc" glPolygonStipple(mask: ptr(GLubyte)) -> void
+proc "importc" glPopAttrib() -> void
+proc "importc" glPopClientAttrib() -> void
+proc "importc" glPopDebugGroup() -> void
+proc "importc" glPopMatrix() -> void
+proc "importc" glPopName() -> void
+proc "importc" glPrimitiveRestartIndex(index: GLuint) -> void
+proc "importc" glPrioritizeTextures(n: GLsizei, textures: ptr(GLuint), priorities: ptr(GLfloat)) -> void
+proc "importc" glProgramBinary(program: GLuint, binaryFormat: GLenum, binary: pointer, length: GLsizei) -> void
+proc "importc" glProgramParameteri(program: GLuint, pname: GLenum, value: GLint) -> void
+proc "importc" glProgramUniform1d(program: GLuint, location: GLint, v0: GLdouble) -> void
+proc "importc" glProgramUniform1dv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLdouble)) -> void
+proc "importc" glProgramUniform1f(program: GLuint, location: GLint, v0: GLfloat) -> void
+proc "importc" glProgramUniform1fv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLfloat)) -> void
+proc "importc" glProgramUniform1i(program: GLuint, location: GLint, v0: GLint) -> void
+proc "importc" glProgramUniform1iv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLint)) -> void
+proc "importc" glProgramUniform1ui(program: GLuint, location: GLint, v0: GLuint) -> void
+proc "importc" glProgramUniform1uiv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLuint)) -> void
+proc "importc" glProgramUniform2d(program: GLuint, location: GLint, v0: GLdouble, v1: GLdouble) -> void
+proc "importc" glProgramUniform2dv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLdouble)) -> void
+proc "importc" glProgramUniform2f(program: GLuint, location: GLint, v0: GLfloat, v1: GLfloat) -> void
+proc "importc" glProgramUniform2fv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLfloat)) -> void
+proc "importc" glProgramUniform2i(program: GLuint, location: GLint, v0: GLint, v1: GLint) -> void
+proc "importc" glProgramUniform2iv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLint)) -> void
+proc "importc" glProgramUniform2ui(program: GLuint, location: GLint, v0: GLuint, v1: GLuint) -> void
+proc "importc" glProgramUniform2uiv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLuint)) -> void
+proc "importc" glProgramUniform3d(program: GLuint, location: GLint, v0: GLdouble, v1: GLdouble, v2: GLdouble) -> void
+proc "importc" glProgramUniform3dv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLdouble)) -> void
+proc "importc" glProgramUniform3f(program: GLuint, location: GLint, v0: GLfloat, v1: GLfloat, v2: GLfloat) -> void
+proc "importc" glProgramUniform3fv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLfloat)) -> void
+proc "importc" glProgramUniform3i(program: GLuint, location: GLint, v0: GLint, v1: GLint, v2: GLint) -> void
+proc "importc" glProgramUniform3iv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLint)) -> void
+proc "importc" glProgramUniform3ui(program: GLuint, location: GLint, v0: GLuint, v1: GLuint, v2: GLuint) -> void
+proc "importc" glProgramUniform3uiv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLuint)) -> void
+proc "importc" glProgramUniform4d(program: GLuint, location: GLint, v0: GLdouble, v1: GLdouble, v2: GLdouble, v3: GLdouble) -> void
+proc "importc" glProgramUniform4dv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLdouble)) -> void
+proc "importc" glProgramUniform4f(program: GLuint, location: GLint, v0: GLfloat, v1: GLfloat, v2: GLfloat, v3: GLfloat) -> void
+proc "importc" glProgramUniform4fv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLfloat)) -> void
+proc "importc" glProgramUniform4i(program: GLuint, location: GLint, v0: GLint, v1: GLint, v2: GLint, v3: GLint) -> void
+proc "importc" glProgramUniform4iv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLint)) -> void
+proc "importc" glProgramUniform4ui(program: GLuint, location: GLint, v0: GLuint, v1: GLuint, v2: GLuint, v3: GLuint) -> void
+proc "importc" glProgramUniform4uiv(program: GLuint, location: GLint, count: GLsizei, value: ptr(GLuint)) -> void
+proc "importc" glProgramUniformMatrix2dv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)) -> void
+proc "importc" glProgramUniformMatrix2fv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)) -> void
+proc "importc" glProgramUniformMatrix2x3dv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)) -> void
+proc "importc" glProgramUniformMatrix2x3fv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)) -> void
+proc "importc" glProgramUniformMatrix2x4dv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)) -> void
+proc "importc" glProgramUniformMatrix2x4fv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)) -> void
+proc "importc" glProgramUniformMatrix3dv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)) -> void
+proc "importc" glProgramUniformMatrix3fv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)) -> void
+proc "importc" glProgramUniformMatrix3x2dv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)) -> void
+proc "importc" glProgramUniformMatrix3x2fv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)) -> void
+proc "importc" glProgramUniformMatrix3x4dv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)) -> void
+proc "importc" glProgramUniformMatrix3x4fv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)) -> void
+proc "importc" glProgramUniformMatrix4dv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)) -> void
+proc "importc" glProgramUniformMatrix4fv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)) -> void
+proc "importc" glProgramUniformMatrix4x2dv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)) -> void
+proc "importc" glProgramUniformMatrix4x2fv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)) -> void
+proc "importc" glProgramUniformMatrix4x3dv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)) -> void
+proc "importc" glProgramUniformMatrix4x3fv(program: GLuint, location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)) -> void
+proc "importc" glProvokingVertex(mode: GLenum) -> void
+proc "importc" glPushAttrib(mask: GLbitfield) -> void
+proc "importc" glPushClientAttrib(mask: GLbitfield) -> void
+proc "importc" glPushDebugGroup(source: GLenum, id: GLuint, length: GLsizei, message: cstr) -> void
+proc "importc" glPushMatrix() -> void
+proc "importc" glPushName(name: GLuint) -> void
+proc "importc" glQueryCounter(id: GLuint, target: GLenum) -> void
+proc "importc" glRasterPos2d(x: GLdouble, y: GLdouble) -> void
+proc "importc" glRasterPos2dv(v: ptr(GLdouble)) -> void
+proc "importc" glRasterPos2f(x: GLfloat, y: GLfloat) -> void
+proc "importc" glRasterPos2fv(v: ptr(GLfloat)) -> void
+proc "importc" glRasterPos2i(x: GLint, y: GLint) -> void
+proc "importc" glRasterPos2iv(v: ptr(GLint)) -> void
+proc "importc" glRasterPos2s(x: GLshort, y: GLshort) -> void
+proc "importc" glRasterPos2sv(v: ptr(GLshort)) -> void
+proc "importc" glRasterPos3d(x: GLdouble, y: GLdouble, z: GLdouble) -> void
+proc "importc" glRasterPos3dv(v: ptr(GLdouble)) -> void
+proc "importc" glRasterPos3f(x: GLfloat, y: GLfloat, z: GLfloat) -> void
+proc "importc" glRasterPos3fv(v: ptr(GLfloat)) -> void
+proc "importc" glRasterPos3i(x: GLint, y: GLint, z: GLint) -> void
+proc "importc" glRasterPos3iv(v: ptr(GLint)) -> void
+proc "importc" glRasterPos3s(x: GLshort, y: GLshort, z: GLshort) -> void
+proc "importc" glRasterPos3sv(v: ptr(GLshort)) -> void
+proc "importc" glRasterPos4d(x: GLdouble, y: GLdouble, z: GLdouble, w: GLdouble) -> void
+proc "importc" glRasterPos4dv(v: ptr(GLdouble)) -> void
+proc "importc" glRasterPos4f(x: GLfloat, y: GLfloat, z: GLfloat, w: GLfloat) -> void
+proc "importc" glRasterPos4fv(v: ptr(GLfloat)) -> void
+proc "importc" glRasterPos4i(x: GLint, y: GLint, z: GLint, w: GLint) -> void
+proc "importc" glRasterPos4iv(v: ptr(GLint)) -> void
+proc "importc" glRasterPos4s(x: GLshort, y: GLshort, z: GLshort, w: GLshort) -> void
+proc "importc" glRasterPos4sv(v: ptr(GLshort)) -> void
+proc "importc" glReadBuffer(src: GLenum) -> void
+proc "importc" glReadPixels(x: GLint, y: GLint, width: GLsizei, height: GLsizei, format: GLenum, typ: GLenum, pixels: pointer) -> void
+proc "importc" glReadnPixels(x: GLint, y: GLint, width: GLsizei, height: GLsizei, format: GLenum, typ: GLenum, bufSize: GLsizei, data: pointer) -> void
+proc "importc" glRectd(x1: GLdouble, y1: GLdouble, x2: GLdouble, y2: GLdouble) -> void
+proc "importc" glRectdv(v1: ptr(GLdouble), v2: ptr(GLdouble)) -> void
+proc "importc" glRectf(x1: GLfloat, y1: GLfloat, x2: GLfloat, y2: GLfloat) -> void
+proc "importc" glRectfv(v1: ptr(GLfloat), v2: ptr(GLfloat)) -> void
+proc "importc" glRecti(x1: GLint, y1: GLint, x2: GLint, y2: GLint) -> void
+proc "importc" glRectiv(v1: ptr(GLint), v2: ptr(GLint)) -> void
+proc "importc" glRects(x1: GLshort, y1: GLshort, x2: GLshort, y2: GLshort) -> void
+proc "importc" glRectsv(v1: ptr(GLshort), v2: ptr(GLshort)) -> void
+proc "importc" glReleaseShaderCompiler() -> void
+proc "importc" glRenderMode(mode: GLenum) -> GLint
+proc "importc" glRenderbufferStorage(target: GLenum, internalformat: GLenum, width: GLsizei, height: GLsizei) -> void
+proc "importc" glRenderbufferStorageMultisample(target: GLenum, samples: GLsizei, internalformat: GLenum, width: GLsizei, height: GLsizei) -> void
+proc "importc" glResumeTransformFeedback() -> void
+proc "importc" glRotated(angle: GLdouble, x: GLdouble, y: GLdouble, z: GLdouble) -> void
+proc "importc" glRotatef(angle: GLfloat, x: GLfloat, y: GLfloat, z: GLfloat) -> void
+proc "importc" glSampleCoverage(value: GLfloat, invert: GLboolean) -> void
+proc "importc" glSampleMaski(maskNumber: GLuint, mask: GLbitfield) -> void
+proc "importc" glSamplerParameterIiv(sampler: GLuint, pname: GLenum, param: ptr(GLint)) -> void
+proc "importc" glSamplerParameterIuiv(sampler: GLuint, pname: GLenum, param: ptr(GLuint)) -> void
+proc "importc" glSamplerParameterf(sampler: GLuint, pname: GLenum, param: GLfloat) -> void
+proc "importc" glSamplerParameterfv(sampler: GLuint, pname: GLenum, param: ptr(GLfloat)) -> void
+proc "importc" glSamplerParameteri(sampler: GLuint, pname: GLenum, param: GLint) -> void
+proc "importc" glSamplerParameteriv(sampler: GLuint, pname: GLenum, param: ptr(GLint)) -> void
+proc "importc" glScaled(x: GLdouble, y: GLdouble, z: GLdouble) -> void
+proc "importc" glScalef(x: GLfloat, y: GLfloat, z: GLfloat) -> void
+proc "importc" glScissor(x: GLint, y: GLint, width: GLsizei, height: GLsizei) -> void
+proc "importc" glScissorArrayv(first: GLuint, count: GLsizei, v: ptr(GLint)) -> void
+proc "importc" glScissorIndexed(index: GLuint, left: GLint, bottom: GLint, width: GLsizei, height: GLsizei) -> void
+proc "importc" glScissorIndexedv(index: GLuint, v: ptr(GLint)) -> void
+proc "importc" glSecondaryColor3b(red: GLbyte, green: GLbyte, blue: GLbyte) -> void
+proc "importc" glSecondaryColor3bv(v: ptr(GLbyte)) -> void
+proc "importc" glSecondaryColor3d(red: GLdouble, green: GLdouble, blue: GLdouble) -> void
+proc "importc" glSecondaryColor3dv(v: ptr(GLdouble)) -> void
+proc "importc" glSecondaryColor3f(red: GLfloat, green: GLfloat, blue: GLfloat) -> void
+proc "importc" glSecondaryColor3fv(v: ptr(GLfloat)) -> void
+proc "importc" glSecondaryColor3i(red: GLint, green: GLint, blue: GLint) -> void
+proc "importc" glSecondaryColor3iv(v: ptr(GLint)) -> void
+proc "importc" glSecondaryColor3s(red: GLshort, green: GLshort, blue: GLshort) -> void
+proc "importc" glSecondaryColor3sv(v: ptr(GLshort)) -> void
+proc "importc" glSecondaryColor3ub(red: GLubyte, green: GLubyte, blue: GLubyte) -> void
+proc "importc" glSecondaryColor3ubv(v: ptr(GLubyte)) -> void
+proc "importc" glSecondaryColor3ui(red: GLuint, green: GLuint, blue: GLuint) -> void
+proc "importc" glSecondaryColor3uiv(v: ptr(GLuint)) -> void
+proc "importc" glSecondaryColor3us(red: GLushort, green: GLushort, blue: GLushort) -> void
+proc "importc" glSecondaryColor3usv(v: ptr(GLushort)) -> void
+proc "importc" glSecondaryColorP3ui(typ: GLenum, color: GLuint) -> void
+proc "importc" glSecondaryColorP3uiv(typ: GLenum, color: ptr(GLuint)) -> void
+proc "importc" glSecondaryColorPointer(size: GLint, typ: GLenum, stride: GLsizei, pointer: pointer) -> void
+proc "importc" glSelectBuffer(size: GLsizei, buffer: ptr(GLuint)) -> void
+proc "importc" glShadeModel(mode: GLenum) -> void
+proc "importc" glShaderBinary(count: GLsizei, shaders: ptr(GLuint), binaryformat: GLenum, binary: pointer, length: GLsizei) -> void
+proc "importc" glShaderSource(shader: GLuint, count: GLsizei, string: ptr(cstr), length: ptr(GLint)) -> void
+proc "importc" glShaderStorageBlockBinding(program: GLuint, storageBlockIndex: GLuint, storageBlockBinding: GLuint) -> void
+proc "importc" glStencilFunc(func: GLenum, ref: GLint, mask: GLuint) -> void
+proc "importc" glStencilFuncSeparate(face: GLenum, func: GLenum, ref: GLint, mask: GLuint) -> void
+proc "importc" glStencilMask(mask: GLuint) -> void
+proc "importc" glStencilMaskSeparate(face: GLenum, mask: GLuint) -> void
+proc "importc" glStencilOp(fail: GLenum, zfail: GLenum, zpass: GLenum) -> void
+proc "importc" glStencilOpSeparate(face: GLenum, sfail: GLenum, dpfail: GLenum, dppass: GLenum) -> void
+proc "importc" glTexBuffer(target: GLenum, internalformat: GLenum, buffer: GLuint) -> void
+proc "importc" glTexBufferRange(target: GLenum, internalformat: GLenum, buffer: GLuint, offset: GLintptr, size: GLsizeiptr) -> void
+proc "importc" glTexCoord1d(s: GLdouble) -> void
+proc "importc" glTexCoord1dv(v: ptr(GLdouble)) -> void
+proc "importc" glTexCoord1f(s: GLfloat) -> void
+proc "importc" glTexCoord1fv(v: ptr(GLfloat)) -> void
+proc "importc" glTexCoord1i(s: GLint) -> void
+proc "importc" glTexCoord1iv(v: ptr(GLint)) -> void
+proc "importc" glTexCoord1s(s: GLshort) -> void
+proc "importc" glTexCoord1sv(v: ptr(GLshort)) -> void
+proc "importc" glTexCoord2d(s: GLdouble, t: GLdouble) -> void
+proc "importc" glTexCoord2dv(v: ptr(GLdouble)) -> void
+proc "importc" glTexCoord2f(s: GLfloat, t: GLfloat) -> void
+proc "importc" glTexCoord2fv(v: ptr(GLfloat)) -> void
+proc "importc" glTexCoord2i(s: GLint, t: GLint) -> void
+proc "importc" glTexCoord2iv(v: ptr(GLint)) -> void
+proc "importc" glTexCoord2s(s: GLshort, t: GLshort) -> void
+proc "importc" glTexCoord2sv(v: ptr(GLshort)) -> void
+proc "importc" glTexCoord3d(s: GLdouble, t: GLdouble, r: GLdouble) -> void
+proc "importc" glTexCoord3dv(v: ptr(GLdouble)) -> void
+proc "importc" glTexCoord3f(s: GLfloat, t: GLfloat, r: GLfloat) -> void
+proc "importc" glTexCoord3fv(v: ptr(GLfloat)) -> void
+proc "importc" glTexCoord3i(s: GLint, t: GLint, r: GLint) -> void
+proc "importc" glTexCoord3iv(v: ptr(GLint)) -> void
+proc "importc" glTexCoord3s(s: GLshort, t: GLshort, r: GLshort) -> void
+proc "importc" glTexCoord3sv(v: ptr(GLshort)) -> void
+proc "importc" glTexCoord4d(s: GLdouble, t: GLdouble, r: GLdouble, q: GLdouble) -> void
+proc "importc" glTexCoord4dv(v: ptr(GLdouble)) -> void
+proc "importc" glTexCoord4f(s: GLfloat, t: GLfloat, r: GLfloat, q: GLfloat) -> void
+proc "importc" glTexCoord4fv(v: ptr(GLfloat)) -> void
+proc "importc" glTexCoord4i(s: GLint, t: GLint, r: GLint, q: GLint) -> void
+proc "importc" glTexCoord4iv(v: ptr(GLint)) -> void
+proc "importc" glTexCoord4s(s: GLshort, t: GLshort, r: GLshort, q: GLshort) -> void
+proc "importc" glTexCoord4sv(v: ptr(GLshort)) -> void
+proc "importc" glTexCoordP1ui(typ: GLenum, coords: GLuint) -> void
+proc "importc" glTexCoordP1uiv(typ: GLenum, coords: ptr(GLuint)) -> void
+proc "importc" glTexCoordP2ui(typ: GLenum, coords: GLuint) -> void
+proc "importc" glTexCoordP2uiv(typ: GLenum, coords: ptr(GLuint)) -> void
+proc "importc" glTexCoordP3ui(typ: GLenum, coords: GLuint) -> void
+proc "importc" glTexCoordP3uiv(typ: GLenum, coords: ptr(GLuint)) -> void
+proc "importc" glTexCoordP4ui(typ: GLenum, coords: GLuint) -> void
+proc "importc" glTexCoordP4uiv(typ: GLenum, coords: ptr(GLuint)) -> void
+proc "importc" glTexCoordPointer(size: GLint, typ: GLenum, stride: GLsizei, pointer: pointer) -> void
+proc "importc" glTexEnvf(target: GLenum, pname: GLenum, param: GLfloat) -> void
+proc "importc" glTexEnvfv(target: GLenum, pname: GLenum, params: ptr(GLfloat)) -> void
+proc "importc" glTexEnvi(target: GLenum, pname: GLenum, param: GLint) -> void
+proc "importc" glTexEnviv(target: GLenum, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glTexGend(coord: GLenum, pname: GLenum, param: GLdouble) -> void
+proc "importc" glTexGendv(coord: GLenum, pname: GLenum, params: ptr(GLdouble)) -> void
+proc "importc" glTexGenf(coord: GLenum, pname: GLenum, param: GLfloat) -> void
+proc "importc" glTexGenfv(coord: GLenum, pname: GLenum, params: ptr(GLfloat)) -> void
+proc "importc" glTexGeni(coord: GLenum, pname: GLenum, param: GLint) -> void
+proc "importc" glTexGeniv(coord: GLenum, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glTexImage1D(target: GLenum, level: GLint, internalformat: GLint, width: GLsizei, border: GLint, format: GLenum, typ: GLenum, pixels: pointer) -> void
+proc "importc" glTexImage2D(target: GLenum, level: GLint, internalformat: GLint, width: GLsizei, height: GLsizei, border: GLint, format: GLenum, typ: GLenum, pixels: pointer) -> void
+proc "importc" glTexImage2DMultisample(target: GLenum, samples: GLsizei, internalformat: GLenum, width: GLsizei, height: GLsizei, fixedsamplelocations: GLboolean) -> void
+proc "importc" glTexImage3D(target: GLenum, level: GLint, internalformat: GLint, width: GLsizei, height: GLsizei, depth: GLsizei, border: GLint, format: GLenum, typ: GLenum, pixels: pointer) -> void
+proc "importc" glTexImage3DMultisample(target: GLenum, samples: GLsizei, internalformat: GLenum, width: GLsizei, height: GLsizei, depth: GLsizei, fixedsamplelocations: GLboolean) -> void
+proc "importc" glTexParameterIiv(target: GLenum, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glTexParameterIuiv(target: GLenum, pname: GLenum, params: ptr(GLuint)) -> void
+proc "importc" glTexParameterf(target: GLenum, pname: GLenum, param: GLfloat) -> void
+proc "importc" glTexParameterfv(target: GLenum, pname: GLenum, params: ptr(GLfloat)) -> void
+proc "importc" glTexParameteri(target: GLenum, pname: GLenum, param: GLint) -> void
+proc "importc" glTexParameteriv(target: GLenum, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glTexStorage1D(target: GLenum, levels: GLsizei, internalformat: GLenum, width: GLsizei) -> void
+proc "importc" glTexStorage2D(target: GLenum, levels: GLsizei, internalformat: GLenum, width: GLsizei, height: GLsizei) -> void
+proc "importc" glTexStorage2DMultisample(target: GLenum, samples: GLsizei, internalformat: GLenum, width: GLsizei, height: GLsizei, fixedsamplelocations: GLboolean) -> void
+proc "importc" glTexStorage3D(target: GLenum, levels: GLsizei, internalformat: GLenum, width: GLsizei, height: GLsizei, depth: GLsizei) -> void
+proc "importc" glTexStorage3DMultisample(target: GLenum, samples: GLsizei, internalformat: GLenum, width: GLsizei, height: GLsizei, depth: GLsizei, fixedsamplelocations: GLboolean) -> void
+proc "importc" glTexSubImage1D(target: GLenum, level: GLint, xoffset: GLint, width: GLsizei, format: GLenum, typ: GLenum, pixels: pointer) -> void
+proc "importc" glTexSubImage2D(target: GLenum, level: GLint, xoffset: GLint, yoffset: GLint, width: GLsizei, height: GLsizei, format: GLenum, typ: GLenum, pixels: pointer) -> void
+proc "importc" glTexSubImage3D(target: GLenum, level: GLint, xoffset: GLint, yoffset: GLint, zoffset: GLint, width: GLsizei, height: GLsizei, depth: GLsizei, format: GLenum, typ: GLenum, pixels: pointer) -> void
+proc "importc" glTextureBarrier() -> void
+proc "importc" glTextureBuffer(texture: GLuint, internalformat: GLenum, buffer: GLuint) -> void
+proc "importc" glTextureBufferRange(texture: GLuint, internalformat: GLenum, buffer: GLuint, offset: GLintptr, size: GLsizeiptr) -> void
+proc "importc" glTextureParameterIiv(texture: GLuint, pname: GLenum, params: ptr(GLint)) -> void
+proc "importc" glTextureParameterIuiv(texture: GLuint, pname: GLenum, params: ptr(GLuint)) -> void
+proc "importc" glTextureParameterf(texture: GLuint, pname: GLenum, param: GLfloat) -> void
+proc "importc" glTextureParameterfv(texture: GLuint, pname: GLenum, param: ptr(GLfloat)) -> void
+proc "importc" glTextureParameteri(texture: GLuint, pname: GLenum, param: GLint) -> void
+proc "importc" glTextureParameteriv(texture: GLuint, pname: GLenum, param: ptr(GLint)) -> void
+proc "importc" glTextureStorage1D(texture: GLuint, levels: GLsizei, internalformat: GLenum, width: GLsizei) -> void
+proc "importc" glTextureStorage2D(texture: GLuint, levels: GLsizei, internalformat: GLenum, width: GLsizei, height: GLsizei) -> void
+proc "importc" glTextureStorage2DMultisample(texture: GLuint, samples: GLsizei, internalformat: GLenum, width: GLsizei, height: GLsizei, fixedsamplelocations: GLboolean) -> void
+proc "importc" glTextureStorage3D(texture: GLuint, levels: GLsizei, internalformat: GLenum, width: GLsizei, height: GLsizei, depth: GLsizei) -> void
+proc "importc" glTextureStorage3DMultisample(texture: GLuint, samples: GLsizei, internalformat: GLenum, width: GLsizei, height: GLsizei, depth: GLsizei, fixedsamplelocations: GLboolean) -> void
+proc "importc" glTextureSubImage1D(texture: GLuint, level: GLint, xoffset: GLint, width: GLsizei, format: GLenum, typ: GLenum, pixels: pointer) -> void
+proc "importc" glTextureSubImage2D(texture: GLuint, level: GLint, xoffset: GLint, yoffset: GLint, width: GLsizei, height: GLsizei, format: GLenum, typ: GLenum, pixels: pointer) -> void
+proc "importc" glTextureSubImage3D(texture: GLuint, level: GLint, xoffset: GLint, yoffset: GLint, zoffset: GLint, width: GLsizei, height: GLsizei, depth: GLsizei, format: GLenum, typ: GLenum, pixels: pointer) -> void
+proc "importc" glTextureView(texture: GLuint, target: GLenum, origtexture: GLuint, internalformat: GLenum, minlevel: GLuint, numlevels: GLuint, minlayer: GLuint, numlayers: GLuint) -> void
+proc "importc" glTransformFeedbackBufferBase(xfb: GLuint, index: GLuint, buffer: GLuint) -> void
+proc "importc" glTransformFeedbackBufferRange(xfb: GLuint, index: GLuint, buffer: GLuint, offset: GLintptr, size: GLsizeiptr) -> void
+proc "importc" glTransformFeedbackVaryings(program: GLuint, count: GLsizei, varyings: ptr(cstr), bufferMode: GLenum) -> void
+proc "importc" glTranslated(x: GLdouble, y: GLdouble, z: GLdouble) -> void
+proc "importc" glTranslatef(x: GLfloat, y: GLfloat, z: GLfloat) -> void
+proc "importc" glUniform1d(location: GLint, x: GLdouble) -> void
+proc "importc" glUniform1dv(location: GLint, count: GLsizei, value: ptr(GLdouble)) -> void
+proc "importc" glUniform1f(location: GLint, v0: GLfloat) -> void
+proc "importc" glUniform1fv(location: GLint, count: GLsizei, value: ptr(GLfloat)) -> void
+proc "importc" glUniform1i(location: GLint, v0: GLint) -> void
+proc "importc" glUniform1iv(location: GLint, count: GLsizei, value: ptr(GLint)) -> void
+proc "importc" glUniform1ui(location: GLint, v0: GLuint) -> void
+proc "importc" glUniform1uiv(location: GLint, count: GLsizei, value: ptr(GLuint)) -> void
+proc "importc" glUniform2d(location: GLint, x: GLdouble, y: GLdouble) -> void
+proc "importc" glUniform2dv(location: GLint, count: GLsizei, value: ptr(GLdouble)) -> void
+proc "importc" glUniform2f(location: GLint, v0: GLfloat, v1: GLfloat) -> void
+proc "importc" glUniform2fv(location: GLint, count: GLsizei, value: ptr(GLfloat)) -> void
+proc "importc" glUniform2i(location: GLint, v0: GLint, v1: GLint) -> void
+proc "importc" glUniform2iv(location: GLint, count: GLsizei, value: ptr(GLint)) -> void
+proc "importc" glUniform2ui(location: GLint, v0: GLuint, v1: GLuint) -> void
+proc "importc" glUniform2uiv(location: GLint, count: GLsizei, value: ptr(GLuint)) -> void
+proc "importc" glUniform3d(location: GLint, x: GLdouble, y: GLdouble, z: GLdouble) -> void
+proc "importc" glUniform3dv(location: GLint, count: GLsizei, value: ptr(GLdouble)) -> void
+proc "importc" glUniform3f(location: GLint, v0: GLfloat, v1: GLfloat, v2: GLfloat) -> void
+proc "importc" glUniform3fv(location: GLint, count: GLsizei, value: ptr(GLfloat)) -> void
+proc "importc" glUniform3i(location: GLint, v0: GLint, v1: GLint, v2: GLint) -> void
+proc "importc" glUniform3iv(location: GLint, count: GLsizei, value: ptr(GLint)) -> void
+proc "importc" glUniform3ui(location: GLint, v0: GLuint, v1: GLuint, v2: GLuint) -> void
+proc "importc" glUniform3uiv(location: GLint, count: GLsizei, value: ptr(GLuint)) -> void
+proc "importc" glUniform4d(location: GLint, x: GLdouble, y: GLdouble, z: GLdouble, w: GLdouble) -> void
+proc "importc" glUniform4dv(location: GLint, count: GLsizei, value: ptr(GLdouble)) -> void
+proc "importc" glUniform4f(location: GLint, v0: GLfloat, v1: GLfloat, v2: GLfloat, v3: GLfloat) -> void
+proc "importc" glUniform4fv(location: GLint, count: GLsizei, value: ptr(GLfloat)) -> void
+proc "importc" glUniform4i(location: GLint, v0: GLint, v1: GLint, v2: GLint, v3: GLint) -> void
+proc "importc" glUniform4iv(location: GLint, count: GLsizei, value: ptr(GLint)) -> void
+proc "importc" glUniform4ui(location: GLint, v0: GLuint, v1: GLuint, v2: GLuint, v3: GLuint) -> void
+proc "importc" glUniform4uiv(location: GLint, count: GLsizei, value: ptr(GLuint)) -> void
+proc "importc" glUniformBlockBinding(program: GLuint, uniformBlockIndex: GLuint, uniformBlockBinding: GLuint) -> void
+proc "importc" glUniformMatrix2dv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)) -> void
+proc "importc" glUniformMatrix2fv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)) -> void
+proc "importc" glUniformMatrix2x3dv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)) -> void
+proc "importc" glUniformMatrix2x3fv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)) -> void
+proc "importc" glUniformMatrix2x4dv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)) -> void
+proc "importc" glUniformMatrix2x4fv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)) -> void
+proc "importc" glUniformMatrix3dv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)) -> void
+proc "importc" glUniformMatrix3fv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)) -> void
+proc "importc" glUniformMatrix3x2dv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)) -> void
+proc "importc" glUniformMatrix3x2fv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)) -> void
+proc "importc" glUniformMatrix3x4dv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)) -> void
+proc "importc" glUniformMatrix3x4fv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)) -> void
+proc "importc" glUniformMatrix4dv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)) -> void
+proc "importc" glUniformMatrix4fv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)) -> void
+proc "importc" glUniformMatrix4x2dv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)) -> void
+proc "importc" glUniformMatrix4x2fv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)) -> void
+proc "importc" glUniformMatrix4x3dv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLdouble)) -> void
+proc "importc" glUniformMatrix4x3fv(location: GLint, count: GLsizei, transpose: GLboolean, value: ptr(GLfloat)) -> void
+proc "importc" glUniformSubroutinesuiv(shadertype: GLenum, count: GLsizei, indices: ptr(GLuint)) -> void
+proc "importc" glUnmapBuffer(target: GLenum) -> GLboolean
+proc "importc" glUnmapNamedBuffer(buffer: GLuint) -> GLboolean
+proc "importc" glUseProgram(program: GLuint) -> void
+proc "importc" glUseProgramStages(pipeline: GLuint, stages: GLbitfield, program: GLuint) -> void
+proc "importc" glValidateProgram(program: GLuint) -> void
+proc "importc" glValidateProgramPipeline(pipeline: GLuint) -> void
+proc "importc" glVertex2d(x: GLdouble, y: GLdouble) -> void
+proc "importc" glVertex2dv(v: ptr(GLdouble)) -> void
+proc "importc" glVertex2f(x: GLfloat, y: GLfloat) -> void
+proc "importc" glVertex2fv(v: ptr(GLfloat)) -> void
+proc "importc" glVertex2i(x: GLint, y: GLint) -> void
+proc "importc" glVertex2iv(v: ptr(GLint)) -> void
+proc "importc" glVertex2s(x: GLshort, y: GLshort) -> void
+proc "importc" glVertex2sv(v: ptr(GLshort)) -> void
+proc "importc" glVertex3d(x: GLdouble, y: GLdouble, z: GLdouble) -> void
+proc "importc" glVertex3dv(v: ptr(GLdouble)) -> void
+proc "importc" glVertex3f(x: GLfloat, y: GLfloat, z: GLfloat) -> void
+proc "importc" glVertex3fv(v: ptr(GLfloat)) -> void
+proc "importc" glVertex3i(x: GLint, y: GLint, z: GLint) -> void
+proc "importc" glVertex3iv(v: ptr(GLint)) -> void
+proc "importc" glVertex3s(x: GLshort, y: GLshort, z: GLshort) -> void
+proc "importc" glVertex3sv(v: ptr(GLshort)) -> void
+proc "importc" glVertex4d(x: GLdouble, y: GLdouble, z: GLdouble, w: GLdouble) -> void
+proc "importc" glVertex4dv(v: ptr(GLdouble)) -> void
+proc "importc" glVertex4f(x: GLfloat, y: GLfloat, z: GLfloat, w: GLfloat) -> void
+proc "importc" glVertex4fv(v: ptr(GLfloat)) -> void
+proc "importc" glVertex4i(x: GLint, y: GLint, z: GLint, w: GLint) -> void
+proc "importc" glVertex4iv(v: ptr(GLint)) -> void
+proc "importc" glVertex4s(x: GLshort, y: GLshort, z: GLshort, w: GLshort) -> void
+proc "importc" glVertex4sv(v: ptr(GLshort)) -> void
+proc "importc" glVertexArrayAttribBinding(vaobj: GLuint, attribindex: GLuint, bindingindex: GLuint) -> void
+proc "importc" glVertexArrayAttribFormat(vaobj: GLuint, attribindex: GLuint, size: GLint, typ: GLenum, normalized: GLboolean, relativeoffset: GLuint) -> void
+proc "importc" glVertexArrayAttribIFormat(vaobj: GLuint, attribindex: GLuint, size: GLint, typ: GLenum, relativeoffset: GLuint) -> void
+proc "importc" glVertexArrayAttribLFormat(vaobj: GLuint, attribindex: GLuint, size: GLint, typ: GLenum, relativeoffset: GLuint) -> void
+proc "importc" glVertexArrayBindingDivisor(vaobj: GLuint, bindingindex: GLuint, divisor: GLuint) -> void
+proc "importc" glVertexArrayElementBuffer(vaobj: GLuint, buffer: GLuint) -> void
+proc "importc" glVertexArrayVertexBuffer(vaobj: GLuint, bindingindex: GLuint, buffer: GLuint, offset: GLintptr, stride: GLsizei) -> void
+proc "importc" glVertexArrayVertexBuffers(vaobj: GLuint, first: GLuint, count: GLsizei, buffers: ptr(GLuint), offsets: ptr(GLintptr), strides: ptr(GLsizei)) -> void
+proc "importc" glVertexAttrib1d(index: GLuint, x: GLdouble) -> void
+proc "importc" glVertexAttrib1dv(index: GLuint, v: ptr(GLdouble)) -> void
+proc "importc" glVertexAttrib1f(index: GLuint, x: GLfloat) -> void
+proc "importc" glVertexAttrib1fv(index: GLuint, v: ptr(GLfloat)) -> void
+proc "importc" glVertexAttrib1s(index: GLuint, x: GLshort) -> void
+proc "importc" glVertexAttrib1sv(index: GLuint, v: ptr(GLshort)) -> void
+proc "importc" glVertexAttrib2d(index: GLuint, x: GLdouble, y: GLdouble) -> void
+proc "importc" glVertexAttrib2dv(index: GLuint, v: ptr(GLdouble)) -> void
+proc "importc" glVertexAttrib2f(index: GLuint, x: GLfloat, y: GLfloat) -> void
+proc "importc" glVertexAttrib2fv(index: GLuint, v: ptr(GLfloat)) -> void
+proc "importc" glVertexAttrib2s(index: GLuint, x: GLshort, y: GLshort) -> void
+proc "importc" glVertexAttrib2sv(index: GLuint, v: ptr(GLshort)) -> void
+proc "importc" glVertexAttrib3d(index: GLuint, x: GLdouble, y: GLdouble, z: GLdouble) -> void
+proc "importc" glVertexAttrib3dv(index: GLuint, v: ptr(GLdouble)) -> void
+proc "importc" glVertexAttrib3f(index: GLuint, x: GLfloat, y: GLfloat, z: GLfloat) -> void
+proc "importc" glVertexAttrib3fv(index: GLuint, v: ptr(GLfloat)) -> void
+proc "importc" glVertexAttrib3s(index: GLuint, x: GLshort, y: GLshort, z: GLshort) -> void
+proc "importc" glVertexAttrib3sv(index: GLuint, v: ptr(GLshort)) -> void
+proc "importc" glVertexAttrib4Nbv(index: GLuint, v: ptr(GLbyte)) -> void
+proc "importc" glVertexAttrib4Niv(index: GLuint, v: ptr(GLint)) -> void
+proc "importc" glVertexAttrib4Nsv(index: GLuint, v: ptr(GLshort)) -> void
+proc "importc" glVertexAttrib4Nub(index: GLuint, x: GLubyte, y: GLubyte, z: GLubyte, w: GLubyte) -> void
+proc "importc" glVertexAttrib4Nubv(index: GLuint, v: ptr(GLubyte)) -> void
+proc "importc" glVertexAttrib4Nuiv(index: GLuint, v: ptr(GLuint)) -> void
+proc "importc" glVertexAttrib4Nusv(index: GLuint, v: ptr(GLushort)) -> void
+proc "importc" glVertexAttrib4bv(index: GLuint, v: ptr(GLbyte)) -> void
+proc "importc" glVertexAttrib4d(index: GLuint, x: GLdouble, y: GLdouble, z: GLdouble, w: GLdouble) -> void
+proc "importc" glVertexAttrib4dv(index: GLuint, v: ptr(GLdouble)) -> void
+proc "importc" glVertexAttrib4f(index: GLuint, x: GLfloat, y: GLfloat, z: GLfloat, w: GLfloat) -> void
+proc "importc" glVertexAttrib4fv(index: GLuint, v: ptr(GLfloat)) -> void
+proc "importc" glVertexAttrib4iv(index: GLuint, v: ptr(GLint)) -> void
+proc "importc" glVertexAttrib4s(index: GLuint, x: GLshort, y: GLshort, z: GLshort, w: GLshort) -> void
+proc "importc" glVertexAttrib4sv(index: GLuint, v: ptr(GLshort)) -> void
+proc "importc" glVertexAttrib4ubv(index: GLuint, v: ptr(GLubyte)) -> void
+proc "importc" glVertexAttrib4uiv(index: GLuint, v: ptr(GLuint)) -> void
+proc "importc" glVertexAttrib4usv(index: GLuint, v: ptr(GLushort)) -> void
+proc "importc" glVertexAttribBinding(attribindex: GLuint, bindingindex: GLuint) -> void
+proc "importc" glVertexAttribDivisor(index: GLuint, divisor: GLuint) -> void
+proc "importc" glVertexAttribFormat(attribindex: GLuint, size: GLint, typ: GLenum, normalized: GLboolean, relativeoffset: GLuint) -> void
+proc "importc" glVertexAttribI1i(index: GLuint, x: GLint) -> void
+proc "importc" glVertexAttribI1iv(index: GLuint, v: ptr(GLint)) -> void
+proc "importc" glVertexAttribI1ui(index: GLuint, x: GLuint) -> void
+proc "importc" glVertexAttribI1uiv(index: GLuint, v: ptr(GLuint)) -> void
+proc "importc" glVertexAttribI2i(index: GLuint, x: GLint, y: GLint) -> void
+proc "importc" glVertexAttribI2iv(index: GLuint, v: ptr(GLint)) -> void
+proc "importc" glVertexAttribI2ui(index: GLuint, x: GLuint, y: GLuint) -> void
+proc "importc" glVertexAttribI2uiv(index: GLuint, v: ptr(GLuint)) -> void
+proc "importc" glVertexAttribI3i(index: GLuint, x: GLint, y: GLint, z: GLint) -> void
+proc "importc" glVertexAttribI3iv(index: GLuint, v: ptr(GLint)) -> void
+proc "importc" glVertexAttribI3ui(index: GLuint, x: GLuint, y: GLuint, z: GLuint) -> void
+proc "importc" glVertexAttribI3uiv(index: GLuint, v: ptr(GLuint)) -> void
+proc "importc" glVertexAttribI4bv(index: GLuint, v: ptr(GLbyte)) -> void
+proc "importc" glVertexAttribI4i(index: GLuint, x: GLint, y: GLint, z: GLint, w: GLint) -> void
+proc "importc" glVertexAttribI4iv(index: GLuint, v: ptr(GLint)) -> void
+proc "importc" glVertexAttribI4sv(index: GLuint, v: ptr(GLshort)) -> void
+proc "importc" glVertexAttribI4ubv(index: GLuint, v: ptr(GLubyte)) -> void
+proc "importc" glVertexAttribI4ui(index: GLuint, x: GLuint, y: GLuint, z: GLuint, w: GLuint) -> void
+proc "importc" glVertexAttribI4uiv(index: GLuint, v: ptr(GLuint)) -> void
+proc "importc" glVertexAttribI4usv(index: GLuint, v: ptr(GLushort)) -> void
+proc "importc" glVertexAttribIFormat(attribindex: GLuint, size: GLint, typ: GLenum, relativeoffset: GLuint) -> void
+proc "importc" glVertexAttribIPointer(index: GLuint, size: GLint, typ: GLenum, stride: GLsizei, pointer: pointer) -> void
+proc "importc" glVertexAttribL1d(index: GLuint, x: GLdouble) -> void
+proc "importc" glVertexAttribL1dv(index: GLuint, v: ptr(GLdouble)) -> void
+proc "importc" glVertexAttribL2d(index: GLuint, x: GLdouble, y: GLdouble) -> void
+proc "importc" glVertexAttribL2dv(index: GLuint, v: ptr(GLdouble)) -> void
+proc "importc" glVertexAttribL3d(index: GLuint, x: GLdouble, y: GLdouble, z: GLdouble) -> void
+proc "importc" glVertexAttribL3dv(index: GLuint, v: ptr(GLdouble)) -> void
+proc "importc" glVertexAttribL4d(index: GLuint, x: GLdouble, y: GLdouble, z: GLdouble, w: GLdouble) -> void
+proc "importc" glVertexAttribL4dv(index: GLuint, v: ptr(GLdouble)) -> void
+proc "importc" glVertexAttribLFormat(attribindex: GLuint, size: GLint, typ: GLenum, relativeoffset: GLuint) -> void
+proc "importc" glVertexAttribLPointer(index: GLuint, size: GLint, typ: GLenum, stride: GLsizei, pointer: pointer) -> void
+proc "importc" glVertexAttribP1ui(index: GLuint, typ: GLenum, normalized: GLboolean, value: GLuint) -> void
+proc "importc" glVertexAttribP1uiv(index: GLuint, typ: GLenum, normalized: GLboolean, value: ptr(GLuint)) -> void
+proc "importc" glVertexAttribP2ui(index: GLuint, typ: GLenum, normalized: GLboolean, value: GLuint) -> void
+proc "importc" glVertexAttribP2uiv(index: GLuint, typ: GLenum, normalized: GLboolean, value: ptr(GLuint)) -> void
+proc "importc" glVertexAttribP3ui(index: GLuint, typ: GLenum, normalized: GLboolean, value: GLuint) -> void
+proc "importc" glVertexAttribP3uiv(index: GLuint, typ: GLenum, normalized: GLboolean, value: ptr(GLuint)) -> void
+proc "importc" glVertexAttribP4ui(index: GLuint, typ: GLenum, normalized: GLboolean, value: GLuint) -> void
+proc "importc" glVertexAttribP4uiv(index: GLuint, typ: GLenum, normalized: GLboolean, value: ptr(GLuint)) -> void
+proc "importc" glVertexAttribPointer(index: GLuint, size: GLint, typ: GLenum, normalized: GLboolean, stride: GLsizei, pointer: pointer) -> void
+proc "importc" glVertexBindingDivisor(bindingindex: GLuint, divisor: GLuint) -> void
+proc "importc" glVertexP2ui(typ: GLenum, value: GLuint) -> void
+proc "importc" glVertexP2uiv(typ: GLenum, value: ptr(GLuint)) -> void
+proc "importc" glVertexP3ui(typ: GLenum, value: GLuint) -> void
+proc "importc" glVertexP3uiv(typ: GLenum, value: ptr(GLuint)) -> void
+proc "importc" glVertexP4ui(typ: GLenum, value: GLuint) -> void
+proc "importc" glVertexP4uiv(typ: GLenum, value: ptr(GLuint)) -> void
+proc "importc" glVertexPointer(size: GLint, typ: GLenum, stride: GLsizei, pointer: pointer) -> void
+proc "importc" glViewport(x: GLint, y: GLint, width: GLsizei, height: GLsizei) -> void
+proc "importc" glViewportArrayv(first: GLuint, count: GLsizei, v: ptr(GLfloat)) -> void
+proc "importc" glViewportIndexedf(index: GLuint, x: GLfloat, y: GLfloat, w: GLfloat, h: GLfloat) -> void
+proc "importc" glViewportIndexedfv(index: GLuint, v: ptr(GLfloat)) -> void
+proc "importc" glWindowPos2d(x: GLdouble, y: GLdouble) -> void
+proc "importc" glWindowPos2dv(v: ptr(GLdouble)) -> void
+proc "importc" glWindowPos2f(x: GLfloat, y: GLfloat) -> void
+proc "importc" glWindowPos2fv(v: ptr(GLfloat)) -> void
+proc "importc" glWindowPos2i(x: GLint, y: GLint) -> void
+proc "importc" glWindowPos2iv(v: ptr(GLint)) -> void
+proc "importc" glWindowPos2s(x: GLshort, y: GLshort) -> void
+proc "importc" glWindowPos2sv(v: ptr(GLshort)) -> void
+proc "importc" glWindowPos3d(x: GLdouble, y: GLdouble, z: GLdouble) -> void
+proc "importc" glWindowPos3dv(v: ptr(GLdouble)) -> void
+proc "importc" glWindowPos3f(x: GLfloat, y: GLfloat, z: GLfloat) -> void
+proc "importc" glWindowPos3fv(v: ptr(GLfloat)) -> void
+proc "importc" glWindowPos3i(x: GLint, y: GLint, z: GLint) -> void
+proc "importc" glWindowPos3iv(v: ptr(GLint)) -> void
+proc "importc" glWindowPos3s(x: GLshort, y: GLshort, z: GLshort) -> void
+proc "importc" glWindowPos3sv(v: ptr(GLshort)) -> void

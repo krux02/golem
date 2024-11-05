@@ -22,11 +22,13 @@ type "importc" SDL_Event = struct  {
   key: SDL_KeyboardEvent
 }
 
-proc "importc" SDL_CreateWindow(name: cstr, x,y,w,h: i32, flags: u32): ptr SDL_Window
-proc "importc" SDL_GL_CreateContext(window: ptr SDL_Window): SDL_GLContext
-proc "importc" SDL_GL_SwapWindow(window: ptr SDL_Window): void
-proc "importc" SDL_GL_GetProcAddress(`proc`: cstr): pointer
-proc "importc" SDL_PollEvent(event: ptr SDL_Event): bool
+proc "importc" SDL_CreateWindow(name: cstr, x,y,w,h: i32, flags: u32) -> ptr SDL_Window
+proc "importc" SDL_GL_CreateContext(window: ptr SDL_Window) -> SDL_GLContext
+proc "importc" SDL_GL_SwapWindow(window: ptr SDL_Window) -> void
+proc "importc" SDL_GL_GetProcAddress(`proc`: cstr) -> pointer
+proc "importc" SDL_PollEvent(event: ptr SDL_Event) -> bool
+proc "importc" SDL_GetMouseState(x,y: ptr i32) -> u32
+
 
 const SDL_WINDOWPOS_UNDEFINED: i32 = 0x1FFF0000
 const SDL_WINDOW_OPENGL:u32 = 0x00000002
