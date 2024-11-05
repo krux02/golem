@@ -33,10 +33,6 @@ const (
 	TkConst
 	TkBreak
 	TkContinue
-	TkStruct
-	TkUnion
-	TkEnum
-	TkTrait
 
 	TkIf
 	TkElse
@@ -72,10 +68,6 @@ var TokenKindNames = [...]string{
 	TkConst:             "Const",
 	TkBreak:             "Break",
 	TkContinue:          "Continue",
-	TkStruct:            "Struct",
-	TkUnion:             "Union",
-	TkEnum:              "Enum",
-	TkTrait:             "Trait",
 	TkIf:                "If",
 	TkElse:              "Else",
 	TkOpenBrace:         "OpenBrace",
@@ -376,7 +368,7 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 		}
 		switch result.value {
 		// builtin word operators
-		case "and", "or", "not", "in", "notin", "ptr", "addr", "do": // , "conv", "cast":
+		case "and", "or", "not", "in", "notin", "ptr", "addr", "do", "struct", "enum", "union": // , "conv", "cast":
 			result.kind = TkOperator
 		case "var":
 			result.kind = TkVar
@@ -388,14 +380,6 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			result.kind = TkBreak
 		case "continue":
 			result.kind = TkContinue
-		case "struct":
-			result.kind = TkStruct
-		case "union":
-			result.kind = TkUnion
-		case "enum":
-			result.kind = TkEnum
-		case "trait":
-			result.kind = TkTrait
 		case "if":
 			result.kind = TkIf
 		case "else":

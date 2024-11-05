@@ -610,8 +610,6 @@ func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
 		}
 	case TkOperator:
 		result = (Expr)(parsePrefixCall(tokenizer, true))
-	case TkStruct, TkUnion, TkEnum, TkTrait:
-		result = (Expr)(parsePrefixCall(tokenizer, false))
 	case TkVar:
 		result = (Expr)(parseVarExpr(tokenizer))
 	case TkNilLit:
