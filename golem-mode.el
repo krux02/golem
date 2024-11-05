@@ -106,14 +106,15 @@
   (setq-local font-lock-defaults '(golem-highlights))
 
 
-  (setq-local
-   compile-command
-   (let* ((project-root (project-root (project-current)))
-          (project-relative-file-name (file-relative-name  buffer-file-name project-root))
-          (raw-file-name (file-name-nondirectory buffer-file-name)))
-     (concat
-      "go build && ./golem "
-      project-relative-file-name))))
+  ;; (setq-local
+  ;;  compile-command
+  ;;  (let* ((project-root (project-root (project-current)))
+  ;;         (project-relative-file-name (file-relative-name  buffer-file-name project-root))
+  ;;         (raw-file-name (file-name-nondirectory buffer-file-name)))
+  ;;    (concat
+  ;;     "go build && ./golem "
+  ;;     project-relative-file-name)))
+  )
 
 (provide 'golem-mode)
 ;;; golem-mode.el ends here

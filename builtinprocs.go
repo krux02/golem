@@ -422,7 +422,7 @@ func registerBuiltin(name, prefix, infix, postfix string, args []Type, result Ty
 	return registerGenericBuiltin(name, prefix, infix, postfix, nil, args, result, argMutableBitmask)
 }
 
-func registerGenericBuiltinMacro(name string, varargs bool, genericParams []*GenericTypeSymbol, args []Type, result Type, macroFunc BuiltinMacroFunc) {
+func registerGenericBuiltinMacro(name string, varargs TypeConstraint, genericParams []*GenericTypeSymbol, args []Type, result Type, macroFunc BuiltinMacroFunc) {
 	macroDef := &TcBuiltinMacroDef{
 		Signature: makeGenericSignature(name, genericParams, args, result, 0),
 		MacroFunc: macroFunc,
@@ -431,7 +431,7 @@ func registerGenericBuiltinMacro(name string, varargs bool, genericParams []*Gen
 	RegisterProc(nil, builtinScope, macroDef, nil)
 }
 
-func registerBuiltinMacro(name string, varargs bool, args []Type, result Type, macroFunc BuiltinMacroFunc) {
+func registerBuiltinMacro(name string, varargs TypeConstraint, args []Type, result Type, macroFunc BuiltinMacroFunc) {
 	registerGenericBuiltinMacro(name, varargs, nil, args, result, macroFunc)
 }
 
@@ -1130,40 +1130,37 @@ func init() {
 	// printf for now. A general concept for varargs will be specified out as soon
 	// as it becomes necessary, but right now it is not planned.
 	builtinCPrintf = registerBuiltin("c_printf", "printf(", ", ", ")", []Type{TypeCStr}, TypeVoid, 0)
-	builtinCPrintf.GetSignature().Varargs = true
+	builtinCPrintf.GetSignature().Varargs = TypeUnspecified
 
 	// TODO rename the builtin macros proces with better names
-	registerBuiltinMacro("printf", true, []Type{TypeStr}, TypeVoid, ValidatePrintfCall)
-	registerBuiltinMacro("addCFlags", false, []Type{TypeStr}, TypeVoid, BuiltinAddCFlags)
-	registerBuiltinMacro("addLinkerFlags", false, []Type{TypeStr}, TypeVoid, BuiltinAddLinkerFlags)
-	registerBuiltinMacro("emit", false, []Type{TypeStr}, TypeVoid, BuiltinEmitStmt)
-	registerBuiltinMacro("import", false, []Type{TypeStr}, TypeVoid, BuiltinImportStmt)
-	registerBuiltinMacro("for", false, []Type{TypeUntyped}, TypeVoid, BuiltinForLoop)
-	registerBuiltinMacro("while", false, []Type{TypeUntyped}, TypeVoid, BuiltinWhileLoop)
-	registerBuiltinMacro("proc", false, []Type{TypeUntyped}, TypeVoid, BuiltinProcDef)
-	registerBuiltinMacro("proc", false, []Type{TypeUntyped, TypeUntyped}, TypeVoid, BuiltinProcDef)
-	registerBuiltinMacro("template", false, []Type{TypeUntyped}, TypeVoid, BuiltinTemplateDef)
-	registerBuiltinMacro("template", false, []Type{TypeUntyped, TypeUntyped}, TypeVoid, BuiltinTemplateDef)
-	registerBuiltinMacro("type", false, []Type{TypeUntyped}, TypeUntyped, BuiltinTypeDef)
-	registerBuiltinMacro("type", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinTypeDef)
-	registerBuiltinMacro("return", false, []Type{TypeUntyped}, TypeNoReturn, BuiltinReturn)
+	registerBuiltinMacro("printf", TypeUnspecified, []Type{TypeStr}, TypeVoid, ValidatePrintfCall)
+	registerBuiltinMacro("addCFlags", nil, []Type{TypeStr}, TypeVoid, BuiltinAddCFlags)
+	registerBuiltinMacro("addLinkerFlags", nil, []Type{TypeStr}, TypeVoid, BuiltinAddLinkerFlags)
+	registerBuiltinMacro("emit", nil, []Type{TypeStr}, TypeVoid, BuiltinEmitStmt)
+	registerBuiltinMacro("import", nil, []Type{TypeStr}, TypeVoid, BuiltinImportStmt)
+	registerBuiltinMacro("for", nil, []Type{TypeUntyped}, TypeVoid, BuiltinForLoop)
+	registerBuiltinMacro("while", nil, []Type{TypeUntyped}, TypeVoid, BuiltinWhileLoop)
+	registerBuiltinMacro("proc", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeVoid, BuiltinProcDef)
+	registerBuiltinMacro("template", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeVoid, BuiltinTemplateDef)
+	registerBuiltinMacro("type", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeUntyped, BuiltinTypeDef)
+	registerBuiltinMacro("return", nil, []Type{TypeUntyped}, TypeNoReturn, BuiltinReturn)
 
-	registerBuiltinMacro("|", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinPipeTransformation)
-	registerBuiltinMacro(".", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinDotOperator)
-	registerBuiltinMacro(":", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinColonExpr)
+	registerBuiltinMacro("|", nil, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinPipeTransformation)
+	registerBuiltinMacro(".", nil, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinDotOperator)
+	registerBuiltinMacro(":", nil, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinColonExpr)
 
-	registerBuiltinMacro("static", false, []Type{TypeUntyped}, TypeUntyped, BuiltinStaticExpr)
-	registerBuiltinMacro("trait", false, []Type{TypeUntyped}, TypeVoid, BuiltinTraitDef)
+	registerBuiltinMacro("static", nil, []Type{TypeUntyped}, TypeUntyped, BuiltinStaticExpr)
+	registerBuiltinMacro("trait", nil, []Type{TypeUntyped}, TypeVoid, BuiltinTraitDef)
 
 	{
 		// TODO: has no line information
 		T := NewGenericTypeSymbol("", "T", TypeUnspecified)
 		U := NewGenericTypeSymbol("", "U", TypeUnspecified)
-		registerGenericBuiltinMacro("cast", false, []*GenericTypeSymbol{T, U}, []Type{T, GetTypeType(U)}, U, BuiltinCastExpr)
-		registerGenericBuiltinMacro("conv", false, []*GenericTypeSymbol{T, U}, []Type{T, GetTypeType(U)}, U, BuiltinConvExpr)
+		registerGenericBuiltinMacro("cast", nil, []*GenericTypeSymbol{T, U}, []Type{T, GetTypeType(U)}, U, BuiltinCastExpr)
+		registerGenericBuiltinMacro("conv", nil, []*GenericTypeSymbol{T, U}, []Type{T, GetTypeType(U)}, U, BuiltinConvExpr)
 	}
 
-	// registerBuiltinMacro("sizeof", false, []Type{TypeUnspecified}, TypeInt64, BuiltinSizeOf)
+	// registerBuiltinMacro("sizeof", nil, []Type{TypeUnspecified}, TypeInt64, BuiltinSizeOf)
 
 	RegisterNamedType(nil, builtinScope, TypeBoolean, nil)
 	RegisterNamedType(nil, builtinScope, TypeInt8, nil)
@@ -1258,9 +1255,9 @@ func init() {
 	// TODO put all bitops in their own module
 	//   * allow varargs
 	for _, typ := range TypeAnyInt.Items {
-		registerBuiltin("bitand", "(", "&", ")", []Type{typ, typ}, typ, 0)
-		registerBuiltin("bitor", "(", "|", ")", []Type{typ, typ}, typ, 0)
-		registerBuiltin("bitxor", "(", "^", ")", []Type{typ, typ}, typ, 0)
+		registerBuiltin("bitand", "(", "&", ")", []Type{typ, typ}, typ, 0).GetSignature().Varargs = UniqueTypeConstraint{typ}
+		registerBuiltin("bitor", "(", "|", ")", []Type{typ, typ}, typ, 0).GetSignature().Varargs = UniqueTypeConstraint{typ}
+		registerBuiltin("bitxor", "(", "^", ")", []Type{typ, typ}, typ, 0).GetSignature().Varargs = UniqueTypeConstraint{typ}
 		registerBuiltin("bitnot", "~(", "", ")", []Type{typ}, typ, 0)
 		registerBuiltin("shiftleft", "(", "<<", ")", []Type{typ, typ}, typ, 0)
 		registerBuiltin("shiftright", "(", ">>", ")", []Type{typ, typ}, typ, 0)

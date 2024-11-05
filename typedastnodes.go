@@ -251,8 +251,9 @@ type Signature struct {
 	// than in the signature, these symbol will differ from Params
 	ResultType Type
 
-	// NOTE: Varargs currently only used for printf.
-	Varargs bool
+	// if nil, no varargs allowed.
+	// varargs are only allowed for macros
+	Varargs TypeConstraint
 }
 
 type Overloadable interface {

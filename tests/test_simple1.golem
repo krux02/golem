@@ -109,7 +109,9 @@ proc main() -> i32 = {
   {
     let t1: u64 = 0xabcdef1234567890
     let t2: u64 = 0xdeadbeefdeadbeef
+    let t3: u64 = 0xfedcba1234567890
     printf("%x %x %x %x\n", bitand(t1,t2), bitor(t1,t2), bitxor(t1,t2), bitnot(t2))
+    printf("%x %x %x\n", bitand(t1,t2,t3), bitor(t1,t2,t3), bitxor(t1,t2,t3))
   }
 
   return 0

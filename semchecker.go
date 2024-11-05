@@ -240,7 +240,7 @@ func LookUpProc(scope Scope, name string, numArgs int, overloadables []Overloada
 				for _, overloadable := range localOverloadables {
 					sig := overloadable.GetSignature()
 					// TODO, the varargs logic herer needs a proper test
-					if len(sig.Params) == numArgs || sig.Varargs && len(sig.Params) <= numArgs {
+					if len(sig.Params) == numArgs || sig.Varargs != nil && len(sig.Params) <= numArgs {
 						overloadables = append(overloadables, overloadable)
 					}
 				}
@@ -588,8 +588,8 @@ func AppendNoDuplicats[T comparable](types []T, typ T) (result []T) {
 func argTypeGroupAtIndex(signatures []Signature, idx int) (result TypeConstraint) {
 	builder := &TypeGroupBuilder{}
 	for _, sig := range signatures {
-		if sig.Varargs && idx >= len(sig.Params) {
-			return TypeUnspecified
+		if sig.Varargs != nil && idx >= len(sig.Params) {
+			return sig.Varargs
 		}
 		typ := sig.Params[idx].Type
 
@@ -1185,7 +1185,7 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 			subs := sigSubstitutions[j]
 			overloadable := overloadables[j]
 
-			if sig.Varargs && i >= len(sig.Params) {
+			if sig.Varargs != nil && i >= len(sig.Params) {
 				overloadables[n] = overloadable
 				signatures[n] = sig
 				sigSubstitutions[n] = subs
