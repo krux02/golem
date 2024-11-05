@@ -1105,6 +1105,15 @@ func BuiltinTypeDef(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	return &TcErrorNode{Source: call.Source, SourceNode: call}
 }
 
+func BuiltinReturn(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+	value := call.Args[0].(*TcWrappedUntypedAst).Expr
+	result := &TcReturnStmt{
+		Source: call.Source,
+		Value:  SemCheckExpr(sc, scope, value, UniqueTypeConstraint{scope.CurrentProcSignature.ResultType}),
+	}
+	return result
+}
+
 func init() {
 	openGenericsMap = make(map[Type][]Type)
 	arrayTypeMap = make(map[ArrayTypeMapKey]*ArrayType)
@@ -1137,6 +1146,7 @@ func init() {
 	registerBuiltinMacro("template", false, []Type{TypeUntyped, TypeUntyped}, TypeVoid, BuiltinTemplateDef)
 	registerBuiltinMacro("type", false, []Type{TypeUntyped}, TypeUntyped, BuiltinTypeDef)
 	registerBuiltinMacro("type", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinTypeDef)
+	registerBuiltinMacro("return", false, []Type{TypeUntyped}, TypeNoReturn, BuiltinReturn)
 
 	registerBuiltinMacro("|", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinPipeTransformation)
 	registerBuiltinMacro(".", false, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinDotOperator)

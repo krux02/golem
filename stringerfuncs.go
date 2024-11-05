@@ -315,11 +315,6 @@ func (typeDef *TcTraitDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("}")
 }
 
-func (returnExpr *ReturnExpr) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("return ")
-	builder.WriteNode(returnExpr.Value)
-}
-
 func (varExpr *VarExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("var ")
 	builder.WriteNode(varExpr.Expr)

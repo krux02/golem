@@ -64,16 +64,6 @@ func parseInfixOperator(tokenizer *Tokenizer) *Ident {
 	}
 }
 
-func parseReturnExpr(tokenizer *Tokenizer) *ReturnExpr {
-	firstToken := tokenizer.Next()
-	tokenizer.expectKind(firstToken, TkReturn)
-	result := &ReturnExpr{
-		Value: parseExpr(tokenizer, false),
-	}
-	result.Source = joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value)
-	return result
-}
-
 func parseVarExpr(tokenizer *Tokenizer) *VarExpr {
 	firstToken := tokenizer.Next()
 	tokenizer.expectKind(firstToken, TkVar)
@@ -567,8 +557,6 @@ func attachDocComment(expr Expr, target string, value string) bool {
 		return false
 	case *IfElseExpr:
 		return false
-	case *ReturnExpr:
-		return false
 	case *BreakStmt:
 		return false
 	case *ContinueStmt:
@@ -624,8 +612,6 @@ func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
 		result = (Expr)(parsePrefixCall(tokenizer, true))
 	case TkDiscard, TkStruct, TkUnion, TkEnum, TkTrait:
 		result = (Expr)(parsePrefixCall(tokenizer, false))
-	case TkReturn:
-		result = (Expr)(parseReturnExpr(tokenizer))
 	case TkVar:
 		result = (Expr)(parseVarExpr(tokenizer))
 	case TkNilLit:

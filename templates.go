@@ -68,12 +68,6 @@ func (arg *IfElseExpr) RecSubSyms(substitutions []TemplateSubstitution) Expr {
 		Else:      arg.Else.RecSubSyms(substitutions),
 	}
 }
-func (arg *ReturnExpr) RecSubSyms(substitutions []TemplateSubstitution) Expr {
-	return &ReturnExpr{
-		Source: arg.Source,
-		Value:  arg.Value.RecSubSyms(substitutions),
-	}
-}
 func (arg *VarExpr) RecSubSyms(substitutions []TemplateSubstitution) Expr {
 	return &VarExpr{
 		Source: arg.Source,

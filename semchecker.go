@@ -520,6 +520,10 @@ func ExpectType(sc *SemChecker, node Expr, gotten Type, expected TypeConstraint)
 	if gotten == TypeError {
 		return TypeError
 	}
+	if gotten == TypeNoReturn {
+		// TypeNoReturn is the wildcard for every constraint here
+		return TypeNoReturn
+	}
 	if expected == TypeUnspecified {
 		return gotten
 	}
@@ -1501,12 +1505,6 @@ func SemCheckVariableDefStmt(sc *SemChecker, scope Scope, arg *VariableDefStmt) 
 	return result
 }
 
-func SemCheckReturnExpr(sc *SemChecker, scope Scope, arg *ReturnExpr) *TcReturnStmt {
-	result := &TcReturnStmt{Value: SemCheckExpr(sc, scope, arg.Value, UniqueTypeConstraint{scope.CurrentProcSignature.ResultType})}
-	result.Source = arg.Source
-	return result
-}
-
 func UnifyType(a, b Type) Type {
 	if a != b {
 		panic("type incompatible")
@@ -1741,10 +1739,6 @@ func SemCheckExpr(sc *SemChecker, scope Scope, arg Expr, expected TypeConstraint
 		return (TcExpr)(SemCheckIntLit(sc, scope, arg, expected))
 	case *FloatLit:
 		return (TcExpr)(SemCheckFloatLit(sc, scope, arg, expected))
-	case *ReturnExpr:
-		// ignoring expected type here, because the return as expression
-		// never evaluates to anything
-		return (TcExpr)(SemCheckReturnExpr(sc, scope, arg))
 	case *VariableDefStmt:
 		ExpectType(sc, arg, TypeVoid, expected)
 		return (TcExpr)(SemCheckVariableDefStmt(sc, scope, arg))

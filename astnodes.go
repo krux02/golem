@@ -60,11 +60,6 @@ type IfElseExpr struct {
 	Else      Expr
 }
 
-type ReturnExpr struct {
-	Source string
-	Value  Expr
-}
-
 type VarExpr struct {
 	Source string
 	Expr   Expr
@@ -153,7 +148,6 @@ func (arg *BracketExpr) GetSource() string      { return arg.Source }
 func (arg *VariableDefStmt) GetSource() string  { return arg.Source }
 func (arg *IfExpr) GetSource() string           { return arg.Source }
 func (arg *IfElseExpr) GetSource() string       { return arg.Source }
-func (arg *ReturnExpr) GetSource() string       { return arg.Source }
 func (arg *VarExpr) GetSource() string          { return arg.Source }
 func (arg *BreakStmt) GetSource() string        { return arg.Source }
 func (arg *ContinueStmt) GetSource() string     { return arg.Source }

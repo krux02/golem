@@ -31,7 +31,6 @@ const (
 	TkVar
 	TkLet
 	TkConst
-	TkReturn
 	TkDiscard
 	TkBreak
 	TkContinue
@@ -72,7 +71,6 @@ var TokenKindNames = [...]string{
 	TkVar:               "Var",
 	TkLet:               "Let",
 	TkConst:             "Const",
-	TkReturn:            "Return",
 	TkDiscard:           "Discard",
 	TkBreak:             "Break",
 	TkContinue:          "Continue",
@@ -388,8 +386,6 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			result.kind = TkLet
 		case "const":
 			result.kind = TkConst
-		case "return":
-			result.kind = TkReturn
 		case "discard":
 			result.kind = TkDiscard
 		case "break":
