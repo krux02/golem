@@ -47,19 +47,6 @@ type VariableDefStmt struct {
 	Expr   Expr  // everything else
 }
 
-type IfExpr struct {
-	Source    string
-	Condition Expr
-	Body      Expr
-}
-
-type IfElseExpr struct {
-	Source    string
-	Condition Expr
-	Body      Expr
-	Else      Expr
-}
-
 type VarExpr struct {
 	Source string
 	Expr   Expr
@@ -146,8 +133,6 @@ func (arg *ArrayLit) GetSource() string         { return arg.Source }
 func (arg *Call) GetSource() string             { return arg.Source }
 func (arg *BracketExpr) GetSource() string      { return arg.Source }
 func (arg *VariableDefStmt) GetSource() string  { return arg.Source }
-func (arg *IfExpr) GetSource() string           { return arg.Source }
-func (arg *IfElseExpr) GetSource() string       { return arg.Source }
 func (arg *VarExpr) GetSource() string          { return arg.Source }
 func (arg *BreakStmt) GetSource() string        { return arg.Source }
 func (arg *ContinueStmt) GetSource() string     { return arg.Source }

@@ -114,5 +114,21 @@ proc main() -> i32 = {
     printf("%x %x %x\n", bitand(t1,t2,t3), bitor(t1,t2,t3), bitxor(t1,t2,t3))
   }
 
+  {
+    # test if as an expression
+    let i1 : int = 1
+    let i2 : int = 2
+    let t1: str = {if i1 > i2 do "str1" else "str2"}
+    let t2: str = {if i1 > i2 do "str1" elif i2 > i1 do "str2" else "str3"}
+    printf("%v %v\n", t1, t2)
+    # test while loop
+    #
+    var tmp: f64 = 999
+    while tmp > 0.5 do {
+      tmp *= 0.75
+    }
+    printf("%v\n", tmp)
+  }
+
   return 0
 }

@@ -342,34 +342,30 @@ func (loopStmt *TcWhileLoopStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteNode(loopStmt.Body)
 }
 
-func (ifStmt *IfExpr) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("if ")
-	builder.WriteNode(ifStmt.Condition)
-	builder.WriteString(" do ")
-	builder.WriteNode(ifStmt.Body)
-}
-
 func (ifStmt *TcIfStmt) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("if ")
-	builder.WriteNode(ifStmt.Condition)
-	builder.WriteString(" do ")
-	builder.WriteNode(ifStmt.Body)
-}
-
-func (ifStmt *IfElseExpr) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("if ")
-	builder.WriteNode(ifStmt.Condition)
-	builder.WriteString(" do ")
-	builder.WriteNode(ifStmt.Body)
-	builder.WriteString(" else ")
-	builder.WriteNode(ifStmt.Else)
+	for i, it := range ifStmt.ConditionBodyPairs {
+		if i == 0 {
+			builder.WriteString("if ")
+		} else {
+			builder.WriteString("elif ")
+		}
+		builder.WriteNode(it.Condition)
+		builder.WriteString(" do ")
+		builder.WriteNode(it.Body)
+	}
 }
 
 func (ifStmt *TcIfElseExpr) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("if ")
-	builder.WriteNode(ifStmt.Condition)
-	builder.WriteString(" do ")
-	builder.WriteNode(ifStmt.Body)
+	for i, it := range ifStmt.ConditionBodyPairs {
+		if i == 0 {
+			builder.WriteString("if ")
+		} else {
+			builder.WriteString("elif ")
+		}
+		builder.WriteNode(it.Condition)
+		builder.WriteString(" do ")
+		builder.WriteNode(it.Body)
+	}
 	builder.WriteString(" else ")
 	builder.WriteNode(ifStmt.Else)
 }

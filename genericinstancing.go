@@ -125,18 +125,29 @@ func recursiveInstanciateGenericBody(body TcExpr, subs *Substitutions) TcExpr {
 			Body:      recursiveInstanciateGenericBody(b.Body, subs),
 		}
 	case *TcIfStmt:
-		return &TcIfStmt{
-			Source:    b.Source,
-			Condition: recursiveInstanciateGenericBody(b.Condition, subs),
-			Body:      recursiveInstanciateGenericBody(b.Body, subs),
+		result := &TcIfStmt{
+			Source:             b.Source,
+			ConditionBodyPairs: make([]ConditionBodyPair, len(b.ConditionBodyPairs)),
 		}
+		for i, it := range b.ConditionBodyPairs {
+			result.ConditionBodyPairs[i] = ConditionBodyPair{
+				Condition: recursiveInstanciateGenericBody(it.Condition, subs),
+				Body:      recursiveInstanciateGenericBody(it.Body, subs),
+			}
+		}
+		return result
 	case *TcIfElseExpr:
-		return &TcIfElseExpr{
-			Source:    b.Source,
-			Condition: recursiveInstanciateGenericBody(b.Condition, subs),
-			Body:      recursiveInstanciateGenericBody(b.Body, subs),
-			Else:      recursiveInstanciateGenericBody(b.Else, subs),
+		result := &TcIfElseExpr{
+			Source: b.Source,
+			Else:   recursiveInstanciateGenericBody(b.Else, subs),
 		}
+		for i, it := range b.ConditionBodyPairs {
+			result.ConditionBodyPairs[i] = ConditionBodyPair{
+				Condition: recursiveInstanciateGenericBody(it.Condition, subs),
+				Body:      recursiveInstanciateGenericBody(it.Body, subs),
+			}
+		}
+		return result
 	case *TcCodeBlock:
 		newItems := make([]TcExpr, len(b.Items))
 		for i, it := range b.Items {

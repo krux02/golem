@@ -34,9 +34,6 @@ const (
 	TkBreak
 	TkContinue
 
-	TkIf
-	TkElse
-
 	// These tokens must be convertible from Open/Close by flipping the last bit
 	TkOpenBrace    TokenKind = 100
 	TkCloseBrace   TokenKind = 101
@@ -68,8 +65,6 @@ var TokenKindNames = [...]string{
 	TkConst:             "Const",
 	TkBreak:             "Break",
 	TkContinue:          "Continue",
-	TkIf:                "If",
-	TkElse:              "Else",
 	TkOpenBrace:         "OpenBrace",
 	TkCloseBrace:        "CloseBrace",
 	TkOpenBracket:       "OpenBracket",
@@ -368,7 +363,7 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 		}
 		switch result.value {
 		// builtin word operators
-		case "and", "or", "not", "in", "notin", "ptr", "addr", "do", "struct", "enum", "union": // , "conv", "cast":
+		case "and", "or", "not", "in", "notin", "ptr", "addr", "struct", "enum", "union": // , "conv", "cast":
 			result.kind = TkOperator
 		case "var":
 			result.kind = TkVar
@@ -380,10 +375,6 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			result.kind = TkBreak
 		case "continue":
 			result.kind = TkContinue
-		case "if":
-			result.kind = TkIf
-		case "else":
-			result.kind = TkElse
 		case "nil":
 			result.kind = TkNilLit
 		default:

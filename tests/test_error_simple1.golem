@@ -46,7 +46,7 @@ proc main() -> i64 = {
   let myarr1 = [1:i32,2,3,4]
   var myarr2 = [4:i32,3,2,1]
   myarr1[2] = 321 # Error: expression must be mutable
-  (if tmp > 120 do myarr1 else myarr2)[1] = 123 # Error: expression must be mutable
+  {if tmp > 120 do myarr1 else myarr2}[1] = 123 # Error: expression must be mutable
 
   static({ # Error: eval for *main.TcCodeBlock node not implemented
     let t1: u64 = 0xabcdef1234567890

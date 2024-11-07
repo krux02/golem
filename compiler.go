@@ -192,10 +192,17 @@ func (builder *CodeBuilder) CompileVariableDefStmt(context *PackageGeneratorCont
 }
 
 func (builder *CodeBuilder) CompileIfStmt(context *PackageGeneratorContext, stmt *TcIfStmt) {
-	builder.WriteString("if (")
-	builder.CompileExpr(context, stmt.Condition)
-	builder.WriteString(") ")
-	builder.CompileExpr(context, stmt.Body)
+	for i, it := range stmt.ConditionBodyPairs {
+		if i == 0 {
+			builder.WriteString("if (")
+		} else {
+			builder.WriteString("else if (")
+		}
+		builder.CompileExpr(context, it.Condition)
+		builder.WriteString(") ")
+		builder.CompileExpr(context, it.Body)
+	}
+
 }
 
 func ExprHasValue(expr TcExpr) bool {
@@ -206,18 +213,22 @@ func ExprHasValue(expr TcExpr) bool {
 func (builder *CodeBuilder) CompileIfElseExpr(context *PackageGeneratorContext, stmt *TcIfElseExpr) {
 	if ExprHasValue(stmt) {
 		builder.WriteString("(")
-		builder.CompileExpr(context, stmt.Condition)
-		builder.WriteString(" ? ")
-		builder.CompileExpr(context, stmt.Body)
-		builder.WriteString(" : ")
+		for _, it := range stmt.ConditionBodyPairs {
+			builder.CompileExpr(context, it.Condition)
+			builder.WriteString(" ? ")
+			builder.CompileExpr(context, it.Body)
+			builder.WriteString(" : ")
+		}
 		builder.CompileExpr(context, stmt.Else)
 		builder.WriteString(")")
 	} else {
-		builder.WriteString("if (")
-		builder.CompileExpr(context, stmt.Condition)
-		builder.WriteString(") ")
-		builder.CompileExpr(context, stmt.Body)
-		builder.WriteString(" else ")
+		for _, it := range stmt.ConditionBodyPairs {
+			builder.WriteString("if (")
+			builder.CompileExpr(context, it.Condition)
+			builder.WriteString(") ")
+			builder.CompileExpr(context, it.Body)
+			builder.WriteString(" else ")
+		}
 		builder.CompileExpr(context, stmt.Else)
 	}
 }

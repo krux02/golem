@@ -7,6 +7,6 @@
 proc main() : int = {
   let a = "a\yb" # Error: invalid escape \y in string literal
   let b = "\z"   # Error: invalid escape \z in string literal
-  a $$ b # Error: invalid operator '$$'
+  a $$ b # Error: invalid infix operator '$$'
   a + (b, c) # Error: braced expression must contain a single expression, but has 2
 }

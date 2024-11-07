@@ -33,8 +33,6 @@ func OperatorPrecedence(op string) int {
 		return 3
 	case "=", "+=", "-=", "*=", "/=":
 		return 2
-	case "do":
-		return 1
 	}
 	// operator precedence does not exist
 	return -1
@@ -57,7 +55,7 @@ func parseInfixOperator(tokenizer *Tokenizer) *Ident {
 	// ensure operator precedence exists
 	precedence := OperatorPrecedence(token.value)
 	if precedence < 0 {
-		tokenizer.reportError(token, "invalid operator '%s'", token.value)
+		tokenizer.reportError(token, "invalid infix operator '%s'", token.value)
 	}
 	return &Ident{
 		Source: token.value,
@@ -104,60 +102,6 @@ func parseContinueStmt(tokenizer *Tokenizer) *ContinueStmt {
 	token := tokenizer.Next()
 	tokenizer.expectKind(token, TkContinue)
 	return &ContinueStmt{Source: token.value}
-}
-
-// func parseForLoop(tokenizer *Tokenizer) *ForLoopStmt {
-// 	result := &ForLoopStmt{}
-// 	firstToken := tokenizer.Next()
-// 	tokenizer.expectKind(firstToken, TkFor)
-// 	result.LoopIdent = parseIdent(tokenizer)
-// 	token := tokenizer.Next()
-// 	tokenizer.expectOperator(token, "in")
-// 	result.Collection = parseExpr(tokenizer, false)
-// 	token = tokenizer.Next()
-// 	tokenizer.expectKind(token, TkDo)
-// 	result.Body = parseExpr(tokenizer, false)
-// 	lastToken := tokenizer.token
-// 	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
-// 	return result
-// }
-
-// func parseWhileLoop(tokenizer *Tokenizer) *WhileLoopStmt {
-// 	result := &WhileLoopStmt{}
-// 	firstToken := tokenizer.Next()
-// 	tokenizer.expectKind(firstToken, TkWhile)
-// 	result.Condition = parseExpr(tokenizer, false)
-// 	token := tokenizer.Next()
-// 	tokenizer.expectKind(token, TkDo)
-// 	result.Body = parseExpr(tokenizer, false)
-// 	lastToken := tokenizer.token
-// 	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
-// 	return result
-// }
-
-func parseIfStmt(tokenizer *Tokenizer) Expr {
-	firstToken := tokenizer.Next()
-	tokenizer.expectKind(firstToken, TkIf)
-	conditionBodyTokenStart := tokenizer.token
-	conditionBody := parseExpr(tokenizer, false)
-	condition, body, ok := MatchBinaryOperator(conditionBody, "do")
-	if !ok {
-		tokenizer.reportError(conditionBodyTokenStart, "if statatement requires infix `do` operator")
-	}
-
-	if tokenizer.lookAheadToken.kind == TkElse {
-		tokenizer.Next()
-		elseExpr := parseExpr(tokenizer, false)
-		result := &IfElseExpr{Condition: condition, Body: body, Else: elseExpr}
-		lastToken := tokenizer.token
-		result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
-		return result
-		// return IfElseStmt{Condition: condition, Body: body, Else: elseExpr}
-	}
-	result := &IfExpr{Condition: condition, Body: body}
-	lastToken := tokenizer.token
-	result.Source = joinSubstr(tokenizer.code, firstToken.value, lastToken.value)
-	return result
 }
 
 func eatSemicolons(tokenizer *Tokenizer) {
@@ -553,10 +497,6 @@ func attachDocComment(expr Expr, target string, value string) bool {
 		return result
 	case *VariableDefStmt:
 		return attachDocComment(ex.Expr, target, value)
-	case *IfExpr:
-		return false
-	case *IfElseExpr:
-		return false
 	case *BreakStmt:
 		return false
 	case *ContinueStmt:
@@ -577,11 +517,16 @@ func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
 		tokenizer.Next()
 		result = parseExpr(tokenizer, stopAtOperator)
 	case TkIdent:
-		result = (Expr)(parseIdent(tokenizer))
+		ident := parseIdent(tokenizer)
+		// this is a hack. This is simply to prevent the expression `if not x` to be
+		// parsed as an infix operator call, but instead of a command call.
+		switch ident.Source {
+		case "if", "while", "for", "return", "var", "proc", "template", "type":
+			stopAtOperator = true
+		}
+		result = ident
 	case TkOpenCurly:
 		result = (Expr)(parseCodeBlock(tokenizer))
-	case TkIf:
-		result = (Expr)(parseIfStmt(tokenizer))
 	case TkStrLit:
 		result = (Expr)(parseStrLit(tokenizer))
 	case TkRawStrLit:

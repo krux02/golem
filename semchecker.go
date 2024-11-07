@@ -1317,7 +1317,8 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 		case *TcBuiltinMacroDef:
 			result.Sym = &TcProcRef{Source: ident.Source, Overloadable: impl}
 			result.Args = checkedArgs
-			newResult := impl.MacroFunc(sc, scope, result)
+			newResult := impl.MacroFunc(sc, scope, result, expected)
+			// TODO, only do this, if the macro has no errors?
 			ExpectType(sc, call, newResult.GetType(), expected)
 			return newResult
 		default:
@@ -1563,7 +1564,7 @@ func (arg *TcPackageDef) GetType() Type         { return TypeVoid }
 func (arg *TcBuiltinMacroDef) GetType() Type    { return TypeVoid }
 func (arg *TcErrorProcDef) GetType() Type       { return TypeVoid }
 func (stmt *TcIfStmt) GetType() Type            { return TypeVoid }
-func (stmt *TcIfElseExpr) GetType() Type        { return UnifyType(stmt.Body.GetType(), stmt.Else.GetType()) }
+func (stmt *TcIfElseExpr) GetType() Type        { return stmt.Else.GetType() }
 func (returnExpr *TcReturnStmt) GetType() Type  { return TypeNoReturn }
 func (expr *TcTypeContext) GetType() Type       { return GetTypeType(expr.WrappedType) }
 func (expr *TcDotExpr) GetType() Type           { return expr.Rhs.GetType() }
@@ -1742,11 +1743,6 @@ func SemCheckExpr(sc *SemChecker, scope Scope, arg Expr, expected TypeConstraint
 	case *VariableDefStmt:
 		ExpectType(sc, arg, TypeVoid, expected)
 		return (TcExpr)(SemCheckVariableDefStmt(sc, scope, arg))
-	case *IfExpr:
-		ExpectType(sc, arg, TypeVoid, expected)
-		return (TcExpr)(SemCheckIfExpr(sc, scope, arg))
-	case *IfElseExpr:
-		return (TcExpr)(SemCheckIfElseExpr(sc, scope, arg, expected))
 	case *ArrayLit:
 		return (TcExpr)(SemCheckArrayLit(sc, scope, arg, expected))
 	case *NilLit:
@@ -1982,25 +1978,6 @@ func SemCheckNilLit(sc *SemChecker, scope Scope, arg *NilLit, expected TypeConst
 	}
 	ReportUnexpectedType(sc, arg, expected, TypeNilPtr)
 	return &NilLit{Source: arg.Source, Type: TypeError}
-}
-
-func SemCheckIfExpr(sc *SemChecker, scope Scope, stmt *IfExpr) *TcIfStmt {
-	// currently only iteration on strings in possible (of course that is not final)
-	return &TcIfStmt{
-		Source:    stmt.Source,
-		Condition: SemCheckExpr(sc, scope, stmt.Condition, UniqueTypeConstraint{TypeBoolean}),
-		Body:      SemCheckExpr(sc, scope, stmt.Body, UniqueTypeConstraint{TypeVoid}),
-	}
-}
-
-func SemCheckIfElseExpr(sc *SemChecker, scope Scope, stmt *IfElseExpr, expected TypeConstraint) *TcIfElseExpr {
-	// currently only iteration on strings in possible (of course that is not final)
-	return &TcIfElseExpr{
-		Source:    stmt.Source,
-		Condition: SemCheckExpr(sc, scope, stmt.Condition, UniqueTypeConstraint{TypeBoolean}),
-		Body:      SemCheckExpr(sc, scope, stmt.Body, expected),
-		Else:      SemCheckExpr(sc, scope, stmt.Else, expected),
-	}
 }
 
 // TODO ElementType should be some form of language feature

@@ -176,7 +176,7 @@ proc alignFunc(address, alignment: i32) -> i32 = bitand(address + (alignment - 1
 #   dst.write(result.offset, value)
 
 #proc max(a,b: i64): i64 = if a > b do a else b
-proc max(a,b: i32) -> i32 = if a > b do a else b
+proc max(a,b: i32) -> i32 = {if a > b do a else b}
 
 proc std140AlignedWrite(dst: pointer, offset: i32, value: array(16, f32)) -> OffsetAlign = {
   var result: OffsetAlign
@@ -206,7 +206,7 @@ proc main() -> i32 = {
   var running: bool = true
 
 
-  let vertices : ArrayBuffer[Vec4f] = arrayBuffer([
+  let vertices : ArrayBuffer(Vec4f) = arrayBuffer([
     vec4f(-1,-1, 0, 1),
     vec4f( 1,-1, 0, 1),
     vec4f( 0, 1, 0, 1)

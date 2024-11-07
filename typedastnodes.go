@@ -197,17 +197,20 @@ type TcWhileLoopStmt struct {
 	Body      TcExpr
 }
 
-type TcIfStmt struct {
-	Source    string
+type ConditionBodyPair struct {
 	Condition TcExpr
 	Body      TcExpr
 }
 
+type TcIfStmt struct {
+	Source             string
+	ConditionBodyPairs []ConditionBodyPair
+}
+
 type TcIfElseExpr struct {
-	Source    string
-	Condition TcExpr
-	Body      TcExpr
-	Else      TcExpr
+	Source             string
+	ConditionBodyPairs []ConditionBodyPair
+	Else               TcExpr
 }
 
 type TcDotExpr struct {
@@ -464,7 +467,9 @@ func RequireMutable(sc *SemChecker, expr TcExpr) {
 	case *TcErrorNode:
 		// To prevent noise from error nodes do not report here
 	case *TcIfElseExpr:
-		RequireMutable(sc, arg.Body)
+		for _, it := range arg.ConditionBodyPairs {
+			RequireMutable(sc, it.Body)
+		}
 		RequireMutable(sc, arg.Else)
 	default:
 		ReportMustBeMutable(sc, arg)

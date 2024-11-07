@@ -448,14 +448,14 @@ func registerSimpleTemplate(name string, params []*TcSymbol, result Type, substi
 	RegisterProc(nil, builtinScope, templateDef, nil)
 }
 
-type BuiltinMacroFunc func(sc *SemChecker, scope Scope, call *TcCall) TcExpr
+type BuiltinMacroFunc func(sc *SemChecker, scope Scope, call *TcCall, expected TypeConstraint) TcExpr
 
 func registerConstant(name string, value TcExpr) {
 	ident := &Ident{Source: name}
 	_ = builtinScope.NewConstSymbol(nil, ident, value)
 }
 
-func ValidatePrintfCall(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+func ValidatePrintfCall(sc *SemChecker, scope Scope, call *TcCall, expected TypeConstraint) TcExpr {
 
 	formatExpr := call.Args[0]
 	formatStrLit, ok := formatExpr.(*TcStrLit)
@@ -589,7 +589,7 @@ func ValidatePrintfCall(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	return result
 }
 
-func BuiltinAddLinkerFlags(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+func BuiltinAddLinkerFlags(sc *SemChecker, scope Scope, call *TcCall, expected TypeConstraint) TcExpr {
 	if !ExpectArgsLen(sc, call, len(call.Args), 1) {
 		return newErrorNode(call)
 	}
@@ -605,7 +605,7 @@ func BuiltinAddLinkerFlags(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	return &TcCodeBlock{Source: call.Source}
 }
 
-func BuiltinAddCFlags(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+func BuiltinAddCFlags(sc *SemChecker, scope Scope, call *TcCall, expected TypeConstraint) TcExpr {
 	if !ExpectArgsLen(sc, call, len(call.Args), 1) {
 		return newErrorNode(call)
 	}
@@ -620,7 +620,7 @@ func BuiltinAddCFlags(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	return &TcCodeBlock{Source: call.Source}
 }
 
-func BuiltinPipeTransformation(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+func BuiltinPipeTransformation(sc *SemChecker, scope Scope, call *TcCall, expected TypeConstraint) TcExpr {
 	if !ExpectArgsLen(sc, call, len(call.Args), 2) {
 		return newErrorNode(call)
 	}
@@ -644,7 +644,7 @@ func BuiltinPipeTransformation(sc *SemChecker, scope Scope, call *TcCall) TcExpr
 	return SemCheckExpr(sc, scope, result, TypeUnspecified)
 }
 
-func BuiltinDotOperator(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+func BuiltinDotOperator(sc *SemChecker, scope Scope, call *TcCall, expected TypeConstraint) TcExpr {
 	if !ExpectArgsLen(sc, call, len(call.Args), 2) {
 		return newErrorNode(call)
 	}
@@ -680,7 +680,7 @@ func BuiltinDotOperator(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	}
 }
 
-func BuiltinColonExpr(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+func BuiltinColonExpr(sc *SemChecker, scope Scope, call *TcCall, expected TypeConstraint) TcExpr {
 	if !ExpectArgsLen(sc, call, len(call.Args), 2) {
 		return newErrorNode(call)
 	}
@@ -691,7 +691,7 @@ func BuiltinColonExpr(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	return SemCheckExpr(sc, scope, lhs, UniqueTypeConstraint{typ})
 }
 
-func BuiltinEmitStmt(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+func BuiltinEmitStmt(sc *SemChecker, scope Scope, call *TcCall, expected TypeConstraint) TcExpr {
 	if !ExpectArgsLen(sc, call, len(call.Args), 1) {
 		return newErrorNode(call)
 	}
@@ -731,14 +731,14 @@ func BuiltinEmitStmt(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 
 }
 
-func BuiltinStaticExpr(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+func BuiltinStaticExpr(sc *SemChecker, scope Scope, call *TcCall, expected TypeConstraint) TcExpr {
 	// TODO: ensure this expression can be evaluated at compile time
 	expr := call.Args[0].(*TcWrappedUntypedAst).Expr
 	checkedExpr := SemCheckExpr(sc, scope, expr, TypeUnspecified)
 	return EvalExpr(sc, checkedExpr, scope)
 }
 
-func BuiltinTraitDef(sc *SemChecker, scope Scope, def *TcCall) TcExpr {
+func BuiltinTraitDef(sc *SemChecker, scope Scope, def *TcCall, expected TypeConstraint) TcExpr {
 	expr := def.Args[0].(*TcWrappedUntypedAst).Expr
 	name, dependentTypes, signatures := ParseTraitDef(sc, expr)
 	ValidNameCheck(sc, name, "trait")
@@ -773,7 +773,7 @@ func BuiltinTraitDef(sc *SemChecker, scope Scope, def *TcCall) TcExpr {
 	return result
 }
 
-func BuiltinCastExpr(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+func BuiltinCastExpr(sc *SemChecker, scope Scope, call *TcCall, expected TypeConstraint) TcExpr {
 	arg1 := call.Args[0]
 	arg2 := call.Args[1].(*TcTypeContext)
 	// TODO validate that expression can actually be casted. E.g. test if they have the same size and alignment
@@ -784,7 +784,7 @@ func BuiltinCastExpr(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	}
 }
 
-func BuiltinConvExpr(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+func BuiltinConvExpr(sc *SemChecker, scope Scope, call *TcCall, expected TypeConstraint) TcExpr {
 	arg1 := call.Args[0]
 	arg2 := call.Args[1].(*TcTypeContext)
 	// TODO validate that expression can actually be converted. e.g. both types are compatible number types
@@ -795,7 +795,7 @@ func BuiltinConvExpr(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	}
 }
 
-func BuiltinImportStmt(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+func BuiltinImportStmt(sc *SemChecker, scope Scope, call *TcCall, expected TypeConstraint) TcExpr {
 	if !ExpectArgsLen(sc, call, len(call.Args), 1) {
 		return newErrorNode(call)
 	}
@@ -835,23 +835,53 @@ func BuiltinImportStmt(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	return &TcCodeBlock{Source: call.Source}
 }
 
-func BuiltinForLoop(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
-	expr := call.Args[0].(*TcWrappedUntypedAst).Expr
-	loopIdentCollection, body, ok := MatchBinaryOperator(expr, "do")
+func BuiltinForLoop(sc *SemChecker, scope Scope, call *TcCall, expected TypeConstraint) TcExpr {
+	var currentArgIdx = 0
+	nextArg := func() (result Expr, hasExpr bool) {
+		if currentArgIdx < len(call.Args) {
+			result = call.Args[currentArgIdx].(*TcWrappedUntypedAst).Expr
+			currentArgIdx += 1
+			return result, true
+		} else {
+			return nil, false
+		}
+	}
+
+	loopIdentCollection, ok := nextArg()
 	if !ok {
-		ReportErrorf(sc, expr, "expect do operator")
+		ReportErrorf(sc, call, "for loop does not have enough arguments")
 		return newErrorNode(call)
 	}
 	loopIdentExpr, collection, ok := MatchBinaryOperator(loopIdentCollection, "in")
 	if !ok {
-		ReportErrorf(sc, expr, "expect in operator")
+		ReportErrorf(sc, loopIdentCollection, "expect `in` operator")
 		return newErrorNode(call)
 	}
 	loopIdent, ok := loopIdentExpr.(*Ident)
 	if !ok {
-		ReportErrorf(sc, expr, "expect identifier")
+		ReportErrorf(sc, loopIdentExpr, "expect identifier")
 		return newErrorNode(call)
 	}
+	doExpr, ok := nextArg()
+	if !ok {
+		ReportErrorf(sc, call, "for loop does not have enough arguments, expect `do` ")
+		return newErrorNode(call)
+	}
+	if doIdent, isIdent := doExpr.(*Ident); !isIdent || doIdent.Source != "do" {
+		ReportErrorf(sc, call, "for loop expects `do` here")
+		return newErrorNode(call)
+	}
+	body, ok := nextArg()
+	if !ok {
+		ReportErrorf(sc, call, "expect for loop body")
+		return newErrorNode(call)
+	}
+	tooMuch, ok := nextArg()
+	if ok {
+		ReportErrorf(sc, tooMuch, "too many argument for for-loop")
+		return newErrorNode(call)
+	}
+
 	scope = NewSubScope(scope)
 
 	tcCollection := SemCheckExpr(sc, scope, collection, TypeUnspecified)
@@ -864,12 +894,40 @@ func BuiltinForLoop(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	}
 }
 
-func BuiltinWhileLoop(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
-	expr := call.Args[0].(*TcWrappedUntypedAst).Expr
-
-	condition, body, ok := MatchBinaryOperator(expr, "do")
+func BuiltinWhileLoop(sc *SemChecker, scope Scope, call *TcCall, expected TypeConstraint) TcExpr {
+	var currentArgIdx = 0
+	nextArg := func() (result Expr, hasExpr bool) {
+		if currentArgIdx < len(call.Args) {
+			result = call.Args[currentArgIdx].(*TcWrappedUntypedAst).Expr
+			currentArgIdx += 1
+			return result, true
+		} else {
+			return nil, false
+		}
+	}
+	condition, ok := nextArg()
 	if !ok {
-		ReportErrorf(sc, expr, "expect do operator")
+		// technically dead code
+		ReportErrorf(sc, call, "expect condition")
+		return newErrorNode(call)
+	}
+	doExpr, ok := nextArg()
+	if !ok {
+		ReportErrorf(sc, call, "while loop does not have enough arguments, expect `do` ")
+		return newErrorNode(call)
+	}
+	if doIdent, isIdent := doExpr.(*Ident); !isIdent || doIdent.Source != "do" {
+		ReportErrorf(sc, call, "while loop expects `do` here")
+		return newErrorNode(call)
+	}
+	body, ok := nextArg()
+	if !ok {
+		ReportErrorf(sc, call, "expect loop body")
+		return newErrorNode(call)
+	}
+	tooMuch, ok := nextArg()
+	if ok {
+		ReportErrorf(sc, tooMuch, "too many argument for while loop")
 		return newErrorNode(call)
 	}
 	scope = NewSubScope(scope)
@@ -880,7 +938,7 @@ func BuiltinWhileLoop(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	}
 }
 
-func BuiltinProcDef(sc *SemChecker, parentScope Scope, call *TcCall) TcExpr {
+func BuiltinProcDef(sc *SemChecker, parentScope Scope, call *TcCall, expected TypeConstraint) TcExpr {
 	innerScope := NewSubScope(parentScope)
 
 	var annotations *StrLit
@@ -945,7 +1003,7 @@ func BuiltinProcDef(sc *SemChecker, parentScope Scope, call *TcCall) TcExpr {
 	return result
 }
 
-func BuiltinTemplateDef(sc *SemChecker, parentScope Scope, call *TcCall) TcExpr {
+func BuiltinTemplateDef(sc *SemChecker, parentScope Scope, call *TcCall, expected TypeConstraint) TcExpr {
 
 	var annotations *StrLit
 	var expr = call.Args[0].(*TcWrappedUntypedAst).Expr
@@ -981,7 +1039,7 @@ func BuiltinTemplateDef(sc *SemChecker, parentScope Scope, call *TcCall) TcExpr 
 
 }
 
-func BuiltinTypeDef(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+func BuiltinTypeDef(sc *SemChecker, scope Scope, call *TcCall, expected TypeConstraint) TcExpr {
 	//SemCheckTypeDef(sc *SemChecker, scope Scope, expr Expr) TcExpr {
 	expr := call.Args[0].(*TcWrappedUntypedAst).Expr
 	var importc bool
@@ -1105,13 +1163,97 @@ func BuiltinTypeDef(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
 	return &TcErrorNode{Source: call.Source, SourceNode: call}
 }
 
-func BuiltinReturn(sc *SemChecker, scope Scope, call *TcCall) TcExpr {
+func BuiltinReturn(sc *SemChecker, scope Scope, call *TcCall, expected TypeConstraint) TcExpr {
 	value := call.Args[0].(*TcWrappedUntypedAst).Expr
 	result := &TcReturnStmt{
 		Source: call.Source,
 		Value:  SemCheckExpr(sc, scope, value, UniqueTypeConstraint{scope.CurrentProcSignature.ResultType}),
 	}
 	return result
+}
+
+func BuiltinIfElse(sc *SemChecker, scope Scope, call *TcCall, expected TypeConstraint) TcExpr {
+	var conditionBodyPairs []Expr
+	var currentArgIdx = 0
+
+	nextArg := func() (result Expr, hasExpr bool) {
+		if currentArgIdx < len(call.Args) {
+			result = call.Args[currentArgIdx].(*TcWrappedUntypedAst).Expr
+			currentArgIdx += 1
+			return result, true
+		} else {
+			return nil, false
+		}
+	}
+
+	for true {
+		condition, ok := nextArg()
+		if !ok {
+			ReportErrorf(sc, call.Args[len(call.Args)-1], "if stmt requires a condition")
+			return &TcErrorNode{call.Source, call}
+		}
+		doExpr, ok := nextArg()
+		if !ok {
+			ReportErrorf(sc, call.Args[len(call.Args)-1], "if stmt requires `do` after this expression")
+			return &TcErrorNode{call.Source, call}
+		}
+		if doIdent, ok := doExpr.(*Ident); !ok || doIdent.Source != "do" {
+			ReportErrorf(sc, call.Args[len(call.Args)-1], "if stmt requires `do` here")
+			return &TcErrorNode{call.Source, call}
+		}
+		body, ok := nextArg()
+		if !ok {
+			ReportErrorf(sc, call.Args[len(call.Args)-1], "if stmt requires a body")
+			return &TcErrorNode{call.Source, call}
+		}
+		conditionBodyPairs = append(conditionBodyPairs, condition, body)
+		elseExpr, ok := nextArg()
+		if !ok {
+			result := &TcIfStmt{
+				Source: call.Source,
+			}
+			for i := 0; i < len(conditionBodyPairs); i += 2 {
+				condition := conditionBodyPairs[i+0]
+				body := conditionBodyPairs[i+1]
+				result.ConditionBodyPairs = append(result.ConditionBodyPairs, ConditionBodyPair{
+					Condition: SemCheckExpr(sc, scope, condition, UniqueTypeConstraint{TypeBoolean}),
+					Body:      SemCheckExpr(sc, scope, body, UniqueTypeConstraint{TypeVoid}),
+				})
+			}
+			return result
+		}
+		if elseIdent, ok := elseExpr.(*Ident); ok {
+			switch elseIdent.Source {
+			case "else":
+				postElseExpr, ok := nextArg()
+				if !ok {
+					ReportErrorf(sc, call.Args[len(call.Args)-1], "if stmt requires an expression after `else`")
+					return &TcErrorNode{call.Source, call}
+				}
+				result := &TcIfElseExpr{
+					Source: call.Source,
+					Else:   SemCheckExpr(sc, scope, postElseExpr, expected),
+				}
+				for i := 0; i < len(conditionBodyPairs); i += 2 {
+					condition := conditionBodyPairs[i+0]
+					body := conditionBodyPairs[i+1]
+					result.ConditionBodyPairs = append(result.ConditionBodyPairs, ConditionBodyPair{
+						Condition: SemCheckExpr(sc, scope, condition, UniqueTypeConstraint{TypeBoolean}),
+						Body:      SemCheckExpr(sc, scope, body, expected),
+					})
+				}
+				return result
+			case "elif":
+				continue
+			default:
+				ReportErrorf(sc, call.Args[len(call.Args)-1], "if stmt requires `else`, `elif` or end of command here")
+				return &TcErrorNode{call.Source, call}
+			}
+		}
+		ReportErrorf(sc, call.Args[len(call.Args)-1], "if stmt requires `else`, `elif` or end of command here")
+		return &TcErrorNode{call.Source, call}
+	}
+	panic("unreachable code")
 }
 
 func init() {
@@ -1138,12 +1280,13 @@ func init() {
 	registerBuiltinMacro("addLinkerFlags", nil, []Type{TypeStr}, TypeVoid, BuiltinAddLinkerFlags)
 	registerBuiltinMacro("emit", nil, []Type{TypeStr}, TypeVoid, BuiltinEmitStmt)
 	registerBuiltinMacro("import", nil, []Type{TypeStr}, TypeVoid, BuiltinImportStmt)
-	registerBuiltinMacro("for", nil, []Type{TypeUntyped}, TypeVoid, BuiltinForLoop)
-	registerBuiltinMacro("while", nil, []Type{TypeUntyped}, TypeVoid, BuiltinWhileLoop)
+	registerBuiltinMacro("for", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeVoid, BuiltinForLoop)
+	registerBuiltinMacro("while", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeVoid, BuiltinWhileLoop)
 	registerBuiltinMacro("proc", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeVoid, BuiltinProcDef)
 	registerBuiltinMacro("template", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeVoid, BuiltinTemplateDef)
 	registerBuiltinMacro("type", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeUntyped, BuiltinTypeDef)
 	registerBuiltinMacro("return", nil, []Type{TypeUntyped}, TypeNoReturn, BuiltinReturn)
+	registerBuiltinMacro("if", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeUntyped, BuiltinIfElse)
 
 	registerBuiltinMacro("|", nil, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinPipeTransformation)
 	registerBuiltinMacro(".", nil, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinDotOperator)
