@@ -43,14 +43,6 @@ func (arg *BracketExpr) RecSubSyms(substitutions []TemplateSubstitution) Expr {
 	}
 	return result
 }
-func (arg *VariableDefStmt) RecSubSyms(substitutions []TemplateSubstitution) Expr {
-	result := &VariableDefStmt{
-		Source: arg.Source,
-		Prefix: arg.Prefix,
-		Expr:   arg.Expr.RecSubSyms(substitutions),
-	}
-	return result
-}
 
 func (arg *NilLit) RecSubSyms(substitutions []TemplateSubstitution) Expr {
 	return arg

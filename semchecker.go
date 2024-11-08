@@ -1474,38 +1474,6 @@ func ValidNameCheck(sc *SemChecker, ident *Ident, extraword string) {
 	}
 }
 
-func SemCheckVariableDefStmt(sc *SemChecker, scope Scope, arg *VariableDefStmt) *TcVariableDefStmt {
-	kind, name, typeExpr, value, ok := MatchVariableDefStatement(sc, arg)
-	if !ok {
-		// TODO return somtehing that indicades an error
-		return nil
-	}
-	ValidNameCheck(sc, name, "var")
-	result := &TcVariableDefStmt{Source: arg.Source}
-	if value == nil {
-		typ := LookUpType(sc, scope, typeExpr)
-		if kind != SkVar {
-			ReportErrorf(sc, arg, "initial value required")
-		}
-		result.Value = typ.DefaultValue(sc, name)
-		result.Sym = scope.NewSymbol(sc, name, kind, typ)
-	} else {
-		var expected TypeConstraint = TypeUnspecified
-		if typeExpr != nil {
-			expected = UniqueTypeConstraint{LookUpType(sc, scope, typeExpr)}
-		}
-		result.Value = SemCheckExpr(sc, scope, value, expected)
-		if kind == SkConst {
-			// TODO: this needs proper checking if it can even computed
-			result.Sym = scope.NewConstSymbol(sc, name, EvalExpr(sc, result.Value, scope))
-		} else {
-			result.Sym = scope.NewSymbol(sc, name, kind, result.Value.GetType())
-		}
-	}
-
-	return result
-}
-
 func UnifyType(a, b Type) Type {
 	if a != b {
 		panic("type incompatible")
@@ -1740,9 +1708,6 @@ func SemCheckExpr(sc *SemChecker, scope Scope, arg Expr, expected TypeConstraint
 		return (TcExpr)(SemCheckIntLit(sc, scope, arg, expected))
 	case *FloatLit:
 		return (TcExpr)(SemCheckFloatLit(sc, scope, arg, expected))
-	case *VariableDefStmt:
-		ExpectType(sc, arg, TypeVoid, expected)
-		return (TcExpr)(SemCheckVariableDefStmt(sc, scope, arg))
 	case *ArrayLit:
 		return (TcExpr)(SemCheckArrayLit(sc, scope, arg, expected))
 	case *NilLit:
@@ -2010,10 +1975,6 @@ func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *Packag
 	for _, stmt := range arg.TopLevelStmts {
 		var tcStmt TcExpr
 		switch stmt := stmt.(type) {
-		case *VariableDefStmt:
-			varDef := SemCheckVariableDefStmt(sc, pkgScope, stmt)
-			tcStmt = varDef
-			result.VarDefs = append(result.VarDefs, varDef)
 		case *PrefixDocComment:
 			if docComment != nil {
 				panic("internal error, doc comment should be nil here")
@@ -2024,10 +1985,8 @@ func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *Packag
 		case *Call:
 			tcStmt = SemCheckCall(sc, pkgScope, stmt, UniqueTypeConstraint{TypeVoid})
 			switch x := tcStmt.(type) {
-			case *TcCodeBlock:
-				if len(x.Items) != 0 {
-					ReportErrorf(sc, tcStmt, "top level code blocks are not allowed")
-				}
+			case *TcVariableDefStmt:
+				result.VarDefs = append(result.VarDefs, x)
 			case *TcEmitExpr:
 				result.EmitStatements = append(result.EmitStatements, x)
 			case *TcTraitDef:
@@ -2055,6 +2014,10 @@ func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *Packag
 				result.TemplateDefs = append(result.TemplateDefs, x)
 			case *TcErrorNode:
 				// ignore, error already reported
+			case *TcCodeBlock:
+				if len(x.Items) != 0 {
+					ReportErrorf(sc, tcStmt, "top level code blocks are not allowed")
+				}
 			case *TcCall:
 				ReportErrorf(sc, tcStmt, "top level function calls are not allowed: %s", AstFormat(tcStmt))
 			default:

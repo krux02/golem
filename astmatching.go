@@ -16,9 +16,9 @@ func ExpectMinArgsLen(sc *SemChecker, node Expr, gotten, expected int) bool {
 	return true
 }
 
-func MatchVariableDefStatement(sc *SemChecker, arg *VariableDefStmt) (kind SymbolKind, name *Ident, typeExpr Expr, value Expr, ok bool) {
+func MatchVariableDefStatement(sc *SemChecker, callee Expr, expr Expr) (kind SymbolKind, name *Ident, typeExpr Expr, value Expr, ok bool) {
 	// String matiching
-	switch arg.Prefix.Source {
+	switch callee.GetSource() {
 	case "var":
 		kind = SkVar
 	case "let":
@@ -26,10 +26,10 @@ func MatchVariableDefStatement(sc *SemChecker, arg *VariableDefStmt) (kind Symbo
 	case "const":
 		kind = SkConst
 	default:
-		kind = SkInvalid
+		// this branch should be dead code
+		ReportErrorf(sc, callee, "must be var/let/const")
+		return SkInvalid, nil, nil, nil, false
 	}
-
-	var expr = arg.Expr
 
 	if lhs, rhs, ok := MatchAssign(expr); ok {
 		value = rhs

@@ -315,12 +315,6 @@ func (typeDef *TcTraitDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("}")
 }
 
-func (stmt *VariableDefStmt) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString(stmt.Prefix.Source)
-	builder.WriteString(" ")
-	builder.WriteNode(stmt.Expr)
-}
-
 func (loopStmt *TcForLoopStmt) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("for ")
 	builder.WriteString(loopStmt.LoopSym.Source)

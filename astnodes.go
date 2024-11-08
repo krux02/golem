@@ -41,12 +41,6 @@ type InvalidTokenExpr struct {
 	kind   TokenKind
 }
 
-type VariableDefStmt struct {
-	Source string
-	Prefix Ident // var, let, const ...
-	Expr   Expr  // everything else
-}
-
 type CodeBlock struct {
 	Source string
 	Items  []Expr
@@ -119,6 +113,5 @@ func (arg *FloatLit) GetSource() string         { return arg.Source }
 func (arg *ArrayLit) GetSource() string         { return arg.Source }
 func (arg *Call) GetSource() string             { return arg.Source }
 func (arg *BracketExpr) GetSource() string      { return arg.Source }
-func (arg *VariableDefStmt) GetSource() string  { return arg.Source }
 func (arg *NilLit) GetSource() string           { return arg.Source }
 func (arg *PackageDef) GetSource() string       { return arg.Source }

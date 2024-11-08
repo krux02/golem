@@ -1175,7 +1175,44 @@ func BuiltinTypeDef(sc *SemChecker, scope Scope, call *TcCall, expected TypeCons
 	return &TcErrorNode{Source: call.Source, SourceNode: call}
 }
 
+func BuiltinVarLetConst(sc *SemChecker, scope Scope, call *TcCall, expected TypeConstraint) TcExpr {
+	if len(call.Args) > 1 {
+		ReportErrorf(sc, call.Args[1], "too many arguments for return, expected one")
+	}
+	kind, name, typeExpr, value, ok := MatchVariableDefStatement(sc, call.Sym, call.Args[0].(*TcWrappedUntypedAst).Expr)
+	if !ok {
+		return newErrorNode(call)
+	}
+	ValidNameCheck(sc, name, "var")
+	result := &TcVariableDefStmt{Source: call.Source}
+	if value == nil {
+		typ := LookUpType(sc, scope, typeExpr)
+		if kind != SkVar {
+			ReportErrorf(sc, name, "initialization value required")
+		}
+		result.Value = typ.DefaultValue(sc, name)
+		result.Sym = scope.NewSymbol(sc, name, kind, typ)
+	} else {
+		var expected TypeConstraint = TypeUnspecified
+		if typeExpr != nil {
+			expected = UniqueTypeConstraint{LookUpType(sc, scope, typeExpr)}
+		}
+		result.Value = SemCheckExpr(sc, scope, value, expected)
+		if kind == SkConst {
+			// TODO: this needs proper checking if it can even compute
+			result.Sym = scope.NewConstSymbol(sc, name, EvalExpr(sc, result.Value, scope))
+		} else {
+			result.Sym = scope.NewSymbol(sc, name, kind, result.Value.GetType())
+		}
+	}
+
+	return result
+}
+
 func BuiltinReturn(sc *SemChecker, scope Scope, call *TcCall, expected TypeConstraint) TcExpr {
+	if len(call.Args) > 1 {
+		ReportErrorf(sc, call.Args[1], "too many arguments for return, expected one")
+	}
 	value := call.Args[0].(*TcWrappedUntypedAst).Expr
 	result := &TcReturnStmt{
 		Source: call.Source,
@@ -1298,8 +1335,11 @@ func init() {
 	registerBuiltinMacro("continue", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeNoReturn, BuiltinContinueStmt)
 	registerBuiltinMacro("proc", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeVoid, BuiltinProcDef)
 	registerBuiltinMacro("template", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeVoid, BuiltinTemplateDef)
+	registerBuiltinMacro("var", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeUntyped, BuiltinVarLetConst)
+	registerBuiltinMacro("let", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeUntyped, BuiltinVarLetConst)
+	registerBuiltinMacro("const", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeUntyped, BuiltinVarLetConst)
 	registerBuiltinMacro("type", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeUntyped, BuiltinTypeDef)
-	registerBuiltinMacro("return", nil, []Type{TypeUntyped}, TypeNoReturn, BuiltinReturn)
+	registerBuiltinMacro("return", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeNoReturn, BuiltinReturn)
 	registerBuiltinMacro("if", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeUntyped, BuiltinIfElse)
 
 	registerBuiltinMacro("|", nil, []Type{TypeUntyped, TypeUntyped}, TypeUntyped, BuiltinPipeTransformation)

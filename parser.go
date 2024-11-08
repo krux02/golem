@@ -62,22 +62,6 @@ func parseInfixOperator(tokenizer *Tokenizer) *Ident {
 	}
 }
 
-func parseVariableDefStmt(tokenizer *Tokenizer) *VariableDefStmt {
-	result := &VariableDefStmt{}
-	firstToken := tokenizer.Next()
-	switch firstToken.kind {
-	case TkLet, TkVar, TkConst:
-		result.Prefix = Ident{Source: firstToken.value}
-	default:
-		tokenizer.reportWrongKind(firstToken)
-		// TODO what now? Create an invalid expression? this default value of result is in valid stmt.
-		return result
-	}
-	result.Expr = parseExpr(tokenizer, false)
-	result.Source = joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value)
-	return result
-}
-
 func eatSemicolons(tokenizer *Tokenizer) {
 	for tokenizer.lookAheadToken.kind == TkSemicolon || tokenizer.lookAheadToken.kind == TkNewLine {
 		tokenizer.Next()
@@ -319,9 +303,14 @@ func parseStmtOrExpr(tokenizer *Tokenizer) Expr {
 	// TODO this code wraps nil with a type, which is then not seen anymore by `expr == nil`. Could be a problem.
 	switch tokenizer.lookAheadToken.kind {
 	case TkDocComment:
-		return (Expr)(parseDocComment(tokenizer))
+		return parseDocComment(tokenizer)
 	case TkVar, TkLet, TkConst:
-		return (Expr)(parseVariableDefStmt(tokenizer))
+		// TODO this special handling of var let const is ugly here and should not
+		// be here. currently it exists here, because in parseExpr, `TkVar` will
+		// treat "var" like an operator, so that `proc foo(var arg: Baz)` is
+		// possible, and `var` only attaches to `arg` and nothing else.
+		ident := &Ident{Source: tokenizer.Next().value}
+		return parseCommand(tokenizer, ident)
 	}
 	result := parseExpr(tokenizer, false)
 	if ident, isIdent := result.(*Ident); isIdent {
@@ -450,6 +439,7 @@ func parseDocComment(tokenizer *Tokenizer) Expr {
 }
 
 func attachDocComment(expr Expr, target string, value string) bool {
+	// TODO attach doc comments after sem checking phase, this ast has no semantics at all
 	switch ex := expr.(type) {
 	case *Ident:
 		if ex.Source == target {
@@ -479,8 +469,6 @@ func attachDocComment(expr Expr, target string, value string) bool {
 			result = attachDocComment(arg, target, value)
 		}
 		return result
-	case *VariableDefStmt:
-		return attachDocComment(ex.Expr, target, value)
 	}
 	panic("not implemented")
 }
