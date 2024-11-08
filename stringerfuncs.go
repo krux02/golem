@@ -379,13 +379,6 @@ func (pak *PackageDef) PrettyPrint(builder *AstPrettyPrinter) {
 	}
 }
 
-func (breakstmt *BreakStmt) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("break")
-}
-func (continuestmt *ContinueStmt) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("continue")
-}
-
 func (arg *TcWrappedUntypedAst) PrettyPrint(builder *AstPrettyPrinter) {
 	arg.Expr.PrettyPrint(builder)
 }

@@ -14,6 +14,7 @@ type TokenKind int16
 const (
 	TkInvalid TokenKind = iota
 	TkIdent
+	TkQuotedIdent
 	TkNewLine
 	TkSemicolon
 	TkComma
@@ -31,8 +32,6 @@ const (
 	TkVar
 	TkLet
 	TkConst
-	TkBreak
-	TkContinue
 
 	// These tokens must be convertible from Open/Close by flipping the last bit
 	TkOpenBrace    TokenKind = 100
@@ -49,6 +48,7 @@ const (
 var TokenKindNames = [...]string{
 	TkInvalid:           "Invalid",
 	TkIdent:             "Ident",
+	TkQuotedIdent:       "QuotedIdent",
 	TkNewLine:           "NewLine",
 	TkSemicolon:         "Semicolon",
 	TkComma:             "Comma",
@@ -63,8 +63,6 @@ var TokenKindNames = [...]string{
 	TkVar:               "Var",
 	TkLet:               "Let",
 	TkConst:             "Const",
-	TkBreak:             "Break",
-	TkContinue:          "Continue",
 	TkOpenBrace:         "OpenBrace",
 	TkCloseBrace:        "CloseBrace",
 	TkOpenBracket:       "OpenBracket",
@@ -371,10 +369,6 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			result.kind = TkLet
 		case "const":
 			result.kind = TkConst
-		case "break":
-			result.kind = TkBreak
-		case "continue":
-			result.kind = TkContinue
 		case "nil":
 			result.kind = TkNilLit
 		default:
@@ -462,7 +456,7 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 		}
 		result.value = code[:idx2]
 	case c == '`':
-		result.kind = TkIdent
+		result.kind = TkQuotedIdent
 		for pos, rune := range code[cLen:] {
 			if rune == '`' {
 				result.value = code[cLen : cLen+pos]

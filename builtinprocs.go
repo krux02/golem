@@ -938,6 +938,18 @@ func BuiltinWhileLoop(sc *SemChecker, scope Scope, call *TcCall, expected TypeCo
 	}
 }
 
+func BuiltinBreakStmt(sc *SemChecker, scope Scope, call *TcCall, expected TypeConstraint) TcExpr {
+	// TODO implement this
+	ReportErrorf(sc, call, "break not implemented")
+	return newErrorNode(call)
+}
+
+func BuiltinContinueStmt(sc *SemChecker, scope Scope, call *TcCall, expected TypeConstraint) TcExpr {
+	// TODO implement this
+	ReportErrorf(sc, call, "continue not implemented")
+	return newErrorNode(call)
+}
+
 func BuiltinProcDef(sc *SemChecker, parentScope Scope, call *TcCall, expected TypeConstraint) TcExpr {
 	innerScope := NewSubScope(parentScope)
 
@@ -1282,6 +1294,8 @@ func init() {
 	registerBuiltinMacro("import", nil, []Type{TypeStr}, TypeVoid, BuiltinImportStmt)
 	registerBuiltinMacro("for", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeVoid, BuiltinForLoop)
 	registerBuiltinMacro("while", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeVoid, BuiltinWhileLoop)
+	registerBuiltinMacro("break", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeNoReturn, BuiltinBreakStmt)
+	registerBuiltinMacro("continue", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeNoReturn, BuiltinContinueStmt)
 	registerBuiltinMacro("proc", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeVoid, BuiltinProcDef)
 	registerBuiltinMacro("template", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeVoid, BuiltinTemplateDef)
 	registerBuiltinMacro("type", UniqueTypeConstraint{TypeUntyped}, []Type{TypeUntyped}, TypeUntyped, BuiltinTypeDef)

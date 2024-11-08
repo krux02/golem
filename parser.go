@@ -40,7 +40,7 @@ func OperatorPrecedence(op string) int {
 
 func parseIdent(tokenizer *Tokenizer) *Ident {
 	token := tokenizer.Next()
-	tokenizer.expectKind(token, TkIdent)
+	tokenizer.expectKind2(token, TkIdent, TkQuotedIdent)
 	return &Ident{
 		Source: token.value,
 	}
@@ -88,20 +88,6 @@ func parseVariableDefStmt(tokenizer *Tokenizer) *VariableDefStmt {
 	result.Expr = parseExpr(tokenizer, false)
 	result.Source = joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value)
 	return result
-}
-
-func parseBreakStmt(tokenizer *Tokenizer) *BreakStmt {
-	result := &BreakStmt{}
-	token := tokenizer.Next()
-	tokenizer.expectKind(token, TkBreak)
-	result.Source = token.value
-	return result
-}
-
-func parseContinueStmt(tokenizer *Tokenizer) *ContinueStmt {
-	token := tokenizer.Next()
-	tokenizer.expectKind(token, TkContinue)
-	return &ContinueStmt{Source: token.value}
 }
 
 func eatSemicolons(tokenizer *Tokenizer) {
@@ -348,10 +334,6 @@ func parseStmtOrExpr(tokenizer *Tokenizer) Expr {
 		return (Expr)(parseDocComment(tokenizer))
 	case TkVar, TkLet, TkConst:
 		return (Expr)(parseVariableDefStmt(tokenizer))
-	case TkBreak:
-		return (Expr)(parseBreakStmt(tokenizer))
-	case TkContinue:
-		return (Expr)(parseContinueStmt(tokenizer))
 	}
 	result := parseExpr(tokenizer, false)
 	if ident, isIdent := result.(*Ident); isIdent {
@@ -497,10 +479,6 @@ func attachDocComment(expr Expr, target string, value string) bool {
 		return result
 	case *VariableDefStmt:
 		return attachDocComment(ex.Expr, target, value)
-	case *BreakStmt:
-		return false
-	case *ContinueStmt:
-		return false
 	}
 	panic("not implemented")
 }
@@ -512,17 +490,20 @@ func parseNilLit(tokenizer *Tokenizer) *NilLit {
 }
 
 func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
-	switch tokenizer.lookAheadToken.kind {
+
+	switch tk := tokenizer.lookAheadToken.kind; tk {
 	case TkNewLine:
 		tokenizer.Next()
 		result = parseExpr(tokenizer, stopAtOperator)
-	case TkIdent:
+	case TkIdent, TkQuotedIdent:
 		ident := parseIdent(tokenizer)
 		// this is a hack. This is simply to prevent the expression `if not x` to be
 		// parsed as an infix operator call, but instead of a command call.
-		switch ident.Source {
-		case "if", "while", "for", "return", "var", "proc", "template", "type":
-			stopAtOperator = true
+		if tk != TkQuotedIdent {
+			switch ident.Source {
+			case "if", "while", "for", "return", "var", "proc", "template", "type":
+				stopAtOperator = true
+			}
 		}
 		result = ident
 	case TkOpenCurly:
