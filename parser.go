@@ -299,7 +299,7 @@ func parseCommand(tokenizer *Tokenizer, callee Expr) Expr {
 	for *tk != TkNewLine &&
 		*tk != TkSemicolon &&
 		*tk != TkCloseCurly &&
-		*tk != TkPrefixDocComment {
+		*tk != TkEof {
 		result.Args = append(result.Args, parseExpr(tokenizer, false))
 	}
 	if len(result.Args) == 0 {
@@ -330,7 +330,7 @@ func parseArrayLit(tokenizer *Tokenizer) *ArrayLit {
 func parseStmtOrExpr(tokenizer *Tokenizer) Expr {
 	// TODO this code wraps nil with a type, which is then not seen anymore by `expr == nil`. Could be a problem.
 	switch tokenizer.lookAheadToken.kind {
-	case TkPrefixDocComment:
+	case TkDocComment:
 		return (Expr)(parseDocComment(tokenizer))
 	case TkVar, TkLet, TkConst:
 		return (Expr)(parseVariableDefStmt(tokenizer))
@@ -409,13 +409,27 @@ func init() {
 	docCommentSectionRegex = regexp.MustCompile(`^\s*([_[:alpha:]][_[:alnum:]]*)\s*:(.*)$`)
 }
 
-func parseDocComment(tokenizer *Tokenizer) *PrefixDocComment {
-	if !tokenizer.expectKind(tokenizer.lookAheadToken, TkPrefixDocComment) {
-		return nil
+func parseDocComment(tokenizer *Tokenizer) Expr {
+
+	commentStartToken := tokenizer.Next()
+	if !tokenizer.expectKind(commentStartToken, TkDocComment) {
+		return &InvalidTokenExpr{commentStartToken.value, commentStartToken.kind}
 	}
-	token := tokenizer.Next()
-	result := &PrefixDocComment{Source: token.value}
-	commentScanner := &DocCommentScanner{token.value}
+
+	token := commentStartToken
+	for tokenizer.lookAheadToken.kind == TkNewLine {
+		lookAhead2, _ := tokenizer.ScanTokenAt(tokenizer.lookAheadOffset)
+		if lookAhead2.kind == TkDocComment {
+			_ = tokenizer.Next()     // discard newline
+			token = tokenizer.Next() // new doc comment token
+		} else {
+			break
+		}
+	}
+
+	source := joinSubstr(tokenizer.code, commentStartToken.value, token.value)
+	result := &PrefixDocComment{Source: source}
+	commentScanner := &DocCommentScanner{source}
 	for commentScanner.HasNext() {
 		line := commentScanner.Next()
 		if line != "" {
@@ -501,7 +515,7 @@ func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
 		// parsed as an infix operator call, but instead of a command call.
 		if tk != TkQuotedIdent {
 			switch ident.Source {
-			case "if", "while", "for", "return", "var", "let", "const", "proc", "template", "type":
+			case "if", "while", "for", "return", "var", "let", "const", "proc", "template", "type", "discard":
 				stopAtOperator = true
 			}
 		}
@@ -565,7 +579,7 @@ func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
 			result = (Expr)(parseCall(tokenizer, result))
 		case TkOpenBracket:
 			result = (Expr)(parseBracketExpr(tokenizer, result))
-		case TkPostfixDocComment:
+		case TkDocComment:
 			comment := tokenizer.Next().value
 			commentScanner := &DocCommentScanner{comment}
 			for commentScanner.HasNext() {

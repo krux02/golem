@@ -25,8 +25,7 @@ const (
 	TkHexLit
 	TkFloatLit
 	TkNilLit
-	TkPrefixDocComment
-	TkPostfixDocComment
+	TkDocComment
 
 	// keywords
 	TkVar
@@ -46,30 +45,29 @@ const (
 )
 
 var TokenKindNames = [...]string{
-	TkInvalid:           "Invalid",
-	TkIdent:             "Ident",
-	TkQuotedIdent:       "QuotedIdent",
-	TkNewLine:           "NewLine",
-	TkSemicolon:         "Semicolon",
-	TkComma:             "Comma",
-	TkOperator:          "Operator",
-	TkStrLit:            "StrLit",
-	TkRawStrLit:         "RawStrLit",
-	TkIntLit:            "IntLit",
-	TkFloatLit:          "FloatLit",
-	TkNilLit:            "NilLit",
-	TkPrefixDocComment:  "PrefixDocComment",
-	TkPostfixDocComment: "PostfixDocComment",
-	TkVar:               "Var",
-	TkLet:               "Let",
-	TkConst:             "Const",
-	TkOpenBrace:         "OpenBrace",
-	TkCloseBrace:        "CloseBrace",
-	TkOpenBracket:       "OpenBracket",
-	TkCloseBracket:      "CloseBracket",
-	TkOpenCurly:         "OpenCurly",
-	TkCloseCurly:        "CloseCurly",
-	TkEof:               "<EOF>",
+	TkInvalid:      "Invalid",
+	TkIdent:        "Ident",
+	TkQuotedIdent:  "QuotedIdent",
+	TkNewLine:      "NewLine",
+	TkSemicolon:    "Semicolon",
+	TkComma:        "Comma",
+	TkOperator:     "Operator",
+	TkStrLit:       "StrLit",
+	TkRawStrLit:    "RawStrLit",
+	TkIntLit:       "IntLit",
+	TkFloatLit:     "FloatLit",
+	TkNilLit:       "NilLit",
+	TkDocComment:   "DocComment",
+	TkVar:          "Var",
+	TkLet:          "Let",
+	TkConst:        "Const",
+	TkOpenBrace:    "OpenBrace",
+	TkCloseBrace:   "CloseBrace",
+	TkOpenBracket:  "OpenBracket",
+	TkCloseBracket: "CloseBracket",
+	TkOpenCurly:    "OpenCurly",
+	TkCloseCurly:   "CloseCurly",
+	TkEof:          "<EOF>",
 }
 
 type Token struct {
@@ -275,9 +273,23 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 			gotNewLine = true
 			goto eatWhiteSpace
 		case '#': // eat comment as part of whitespace
-			if rune2, _ := utf8.DecodeRuneInString(code[idx+length:]); rune2 == '#' {
+			var atDocCommentStart bool
+			{
+				rune2, _ := utf8.DecodeRuneInString(code[idx+length:])
+				atDocCommentStart = rune2 == '#'
+			}
+
+			if atDocCommentStart {
 				gotComment = true
 			}
+
+			if atDocCommentStart && gotNewLine {
+				newOffset += idx
+				result.kind = TkNewLine
+				result.value = code[:idx]
+				return result, newOffset
+			}
+
 			offset := strings.IndexByte(code[idx:], '\n')
 			if offset != -1 {
 				idx += offset
@@ -312,11 +324,7 @@ func (this *Tokenizer) ScanTokenAt(offset int) (result Token, newOffset int) {
 
 		if gotComment {
 			newOffset += idx
-			if gotNewLine {
-				result.kind = TkPrefixDocComment
-			} else {
-				result.kind = TkPostfixDocComment
-			}
+			result.kind = TkDocComment
 			result.value = code[:idx]
 			return result, newOffset
 		}
