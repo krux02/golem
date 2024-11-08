@@ -110,6 +110,24 @@ type ProcArgument struct {
 	Type    Expr
 }
 
+func MatchVarExpr(expr Expr) (result Expr, ok bool) {
+	call, ok := expr.(*Call)
+	if !ok {
+		return nil, false
+	}
+	if len(call.Args) != 1 {
+		return nil, false
+	}
+	ident, ok := call.Callee.(*Ident)
+	if !ok {
+		return nil, false
+	}
+	if ident.Source != "var" {
+		return nil, false
+	}
+	return call.Args[0], true
+}
+
 func MustMatchProcDef(sc *SemChecker, expr Expr) (name *Ident, body, resultType Expr, genericArgs []GenericArgument, args []ProcArgument) {
 
 	if lhs, rhs, isAssign := MatchAssign(expr); isAssign {
@@ -183,9 +201,9 @@ func MustMatchProcDef(sc *SemChecker, expr Expr) (name *Ident, body, resultType 
 		}
 
 		var mutable = false
-		if varExpr, ok := arg.(*VarExpr); ok {
+		if varExpr, ok := MatchVarExpr(arg); ok {
 			mutable = true
-			arg = varExpr.Expr
+			arg = varExpr
 		}
 		if ident, isIdent := arg.(*Ident); isIdent {
 			newArgs = append(newArgs, ProcArgument{Source: ident.Source, Name: ident, Mutable: mutable})

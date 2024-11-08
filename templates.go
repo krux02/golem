@@ -52,13 +52,6 @@ func (arg *VariableDefStmt) RecSubSyms(substitutions []TemplateSubstitution) Exp
 	return result
 }
 
-func (arg *VarExpr) RecSubSyms(substitutions []TemplateSubstitution) Expr {
-	return &VarExpr{
-		Source: arg.Source,
-		Expr:   arg.Expr.RecSubSyms(substitutions),
-	}
-}
-
 func (arg *NilLit) RecSubSyms(substitutions []TemplateSubstitution) Expr {
 	return arg
 }

@@ -62,18 +62,6 @@ func parseInfixOperator(tokenizer *Tokenizer) *Ident {
 	}
 }
 
-func parseVarExpr(tokenizer *Tokenizer) *VarExpr {
-	firstToken := tokenizer.Next()
-	tokenizer.expectKind(firstToken, TkVar)
-	result := &VarExpr{
-		Expr: parseExpr(tokenizer, true),
-	}
-	result.Source = joinSubstr(tokenizer.code, firstToken.value, tokenizer.token.value)
-	return result
-}
-
-/* (name string, typ TypeExpr, expr Expr) */
-
 func parseVariableDefStmt(tokenizer *Tokenizer) *VariableDefStmt {
 	result := &VariableDefStmt{}
 	firstToken := tokenizer.Next()
@@ -548,10 +536,8 @@ func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
 			tokenizer.reportError(token, "braced expression must contain a single expression, but has %d", len(exprList.Items))
 			result = newErrorNode(exprList)
 		}
-	case TkOperator:
+	case TkOperator, TkVar:
 		result = (Expr)(parsePrefixCall(tokenizer, true))
-	case TkVar:
-		result = (Expr)(parseVarExpr(tokenizer))
 	case TkNilLit:
 		result = (Expr)(parseNilLit(tokenizer))
 	default:
