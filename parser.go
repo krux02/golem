@@ -501,7 +501,7 @@ func parseExpr(tokenizer *Tokenizer, stopAtOperator bool) (result Expr) {
 		// parsed as an infix operator call, but instead of a command call.
 		if tk != TkQuotedIdent {
 			switch ident.Source {
-			case "if", "while", "for", "return", "var", "proc", "template", "type":
+			case "if", "while", "for", "return", "var", "let", "const", "proc", "template", "type":
 				stopAtOperator = true
 			}
 		}
