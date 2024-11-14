@@ -86,6 +86,7 @@ func (builder *CodeBuilder) CompileTypeExpr(context *PackageGeneratorContext, ty
 
 func (builder *CodeBuilder) CompileReturn(context *PackageGeneratorContext, expr *TcReturnStmt) {
 	builder.WriteString("return ")
+	// TODO what with mutable results? Functions that return references to something
 	builder.CompileArg(context, expr.Value, false)
 }
 

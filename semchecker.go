@@ -230,7 +230,8 @@ func LookUpType(sc *SemChecker, scope Scope, expr Expr) Type {
 		// case nil:
 		// 	return TypeError
 	}
-	panic(fmt.Sprintf("unexpected ast node in type expr: %s type: %T", AstFormat(expr), expr))
+	ReportErrorf(sc, expr, "unexpected ast node in type expr: %s type: %T", AstFormat(expr), expr)
+	panic("unexpected ast node")
 }
 
 func LookUpProc(scope Scope, name string, numArgs int, overloadables []Overloadable) []Overloadable {

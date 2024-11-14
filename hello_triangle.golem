@@ -21,6 +21,9 @@ type Location = struct {
   index: i32
 }
 
+type ArrayBuffer = struct {
+  handle: u32
+}
 
 type LineInfo = struct {
   filename: str
@@ -194,13 +197,28 @@ proc std140AlignedWrite(dst: pointer, offset: i32, uniformObject: UniformBufType
   std140AlignedWrite(dst, offset, uniformObject.mvp)
 }
 
-# type ArrayBuffer[
+# TODO should be ArrayBuffer[T]
+proc new(var arrayBuffer: ArrayBuffer) -> void = {
+  glCreateBuffers(1, addr(arrayBuffer.handle))
+}
 
 trait Any(T) = {}
 
+## Wrapper for `glNamedBufferData`.
+proc bufferData(buffer: ArrayBuffer, data: openarray[T], usage: GLenum) =
+  if buffer.handle.int > 0:
+    glNamedBufferData(buffer.handle, GLsizeiptr(data.len * sizeof(T)), unsafeAddr(data[0]), usage)
 
-# noop for now
-proc arrayBuffer[Any(T)](arg: T) -> T = arg
+
+# TODO, this should be ArrayBuffer[T]
+proc arrayBuffer[Any(T)](arg: T, usage: GLenum, label: string) -> ArrayBuffer = {
+  var result: ArrayBuffer
+  result.new
+  result | bufferData(data, usage)
+  if label.len > 0:
+    result.label = label
+  return result
+}
 
 proc main() -> i32 = {
   let window = SDL_CreateWindow("hello triangle", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_OPENGL)
@@ -213,18 +231,17 @@ proc main() -> i32 = {
 
   var running: bool = true
 
-
   let vertices = arrayBuffer([
     [-1,-1, 0, 1]:f32x4,
     [ 1,-1, 0, 1],
     [ 0, 1, 0, 1]
-  ])
+  ], GL_STATIC_DRAW, "vertices")
 
   let colors = arrayBuffer([
     [ 1, 0,0,1]:f32x4,
     [0, 1,0,1],
     [0,0,1,1]
-  ])
+  ], GL_STATIC_DRAW, "colors")
 
   # var buffers : array(2, u32)
 
