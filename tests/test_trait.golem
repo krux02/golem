@@ -34,9 +34,15 @@ proc foo(self:MyStruct, arg:f64) -> void = {
   printf("foo f64: %d %s %f\n", self.a, self.b, arg)
 }
 
+trait Any(T) = {}
+
+proc ident[Any(T)](arg: T) -> T = arg
+
 proc main() -> void = {
   var myStruct: MyStruct = [123, "xyz"]
+  myStruct = ident(myStruct) # does nothing, but should compile
   bar(myStruct)
+
 }
 
 # bing(13:i32)

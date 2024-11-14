@@ -84,7 +84,12 @@ func (builder *CodeBuilder) CompileTypeExpr(context *PackageGeneratorContext, ty
 	}
 }
 
-func (builder *CodeBuilder) compileCall(context *PackageGeneratorContext, call *TcCall) {
+func (builder *CodeBuilder) CompileReturn(context *PackageGeneratorContext, expr *TcReturnStmt) {
+	builder.WriteString("return ")
+	builder.CompileArg(context, expr.Value, false)
+}
+
+func (builder *CodeBuilder) CompileCall(context *PackageGeneratorContext, call *TcCall) {
 	switch impl := call.Sym.Overloadable.(type) {
 	case *TcBuiltinProcDef:
 		builder.WriteString(impl.Prefix)
@@ -353,7 +358,7 @@ func (builder *CodeBuilder) CompileExpr(context *PackageGeneratorContext, expr T
 	case *TcCodeBlock:
 		builder.CompileCodeBlock(context, ex)
 	case *TcCall:
-		builder.compileCall(context, ex)
+		builder.CompileCall(context, ex)
 	case *TcDotExpr:
 		builder.CompileDotExpr(context, ex)
 	case *TcStrLit:
@@ -387,9 +392,7 @@ func (builder *CodeBuilder) CompileExpr(context *PackageGeneratorContext, expr T
 	case *TcVariableDefStmt:
 		builder.CompileVariableDefStmt(context, ex)
 	case *TcReturnStmt:
-		// ignore the value of injectReturn here
-		builder.WriteString("return ")
-		builder.CompileExpr(context, ex.Value)
+		builder.CompileReturn(context, ex)
 	case *TcIfStmt:
 		builder.CompileIfStmt(context, ex)
 	case *TcIfElseExpr:
