@@ -194,6 +194,14 @@ proc std140AlignedWrite(dst: pointer, offset: i32, uniformObject: UniformBufType
   std140AlignedWrite(dst, offset, uniformObject.mvp)
 }
 
+# type ArrayBuffer[
+
+trait Any(T) = {}
+
+
+# noop for now
+proc arrayBuffer[Any(T)](arg: T) -> T = arg
+
 proc main() -> i32 = {
   let window = SDL_CreateWindow("hello triangle", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_OPENGL)
   assert(window != nil)
@@ -206,16 +214,16 @@ proc main() -> i32 = {
   var running: bool = true
 
 
-  let vertices : ArrayBuffer(Vec4f) = arrayBuffer([
-    vec4f(-1,-1, 0, 1),
-    vec4f( 1,-1, 0, 1),
-    vec4f( 0, 1, 0, 1)
+  let vertices = arrayBuffer([
+    [-1,-1, 0, 1]:f32x4,
+    [ 1,-1, 0, 1],
+    [ 0, 1, 0, 1]
   ])
 
   let colors = arrayBuffer([
-    vec4f( 1, 0,0,1),
-    vec4f(0, 1,0,1),
-    vec4f(0,0,1,1)
+    [ 1, 0,0,1]:f32x4,
+    [0, 1,0,1],
+    [0,0,1,1]
   ])
 
   # var buffers : array(2, u32)
@@ -339,7 +347,7 @@ glDrawArrays(4, 0, 3:GLsizei)
     while SDL_PollEvent(addr(event)) do {
       if event.`type` == SDL_QUIT do {
         running = false
-      } else if event.`type` == SDL_KEYDOWN and event.key.keysym.scancode == SDL_SCANCODE_ESCAPE do {
+      } elif event.`type` == SDL_KEYDOWN and event.key.keysym.scancode == SDL_SCANCODE_ESCAPE do {
         running = false
       }
     }

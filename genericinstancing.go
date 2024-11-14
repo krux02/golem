@@ -175,10 +175,12 @@ func recursiveInstanciateGenericBody(body TcExpr, subs *Substitutions) TcExpr {
 		for i, it := range b.Items {
 			newItems[i] = recursiveInstanciateGenericBody(it, subs)
 		}
+		elemType := ApplyTypeSubstitutions(b.ElemType, subs.typeSubs)
 		return &TcArrayLit{
 			Source:   b.Source,
 			Items:    newItems,
-			ElemType: ApplyTypeSubstitutions(b.ElemType, subs.typeSubs),
+			ElemType: elemType,
+			Type:     GetArrayType(elemType, int64(len(b.Items))),
 		}
 	case *TcEnumSetLit:
 		newItems := make([]TcExpr, len(b.Items))

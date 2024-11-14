@@ -252,7 +252,8 @@ type Signature struct {
 	Params        []*TcSymbol
 	ParamsForBody []*TcSymbol // if parameters have a different type in the body,
 	// than in the signature, these symbol will differ from Params
-	ResultType Type
+	ResultType        Type
+	ResultTypeForBody Type
 
 	// if nil, no varargs allowed.
 	// varargs are only allowed for macros
@@ -330,6 +331,7 @@ type TcArrayLit struct {
 	Source   string
 	Items    []TcExpr
 	ElemType Type
+	Type     Type
 }
 
 type TcStructLit struct {

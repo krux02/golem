@@ -446,8 +446,14 @@ func SemCheckSignature(sc *SemChecker, bodyScope Scope, name string, genericArgs
 	if resultType == nil {
 		ReportErrorf(sc, &Ident{Source: name}, "proc def needs result type specified")
 		signature.ResultType = TypeError
+		signature.ResultTypeForBody = TypeError
 	} else {
 		signature.ResultType = LookUpType(sc, signatureScope, resultType)
+		if signature.ResultType != TypeError {
+			signature.ResultTypeForBody = LookUpType(sc, bodyScope, resultType)
+		} else {
+			signature.ResultTypeForBody = TypeError
+		}
 	}
 
 	return signature
@@ -1513,7 +1519,7 @@ func (lit *AbstractDefaultValue) GetType() Type { return lit.Type }
 func (_ *TcErrorNode) GetType() Type            { return TypeError }
 func (call *TcCall) GetType() Type              { return call.Sym.Overloadable.GetSignature().ResultType }
 func (lit *TcStrLit) GetType() Type             { return lit.Type }
-func (lit *TcArrayLit) GetType() Type           { return GetArrayType(lit.ElemType, int64(len(lit.Items))) }
+func (lit *TcArrayLit) GetType() Type           { return lit.Type }
 func (lit *TcEnumSetLit) GetType() Type         { return GetEnumSetType(lit.ElemType) }
 func (lit *TcStructLit) GetType() Type          { return lit.Type }
 func (sym *TcSymbol) GetType() Type             { return sym.Type }
@@ -1726,9 +1732,11 @@ type ArrayTypeMapKey struct {
 }
 
 // Stores information that a type still has unresolved generics.
+// example  array(2,array(2,T)) -> [T]
 var openGenericsMap map[Type][]Type
 
 var arrayTypeMap map[ArrayTypeMapKey]*ArrayType
+var simdVectorTypeMap map[ArrayTypeMapKey]*SimdVectorType
 
 // is this safe, will this always look up a value? It is a pointer in a map
 var enumSetTypeMap map[*EnumType]*EnumSetType
@@ -1768,6 +1776,24 @@ func GetArrayType(elem Type, len int64) (result *ArrayType) {
 		// TODO this should be generic for better error messages on missing overloads, listing all currently known array types is a bit much
 		registerBuiltin("indexOp", "", ".arr[", "]", []Type{result, TypeInt64}, elem, 0)
 
+		argSym := &TcSymbol{Source: "_", Kind: SkProcArg, Type: result}
+		registerSimpleTemplate("len", []*TcSymbol{argSym}, TypeInt64, &IntLit{Value: big.NewInt(len)})
+	}
+	return result
+}
+
+func GetSimdVectorType(elem NamedType, len int64) (result *SimdVectorType) {
+	result, ok := simdVectorTypeMap[ArrayTypeMapKey{elem, len}]
+	if !ok {
+		result = &SimdVectorType{Elem: elem, Len: len}
+		simdVectorTypeMap[ArrayTypeMapKey{elem, len}] = result
+		openGenericsMap[result] = openGenericsMap[elem]
+		// TODO, this should be one generic builtin. Adding the overloads like here
+		// does have a negative effect or error messages.
+		//
+		// TODO the array index operator needs mutability propagation of the first argument.
+		// TODO this should be generic for better error messages on missing overloads, listing all currently known array types is a bit much
+		registerBuiltin("indexOp", "", "[", "]", []Type{result, TypeInt64}, elem, 0)
 		argSym := &TcSymbol{Source: "_", Kind: SkProcArg, Type: result}
 		registerSimpleTemplate("len", []*TcSymbol{argSym}, TypeInt64, &IntLit{Value: big.NewInt(len)})
 	}
@@ -1839,10 +1865,11 @@ func GetTypeType(typ Type) (result *TypeType) {
 
 func SemCheckArrayLit(sc *SemChecker, scope Scope, arg *ArrayLit, expected TypeConstraint) TcExpr {
 	switch exp := expected.(type) {
-	case *UnspecifiedType:
+	case *UnspecifiedType, *TypeTrait:
 		result := &TcArrayLit{}
 		if len(arg.Items) == 0 {
 			result.ElemType = TypeVoid
+			result.Type = GetArrayType(TypeVoid, 0)
 			return result
 		}
 		result.Items = make([]TcExpr, len(arg.Items))
@@ -1851,13 +1878,28 @@ func SemCheckArrayLit(sc *SemChecker, scope Scope, arg *ArrayLit, expected TypeC
 		for i := 1; i < len(arg.Items); i++ {
 			result.Items[i] = SemCheckExpr(sc, scope, arg.Items[i], UniqueTypeConstraint{result.ElemType})
 		}
+		result.Type = GetArrayType(result.ElemType, int64(len(result.Items)))
 		return result
 	case UniqueTypeConstraint:
 		switch exp := exp.Typ.(type) {
 		case *ArrayType:
-			result := &TcArrayLit{}
-			result.Items = make([]TcExpr, len(arg.Items))
-			result.ElemType = exp.Elem
+			result := &TcArrayLit{
+				Items:    make([]TcExpr, len(arg.Items)),
+				ElemType: exp.Elem,
+				Type:     exp,
+			}
+			for i, item := range arg.Items {
+				result.Items[i] = SemCheckExpr(sc, scope, item, UniqueTypeConstraint{exp.Elem})
+			}
+			ExpectArgsLen(sc, arg, len(arg.Items), int(exp.Len))
+			return result
+		case *SimdVectorType:
+			// TODO this code is identical to ArratType, maybe it can be compressed
+			result := &TcArrayLit{
+				Items:    make([]TcExpr, len(arg.Items)),
+				ElemType: exp.Elem,
+				Type:     exp,
+			}
 			for i, item := range arg.Items {
 				result.Items[i] = SemCheckExpr(sc, scope, item, UniqueTypeConstraint{exp.Elem})
 			}

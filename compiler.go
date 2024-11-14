@@ -30,6 +30,7 @@ type PackageGeneratorContext struct {
 	ScheduledForGenerationStructType map[*StructType]bool
 	ScheduledForGenerationEnumType   map[*EnumType]bool
 	ScheduledForGenerationArrayType  map[*ArrayType]bool
+	ScheduledForGenerationVectorType map[*SimdVectorType]bool
 }
 
 func NewPackageGeneratorContext(pak *TcPackageDef) *PackageGeneratorContext {
@@ -39,6 +40,7 @@ func NewPackageGeneratorContext(pak *TcPackageDef) *PackageGeneratorContext {
 		ScheduledForGenerationStructType: make(map[*StructType]bool),
 		ScheduledForGenerationEnumType:   make(map[*EnumType]bool),
 		ScheduledForGenerationArrayType:  make(map[*ArrayType]bool),
+		ScheduledForGenerationVectorType: make(map[*SimdVectorType]bool),
 	}
 }
 
@@ -62,6 +64,10 @@ func (builder *CodeBuilder) CompileTypeExpr(context *PackageGeneratorContext, ty
 		builder.WriteString(typ.InternalName)
 	case *ArrayType:
 		typ.ManglePrint(&builder.Builder)
+	case *SimdVectorType:
+		builder.WriteString(typ.Elem.GetName())
+		builder.WriteString("x")
+		WriteUIntLit(&builder.Builder, false, uint64(typ.Len))
 	case *StructType:
 		// TODO this should be the mangled name (or importc name)
 		builder.WriteString(typ.Impl.Name)
@@ -307,10 +313,11 @@ func (builder *CodeBuilder) CompileSeparatedExprList(context *PackageGeneratorCo
 }
 
 func (builder *CodeBuilder) CompileArrayLit(context *PackageGeneratorContext, lit *TcArrayLit) {
-	builder.WriteString("{")
+	builder.WriteString("(")
+	builder.CompileTypeExpr(context, lit.Type)
+	builder.WriteString("){")
 	builder.CompileSeparatedExprList(context, lit.Items, ", ")
 	builder.WriteString("}")
-
 }
 
 func (builder *CodeBuilder) CompileStructLit(context *PackageGeneratorContext, lit *TcStructLit) {
@@ -465,6 +472,30 @@ func compileArrayDef(context *PackageGeneratorContext, arrayType *ArrayType) {
 	fmt.Fprintf(builder, " arr[%d];} ", arrayType.Len)
 	arrayType.ManglePrint(&builder.Builder)
 	builder.WriteString(";")
+}
+
+func compileSimdVectorDef(context *PackageGeneratorContext, arrayType *SimdVectorType) {
+	builder := &context.typeDecl
+	builder.NewlineAndIndent()
+	builder.WriteString("typedef ")
+
+	builder.CompileTypeExpr(context, arrayType.Elem)
+	builder.WriteString(" ")
+	builder.WriteString(arrayType.Elem.GetName())
+	builder.WriteString("x")
+	WriteUIntLit(&builder.Builder, false, uint64(arrayType.Len))
+
+	builder.WriteString(" __attribute__ ((vector_size(")
+	WriteUIntLit(&builder.Builder, false, uint64(arrayType.Len))
+	builder.WriteString("*sizeof(")
+	builder.CompileTypeExpr(context, arrayType.Elem)
+	builder.WriteString(")), aligned(")
+	WriteUIntLit(&builder.Builder, false, uint64(arrayType.Len))
+	builder.WriteString("*sizeof(")
+	builder.CompileTypeExpr(context, arrayType.Elem)
+	builder.WriteString("))));")
+
+	//typedef float f32x4 __attribute__ ((vector_size(16), aligned(16)));
 }
 
 func compileEnumDef(context *PackageGeneratorContext, enumDef *TcEnumDef) {
@@ -622,6 +653,8 @@ func markTypeForGeneration(context *PackageGeneratorContext, typ Type) {
 	switch typ := typ.(type) {
 	case *ArrayType:
 		markArrayTypeForGeneration(context, typ)
+	case *SimdVectorType:
+		markSimdVectorTypeForGeneration(context, typ)
 	case *StructType:
 		markStructTypeForGeneration(context, typ)
 	case *EnumType:
@@ -644,6 +677,16 @@ func markArrayTypeForGeneration(context *PackageGeneratorContext, typ *ArrayType
 	markTypeForGeneration(context, typ.Elem)
 	context.TodoListTypes = append(context.TodoListTypes, typ)
 	context.ScheduledForGenerationArrayType[typ] = true
+	//fmt.Printf("marking type for generation: %s %s\n", AstFormat(typ), AstFormat(typ.Elem))
+}
+
+func markSimdVectorTypeForGeneration(context *PackageGeneratorContext, typ *SimdVectorType) {
+	if context.ScheduledForGenerationVectorType[typ] {
+		return // nothing to do when already scheduled
+	}
+	markTypeForGeneration(context, typ.Elem)
+	context.TodoListTypes = append(context.TodoListTypes, typ)
+	context.ScheduledForGenerationVectorType[typ] = true
 	//fmt.Printf("marking type for generation: %s %s\n", AstFormat(typ), AstFormat(typ.Elem))
 }
 
@@ -706,9 +749,6 @@ func compilePackageToC(program *ProgramContext, pak *TcPackageDef, mainPackage b
 #include <assert.h>
 typedef struct string {size_t len; char const* data;} string;
 typedef unsigned char bool;
-
-// TODO actually use this f32x4 vector type
-typedef float f32x4 __attribute__ ((vector_size(16), aligned(16)));
 `)
 
 	// program.Main
@@ -729,6 +769,8 @@ typedef float f32x4 __attribute__ ((vector_size(16), aligned(16)));
 			compileStructDef(context, typ.Impl)
 		case *ArrayType:
 			compileArrayDef(context, typ)
+		case *SimdVectorType:
+			compileSimdVectorDef(context, typ)
 		default:
 			panic(fmt.Errorf("internal error: this type should not be in the marked for generation queue: %T", typ))
 		}

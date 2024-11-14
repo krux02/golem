@@ -59,6 +59,11 @@ type ArrayType struct {
 	Elem Type
 }
 
+type SimdVectorType struct {
+	Len  int64
+	Elem NamedType
+}
+
 // types for literals
 
 type IntLitType struct {
@@ -137,6 +142,12 @@ type PtrType struct {
 
 func (typ *ArrayType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune('A')
+	builder.WriteString(fmt.Sprintf("%d", typ.Len))
+	typ.Elem.ManglePrint(builder)
+}
+
+func (typ *SimdVectorType) ManglePrint(builder *strings.Builder) {
+	builder.WriteRune('V')
 	builder.WriteString(fmt.Sprintf("%d", typ.Len))
 	typ.Elem.ManglePrint(builder)
 }
@@ -228,9 +239,6 @@ var TypeChar = &BuiltinIntType{"char", "uint32_t", 'c', big.NewInt(0), big.NewIn
 var TypeVoid = &BuiltinType{"void", "void", 'v'}
 var TypeNilPtr = &BuiltinType{"nilptr", "void*", 'n'}
 
-// vector type
-var TypeFloat32x4 = &BuiltinType{"f32x4", "f32x4", '4'}
-
 // This type is used to tag that a function never returns.
 var TypeNoReturn = &BuiltinType{"noreturn", "void", '-'}
 
@@ -302,7 +310,19 @@ func (typ *ErrorType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
 }
 
 func (typ *ArrayType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
-	return &TcArrayLit{ElemType: typ.Elem}
+	result := &TcArrayLit{ElemType: typ.Elem, Type: typ}
+	for i := int64(0); i < typ.Len; i++ {
+		result.Items = append(result.Items, typ.Elem.DefaultValue(sc, context))
+	}
+	return result
+}
+
+func (typ *SimdVectorType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
+	result := &TcArrayLit{ElemType: typ.Elem, Type: typ}
+	for i := int64(0); i < typ.Len; i++ {
+		result.Items = append(result.Items, typ.Elem.DefaultValue(sc, context))
+	}
+	return result
 }
 
 func (typ *StructType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
@@ -1007,7 +1027,7 @@ func BuiltinProcDef(sc *SemChecker, parentScope Scope, call *TcCall, expected Ty
 		if body == nil {
 			ReportErrorf(sc, call, "proc def misses a body")
 		} else {
-			tcBody = SemCheckExpr(sc, innerScope, body, UniqueTypeConstraint{signature.ResultType})
+			tcBody = SemCheckExpr(sc, innerScope, body, UniqueTypeConstraint{signature.ResultTypeForBody})
 		}
 	}
 
@@ -1216,7 +1236,7 @@ func BuiltinReturn(sc *SemChecker, scope Scope, call *TcCall, expected TypeConst
 	value := call.Args[0].(*TcWrappedUntypedAst).Expr
 	result := &TcReturnStmt{
 		Source: call.Source,
-		Value:  SemCheckExpr(sc, scope, value, UniqueTypeConstraint{scope.CurrentProcSignature.ResultType}),
+		Value:  SemCheckExpr(sc, scope, value, UniqueTypeConstraint{scope.CurrentProcSignature.ResultTypeForBody}),
 	}
 	return result
 }
@@ -1308,6 +1328,7 @@ func BuiltinIfElse(sc *SemChecker, scope Scope, call *TcCall, expected TypeConst
 func init() {
 	openGenericsMap = make(map[Type][]Type)
 	arrayTypeMap = make(map[ArrayTypeMapKey]*ArrayType)
+	simdVectorTypeMap = make(map[ArrayTypeMapKey]*SimdVectorType)
 	enumSetTypeMap = make(map[*EnumType]*EnumSetType)
 	ptrTypeMap = make(map[Type]*PtrType)
 	typeTypeMap = make(map[Type]*TypeType)
@@ -1377,12 +1398,14 @@ func init() {
 	RegisterNamedType(nil, builtinScope, TypeNoReturn, nil)
 	RegisterNamedType(nil, builtinScope, TypeNilPtr, nil)
 
-	RegisterNamedType(nil, builtinScope, TypeFloat32x4, nil)
+	// RegisterNamedType(nil, builtinScope, TypeFloat32x4, nil)
 
 	// type aliases
 	RegisterType(nil, builtinScope, "pointer", GetPtrType(TypeVoid), nil)
 	RegisterType(nil, builtinScope, "int", TypeInt64, nil)
 	RegisterType(nil, builtinScope, "uint", TypeUInt64, nil)
+	TypeFloat32x4 := GetSimdVectorType(TypeFloat32, 4)
+	RegisterType(nil, builtinScope, "f32x4", TypeFloat32x4, nil)
 
 	RegisterTypeGroup(nil, builtinScope, TypeAnyFloat, nil)
 	RegisterTypeGroup(nil, builtinScope, TypeAnyInt, nil)
@@ -1464,16 +1487,19 @@ func init() {
 	registerBuiltin("cstr", "", "", ".data", []Type{TypeStr}, TypeCStr, 0)
 
 	// vector types
-	for _, typ := range []Type{TypeFloat32x4} {
-		registerBuiltin("+", "(", "+", ")", []Type{typ, typ}, typ, 0)
-		registerBuiltin("-", "(", "-", ")", []Type{typ, typ}, typ, 0)
-		registerBuiltin("*", "(", "*", ")", []Type{typ, typ}, typ, 0)
-		registerBuiltin("/", "(", "/", ")", []Type{typ, typ}, typ, 0)
 
-		registerBuiltin("<", "(", "<", ")", []Type{typ, typ}, TypeBoolean, 0)
-		registerBuiltin("<=", "(", "<=", ")", []Type{typ, typ}, TypeBoolean, 0)
-		registerBuiltin(">", "(", ">", ")", []Type{typ, typ}, TypeBoolean, 0)
-		registerBuiltin(">=", "(", ">=", ")", []Type{typ, typ}, TypeBoolean, 0)
+	for _, typ := range []Type{TypeFloat32x4} {
+		for _, op := range []string{"+", "-", "*", "/"} {
+			registerBuiltin(op, "(", op, ")", []Type{typ, typ}, typ, 1)
+		}
+		for _, op := range []string{"+=", "-=", "*=", "/="} {
+			registerBuiltin(op, "(", op, ")", []Type{typ, typ}, TypeVoid, 1)
+		}
+
+		// registerBuiltin("<", "(", "<", ")", []Type{typ, typ}, TypeBoolean, 0)
+		// registerBuiltin("<=", "(", "<=", ")", []Type{typ, typ}, TypeBoolean, 0)
+		// registerBuiltin(">", "(", ">", ")", []Type{typ, typ}, TypeBoolean, 0)
+		// registerBuiltin(">=", "(", ">=", ")", []Type{typ, typ}, TypeBoolean, 0)
 	}
 
 	{

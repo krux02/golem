@@ -414,6 +414,12 @@ func (typ *ArrayType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(")")
 }
 
+func (typ *SimdVectorType) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteNode(typ.Elem)
+	builder.WriteString("x")
+	WriteUIntLit(&builder.Builder, false, uint64(typ.Len))
+}
+
 func (typ *EnumSetType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("set(")
 	builder.WriteNode(typ.Elem)

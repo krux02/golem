@@ -12,8 +12,7 @@ implement/test break and continue
 * TODO proper testing for the | syntax
 * TODO import statement issues
 
-technically, my language allows scope local import statements. That is
-completely untested.
+technically, my language allows scope local import statements. That is untested.
 
 * TODO macros that stay as macro calls in semchecked ast
 
@@ -34,7 +33,7 @@ untyped type, disable all overloading for that function name.
 
 * TODO find a better syntax for general annotations.
 
-Annotations need to be ignorable. They need to be a type of synatx that isn't seen my regular ast pattern matching.
+Annotations need to be ignorable. They need to be a type of synatx that isn't seen by regular ast pattern matching.
 An annotation like ~ident @ <Expr>~ must match the pattern of just an identifier, not the ~@~ operator call.
 [[file:parser.go::func applyOperatorPrecedenceFromLeft(tokenizerCode string, lhs Expr, op *Ident, rhs Expr) *Call {][applyOperatorPrecedence]]
 
