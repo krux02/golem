@@ -22,7 +22,7 @@ proc bar2(arg_: i64) -> i64 = 0     # Error: proc arg identifier may not start o
 proc bar3(arg__0: i64) -> i64 = 0   # Error: proc arg identifier may not use __ (double underscore), reserved for internal usage
 
 # `untyped` shall not be allowed outside the macro/template context.
-proc bar3(arg0: untyped) -> i64 = 0 # Error: Type not found: untyped
+proc bar3(arg0: untyped) -> i64 = 0 # Error: type not found 'untyped'
 
 proc main() -> i64 = {
   let tmp0 = 321 # Error: int literal needs to have a unique type constraint, but got 'no constraint'

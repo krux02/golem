@@ -21,8 +21,15 @@ type Location = struct {
   index: i32
 }
 
-type ArrayBuffer = struct {
+trait Any(T) = {}
+
+type ArrayBuffer[T] = struct {
   handle: u32
+}
+
+type openarray[T] = struct {
+  len: int
+  data: ptr T
 }
 
 type LineInfo = struct {
@@ -198,22 +205,25 @@ proc std140AlignedWrite(dst: pointer, offset: i32, uniformObject: UniformBufType
 }
 
 # TODO should be ArrayBuffer[T]
-proc new(var arrayBuffer: ArrayBuffer) -> void = {
+proc new[T](var arrayBuffer: ArrayBuffer[T]) -> void = {
   glCreateBuffers(1, addr(arrayBuffer.handle))
 }
 
-trait Any(T) = {}
-
 ## Wrapper for `glNamedBufferData`.
-proc bufferData(buffer: ArrayBuffer, data: openarray[T], usage: GLenum) =
-  if buffer.handle.int > 0:
-    glNamedBufferData(buffer.handle, GLsizeiptr(data.len * sizeof(T)), unsafeAddr(data[0]), usage)
-
+proc bufferData[HasSizeOf(T)](buffer: ArrayBuffer[T], data: openarray[T], usage: GLenum) -> void = {
+  if int(buffer.handle) > 0 do {
+    glNamedBufferData(buffer.handle,
+      data.len * sizeof(type(T)) | conv(type(GLsizeiptr)),
+      data.data | conv(type(pointer)),
+      usage
+    )
+  }
+}
 
 # TODO, this should be ArrayBuffer[T]
-proc arrayBuffer[Any(T)](arg: T, usage: GLenum, label: string) -> ArrayBuffer = {
-  var result: ArrayBuffer
-  result.new
+proc arrayBuffer[Any(T)](arg: T, usage: GLenum, label: str) -> ArrayBuffer[T] = {
+  var result: ArrayBuffer[T]
+  result | new
   result | bufferData(data, usage)
   if label.len > 0:
     result.label = label

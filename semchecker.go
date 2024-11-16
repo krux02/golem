@@ -149,6 +149,9 @@ func (scope Scope) NewConstSymbol(sc *SemChecker, name *Ident, value TcExpr) *Tc
 }
 
 func LookUpTypeConstraint(sc *SemChecker, scope Scope, ident *Ident) TypeConstraint {
+	if ident == nil {
+		return TypeUnspecified
+	}
 	name := ident.Source
 	if typ, ok := scope.TypeConstraints[name]; ok {
 		return typ
@@ -161,6 +164,23 @@ func LookUpTypeConstraint(sc *SemChecker, scope Scope, ident *Ident) TypeConstra
 	return UniqueTypeConstraint{TypeError}
 }
 
+// recursively scans the scope upwards to the top scope to look up a type just by name
+func RecursiveTypeLookup(sc *SemChecker, scope Scope, name *Ident) Type {
+	result, _ := scope.Types[name.Source]
+	if result != nil {
+		return result
+	}
+	if scope.Parent != nil {
+		return RecursiveTypeLookup(sc, scope.Parent, name)
+	}
+	ReportUnknownType(sc, name)
+	return TypeError
+}
+
+// looks up a type by an expression. If the type is in identifier it is
+// equivalent to `RecursiveTypeLookup`. If it is an expression with generic
+// arguments, it will look up each argument and apply generic instanciation when
+// necessary.
 func LookUpType(sc *SemChecker, scope Scope, expr Expr) Type {
 	switch x := expr.(type) {
 	case *Call:
@@ -216,19 +236,59 @@ func LookUpType(sc *SemChecker, scope Scope, expr Expr) Type {
 			return TypeError
 		}
 	case *Ident:
-		name := x.Source
-		if typ, ok := scope.Types[name]; ok {
-			return typ
+		result := RecursiveTypeLookup(sc, scope, x)
+		if structType, isStructType := result.(*StructType); isStructType {
+			if len(structType.Impl.GenericParams) > 0 {
+				ReportErrorf(sc, expr, "generic struct needs generic parameters")
+				result = TypeError
+			}
 		}
-		if scope.Parent != nil {
-			return LookUpType(sc, scope.Parent, expr)
-		}
-		ReportErrorf(sc, expr, "Type not found: %s", name)
-		return TypeError
+		return result
 	case *IntLit:
 		return GetIntLitType(x.Value)
 		// case nil:
 		// 	return TypeError
+	case *BracketExpr:
+		var name *Ident
+
+		genericParams := make([]Type, len(x.Args))
+		var hasErrors bool = false
+		for i, arg := range x.Args {
+			typ := LookUpType(sc, scope, arg)
+			hasErrors = hasErrors || typ == TypeError
+			genericParams[i] = typ
+		}
+		if hasErrors {
+			return TypeError
+		}
+		if ident, isIdent := x.Callee.(*Ident); isIdent {
+			name = ident
+		} else {
+			ReportErrorf(sc, x.Callee, "Expect identifier for name here")
+			return TypeError
+		}
+
+		result := RecursiveTypeLookup(sc, scope, name)
+		if result == TypeError {
+			return TypeError
+		}
+
+		if structType, isStructType := result.(*StructType); isStructType {
+			if len(structType.Impl.GenericParams) != len(x.Args) {
+				ReportErrorf(sc, expr, "generic struct needs %d generic parameters", len(structType.Impl.GenericParams))
+				return TypeError
+			}
+			subs := make([]TypeSubstitution, len(x.Args))
+			for i, genParam := range structType.Impl.GenericParams {
+				subs[i].sym = genParam
+				subs[i].newType = genericParams[i]
+			}
+			result = ApplyTypeSubstitutions(structType, subs)
+		} else {
+			ReportErrorf(sc, expr, "type does not take generic parameters")
+			return TypeError
+		}
+		return result
 	}
 	ReportErrorf(sc, expr, "unexpected ast node in type expr: %s type: %T", AstFormat(expr), expr)
 	panic("unexpected ast node")
@@ -359,11 +419,19 @@ func SemCheckSignature(sc *SemChecker, bodyScope Scope, name string, genericArgs
 		name := genericArg.Name
 
 		genTypeSym := NewGenericTypeSymbol(name.Source, name.Source, constraint)
-		abstractTypeSym := NewAbstractTypeSymbol(name.Source)
-		genTypeSym.AbsTypSym = abstractTypeSym
 		genericParams = append(genericParams, genTypeSym)
-		// make the generic type symbol available to look up in its body
-		RegisterType(sc, bodyScope, name.Source, abstractTypeSym, name)
+
+		// A generic type in a procedure is some form of a type duality. One type
+		// for the signature that has the property of being generic/abstract. Which
+		// is an important attribute to know for signature overloading. And within
+		// the body of the generic body, where the generic type is a concrete type,
+		// the the attribute of being a concrete type that can be resolved like a
+		// concrete type. This type `AbsTypeSym` will later, in generic
+		// instanciation, be substituted with the real type.
+		//
+		// a make the abstract type symbol available to look up in its body
+		RegisterType(sc, bodyScope, name.Source, genTypeSym.AbsTypSym, name)
+		// make the generic type symbol available to look up in its signature
 		RegisterType(sc, signatureScope, name.Source, genTypeSym, name)
 
 		switch constraint := constraint.(type) {
@@ -374,7 +442,7 @@ func SemCheckSignature(sc *SemChecker, bodyScope Scope, name string, genericArgs
 			}
 			sym := traitDef.DependentTypes[0]
 			subs := &Substitutions{
-				typeSubs: []TypeSubstitution{{sym, abstractTypeSym}},
+				typeSubs: []TypeSubstitution{{sym, genTypeSym.AbsTypSym}},
 			}
 			traitInst := &TraitInstance{}
 			genTypeSym.TraitInst = traitInst
@@ -388,6 +456,8 @@ func SemCheckSignature(sc *SemChecker, bodyScope Scope, name string, genericArgs
 				traitInst.ProcDefs = append(traitInst.ProcDefs, overloadable)
 				RegisterProc(sc, bodyScope, overloadable, genericArg.TraitName)
 			}
+		case *UnspecifiedType:
+			// do nothing
 		default:
 			ReportWarningf(sc, genericArg.TraitName, "currently only traits are supported in the compiler as type constraints")
 		}
@@ -499,6 +569,10 @@ func ReportWarningf(sc *SemChecker, node Expr, msg string, args ...interface{}) 
 
 func ReportUnexpectedType(sc *SemChecker, context Expr, expected TypeConstraint, gotten Type) {
 	ReportErrorf(sc, context, "expected type '%s' but got type '%s'", AstFormat(expected), AstFormat(gotten))
+}
+
+func ReportUnknownType(sc *SemChecker, context Expr) {
+	ReportErrorf(sc, context, "type not found '%s'", AstFormat(context))
 }
 
 func ReportInvalidDocCommentKey(sc *SemChecker, section *NamedDocSection) {
@@ -836,6 +910,7 @@ func RecursiveTypeSubstitution(typ Type, substitutions []TypeSubstitution) Type 
 	case *IntLitType:
 		return typ
 	case *StructType:
+		// TODO something here
 		return typ
 	case *EnumSetType:
 		return GetEnumSetType(RecursiveTypeSubstitution(typ.Elem, substitutions).(*EnumType))

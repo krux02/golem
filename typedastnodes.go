@@ -69,11 +69,13 @@ type TcEnumDef struct {
 }
 
 type TcStructDef struct {
-	Source     string
-	Name       string
-	Fields     []*TcStructField
-	Importc    bool
-	DocComment *PrefixDocComment
+	Source string
+	Name   string
+
+	GenericParams []*GenericTypeSymbol
+	Fields        []*TcStructField
+	Importc       bool
+	DocComment    *PrefixDocComment
 }
 
 type TcTypeAlias struct {
@@ -122,15 +124,11 @@ type GenericTypeSymbol struct {
 	// a symbol that needs later substitution on generic instantiation
 	Source     string
 	Name       string
-	Constraint TypeConstraint      // TypeGroup, TypeTrait, TypeUnspecified
-	TraitInst  *TraitInstance      // if the Constraint is `TypeTrait` this is non nil
-	AbsTypSym  *AbstractTypeSymbol // if the Constraint is `TypeTrait` this is non nil
-}
-
-func NewAbstractTypeSymbol(Name string) *AbstractTypeSymbol {
-	result := &AbstractTypeSymbol{Name: Name}
-	openGenericsMap[result] = []Type{result}
-	return result
+	Constraint TypeConstraint // TypeGroup, TypeTrait, TypeUnspecified
+	TraitInst  *TraitInstance // if the Constraint is `TypeTrait` this is non nil
+	// The type symbol to use in the body of a generic procedure/type. Later to be
+	// substituted with the real type
+	AbsTypSym *AbstractTypeSymbol
 }
 
 func NewGenericTypeSymbol(Source string, Name string, constraint TypeConstraint) *GenericTypeSymbol {
@@ -138,8 +136,10 @@ func NewGenericTypeSymbol(Source string, Name string, constraint TypeConstraint)
 		Source:     Source,
 		Name:       Name,
 		Constraint: constraint,
+		AbsTypSym:  &AbstractTypeSymbol{Name: Name},
 	}
 	openGenericsMap[result] = []Type{result}
+	openGenericsMap[result.AbsTypSym] = []Type{result.AbsTypSym}
 	return result
 }
 

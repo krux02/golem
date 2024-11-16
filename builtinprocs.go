@@ -1036,25 +1036,21 @@ func BuiltinProcDef(sc *SemChecker, parentScope Scope, call *TcCall, expected Ty
 }
 
 func BuiltinTemplateDef(sc *SemChecker, parentScope Scope, call *TcCall, expected TypeConstraint) TcExpr {
-
 	var annotations *StrLit
 	var expr = call.Args[0].(*TcWrappedUntypedAst).Expr
 	if strLit, isStrLit := expr.(*StrLit); isStrLit {
 		annotations = strLit
 		expr = call.Args[1].(*TcWrappedUntypedAst).Expr
 	}
-
 	innerScope := NewSubScope(parentScope)
 	name, body, resultType, genericArgs, args := MustMatchProcDef(sc, expr)
 
 	if annotations != nil {
 		ReportInvalidAnnotations(sc, annotations)
 	}
-
 	// the type `untyped` is a special builtin type that is not actually a type. It should only be legal to use it in the context of
 	innerScope.Types["untyped"] = TypeUntyped
 	signature := SemCheckSignature(sc, innerScope, name.Source, genericArgs, args, resultType)
-
 	N := len(signature.Params)
 	subs := make([]TemplateSubstitution, N)
 	for i, it := range signature.Params {
@@ -1066,9 +1062,7 @@ func BuiltinTemplateDef(sc *SemChecker, parentScope Scope, call *TcCall, expecte
 		Body:      body.RecSubSyms(subs),
 	}
 	// TODO check for signature collision
-	//
 	return templateDef
-
 }
 
 func BuiltinTypeDef(sc *SemChecker, scope Scope, call *TcCall, expected TypeConstraint) TcExpr {
@@ -1096,9 +1090,24 @@ func BuiltinTypeDef(sc *SemChecker, scope Scope, call *TcCall, expected TypeCons
 			WrappedType: LookUpType(sc, scope, expr),
 		})
 	}
-	name, isIdent := lhs.(*Ident)
-	if !isIdent {
-		ReportErrorf(sc, lhs, "expect ident")
+
+	var name *Ident
+	var genericArgs []*GenericTypeSymbol
+	if bracketExpr, isBracketExpr := lhs.(*BracketExpr); isBracketExpr {
+		name, _ = bracketExpr.Callee.(*Ident)
+		for _, arg := range bracketExpr.Args {
+			if ident, isIdent := arg.(*Ident); isIdent {
+				sym := NewGenericTypeSymbol(ident.Source, ident.Source, TypeUnspecified)
+				genericArgs = append(genericArgs, sym)
+			} else {
+				ReportErrorf(sc, arg, "expect identifier for Generic argument here")
+			}
+		}
+	} else {
+		name, _ = lhs.(*Ident)
+	}
+	if name == nil {
+		ReportErrorf(sc, lhs, "expect identifier for name here")
 		return &TcErrorNode{Source: call.Source, SourceNode: call}
 	}
 	callee, body, isPrefixCall := MatchPrefixCall(rhs)
@@ -1110,20 +1119,26 @@ func BuiltinTypeDef(sc *SemChecker, scope Scope, call *TcCall, expected TypeCons
 
 	switch callee.Source {
 	case "struct":
+		var outerScope = scope
+		if len(genericArgs) > 0 {
+			scope = NewSubScope(scope)
+			for _, genSym := range genericArgs {
+				RegisterType(sc, scope, genSym.Name, genSym.AbsTypSym, genSym)
+			}
+		}
 		block, isBlock := body.(*CodeBlock)
 		if !isBlock {
 			ReportErrorf(sc, body, "expect code block")
 			return &TcErrorNode{Source: call.Source, SourceNode: call}
 		}
-
 		result := &TcStructDef{
-			Source:  call.Source,
-			Name:    name.Source,
-			Importc: importc,
+			Source:        call.Source,
+			Name:          name.Source,
+			GenericParams: genericArgs,
+			Importc:       importc,
 		}
 		structType := &StructType{Impl: result}
 		// TODO: test when Importc that all fields are also Importc (or importc compatible, like builtin integer types)
-
 		for _, field := range block.Items {
 			if lhs, rhs, ok := MatchColonExpr(field); !ok {
 				ReportErrorf(sc, field, "expect colon expr")
@@ -1140,9 +1155,12 @@ func BuiltinTypeDef(sc *SemChecker, scope Scope, call *TcCall, expected TypeCons
 				}
 			}
 		}
-		RegisterNamedType(sc, scope, structType, name)
+		RegisterNamedType(sc, outerScope, structType, name)
 		return result
 	case "enum":
+		if len(genericArgs) > 0 {
+			ReportErrorf(sc, body, "generic args for enums are not supported")
+		}
 		block, isBlock := body.(*CodeBlock)
 		if !isBlock {
 			ReportErrorf(sc, body, "expect code block")

@@ -43,7 +43,7 @@ func MatchVariableDefStatement(sc *SemChecker, callee Expr, expr Expr) (kind Sym
 
 	name, isIdent := expr.(*Ident)
 	if !isIdent {
-		ReportErrorf(sc, expr, "expect identifier")
+		ReportErrorf(sc, expr, "expect ident")
 	}
 
 	return kind, name, typeExpr, value, kind != SkInvalid && isIdent
@@ -154,40 +154,43 @@ func MustMatchProcDef(sc *SemChecker, expr Expr) (name *Ident, body, resultType 
 		genericArgs = make([]GenericArgument, 0, len(bracketExpr.Args))
 		// TODO do something with args
 		for _, arg := range bracketExpr.Args {
-			call, isCall := arg.(*Call)
-			if !isCall {
-				// TODO test error message
-				ReportErrorf(sc, arg, "generic argument must be a call expr")
-				continue
-			}
-			if len(call.Args) != 1 {
-				ReportErrorf(sc, arg, "Trait on multiple types not yet implemented")
-				continue
-			}
-			name, isIdent := call.Args[0].(*Ident)
-			if !isIdent {
-				// TODO test error message
-				ReportErrorf(sc, call.Args[0], "generic argument name must be an Identifire, but it is %T", call.Args[0])
-				continue
-			}
-			traitName, isIdent := call.Callee.(*Ident)
-			if !isIdent {
-				// TODO firstToken is not the right code location
-				ReportErrorf(sc, call.Callee, "generic argument constraint must be an Identifire, but it is %T", call.Callee)
-				continue
-			}
+			var name *Ident
+			var traitName *Ident
 
+			switch arg := arg.(type) {
+			case *Ident:
+				name = arg
+			case *Call:
+				call := arg
+				if len(call.Args) != 1 {
+					ReportErrorf(sc, arg, "Trait on multiple types not yet implemented")
+					continue
+				}
+				name, _ = call.Args[0].(*Ident)
+				if name == nil {
+					// TODO test error message
+					ReportErrorf(sc, call.Args[0], "generic argument name must be an Identifire, but it is %T", call.Args[0])
+					continue
+				}
+				traitName, _ = call.Callee.(*Ident)
+				if traitName == nil {
+					// TODO firstToken is not the right code location
+					ReportErrorf(sc, call.Callee, "generic argument constraint must be an Identifire, but it is %T", call.Callee)
+					continue
+				}
+			default:
+				ReportErrorf(sc, arg, "generic argument must be a call expr or identifier")
+				continue
+			}
 			genericArg := GenericArgument{Source: arg.GetSource(), Name: name, TraitName: traitName}
 			genericArgs = append(genericArgs, genericArg)
 		}
 	}
-
 	if ident, isIdent := expr.(*Ident); isIdent {
 		name = ident
 	} else {
 		ReportErrorf(sc, expr, "proc name must be an identifier, but it is %T", expr)
 	}
-
 	var newArgs []ProcArgument
 	for _, arg := range argsRaw {
 
