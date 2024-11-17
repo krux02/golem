@@ -73,9 +73,11 @@ type TcStructDef struct {
 	Name   string
 
 	GenericParams []*GenericTypeSymbol
-	Fields        []*TcStructField
-	Importc       bool
-	DocComment    *PrefixDocComment
+	InstanceCache *InstanceCache[*StructType]
+
+	Fields     []*TcStructField
+	Importc    bool
+	DocComment *PrefixDocComment
 }
 
 type TcTypeAlias struct {

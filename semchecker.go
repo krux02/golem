@@ -165,23 +165,23 @@ func LookUpTypeConstraint(sc *SemChecker, scope Scope, ident *Ident) TypeConstra
 }
 
 // recursively scans the scope upwards to the top scope to look up a type just by name
-func RecursiveTypeLookup(sc *SemChecker, scope Scope, name *Ident) Type {
+func RecursiveLookUpTypeName(sc *SemChecker, scope Scope, name *Ident) Type {
 	result, _ := scope.Types[name.Source]
 	if result != nil {
 		return result
 	}
 	if scope.Parent != nil {
-		return RecursiveTypeLookup(sc, scope.Parent, name)
+		return RecursiveLookUpTypeName(sc, scope.Parent, name)
 	}
 	ReportUnknownType(sc, name)
 	return TypeError
 }
 
 // looks up a type by an expression. If the type is in identifier it is
-// equivalent to `RecursiveTypeLookup`. If it is an expression with generic
+// almost equivalent to `RecursiveLookUpTypeName`. If it is an expression with generic
 // arguments, it will look up each argument and apply generic instanciation when
 // necessary.
-func LookUpType(sc *SemChecker, scope Scope, expr Expr) Type {
+func LookUpTypeExpr(sc *SemChecker, scope Scope, expr Expr) Type {
 	switch x := expr.(type) {
 	case *Call:
 		ident, ok := x.Callee.(*Ident)
@@ -195,7 +195,7 @@ func LookUpType(sc *SemChecker, scope Scope, expr Expr) Type {
 				return TypeError
 			}
 
-			arg0 := LookUpType(sc, scope, x.Args[0])
+			arg0 := LookUpTypeExpr(sc, scope, x.Args[0])
 			if arg0 == TypeError {
 				// maybe fall back to unchecked array
 				return TypeError
@@ -205,13 +205,13 @@ func LookUpType(sc *SemChecker, scope Scope, expr Expr) Type {
 				ReportInvalidAstNode(sc, x.Args[0], "int literal")
 				return TypeError
 			}
-			elem := LookUpType(sc, scope, x.Args[1])
+			elem := LookUpTypeExpr(sc, scope, x.Args[1])
 			return GetArrayType(elem, intLit.Value.Int64())
 		case "set":
 			if !ExpectArgsLen(sc, expr, len(x.Args), 1) {
 				return TypeError
 			}
-			arg0 := LookUpType(sc, scope, x.Args[0])
+			arg0 := LookUpTypeExpr(sc, scope, x.Args[0])
 			if arg0 == TypeError {
 				return TypeError
 			}
@@ -225,7 +225,7 @@ func LookUpType(sc *SemChecker, scope Scope, expr Expr) Type {
 			if !ExpectArgsLen(sc, expr, len(x.Args), 1) {
 				return TypeError
 			}
-			targetType := LookUpType(sc, scope, x.Args[0])
+			targetType := LookUpTypeExpr(sc, scope, x.Args[0])
 			if targetType == TypeError {
 				return TypeError
 			}
@@ -236,7 +236,7 @@ func LookUpType(sc *SemChecker, scope Scope, expr Expr) Type {
 			return TypeError
 		}
 	case *Ident:
-		result := RecursiveTypeLookup(sc, scope, x)
+		result := RecursiveLookUpTypeName(sc, scope, x)
 		if structType, isStructType := result.(*StructType); isStructType {
 			if len(structType.Impl.GenericParams) > 0 {
 				ReportErrorf(sc, expr, "generic struct needs generic parameters")
@@ -254,7 +254,7 @@ func LookUpType(sc *SemChecker, scope Scope, expr Expr) Type {
 		genericParams := make([]Type, len(x.Args))
 		var hasErrors bool = false
 		for i, arg := range x.Args {
-			typ := LookUpType(sc, scope, arg)
+			typ := LookUpTypeExpr(sc, scope, arg)
 			hasErrors = hasErrors || typ == TypeError
 			genericParams[i] = typ
 		}
@@ -268,7 +268,7 @@ func LookUpType(sc *SemChecker, scope Scope, expr Expr) Type {
 			return TypeError
 		}
 
-		result := RecursiveTypeLookup(sc, scope, name)
+		result := RecursiveLookUpTypeName(sc, scope, name)
 		if result == TypeError {
 			return TypeError
 		}
@@ -278,12 +278,7 @@ func LookUpType(sc *SemChecker, scope Scope, expr Expr) Type {
 				ReportErrorf(sc, expr, "generic struct needs %d generic parameters", len(structType.Impl.GenericParams))
 				return TypeError
 			}
-			subs := make([]TypeSubstitution, len(x.Args))
-			for i, genParam := range structType.Impl.GenericParams {
-				subs[i].sym = genParam
-				subs[i].newType = genericParams[i]
-			}
-			result = ApplyTypeSubstitutions(structType, subs)
+			result = GetStructInstanceType(structType, genericParams)
 		} else {
 			ReportErrorf(sc, expr, "type does not take generic parameters")
 			return TypeError
@@ -472,11 +467,11 @@ func SemCheckSignature(sc *SemChecker, bodyScope Scope, name string, genericArgs
 		}
 
 		// the same, unless a generac parameter
-		sigTyp := LookUpType(sc, signatureScope, arg.Type)
+		sigTyp := LookUpTypeExpr(sc, signatureScope, arg.Type)
 		var bodyTyp Type
 		// prevent double reporting of error messages
 		if sigTyp != TypeError {
-			bodyTyp = LookUpType(sc, bodyScope, arg.Type)
+			bodyTyp = LookUpTypeExpr(sc, bodyScope, arg.Type)
 		} else {
 			bodyTyp = TypeError
 		}
@@ -519,9 +514,9 @@ func SemCheckSignature(sc *SemChecker, bodyScope Scope, name string, genericArgs
 		signature.ResultType = TypeError
 		signature.ResultTypeForBody = TypeError
 	} else {
-		signature.ResultType = LookUpType(sc, signatureScope, resultType)
+		signature.ResultType = LookUpTypeExpr(sc, signatureScope, resultType)
 		if signature.ResultType != TypeError {
-			signature.ResultTypeForBody = LookUpType(sc, bodyScope, resultType)
+			signature.ResultTypeForBody = LookUpTypeExpr(sc, bodyScope, resultType)
 		} else {
 			signature.ResultTypeForBody = TypeError
 		}
@@ -1223,6 +1218,7 @@ genericParams:
 				continue genericParams
 			}
 		}
+		fmt.Println(AstFormat(&Substitutions{typeSubs: typeSubs}))
 		panic(fmt.Errorf("symbol has no substitudion: %s", AstFormat(sym)))
 	}
 	return cacheKey
@@ -1872,6 +1868,22 @@ func GetSimdVectorType(elem NamedType, len int64) (result *SimdVectorType) {
 		registerBuiltin("indexOp", "", "[", "]", []Type{result, TypeInt64}, elem, 0)
 		argSym := &TcSymbol{Source: "_", Kind: SkProcArg, Type: result}
 		registerSimpleTemplate("len", []*TcSymbol{argSym}, TypeInt64, &IntLit{Value: big.NewInt(len)})
+	}
+	return result
+}
+
+func GetStructInstanceType(structType *StructType, genericArgs []Type) *StructType {
+	result := structType.Impl.InstanceCache.LookUp(genericArgs)
+	if result == nil {
+		subs := make([]TypeSubstitution, len(genericArgs))
+		var openGenerics []Type
+		for i, genArg := range genericArgs {
+			subs[i].sym = structType.Impl.GenericParams[i]
+			subs[i].newType = genArg
+			openGenerics = append(openGenerics, openGenericsMap[genArg]...)
+		}
+		result = ApplyTypeSubstitutions(structType, subs).(*StructType)
+		openGenericsMap[result] = openGenerics
 	}
 	return result
 }

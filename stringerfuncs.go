@@ -463,6 +463,15 @@ func (call *TcCall) PrettyPrint(builder *AstPrettyPrinter) {
 
 func (structDef *StructType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(structDef.Impl.Name)
+	// TODO this is not correct, it uses names from the type definition, not from the type expression, where it is actually used.
+	// So a type expressio `MyType[U]` becomes a MyType[T] again if T is used for the type definiton.
+	if len(structDef.Impl.GenericParams) > 0 {
+		builder.WriteString("[")
+		for _, param := range structDef.Impl.GenericParams {
+			builder.WriteNode(param)
+		}
+		builder.WriteString("]")
+	}
 }
 
 func (structDef *TcStructDef) PrettyPrint(builder *AstPrettyPrinter) {
@@ -785,6 +794,8 @@ func (expr *TcConvExpr) PrettyPrint(builder *AstPrettyPrinter) {
 
 func (subs *Substitutions) PrettyPrint(builder *AstPrettyPrinter) {
 	// builder.WriteString("subs(")
+	builder.NewlineAndIndent()
+	builder.WriteString("subs:")
 	builder.Indentation += 1
 	if len(subs.symSubs) > 0 {
 		builder.NewlineAndIndent()

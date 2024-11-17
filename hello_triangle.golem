@@ -205,7 +205,7 @@ proc std140AlignedWrite(dst: pointer, offset: i32, uniformObject: UniformBufType
 }
 
 # TODO should be ArrayBuffer[T]
-proc new[T](var arrayBuffer: ArrayBuffer[T]) -> void = {
+proc new[U](var arrayBuffer: ArrayBuffer[U]) -> void = {
   glCreateBuffers(1, addr(arrayBuffer.handle))
 }
 
@@ -221,12 +221,13 @@ proc bufferData[HasSizeOf(T)](buffer: ArrayBuffer[T], data: openarray[T], usage:
 }
 
 # TODO, this should be ArrayBuffer[T]
-proc arrayBuffer[Any(T)](arg: T, usage: GLenum, label: str) -> ArrayBuffer[T] = {
+proc arrayBuffer[Any(T)](data: openarray[T], usage: GLenum, label: str) -> ArrayBuffer[T] = {
   var result: ArrayBuffer[T]
   result | new
   result | bufferData(data, usage)
-  if label.len > 0:
+  if label.len > 0 do {
     result.label = label
+  }
   return result
 }
 

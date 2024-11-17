@@ -706,7 +706,7 @@ func BuiltinColonExpr(sc *SemChecker, scope Scope, call *TcCall, expected TypeCo
 	}
 	lhs := call.Args[0].(*TcWrappedUntypedAst).Expr
 	rhs := call.Args[1].(*TcWrappedUntypedAst).Expr
-	typ := LookUpType(sc, scope, rhs)
+	typ := LookUpTypeExpr(sc, scope, rhs)
 	// typ = ExpectType(sc, call, typ, expected)
 	return SemCheckExpr(sc, scope, lhs, UniqueTypeConstraint{typ})
 }
@@ -1087,7 +1087,7 @@ func BuiltinTypeDef(sc *SemChecker, scope Scope, call *TcCall, expected TypeCons
 		expr := call.Args[0].(*TcWrappedUntypedAst).Expr
 		return (TcExpr)(&TcTypeContext{
 			Source:      call.Source,
-			WrappedType: LookUpType(sc, scope, expr),
+			WrappedType: LookUpTypeExpr(sc, scope, expr),
 		})
 	}
 
@@ -1120,6 +1120,7 @@ func BuiltinTypeDef(sc *SemChecker, scope Scope, call *TcCall, expected TypeCons
 	switch callee.Source {
 	case "struct":
 		var outerScope = scope
+		instanceCache := NewInstanceCache[*StructType](len(genericArgs)) // might be nil if len == 0
 		if len(genericArgs) > 0 {
 			scope = NewSubScope(scope)
 			for _, genSym := range genericArgs {
@@ -1135,6 +1136,7 @@ func BuiltinTypeDef(sc *SemChecker, scope Scope, call *TcCall, expected TypeCons
 			Source:        call.Source,
 			Name:          name.Source,
 			GenericParams: genericArgs,
+			InstanceCache: instanceCache,
 			Importc:       importc,
 		}
 		structType := &StructType{Impl: result}
@@ -1149,7 +1151,7 @@ func BuiltinTypeDef(sc *SemChecker, scope Scope, call *TcCall, expected TypeCons
 					ValidNameCheck(sc, nameIdent, "struct field")
 					tcField := &TcStructField{
 						Name: nameIdent.Source,
-						Type: LookUpType(sc, scope, rhs),
+						Type: LookUpTypeExpr(sc, scope, rhs),
 					}
 					result.Fields = append(result.Fields, tcField)
 				}
@@ -1198,7 +1200,7 @@ func BuiltinTypeDef(sc *SemChecker, scope Scope, call *TcCall, expected TypeCons
 		return result
 	case "type":
 		// a very primitive type alias implementation
-		typ := LookUpType(sc, scope, body)
+		typ := LookUpTypeExpr(sc, scope, body)
 
 		result := &TcTypeAlias{
 			Source: call.Source,
@@ -1224,7 +1226,7 @@ func BuiltinVarLetConst(sc *SemChecker, scope Scope, call *TcCall, expected Type
 	ValidNameCheck(sc, name, "var")
 	result := &TcVariableDefStmt{Source: call.Source}
 	if value == nil {
-		typ := LookUpType(sc, scope, typeExpr)
+		typ := LookUpTypeExpr(sc, scope, typeExpr)
 		if kind != SkVar {
 			ReportErrorf(sc, name, "initialization value required")
 		}
@@ -1233,7 +1235,7 @@ func BuiltinVarLetConst(sc *SemChecker, scope Scope, call *TcCall, expected Type
 	} else {
 		var expected TypeConstraint = TypeUnspecified
 		if typeExpr != nil {
-			expected = UniqueTypeConstraint{LookUpType(sc, scope, typeExpr)}
+			expected = UniqueTypeConstraint{LookUpTypeExpr(sc, scope, typeExpr)}
 		}
 		result.Value = SemCheckExpr(sc, scope, value, expected)
 		if kind == SkConst {
