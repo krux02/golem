@@ -532,7 +532,16 @@ func compileEnumDef(context *PackageGeneratorContext, enumDef *TcEnumDef) {
 	builder.WriteString("};")
 }
 
-func compileStructDef(context *PackageGeneratorContext, structDef *TcStructDef) {
+func compileStructDef(context *PackageGeneratorContext, structDef *TcStructDef, genericArgs []Type) {
+	if len(structDef.GenericParams) != len(genericArgs) {
+		panic("internal error")
+	}
+
+	var subs []TypeSubstitution
+	for i, genArg := range genericArgs {
+		subs = append(subs, TypeSubstitution{structDef.GenericParams[i], genArg})
+	}
+
 	builder := &context.typeDecl
 	builder.NewlineAndIndent()
 	builder.WriteString("typedef struct ")
@@ -541,7 +550,7 @@ func compileStructDef(context *PackageGeneratorContext, structDef *TcStructDef) 
 	builder.Indentation += 1
 	for _, field := range structDef.Fields {
 		builder.NewlineAndIndent()
-		builder.CompileTypeExpr(context, field.Type)
+		builder.CompileTypeExpr(context, ApplyTypeSubstitutions(field.Type, subs))
 		builder.WriteString(" ")
 		builder.WriteString(field.Name)
 		builder.WriteString(";")
@@ -698,6 +707,9 @@ func markStructTypeForGeneration(context *PackageGeneratorContext, typ *StructTy
 	if typ.Impl.Importc || context.ScheduledForGenerationStructType[typ] {
 		return // nothing to do when already scheduled
 	}
+	for _, genArg := range typ.GenericArgs {
+		markTypeForGeneration(context, genArg)
+	}
 	for _, field := range typ.Impl.Fields {
 		markTypeForGeneration(context, field.Type)
 	}
@@ -719,15 +731,6 @@ func (context *PackageGeneratorContext) popMarkedForGenerationProcDef() (result 
 	if N > 0 {
 		result = context.TodoListProc[N-1]
 		context.TodoListProc = context.TodoListProc[:N-1]
-	}
-	return result
-}
-
-func (context *PackageGeneratorContext) popMarkedForGenerationType() (result Type) {
-	N := len(context.TodoListTypes)
-	if N > 0 {
-		result = context.TodoListTypes[N-1]
-		context.TodoListTypes = context.TodoListTypes[:N-1]
 	}
 	return result
 }
@@ -770,7 +773,7 @@ typedef unsigned char bool;
 		case *EnumType:
 			compileEnumDef(context, typ.Impl)
 		case *StructType:
-			compileStructDef(context, typ.Impl)
+			compileStructDef(context, typ.Impl, typ.GenericArgs)
 		case *ArrayType:
 			compileArrayDef(context, typ)
 		case *SimdVectorType:

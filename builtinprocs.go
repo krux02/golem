@@ -51,7 +51,8 @@ type EnumType struct {
 }
 
 type StructType struct {
-	Impl *TcStructDef
+	Impl        *TcStructDef
+	GenericArgs []Type
 }
 
 type ArrayType struct {
@@ -375,7 +376,7 @@ var builtinScope Scope = &ScopeImpl{
 	CurrentProcSignature: nil,
 	Overloadables:        make(map[string][]Overloadable),
 	Variables:            make(map[string]*TcSymbol),
-	Types:                make(map[string]Type),
+	Types:                make(map[string]any),
 	TypeConstraints:      make(map[string]TypeConstraint),
 }
 
@@ -1139,7 +1140,7 @@ func BuiltinTypeDef(sc *SemChecker, scope Scope, call *TcCall, expected TypeCons
 			InstanceCache: instanceCache,
 			Importc:       importc,
 		}
-		structType := &StructType{Impl: result}
+
 		// TODO: test when Importc that all fields are also Importc (or importc compatible, like builtin integer types)
 		for _, field := range block.Items {
 			if lhs, rhs, ok := MatchColonExpr(field); !ok {
@@ -1157,7 +1158,13 @@ func BuiltinTypeDef(sc *SemChecker, scope Scope, call *TcCall, expected TypeCons
 				}
 			}
 		}
-		RegisterNamedType(sc, outerScope, structType, name)
+
+		if len(genericArgs) == 0 {
+			RegisterNamedType(sc, outerScope, &StructType{Impl: result, GenericArgs: nil}, name)
+		} else {
+			RegisterType(sc, outerScope, result.Name, result, result)
+		}
+
 		return result
 	case "enum":
 		if len(genericArgs) > 0 {

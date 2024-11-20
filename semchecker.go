@@ -38,8 +38,11 @@ type ScopeImpl struct {
 	CurrentTrait         *TcTraitDef
 	Variables            map[string]*TcSymbol
 	Overloadables        map[string][]Overloadable
-	Types                map[string]Type
-	TypeConstraints      map[string]TypeConstraint
+	// this is of type `any` and not `Type` is because generic struct types
+	// without generic arguments are not types yet. Yet they will be stored in
+	// this map, so that name resolution can find them. They can't be cast to `Type` yet.
+	Types           map[string]any
+	TypeConstraints map[string]TypeConstraint
 }
 
 type Scope = *ScopeImpl
@@ -53,12 +56,12 @@ func NewSubScope(scope Scope) Scope {
 		// TODO maybe do lazy initialization of some of these? Traits are rarely addad.
 		Variables:       make(map[string]*TcSymbol),
 		Overloadables:   make(map[string][]Overloadable),
-		Types:           make(map[string]Type),
+		Types:           make(map[string]any),
 		TypeConstraints: make(map[string]TypeConstraint),
 	}
 }
 
-func RegisterType(sc *SemChecker, scope Scope, name string, typ Type, context Expr) {
+func RegisterType(sc *SemChecker, scope Scope, name string, typ any, context Expr) {
 	if _, ok := scope.Types[name]; ok {
 		ReportErrorf(sc, context, "double definition of type '%s'", name)
 		// TODO previously defined at ...
@@ -165,7 +168,7 @@ func LookUpTypeConstraint(sc *SemChecker, scope Scope, ident *Ident) TypeConstra
 }
 
 // recursively scans the scope upwards to the top scope to look up a type just by name
-func RecursiveLookUpTypeName(sc *SemChecker, scope Scope, name *Ident) Type {
+func RecursiveLookUpTypeName(sc *SemChecker, scope Scope, name *Ident) any {
 	result, _ := scope.Types[name.Source]
 	if result != nil {
 		return result
@@ -243,7 +246,10 @@ func LookUpTypeExpr(sc *SemChecker, scope Scope, expr Expr) Type {
 				result = TypeError
 			}
 		}
-		return result
+		if actualType, isActualType := result.(Type); isActualType {
+			return actualType
+		}
+		panic("internal error")
 	case *IntLit:
 		return GetIntLitType(x.Value)
 		// case nil:
@@ -268,22 +274,20 @@ func LookUpTypeExpr(sc *SemChecker, scope Scope, expr Expr) Type {
 			return TypeError
 		}
 
-		result := RecursiveLookUpTypeName(sc, scope, name)
-		if result == TypeError {
+		// typ := RecursiveLookUpTypeName(sc, sope, name)
+		typ := RecursiveLookUpTypeName(sc, scope, name)
+		if typ == TypeError {
 			return TypeError
 		}
-
-		if structType, isStructType := result.(*StructType); isStructType {
-			if len(structType.Impl.GenericParams) != len(x.Args) {
-				ReportErrorf(sc, expr, "generic struct needs %d generic parameters", len(structType.Impl.GenericParams))
+		if structDef, isIncompleteStructType := typ.(*TcStructDef); isIncompleteStructType {
+			if len(structDef.GenericParams) != len(x.Args) {
+				ReportErrorf(sc, expr, "generic struct needs %d generic parameters", len(structDef.GenericParams))
 				return TypeError
 			}
-			result = GetStructInstanceType(structType, genericParams)
-		} else {
-			ReportErrorf(sc, expr, "type does not take generic parameters")
-			return TypeError
+			return GetStructInstanceType(structDef, genericParams)
 		}
-		return result
+		ReportErrorf(sc, expr, "type does not take generic parameters")
+		return TypeError
 	}
 	ReportErrorf(sc, expr, "unexpected ast node in type expr: %s type: %T", AstFormat(expr), expr)
 	panic("unexpected ast node")
@@ -823,6 +827,22 @@ func GenericParamSignatureMatch(scope Scope, exprType, paramType Type, substitut
 	}
 
 	{
+		exprStructType, exprIsStructType := exprType.(*StructType)
+		paramStructType, paramIsStructType := paramType.(*StructType)
+		if exprIsStructType && paramIsStructType && exprStructType.Impl == paramStructType.Impl {
+			// NOTE: I really dislike this code that modifies the input
+			outSubstitutions = substitutions
+			for i, genArg := range exprStructType.GenericArgs {
+				ok, outSubstitutions = GenericParamSignatureMatch(scope, genArg, paramStructType.GenericArgs[i], outSubstitutions)
+				if !ok {
+					return false, nil
+				}
+			}
+			return true, outSubstitutions
+		}
+	}
+
+	{
 		exprArrType, exprIsArrType := exprType.(*ArrayType)
 		paramArrType, paramIsArrType := paramType.(*ArrayType)
 		if exprIsArrType && paramIsArrType {
@@ -905,8 +925,11 @@ func RecursiveTypeSubstitution(typ Type, substitutions []TypeSubstitution) Type 
 	case *IntLitType:
 		return typ
 	case *StructType:
-		// TODO something here
-		return typ
+		newGenericArgs := make([]Type, len(typ.GenericArgs))
+		for i, genArg := range typ.GenericArgs {
+			newGenericArgs[i] = RecursiveTypeSubstitution(genArg, substitutions)
+		}
+		return GetStructInstanceType(typ.Impl, newGenericArgs)
 	case *EnumSetType:
 		return GetEnumSetType(RecursiveTypeSubstitution(typ.Elem, substitutions).(*EnumType))
 	case *ArrayType:
@@ -1872,17 +1895,15 @@ func GetSimdVectorType(elem NamedType, len int64) (result *SimdVectorType) {
 	return result
 }
 
-func GetStructInstanceType(structType *StructType, genericArgs []Type) *StructType {
-	result := structType.Impl.InstanceCache.LookUp(genericArgs)
+func GetStructInstanceType(structDef *TcStructDef, genericArgs []Type) *StructType {
+	result := structDef.InstanceCache.LookUp(genericArgs)
 	if result == nil {
-		subs := make([]TypeSubstitution, len(genericArgs))
 		var openGenerics []Type
-		for i, genArg := range genericArgs {
-			subs[i].sym = structType.Impl.GenericParams[i]
-			subs[i].newType = genArg
+		for _, genArg := range genericArgs {
 			openGenerics = append(openGenerics, openGenericsMap[genArg]...)
 		}
-		result = ApplyTypeSubstitutions(structType, subs).(*StructType)
+		// result = ApplyTypeSubstitutions(structType, subs).(*StructType)
+		result = &StructType{structDef, genericArgs}
 		openGenericsMap[result] = openGenerics
 	}
 	return result

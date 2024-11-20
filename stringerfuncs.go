@@ -72,7 +72,7 @@ func (ident *Ident) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(ident.Source)
 }
 
-func mkstring(items []Expr, prefix, infix, postfix string, builder *AstPrettyPrinter) {
+func mkstring[T PrettyPrintable](items []T, prefix, infix, postfix string, builder *AstPrettyPrinter) {
 	builder.WriteString(prefix)
 	for i, it := range items {
 		if i != 0 {
@@ -463,14 +463,8 @@ func (call *TcCall) PrettyPrint(builder *AstPrettyPrinter) {
 
 func (structDef *StructType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(structDef.Impl.Name)
-	// TODO this is not correct, it uses names from the type definition, not from the type expression, where it is actually used.
-	// So a type expressio `MyType[U]` becomes a MyType[T] again if T is used for the type definiton.
-	if len(structDef.Impl.GenericParams) > 0 {
-		builder.WriteString("[")
-		for _, param := range structDef.Impl.GenericParams {
-			builder.WriteNode(param)
-		}
-		builder.WriteString("]")
+	if len(structDef.GenericArgs) > 0 {
+		mkstring(structDef.GenericArgs, "[", ", ", "]", builder)
 	}
 }
 

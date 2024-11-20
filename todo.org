@@ -1,9 +1,3 @@
-* TODO finish generic instanciation of struct types
-
-similar to how GetArrayType and GetEnumSetType use a map to ensure the same type
-instance for the same type parameters, there needs to be a map for each struct
-type. This does not exist yet and must be done.
-
 * TODO better error message for syntax error in proc def
 
 espectially when the return type is passed in with : instead of ->
