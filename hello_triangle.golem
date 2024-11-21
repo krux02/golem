@@ -246,13 +246,13 @@ proc main() -> i32 = {
     [-1,-1, 0, 1]:f32x4,
     [ 1,-1, 0, 1],
     [ 0, 1, 0, 1]
-  ], GL_STATIC_DRAW, "vertices")
+  ], GL_STATIC_DRAW, "vertices":str)
 
   let colors = arrayBuffer([
     [ 1, 0,0,1]:f32x4,
     [0, 1,0,1],
     [0,0,1,1]
-  ], GL_STATIC_DRAW, "colors")
+  ], GL_STATIC_DRAW, "colors":str)
 
   # var buffers : array(2, u32)
 

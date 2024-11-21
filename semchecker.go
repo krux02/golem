@@ -1089,6 +1089,7 @@ func (this *InstanceCache[T]) Debug() string {
 	builder := &strings.Builder{}
 	switch m := this.Map.(type) {
 	case map[[1]Type]T:
+		fmt.Printf("[1] len: %d\n", len(m))
 		for key, value := range m {
 			fmt.Fprintf(builder, "[%s] -> %#+v\n",
 				AstFormat(key[0]),
@@ -1096,6 +1097,7 @@ func (this *InstanceCache[T]) Debug() string {
 			)
 		}
 	case map[[2]Type]T:
+		fmt.Printf("[2] len: %d\n", len(m))
 		for key, value := range m {
 			fmt.Fprintf(builder, "[%s, %s] -> %#+v\n",
 				AstFormat(key[0]),
@@ -1104,6 +1106,7 @@ func (this *InstanceCache[T]) Debug() string {
 			)
 		}
 	case map[[3]Type]T:
+		fmt.Printf("[3] len: %d\n", len(m))
 		for key, value := range m {
 			fmt.Fprintf(builder, "[%s, %s, %s] -> %v\n",
 				AstFormat(key[0]),
@@ -1114,6 +1117,7 @@ func (this *InstanceCache[T]) Debug() string {
 		}
 	case map[[4]Type]T:
 		for key, value := range m {
+			fmt.Printf("[4] len: %d\n", len(m))
 			fmt.Fprintf(builder, "[%s, %s, %s, %s] -> %#+v\n",
 				AstFormat(key[0]),
 				AstFormat(key[1]),
@@ -1123,6 +1127,7 @@ func (this *InstanceCache[T]) Debug() string {
 			)
 		}
 	case map[[5]Type]T:
+		fmt.Printf("[5] len: %d\n", len(m))
 		for key, value := range m {
 			fmt.Fprintf(builder, "[%s, %s, %s, %s, %s] -> %#+v\n",
 				AstFormat(key[0]),
@@ -1134,6 +1139,7 @@ func (this *InstanceCache[T]) Debug() string {
 			)
 		}
 	case map[[6]Type]T:
+		fmt.Printf("[6] len: %d\n", len(m))
 		for key, value := range m {
 
 			fmt.Fprintf(builder, "[%s, %s, %s, %s, %s, %s] -> %#+v\n",
@@ -1905,6 +1911,7 @@ func GetStructInstanceType(structDef *TcStructDef, genericArgs []Type) *StructTy
 		// result = ApplyTypeSubstitutions(structType, subs).(*StructType)
 		result = &StructType{structDef, genericArgs}
 		openGenericsMap[result] = openGenerics
+		structDef.InstanceCache.Set(genericArgs, result)
 	}
 	return result
 }
