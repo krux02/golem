@@ -414,6 +414,12 @@ func (typ *ArrayType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(")")
 }
 
+func (typ *OpenArrayType) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("openarray(")
+	builder.WriteNode(typ.Elem)
+	builder.WriteString(")")
+}
+
 func (typ *SimdVectorType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteNode(typ.Elem)
 	builder.WriteString("x")

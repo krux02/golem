@@ -209,7 +209,19 @@ func LookUpTypeExpr(sc *SemChecker, scope Scope, expr Expr) Type {
 				return TypeError
 			}
 			elem := LookUpTypeExpr(sc, scope, x.Args[1])
+			if elem == TypeError {
+				return TypeError
+			}
 			return GetArrayType(elem, intLit.Value.Int64())
+		case "openarray":
+			if !ExpectArgsLen(sc, expr, len(x.Args), 1) {
+				return TypeError
+			}
+			elem := LookUpTypeExpr(sc, scope, x.Args[0])
+			if elem == TypeError {
+				return TypeError
+			}
+			return GetOpenArrayType(elem)
 		case "set":
 			if !ExpectArgsLen(sc, expr, len(x.Args), 1) {
 				return TypeError
@@ -686,13 +698,8 @@ func argTypeGroupAtIndex(signatures []Signature, idx int) (result TypeConstraint
 		builder.Items = AppendNoDuplicats(builder.Items, typ)
 	}
 	if len(builder.Items) == 1 {
-
 		typ := builder.Items[0]
-		if signatures[0].Name == "pointless" {
-			fmt.Printf("%s %T\n", AstFormat(typ), typ)
-		}
-
-		return UniqueTypeConstraint{builder.Items[0]}
+		return UniqueTypeConstraint{typ}
 	}
 	if len(builder.Items) == 0 {
 		return TypeUnspecified
@@ -854,6 +861,14 @@ func GenericParamSignatureMatch(scope Scope, exprType, paramType Type, substitut
 	}
 
 	{
+		exprArrType, exprIsOpenArrType := exprType.(*OpenArrayType)
+		paramArrType, paramIsOpenArrType := paramType.(*OpenArrayType)
+		if exprIsOpenArrType && paramIsOpenArrType {
+			return GenericParamSignatureMatch(scope, exprArrType.Elem, paramArrType.Elem, substitutions)
+		}
+	}
+
+	{
 		exprPtrType, exprIsPtrType := exprType.(*PtrType)
 		paramPtrType, paramIsPtrType := paramType.(*PtrType)
 		if exprIsPtrType && paramIsPtrType {
@@ -935,6 +950,8 @@ func RecursiveTypeSubstitution(typ Type, substitutions []TypeSubstitution) Type 
 	case *ArrayType:
 		// TODO: array length substitution is not possible right now
 		return GetArrayType(RecursiveTypeSubstitution(typ.Elem, substitutions), typ.Len)
+	case *OpenArrayType:
+		return GetOpenArrayType(RecursiveTypeSubstitution(typ.Elem, substitutions))
 	case *TypeType:
 		return GetTypeType(RecursiveTypeSubstitution(typ.WrappedType, substitutions))
 	case *PtrType:
@@ -1837,6 +1854,7 @@ type ArrayTypeMapKey struct {
 var openGenericsMap map[Type][]Type
 
 var arrayTypeMap map[ArrayTypeMapKey]*ArrayType
+var openArrayTypeMap map[Type]*OpenArrayType
 var simdVectorTypeMap map[ArrayTypeMapKey]*SimdVectorType
 
 // is this safe, will this always look up a value? It is a pointer in a map
@@ -1879,6 +1897,29 @@ func GetArrayType(elem Type, len int64) (result *ArrayType) {
 
 		argSym := &TcSymbol{Source: "_", Kind: SkProcArg, Type: result}
 		registerSimpleTemplate("len", []*TcSymbol{argSym}, TypeInt64, &IntLit{Value: big.NewInt(len)})
+	}
+	return result
+}
+
+func GetOpenArrayType(elem Type) (result *OpenArrayType) {
+	result, ok := openArrayTypeMap[elem]
+	//fmt.Printf("debug get open array type: %v  elem: %s p: %+#v\n", ok, AstFormat(elem), elem)
+	if !ok {
+		result = &OpenArrayType{Elem: elem}
+		openArrayTypeMap[elem] = result
+		openGenericsMap[result] = openGenericsMap[elem]
+		// TODO, this should be one generic builtin. Adding the overloads like here
+		// does have a negative effect or error messages.
+		//
+		// TODO the array index operator needs mutability propagation of the first argument.
+		// TODO this should be generic for better error messages on missing overloads, listing all currently known array types is a bit much
+
+		_, isGenericTypeSym := elem.(*GenericTypeSymbol)
+		if !isGenericTypeSym {
+			registerBuiltin("indexOp", "", ".data[", "]", []Type{result, TypeInt64}, elem, 0)
+			registerBuiltin("len", "", "", ".len", []Type{result}, TypeInt64, 0)
+			registerBuiltin("data", "", "", ".data", []Type{result}, GetPtrType(elem), 0)
+		}
 	}
 	return result
 }
@@ -1998,6 +2039,16 @@ func SemCheckArrayLit(sc *SemChecker, scope Scope, arg *ArrayLit, expected TypeC
 		return result
 	case UniqueTypeConstraint:
 		switch exp := exp.Typ.(type) {
+		case *OpenArrayType:
+			result := &TcArrayLit{
+				Items:    make([]TcExpr, len(arg.Items)),
+				ElemType: exp.Elem,
+				Type:     exp,
+			}
+			for i, item := range arg.Items {
+				result.Items[i] = SemCheckExpr(sc, scope, item, UniqueTypeConstraint{exp.Elem})
+			}
+			return result
 		case *ArrayType:
 			result := &TcArrayLit{
 				Items:    make([]TcExpr, len(arg.Items)),

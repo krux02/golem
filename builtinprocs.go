@@ -60,6 +60,10 @@ type ArrayType struct {
 	Elem Type
 }
 
+type OpenArrayType struct {
+	Elem Type
+}
+
 type SimdVectorType struct {
 	Len  int64
 	Elem NamedType
@@ -144,6 +148,11 @@ type PtrType struct {
 func (typ *ArrayType) ManglePrint(builder *strings.Builder) {
 	builder.WriteRune('A')
 	builder.WriteString(fmt.Sprintf("%d", typ.Len))
+	typ.Elem.ManglePrint(builder)
+}
+
+func (typ *OpenArrayType) ManglePrint(builder *strings.Builder) {
+	builder.WriteRune('O')
 	typ.Elem.ManglePrint(builder)
 }
 
@@ -315,6 +324,11 @@ func (typ *ArrayType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
 	for i := int64(0); i < typ.Len; i++ {
 		result.Items = append(result.Items, typ.Elem.DefaultValue(sc, context))
 	}
+	return result
+}
+
+func (typ *OpenArrayType) DefaultValue(sc *SemChecker, context Expr) TcExpr {
+	result := &TcArrayLit{ElemType: typ.Elem, Type: typ}
 	return result
 }
 
@@ -1355,6 +1369,7 @@ func BuiltinIfElse(sc *SemChecker, scope Scope, call *TcCall, expected TypeConst
 func init() {
 	openGenericsMap = make(map[Type][]Type)
 	arrayTypeMap = make(map[ArrayTypeMapKey]*ArrayType)
+	openArrayTypeMap = make(map[Type]*OpenArrayType)
 	simdVectorTypeMap = make(map[ArrayTypeMapKey]*SimdVectorType)
 	enumSetTypeMap = make(map[*EnumType]*EnumSetType)
 	ptrTypeMap = make(map[Type]*PtrType)

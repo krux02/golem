@@ -27,10 +27,10 @@ type ArrayBuffer[T] = struct {
   handle: u32
 }
 
-type openarray[T] = struct {
-  len: int
-  data: ptr T
-}
+# type openarray[T] = struct {
+#   len: int
+#   data: ptr T
+# }
 
 type LineInfo = struct {
   filename: str
@@ -177,11 +177,9 @@ proc alignFunc(address, alignment: i32) -> i32 = bitand(address + (alignment - 1
 #   var result: OffsetAlign = [offset = alignFunc(offset, 4), align = 4]
 #   write(dst, result.offset, u32(value))
 # }
-
 # proc std140AlignedWrite*(dst: pointer, offset: int32, value: SomeNumber): tuple[offset, align: int32] =
 #   result.align = max(sizeof(SomeNumber), 4)
 #   result.offset = alignFunc(offset, result.align)
-
 #   debug result
 #   dst.write(result.offset, value)
 
@@ -210,18 +208,18 @@ proc new[U](var arrayBuffer: ArrayBuffer[U]) -> void = {
 }
 
 ## Wrapper for `glNamedBufferData`.
-proc bufferData[HasSizeOf(T)](buffer: ArrayBuffer[T], data: openarray[T], usage: GLenum) -> void = {
+proc bufferData[HasSizeOf(X)](buffer: ArrayBuffer[X], data: openarray(X), usage: GLenum) -> void = {
   if int(buffer.handle) > 0 do {
     glNamedBufferData(buffer.handle,
-      data.len * sizeof(type(T)) | conv(type(GLsizeiptr)),
-      data.data | conv(type(pointer)),
+      len(data) * sizeof(type(X)) | conv(type(GLsizeiptr)),
+      data(data) | conv(type(pointer)),
       usage
     )
   }
 }
 
 # TODO, this should be ArrayBuffer[T]
-proc arrayBuffer[HasSizeOf(T)](data: openarray[T], usage: GLenum, label: str) -> ArrayBuffer[T] = {
+proc arrayBuffer[HasSizeOf(T)](data: openarray(T), usage: GLenum, label: str) -> ArrayBuffer[T] = {
   var result: ArrayBuffer[T]
   result | new
   result | bufferData(data, usage)
@@ -252,7 +250,7 @@ proc main() -> i32 = {
     [ 1, 0,0,1]:f32x4,
     [0, 1,0,1],
     [0,0,1,1]
-  ], GL_STATIC_DRAW, "colors":str)
+  ]:openarray(f32x4), GL_STATIC_DRAW, "colors":str)
 
   # var buffers : array(2, u32)
 
