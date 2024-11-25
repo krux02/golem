@@ -414,6 +414,12 @@ func (typ *ArrayType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(")")
 }
 
+func (typ *OpenArrayType) PrettyPrint(builder *AstPrettyPrinter) {
+	builder.WriteString("openarray(")
+	builder.WriteNode(typ.Elem)
+	builder.WriteString(")")
+}
+
 func (typ *SimdVectorType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteNode(typ.Elem)
 	builder.WriteString("x")
@@ -427,15 +433,13 @@ func (typ *EnumSetType) PrettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (typ *GenericTypeSymbol) PrettyPrint(builder *AstPrettyPrinter) {
-	// builder.WriteString("(")
 	builder.WriteString(typ.Name)
-	// builder.WriteString(" : ")
-	// typ.Constraint.PrettyPrint(builder)
-	// builder.WriteString(")")
+	//builder.WriteString(" /generic/")
 }
 
 func (typ *AbstractTypeSymbol) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(typ.Name)
+	//builder.WriteString(" /abstract/")
 }
 
 func (call *TcCall) PrettyPrint(builder *AstPrettyPrinter) {
@@ -586,11 +590,7 @@ func (expr *TcStructField) PrettyPrint(builder *AstPrettyPrinter) {
 func (signature *Signature) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString(signature.Name)
 	if len(signature.GenericParams) > 0 {
-		builder.WriteString("[")
-		for _, genParam := range signature.GenericParams {
-			builder.WriteNode(genParam)
-		}
-		builder.WriteString("]")
+		mkstring(signature.GenericParams, "[", ", ", "]", builder)
 	}
 	builder.WriteString("(")
 	splitLines := len(signature.Params) > 3
@@ -813,6 +813,12 @@ func (subs *Substitutions) PrettyPrint(builder *AstPrettyPrinter) {
 			builder.NewlineAndIndent()
 			builder.WriteString("  ")
 			builder.WriteNode(sub.sym)
+			if _, isAbstract := sub.sym.(*AbstractTypeSymbol); isAbstract {
+				builder.WriteString(" *abs*")
+			}
+			if _, isGeneric := sub.sym.(*GenericTypeSymbol); isGeneric {
+				builder.WriteString(" *gen*")
+			}
 			builder.WriteString(" -> ")
 			builder.WriteNode(sub.newType)
 		}

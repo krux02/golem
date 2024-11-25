@@ -18,7 +18,7 @@ type StructNest1 = struct {
 }
 
 type StructNest2 = struct {
-  nest2: StructNest1
+  nest2: StructNest1 #
 }
 
 type StructNest3 = struct {

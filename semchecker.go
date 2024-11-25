@@ -209,7 +209,19 @@ func LookUpTypeExpr(sc *SemChecker, scope Scope, expr Expr) Type {
 				return TypeError
 			}
 			elem := LookUpTypeExpr(sc, scope, x.Args[1])
+			if elem == TypeError {
+				return TypeError
+			}
 			return GetArrayType(elem, intLit.Value.Int64())
+		case "openarray":
+			if !ExpectArgsLen(sc, expr, len(x.Args), 1) {
+				return TypeError
+			}
+			elem := LookUpTypeExpr(sc, scope, x.Args[0])
+			if elem == TypeError {
+				return TypeError
+			}
+			return GetOpenArrayType(elem)
 		case "set":
 			if !ExpectArgsLen(sc, expr, len(x.Args), 1) {
 				return TypeError
@@ -611,12 +623,22 @@ func ExpectType(sc *SemChecker, node Expr, gotten Type, expected TypeConstraint)
 	case *UnspecifiedType:
 		return gotten
 	case *TypeGroup:
+		// fmt.Printf("type group")
+		// for _, it := range expected.Items {
+		// 	fmt.Printf(" %s", AstFormat(it))
+		// }
+		// fmt.Printf("\n")
 		for _, it := range expected.Items {
 			if gotten == it {
 				return gotten
 			}
 		}
 	case UniqueTypeConstraint:
+
+		if ok, _ := ParamSignatureMatch(gotten, expected.Typ); ok {
+			return gotten
+		}
+
 		if expected.Typ == gotten {
 			return gotten
 		}
@@ -679,24 +701,21 @@ func argTypeGroupAtIndex(signatures []Signature, idx int) (result TypeConstraint
 			}
 		}
 
-		if len(openGenericsMap[typ]) > 0 {
-			// TODO this can be more precise than the most generic `TypeUnspecified`
-			return TypeUnspecified
-		}
 		builder.Items = AppendNoDuplicats(builder.Items, typ)
 	}
 	if len(builder.Items) == 1 {
-
 		typ := builder.Items[0]
-		if signatures[0].Name == "pointless" {
-			fmt.Printf("%s %T\n", AstFormat(typ), typ)
-		}
-
-		return UniqueTypeConstraint{builder.Items[0]}
+		return UniqueTypeConstraint{typ}
 	}
 	if len(builder.Items) == 0 {
 		return TypeUnspecified
 	}
+	for _, typ := range builder.Items {
+		if len(openGenericsMap[typ]) > 0 {
+			return TypeUnspecified
+		}
+	}
+
 	return (*TypeGroup)(builder)
 }
 
@@ -715,21 +734,21 @@ type TypeSubstitution = struct {
 	newType Type
 }
 
-func GenericParamSignatureMatch(scope Scope, exprType, paramType Type, substitutions *Substitutions) (ok bool, outSubstitutions *Substitutions) {
+func GenericParamSignatureMatch(exprType, paramType Type, inTypeSubs []TypeSubstitution) (ok bool, outTypeSubs []TypeSubstitution) {
 	if typeSym, isTypeSym := paramType.(*GenericTypeSymbol); isTypeSym {
 		// check if the type is somehow in the substitutions list
-		for _, sub := range substitutions.typeSubs {
+		for _, sub := range inTypeSubs {
 			if typeSym == sub.sym {
 				if sub.sym == exprType {
-					return true, substitutions
+					return true, inTypeSubs
 				} else {
 					return false, nil
 				}
 			}
 		}
 
-		outSubstitutions = substitutions // TODO is this correct? It modifies input substitutions
-		outSubstitutions.typeSubs = append(outSubstitutions.typeSubs,
+		// TODO is this correct? It modifies input substitutions
+		outTypeSubs = append(inTypeSubs,
 			TypeSubstitution{typeSym, exprType},
 			TypeSubstitution{typeSym.AbsTypSym, exprType},
 		)
@@ -737,92 +756,23 @@ func GenericParamSignatureMatch(scope Scope, exprType, paramType Type, substitut
 		switch constraint := typeSym.Constraint.(type) {
 		case UniqueTypeConstraint:
 			if constraint.Typ == exprType {
-				return true, outSubstitutions
+				return true, outTypeSubs
 			}
 			return false, nil
 		case *TypeGroup:
 			for _, it := range constraint.Items {
 				if it == exprType {
-					return true, outSubstitutions
+					return true, outTypeSubs
 				}
 			}
 			return false, nil
 		case *TypeTrait:
-			// fmt.Printf("dependent types: [")
-			// for i, typ := range constraint.Impl.DependentTypes {
-			// 	if i != 0 {
-			// 		fmt.Print(", ")
-			// 	}
-			// 	fmt.Print(typ.Name)
-			// }
-			// fmt.Printf("]\n")
-			// fmt.Printf("expr type: %s\n", AstFormat(exprType))
-			// fmt.Printf("signatures:\n")
-			// for _, sig := range constraint.Impl.Signatures {
-			// 	fmt.Printf("  %s\n", AstFormat(&sig))
-			// }
 
-			if len(constraint.Impl.DependentTypes) != 1 {
-				panic("not implemented")
-			}
-			traitInst := typeSym.TraitInst
-			// fmt.Printf("proc defs:\n")
-			// for _, def := range traitInst.ProcDefs {
-			// 	fmt.Printf("   %s\n", AstFormat(def))
-			// }
-			//
-			// trait CanDoPointlessStuff(U) = {
-			//   proc pointlessStuff(_: U): void
-			// }
-
-			// to convert the signatures listed in the trait to the current usage, we
-			// create a substitutions object here. in the example it would be U -> f32
-
-			typeSym := constraint.Impl.DependentTypes[0]
-
-			traitSubs := &Substitutions{
-				typeSubs: []TypeSubstitution{
-					{typeSym, exprType},
-				},
-			}
-			// fmt.Printf("traitSubs: %s\n", AstFormat(traitSubs))
-			var procSubs []ProcSubstitution
-			for i, sig := range constraint.Impl.Signatures {
-				// sig :: pointlessStuff(U): void
-				newSig, _ := SignatureApplyTypeSubstitution(sig, traitSubs) // pointlessStuff(f32): void
-				// fmt.Printf("traitSubs: %s\n", AstFormat(traitSubs))
-				// fmt.Printf("sig: %s\nnewsig: %s\n", AstFormat(&sig), AstFormat(&newSig))
-				candidates := LookUpProc(scope, newSig.Name, -1, nil)
-				var substitutionProc Overloadable
-			candidatesLoop:
-				for _, it := range candidates {
-
-					itSig := it.GetSignature()
-					for i := range newSig.Params {
-						// TODO this needs to be generic parameter signature matching
-						if itSig.Params[i].Type != newSig.Params[i].Type {
-							continue candidatesLoop
-						}
-					}
-					// this doesn't work for any generic type
-					substitutionProc = it
-					break candidatesLoop
-				}
-
-				if substitutionProc == nil {
-					return false, nil
-				}
-
-				traitProc := traitInst.ProcDefs[i]
-				//fmt.Printf("subst: %s\nwith: %s\n", AstFormat(traitProc), AstFormat(substitutionProc))
-				procSubs = append(procSubs, ProcSubstitution{traitProc, substitutionProc})
-			}
-
-			outSubstitutions.procSubs = append(outSubstitutions.procSubs, procSubs...)
-			return true, outSubstitutions
+			// do nothing right now?
+			return true, outTypeSubs
 
 		case *UnspecifiedType:
-			return true, outSubstitutions
+			return true, outTypeSubs
 		}
 	}
 
@@ -830,15 +780,16 @@ func GenericParamSignatureMatch(scope Scope, exprType, paramType Type, substitut
 		exprStructType, exprIsStructType := exprType.(*StructType)
 		paramStructType, paramIsStructType := paramType.(*StructType)
 		if exprIsStructType && paramIsStructType && exprStructType.Impl == paramStructType.Impl {
-			// NOTE: I really dislike this code that modifies the input
-			outSubstitutions = substitutions
+			// NOTE: I really dislike this code that modifies the input on substitution
+			outTypeSubs = inTypeSubs
 			for i, genArg := range exprStructType.GenericArgs {
-				ok, outSubstitutions = GenericParamSignatureMatch(scope, genArg, paramStructType.GenericArgs[i], outSubstitutions)
+				fmt.Printf("")
+				ok, outTypeSubs = GenericParamSignatureMatch(genArg, paramStructType.GenericArgs[i], outTypeSubs)
 				if !ok {
 					return false, nil
 				}
 			}
-			return true, outSubstitutions
+			return true, outTypeSubs
 		}
 	}
 
@@ -849,7 +800,15 @@ func GenericParamSignatureMatch(scope Scope, exprType, paramType Type, substitut
 			if exprArrType.Len != paramArrType.Len {
 				return false, nil
 			}
-			return GenericParamSignatureMatch(scope, exprArrType.Elem, paramArrType.Elem, substitutions)
+			return GenericParamSignatureMatch(exprArrType.Elem, paramArrType.Elem, inTypeSubs)
+		}
+	}
+
+	{
+		exprArrType, exprIsOpenArrType := exprType.(*OpenArrayType)
+		paramArrType, paramIsOpenArrType := paramType.(*OpenArrayType)
+		if exprIsOpenArrType && paramIsOpenArrType {
+			return GenericParamSignatureMatch(exprArrType.Elem, paramArrType.Elem, inTypeSubs)
 		}
 	}
 
@@ -857,7 +816,7 @@ func GenericParamSignatureMatch(scope Scope, exprType, paramType Type, substitut
 		exprPtrType, exprIsPtrType := exprType.(*PtrType)
 		paramPtrType, paramIsPtrType := paramType.(*PtrType)
 		if exprIsPtrType && paramIsPtrType {
-			return GenericParamSignatureMatch(scope, exprPtrType.Target, paramPtrType.Target, substitutions)
+			return GenericParamSignatureMatch(exprPtrType.Target, paramPtrType.Target, inTypeSubs)
 		}
 	}
 
@@ -865,7 +824,7 @@ func GenericParamSignatureMatch(scope Scope, exprType, paramType Type, substitut
 		exprEnumSetType, exprIsEnumSetType := exprType.(*EnumSetType)
 		paramEnumSetType, paramIsEnumSetType := paramType.(*EnumSetType) // TODO, this line is untested
 		if exprIsEnumSetType && paramIsEnumSetType {
-			return GenericParamSignatureMatch(scope, exprEnumSetType.Elem, paramEnumSetType.Elem, substitutions)
+			return GenericParamSignatureMatch(exprEnumSetType.Elem, paramEnumSetType.Elem, inTypeSubs)
 		}
 	}
 
@@ -873,7 +832,7 @@ func GenericParamSignatureMatch(scope Scope, exprType, paramType Type, substitut
 		exprTypeType, exprIsTypeType := exprType.(*TypeType)
 		paramTypeType, paramIsTypeType := paramType.(*TypeType)
 		if exprIsTypeType && paramIsTypeType {
-			return GenericParamSignatureMatch(scope, exprTypeType.WrappedType, paramTypeType.WrappedType, substitutions)
+			return GenericParamSignatureMatch(exprTypeType.WrappedType, paramTypeType.WrappedType, inTypeSubs)
 		}
 	}
 
@@ -881,7 +840,9 @@ func GenericParamSignatureMatch(scope Scope, exprType, paramType Type, substitut
 		exprTypeSym, exprIsAbstractType := exprType.(*AbstractTypeSymbol)
 		paramTypeSym, paramIsAbstractType := paramType.(*AbstractTypeSymbol)
 		if exprIsAbstractType && paramIsAbstractType {
-			return exprTypeSym == paramTypeSym, substitutions
+			if exprTypeSym == paramTypeSym {
+				return true, inTypeSubs
+			}
 		}
 	}
 
@@ -889,17 +850,12 @@ func GenericParamSignatureMatch(scope Scope, exprType, paramType Type, substitut
 	return false, nil
 }
 
-func ParamSignatureMatch(scope Scope, exprType, paramType Type) (ok bool, typeSubs []TypeSubstitution, procSubs []ProcSubstitution) {
+func ParamSignatureMatch(exprType, paramType Type) (ok bool, typeSubs []TypeSubstitution) {
 	if len(openGenericsMap[paramType]) > 0 {
-		ok, result := GenericParamSignatureMatch(scope, exprType, paramType, &Substitutions{})
-		if ok {
-			return true, result.typeSubs, result.procSubs
-		} else {
-			return false, nil, nil
-		}
+		return GenericParamSignatureMatch(exprType, paramType, typeSubs)
 	}
 	// fast non recursive pass
-	return exprType == paramType, nil, nil
+	return exprType == paramType, nil
 }
 
 func RecursiveTypeSubstitution(typ Type, substitutions []TypeSubstitution) Type {
@@ -935,6 +891,8 @@ func RecursiveTypeSubstitution(typ Type, substitutions []TypeSubstitution) Type 
 	case *ArrayType:
 		// TODO: array length substitution is not possible right now
 		return GetArrayType(RecursiveTypeSubstitution(typ.Elem, substitutions), typ.Len)
+	case *OpenArrayType:
+		return GetOpenArrayType(RecursiveTypeSubstitution(typ.Elem, substitutions))
 	case *TypeType:
 		return GetTypeType(RecursiveTypeSubstitution(typ.WrappedType, substitutions))
 	case *PtrType:
@@ -1253,6 +1211,160 @@ genericParams:
 	return cacheKey
 }
 
+func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, overloadable Overloadable, checkedArgs []TcExpr, substitutions *Substitutions) {
+	// this is for trait checking
+	//
+	var traits []TypeSubstitution
+
+	for _, typeSub := range substitutions.typeSubs {
+		switch sym := typeSub.sym.(type) {
+		case *GenericTypeSymbol:
+			switch constraint := sym.Constraint.(type) {
+			case *UnspecifiedType:
+				continue
+			case *TypeTrait:
+				traits = AppendNoDuplicats(traits, typeSub)
+			default:
+				fmt.Println(AstFormat(sym.Constraint))
+				fmt.Printf("%#+v\n", sym.Constraint)
+				panic("what do I do now?")
+				panic(constraint)
+			}
+		}
+
+		var debug = true
+
+		if len(traits) > 0 {
+			fmt.Println("\n=== check generic type ===\n")
+			fmt.Println(AstFormat(overloadable.GetSignature()))
+			// fmt.Println(AstFormat(&signatures[0]))
+			fmt.Println(AstFormat(substitutions))
+			fmt.Println("traits")
+			for _, trait := range traits {
+
+				fmt.Printf("%s -> %s", AstFormat(trait.sym), AstFormat(trait.newType))
+				// // fmt.Println(AstFormat(trait.Impl))
+				// // // trait.Impl.Signatures
+				// // // for _, def := range traitInst.ProcDefs {
+				// // // 	fmt.Printf("   %s\n", AstFormat(def))
+				// // }
+			}
+
+			fmt.Printf("proc defs:\n")
+
+			// trait CanDoPointlessStuff(U) = {
+			//   proc pointlessStuff(_: U): void
+			// }
+			for _, typeSub := range traits {
+
+				// exprType := typeSub.sym.constrainet
+
+				fmt.Printf("gen param match expr: %s param: %s\n", AstFormat(typeSub.sym), AstFormat(typeSub.newType))
+				fmt.Printf("%#+v\n", typeSub.sym)
+				fmt.Printf("%#+v\n", typeSub.newType)
+
+				typeSym := typeSub.sym.(*GenericTypeSymbol)
+				constraint := typeSym.Constraint.(*TypeTrait)
+
+				//fmt.Println(AstFormat(constraint))
+
+				if len(constraint.Impl.DependentTypes) != 1 {
+					panic("not implemented")
+				}
+				traitInst := typeSym.TraitInst
+				// fmt.Printf("proc defs:\n")
+				// for _, def := range traitInst.ProcDefs {
+				// 	fmt.Printf("   %s\n", AstFormat(def))
+				// }
+				//
+				// trait CanDoPointlessStuff(U) = {
+				//   proc pointlessStuff(_: U): void
+				// }
+
+				// to convert the signatures listed in the trait to the current usage, we
+				// create a substitutions object here. in the example it would be U -> f32
+
+				// typeSym := constraint.Impl.DependentTypes[0]
+
+				traitSubs := &Substitutions{}
+
+				traitSubs.typeSubs = append(traitSubs.typeSubs, traits...)
+
+				// fmt.Printf("traitSubs: %s\n", AstFormat(traitSubs))
+				var procSubs []ProcSubstitution
+				for i, sig := range constraint.Impl.Signatures {
+					// sig :: pointlessStuff(U): void
+					newSig, _ := SignatureApplyTypeSubstitution(sig, traitSubs) // pointlessStuff(f32): void
+					// fmt.Printf("traitSubs: %s\n", AstFormat(traitSubs))
+					// fmt.Printf("sig: %s\nnewsig: %s\n", AstFormat(&sig), AstFormat(&newSig))
+					candidates := LookUpProc(scope, newSig.Name, -1, nil)
+					var substitutionProc Overloadable
+
+					if debug {
+						fmt.Printf("sig: %s\nnewSig: %s\n", AstFormat(&sig), AstFormat(&newSig))
+						fmt.Printf("candidates: %d\n", len(candidates))
+					}
+
+				candidatesLoop:
+					for _, it := range candidates {
+
+						itSig := it.GetSignature()
+						for i := range newSig.Params {
+							// if debug {
+							// 	fmt.Printf("a: %s\nb: %s\n", AstFormat(itSig.Params[i].Type), AstFormat(newSig.Params[i].Type))
+							// }
+
+							// this doesn't work for any generic types properly, as it doesn't substitute generic type symbols
+							if ok, _ := ParamSignatureMatch(itSig.Params[i].Type, newSig.Params[i].Type); !ok {
+								continue candidatesLoop
+							}
+						}
+
+						substitutionProc = it
+						break candidatesLoop
+					}
+
+					if substitutionProc == nil {
+						ReportErrorf(sc, overloadable, "overload '%s' for trait '%s' not found\n", AstFormat(&newSig), constraint.Impl.Name)
+						//return TypeError
+					}
+
+					traitProc := traitInst.ProcDefs[i]
+					//fmt.Printf("subst: %s\nwith: %s\n", AstFormat(traitProc), AstFormat(substitutionProc))
+					procSubs = append(procSubs, ProcSubstitution{traitProc, substitutionProc})
+				}
+
+				substitutions.procSubs = append(substitutions.procSubs, procSubs...)
+			}
+			//return gotten
+			panic("what do I do now?")
+		}
+
+		fmt.Println(checkedArgs[0].GetSource())
+		fmt.Printf("%s\n%s\n%v\n", AstFormat(overloadable), AstFormat(checkedArgs[0].GetType()), substitutions)
+
+		panic("what do I do now?")
+	}
+
+	// fmt.Printf("dependent types: [")
+	// for i, typ := range constraint.Impl.DependentTypes {
+	// 	if i != 0 {
+	// 		fmt.Print(", ")
+	// 	}
+	// 	fmt.Print(typ.Name)
+	// }
+	// fmt.Printf("]\n")
+	// fmt.Printf("expr type: %s\n", AstFormat(exprType))
+	// fmt.Printf("signatures:\n")
+	// for _, sig := range constraint.Impl.Signatures {
+	// 	fmt.Printf("  %s\n", AstFormat(&sig))
+	// }
+
+	// TODO this trait matching must be moved away from here, it causes
+	// massive problems when it is done here.
+
+}
+
 func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstraint) TcExpr {
 	ident, isIdent := call.Callee.(*Ident)
 	if !isIdent {
@@ -1272,9 +1384,15 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 
 	var checkedArgs []TcExpr
 	hasArgTypeError := false
+	// if call.Callee.GetSource() == "arrayBuffer" {
+	// 	 fmt.Println(AstFormat(&signatures[0]))
+	// }
 	for i, arg := range call.Args {
 		// TODO reuse TypeGroupBuilder here
 		expectedArgType := argTypeGroupAtIndex(signatures, i)
+		// if call.Callee.GetSource() == "arrayBuffer" {
+		// 	 fmt.Printf("arg %d: %s\n", i, AstFormat(expectedArgType))
+		// }
 		tcArg := SemCheckExpr(sc, scope, arg, expectedArgType)
 		checkedArgs = append(checkedArgs, tcArg)
 		argType := tcArg.GetType()
@@ -1301,10 +1419,9 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 			}
 
 			typ := sig.Params[i].Type
-			if ok, typeSubs, procSubs := ParamSignatureMatch(scope, argType, typ); ok {
+			if ok, typeSubs := ParamSignatureMatch(argType, typ); ok {
 				// instantiate generic
 				subs.typeSubs = append(subs.typeSubs, typeSubs...)
-				subs.procSubs = append(subs.procSubs, procSubs...)
 				overloadables[n] = overloadable
 				signatures[n], _ = SignatureApplyTypeSubstitution(sig, &subs)
 				sigSubstitutions[n] = subs
@@ -1383,7 +1500,13 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 			}
 		}
 
-		switch impl := overloadables[0].(type) {
+		overloadable := overloadables[0]
+
+		if len(overloadable.GetSignature().GenericParams) > 0 {
+			CheckGenericTypeCallConstraint(sc, scope, overloadables[0], checkedArgs, &sigSubstitutions[0])
+		}
+
+		switch impl := overloadable.(type) {
 		case *TcProcDef:
 			instance := InstanciateGenericProc(impl, &sigSubstitutions[0])
 			result.Sym = &TcProcRef{Source: ident.Source, Overloadable: instance}
@@ -1837,6 +1960,7 @@ type ArrayTypeMapKey struct {
 var openGenericsMap map[Type][]Type
 
 var arrayTypeMap map[ArrayTypeMapKey]*ArrayType
+var openArrayTypeMap map[Type]*OpenArrayType
 var simdVectorTypeMap map[ArrayTypeMapKey]*SimdVectorType
 
 // is this safe, will this always look up a value? It is a pointer in a map
@@ -1883,10 +2007,34 @@ func GetArrayType(elem Type, len int64) (result *ArrayType) {
 	return result
 }
 
+func GetOpenArrayType(elem Type) (result *OpenArrayType) {
+	result, ok := openArrayTypeMap[elem]
+	//fmt.Printf("debug get open array type: %v  elem: %s p: %+#v\n", ok, AstFormat(elem), elem)
+	if !ok {
+		result = &OpenArrayType{Elem: elem}
+		openArrayTypeMap[elem] = result
+		openGenericsMap[result] = openGenericsMap[elem]
+		// TODO, this should be one generic builtin. Adding the overloads like here
+		// does have a negative effect or error messages.
+		//
+		// TODO the array index operator needs mutability propagation of the first argument.
+		// TODO this should be generic for better error messages on missing overloads, listing all currently known array types is a bit much
+
+		_, isGenericTypeSym := elem.(*GenericTypeSymbol)
+		if !isGenericTypeSym {
+			registerBuiltin("indexOp", "", ".data[", "]", []Type{result, TypeInt64}, elem, 0)
+			registerBuiltin("len", "", "", ".len", []Type{result}, TypeInt64, 0)
+			registerBuiltin("data", "", "", ".data", []Type{result}, GetPtrType(elem), 0)
+		}
+	}
+	return result
+}
+
 func GetSimdVectorType(elem NamedType, len int64) (result *SimdVectorType) {
 	result, ok := simdVectorTypeMap[ArrayTypeMapKey{elem, len}]
 	if !ok {
 		result = &SimdVectorType{Elem: elem, Len: len}
+		fmt.Printf("creating simd vector type %d of %s\n", len, elem.GetName())
 		simdVectorTypeMap[ArrayTypeMapKey{elem, len}] = result
 		openGenericsMap[result] = openGenericsMap[elem]
 		// TODO, this should be one generic builtin. Adding the overloads like here
@@ -1998,15 +2146,33 @@ func SemCheckArrayLit(sc *SemChecker, scope Scope, arg *ArrayLit, expected TypeC
 		return result
 	case UniqueTypeConstraint:
 		switch exp := exp.Typ.(type) {
+		case *OpenArrayType:
+			result := &TcArrayLit{
+				Items: make([]TcExpr, len(arg.Items)),
+			}
+			elemType := exp.Elem
+			for i, item := range arg.Items {
+				result.Items[i] = SemCheckExpr(sc, scope, item, UniqueTypeConstraint{elemType})
+				if i == 0 {
+					elemType = result.Items[0].GetType()
+				}
+			}
+			result.ElemType = elemType
+			result.Type = GetOpenArrayType(elemType)
+			return result
 		case *ArrayType:
 			result := &TcArrayLit{
-				Items:    make([]TcExpr, len(arg.Items)),
-				ElemType: exp.Elem,
-				Type:     exp,
+				Items: make([]TcExpr, len(arg.Items)),
 			}
+			elemType := exp.Elem
 			for i, item := range arg.Items {
-				result.Items[i] = SemCheckExpr(sc, scope, item, UniqueTypeConstraint{exp.Elem})
+				result.Items[i] = SemCheckExpr(sc, scope, item, UniqueTypeConstraint{elemType})
+				if i == 0 {
+					elemType = result.Items[0].GetType()
+				}
 			}
+			result.ElemType = elemType
+			result.Type = GetArrayType(elemType, exp.Len)
 			ExpectArgsLen(sc, arg, len(arg.Items), int(exp.Len))
 			return result
 		case *SimdVectorType:
@@ -2076,6 +2242,8 @@ func SemCheckArrayLit(sc *SemChecker, scope Scope, arg *ArrayLit, expected TypeC
 				}
 				return result
 			}
+		case *GenericTypeSymbol:
+			return SemCheckArrayLit(sc, scope, arg, exp.Constraint)
 		case *BuiltinType:
 			panic(fmt.Errorf("I don't know about type %s!", exp.Name))
 		default:

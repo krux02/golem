@@ -1,5 +1,7 @@
 package main
 
+// (setq left-margin-width 30)
+
 func EvalExpr(sc *SemChecker, expr TcExpr, scope Scope) TcExpr {
 	// TODO actually do something
 
