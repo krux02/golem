@@ -237,8 +237,9 @@ proc main() -> i32 = {
   # SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG)
   # SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE)
   let context: SDL_GLContext = SDL_GL_CreateContext(window)
-
   var running: bool = true
+  var tmp: f32x4 = [1,2,3,4]
+  printf("size: %d\n", sizeof(tmp))
 
   let vertices = arrayBuffer([
     [-1,-1, 0, 1]:f32x4,
