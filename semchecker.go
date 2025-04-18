@@ -1339,10 +1339,8 @@ func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, overloadable Ov
 			//return gotten
 			panic("what do I do now?")
 		}
-
 		fmt.Println(checkedArgs[0].GetSource())
 		fmt.Printf("%s\n%s\n%v\n", AstFormat(overloadable), AstFormat(checkedArgs[0].GetType()), substitutions)
-
 		panic("what do I do now?")
 	}
 
