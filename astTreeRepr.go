@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 func AstTreeFormat(node Expr) string {
@@ -46,8 +47,25 @@ func astTreeFormat(builder *AstPrettyPrinter, visitedNodes map[uintptr]int, node
 	switch node.Kind() {
 	case reflect.Invalid:
 		builder.WriteString("<invalid>")
-	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr, reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128, reflect.String:
+	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr, reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128:
 		fmt.Fprintf(builder, "%v", node)
+	case reflect.String:
+		str := node.String()
+		idx := strings.IndexRune(str, '\n')
+		var truncated = false
+		if 0 <= idx {
+			str = str[:idx]
+			truncated = true
+		}
+		if len(str) > 30 {
+			str = str[:30]
+			truncated = true
+		}
+		if truncated {
+			fmt.Fprintf(builder, "%s...", str)
+		} else {
+			fmt.Fprintf(builder, "%s", str)
+		}
 	case reflect.Array:
 		fmt.Fprintf(builder, "not implemented %v", node.Kind())
 	case reflect.Chan:
