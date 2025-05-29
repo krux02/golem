@@ -9,6 +9,7 @@ import (
 	"unsafe"
 )
 
+//go:generate stringer -type=TokenKind
 type TokenKind int16
 
 const (
@@ -43,32 +44,6 @@ const (
 	TkEof TokenKind = iota // end of file
 	TkCount
 )
-
-var TokenKindNames = [...]string{
-	TkInvalid:      "Invalid",
-	TkIdent:        "Ident",
-	TkQuotedIdent:  "QuotedIdent",
-	TkNewLine:      "NewLine",
-	TkSemicolon:    "Semicolon",
-	TkComma:        "Comma",
-	TkOperator:     "Operator",
-	TkStrLit:       "StrLit",
-	TkRawStrLit:    "RawStrLit",
-	TkIntLit:       "IntLit",
-	TkFloatLit:     "FloatLit",
-	TkNilLit:       "NilLit",
-	TkDocComment:   "DocComment",
-	TkVar:          "Var",
-	TkLet:          "Let",
-	TkConst:        "Const",
-	TkOpenBrace:    "OpenBrace",
-	TkCloseBrace:   "CloseBrace",
-	TkOpenBracket:  "OpenBracket",
-	TkCloseBracket: "CloseBracket",
-	TkOpenCurly:    "OpenCurly",
-	TkCloseCurly:   "CloseCurly",
-	TkEof:          "<EOF>",
-}
 
 type Token struct {
 	kind  TokenKind
@@ -554,7 +529,7 @@ func (tokenizer *Tokenizer) reportError(token Token, msg string, args ...interfa
 func (tokenizer *Tokenizer) reportWrongKind(token Token) {
 	if token.kind != TkInvalid {
 		// Skip reporting invalid tokens, as they should already be reported as an error on creating them.
-		tokenizer.reportError(token, "unexpected token: %s value: '%s'", TokenKindNames[token.kind], token.value)
+		tokenizer.reportError(token, "unexpected token: %v value: '%s'", token.kind, token.value)
 	}
 	return
 }

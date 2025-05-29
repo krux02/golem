@@ -14,20 +14,35 @@ type AstPrettyPrinter struct {
 	Indentation int
 }
 
-func (this TokenKind) String() string {
-	return TokenKindNames[this]
-}
-
 func (this Token) String() string {
 	return fmt.Sprintf("(%s %q)", this.kind, this.value)
 }
 
-/// AST NODES
+// / AST NODES
+// compresses multiple consecutive empty lines into a single empty line
+func filterOutEmptyLines(str string) string {
+	builder := &strings.Builder{}
+	var lastLineEmpty = false
+	for _, line := range strings.Split(str, "\n") {
+		if strings.Count(line, " ") == len(line) {
+			if !lastLineEmpty {
+				builder.WriteRune('\n')
+			}
+			lastLineEmpty = true
+		} else {
+			builder.WriteString(line)
+			builder.WriteRune('\n')
+			lastLineEmpty = false
+		}
+	}
+	return builder.String()
+}
 
 func (builder *AstPrettyPrinter) NewlineAndIndent() {
+
 	builder.WriteRune('\n')
 	N := builder.Indentation
-	for i := 0; i < N; i++ {
+	for range N {
 		builder.WriteString("  ")
 	}
 	builder.LineIdx += 1
@@ -60,7 +75,7 @@ func AstFormat(node PrettyPrintable) string {
 
 func (arg *InvalidTokenExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("<invalid ")
-	builder.WriteString(TokenKindNames[arg.kind])
+	builder.WriteString(arg.kind.String())
 	builder.WriteString(": ")
 	builder.WriteString(arg.Source)
 	builder.WriteString(">")

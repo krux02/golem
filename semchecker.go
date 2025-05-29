@@ -1211,7 +1211,7 @@ genericParams:
 	return cacheKey
 }
 
-func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, overloadable Overloadable, checkedArgs []TcExpr, substitutions *Substitutions) {
+func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, ident *Ident, overloadable Overloadable, checkedArgs []TcExpr, substitutions *Substitutions) {
 	// this is for trait checking
 	//
 	var traits []TypeSubstitution
@@ -1219,7 +1219,7 @@ func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, overloadable Ov
 	for _, typeSub := range substitutions.typeSubs {
 		switch sym := typeSub.sym.(type) {
 		case *GenericTypeSymbol:
-			switch constraint := sym.Constraint.(type) {
+			switch sym.Constraint.(type) {
 			case *UnspecifiedType:
 				continue
 			case *TypeTrait:
@@ -1228,7 +1228,6 @@ func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, overloadable Ov
 				fmt.Println(AstFormat(sym.Constraint))
 				fmt.Printf("%#+v\n", sym.Constraint)
 				panic("what do I do now?")
-				panic(constraint)
 			}
 		}
 
@@ -1337,11 +1336,14 @@ func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, overloadable Ov
 				substitutions.procSubs = append(substitutions.procSubs, procSubs...)
 			}
 			//return gotten
+			fmt.Println(checkedArgs[0].GetSource())
+			fmt.Printf("%s\n%s\n%v\n", AstFormat(overloadable), AstFormat(checkedArgs[0].GetType()), substitutions)
+			fmt.Println(AstTreeFormat(overloadable))
+			ReportErrorf(sc, ident, "compiler bug")
 			panic("what do I do now?")
 		}
-		fmt.Println(checkedArgs[0].GetSource())
-		fmt.Printf("%s\n%s\n%v\n", AstFormat(overloadable), AstFormat(checkedArgs[0].GetType()), substitutions)
-		panic("what do I do now?")
+
+		// panic("what do I do now?")
 	}
 
 	// fmt.Printf("dependent types: [")
@@ -1357,7 +1359,6 @@ func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, overloadable Ov
 	// for _, sig := range constraint.Impl.Signatures {
 	// 	fmt.Printf("  %s\n", AstFormat(&sig))
 	// }
-
 	// TODO this trait matching must be moved away from here, it causes
 	// massive problems when it is done here.
 
@@ -1501,7 +1502,9 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 		overloadable := overloadables[0]
 
 		if len(overloadable.GetSignature().GenericParams) > 0 {
-			CheckGenericTypeCallConstraint(sc, scope, overloadables[0], checkedArgs, &sigSubstitutions[0])
+
+			CheckGenericTypeCallConstraint(sc, scope, ident, overloadable, checkedArgs, &sigSubstitutions[0])
+
 		}
 
 		switch impl := overloadable.(type) {

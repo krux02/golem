@@ -156,6 +156,7 @@ type TcProcRef struct {
 	Overloadable Overloadable
 }
 
+//go:generate stringer -type=SymbolKind
 type SymbolKind int
 
 // not the type or properties of a symbol, just where it has been declared
