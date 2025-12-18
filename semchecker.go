@@ -1212,8 +1212,8 @@ genericParams:
 }
 
 func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, ident *Ident, overloadable Overloadable, checkedArgs []TcExpr, substitutions *Substitutions) {
+
 	// this is for trait checking
-	//
 	var traits []TypeSubstitution
 
 	for _, typeSub := range substitutions.typeSubs {
@@ -1234,7 +1234,7 @@ func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, ident *Ident, o
 		var debug = true
 
 		if len(traits) > 0 {
-			fmt.Println("\n=== check generic type ===\n")
+			fmt.Println("\n=== check generic type ===")
 			fmt.Println(AstFormat(overloadable.GetSignature()))
 			// fmt.Println(AstFormat(&signatures[0]))
 			fmt.Println(AstFormat(substitutions))
@@ -1254,6 +1254,7 @@ func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, ident *Ident, o
 			// trait CanDoPointlessStuff(U) = {
 			//   proc pointlessStuff(_: U): void
 			// }
+
 			for _, typeSub := range traits {
 
 				// exprType := typeSub.sym.constrainet
@@ -1335,6 +1336,7 @@ func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, ident *Ident, o
 
 				substitutions.procSubs = append(substitutions.procSubs, procSubs...)
 			}
+
 			//return gotten
 			fmt.Println(checkedArgs[0].GetSource())
 			fmt.Printf("%s\n%s\n%v\n", AstFormat(overloadable), AstFormat(checkedArgs[0].GetType()), substitutions)

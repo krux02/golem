@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 )
 
@@ -23,7 +24,7 @@ func isEmpty(node reflect.Value) bool {
 		return true
 	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr, reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128:
 		return false
-	case reflect.Array, reflect.String:
+	case reflect.Array, reflect.String, reflect.Slice:
 		return node.Len() == 0
 	case reflect.Chan:
 		return false // ???
@@ -35,12 +36,14 @@ func isEmpty(node reflect.Value) bool {
 		return node.IsNil() || isEmpty(node.Elem())
 	case reflect.Pointer, reflect.UnsafePointer:
 		return node.IsNil()
-	case reflect.Slice:
-		return node.Len() == 0
 	case reflect.Struct:
 		return false
 	}
 	return false
+}
+
+var filteredOutFields = []string{
+	"Prefix", "Infix", "Postfix",
 }
 
 func astTreeFormat(builder *AstPrettyPrinter, visitedNodes map[uintptr]int, node reflect.Value) {
@@ -66,14 +69,20 @@ func astTreeFormat(builder *AstPrettyPrinter, visitedNodes map[uintptr]int, node
 		} else {
 			fmt.Fprintf(builder, "%s", str)
 		}
-	case reflect.Array:
-		fmt.Fprintf(builder, "not implemented %v", node.Kind())
 	case reflect.Chan:
 		fmt.Fprintf(builder, "not implemented %v", node.Kind())
 	case reflect.Func:
 		fmt.Fprintf(builder, "not implemented %v", node.Kind())
 	case reflect.Map:
-		fmt.Fprintf(builder, "not implemented %v", node.Kind())
+		fmt.Fprintf(builder, "map (len: %d)", node.Len())
+		builder.Indentation += 1
+		for it := node.MapRange(); it.Next(); {
+			builder.NewlineAndIndent()
+			astTreeFormat(builder, visitedNodes, it.Key())
+			fmt.Fprintf(builder, " -> ")
+			astTreeFormat(builder, visitedNodes, it.Value())
+		}
+		builder.Indentation -= 1
 	case reflect.Interface:
 		// builder.WriteString(" ->")
 		// if idx, ok := visitedNodes[node.Pointer()]; ok {
@@ -84,14 +93,31 @@ func astTreeFormat(builder *AstPrettyPrinter, visitedNodes map[uintptr]int, node
 		//}
 	case reflect.Pointer:
 		// builder.WriteString(" ->")
-		if idx, ok := visitedNodes[node.Pointer()]; ok {
-			fmt.Fprintf(builder, "visited on Line %d", idx+1)
-		} else {
-			visitedNodes[node.Pointer()] = builder.LineIdx
-			astTreeFormat(builder, visitedNodes, node.Elem())
-		}
+		//
+		//
+		// if node.Type() == reflect.TypeFor[*BuiltinIntType]() {
+		//
+		// 	return
+		// }
 
-	case reflect.Slice:
+		switch n := node.Interface().(type) {
+		case (*BuiltinIntType):
+			builder.WriteString(n.Name)
+		case (*BuiltinFloatType):
+			builder.WriteString(n.Name)
+		case (*BuiltinStringType):
+			builder.WriteString(n.Name)
+		case (*BuiltinType):
+			builder.WriteString(n.Name)
+		default:
+			if idx, ok := visitedNodes[node.Pointer()]; ok {
+				fmt.Fprintf(builder, "visited on Line %d", idx+1)
+			} else {
+				visitedNodes[node.Pointer()] = builder.LineIdx
+				astTreeFormat(builder, visitedNodes, node.Elem())
+			}
+		}
+	case reflect.Slice, reflect.Array:
 		//builder.WriteString("[")
 		builder.Indentation += 1
 		for i := range node.Len() {
@@ -115,10 +141,16 @@ func astTreeFormat(builder *AstPrettyPrinter, visitedNodes map[uintptr]int, node
 				continue
 			}
 			name := node.Type().Field(i).Name
+
+			if slices.Contains(filteredOutFields, name) {
+				continue
+			}
+
 			builder.NewlineAndIndent()
 			builder.WriteString(name)
 			builder.WriteString(": ")
 			astTreeFormat(builder, visitedNodes, value)
+
 		}
 		builder.Indentation -= 1
 		if node.NumField() > 0 {

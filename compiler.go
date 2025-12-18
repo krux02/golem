@@ -755,7 +755,7 @@ func compilePackageToC(program *ProgramContext, pak *TcPackageDef, mainPackage b
 	context.includes.WriteString(`
 #include <assert.h>
 typedef struct string {size_t len; char const* data;} string;
-typedef unsigned char bool;
+//typedef unsigned char bool;
 `)
 
 	// program.Main

@@ -42,7 +42,6 @@ proc main() -> void = {
   var myStruct: MyStruct = [123, "xyz"]
   myStruct = ident(myStruct) # does nothing, but should compile
   bar(myStruct)
-
 }
 
 # bing(13:i32)
