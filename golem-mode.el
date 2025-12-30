@@ -92,6 +92,22 @@
     res))
 
 
+(defun golem-toggle-c-file ()
+  "Go to generated c source, or back from there to the golem source."
+  (interactive)
+
+  (if (boundp 'golem-file-name)
+      (if (file-exists-p golem-file-name)
+          (progn
+            (message "opening file %s" golem-file-name)
+            (find-file golem-file-name))
+        (message "golem file does not exist: %s" golem-file-name))
+    (let ((c-file-name (concat (temporary-file-directory) "golem/" (file-name-base (buffer-file-name)) ".c")))
+      (if (file-exists-p c-file-name)
+          (find-file c-file-name)
+        (message "c file does not exist: %s" c-file-name)))))
+
+
 
 ;;;###autoload
 (define-derived-mode golem-mode prog-mode "golem"

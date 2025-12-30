@@ -1,7 +1,24 @@
 
+# trait Number(T) = {
+#   proc +(_:T, _:T) -> T
+#   proc -(_:T, _:T) -> T
+#   proc *(_:T, _:T) -> T
+#   proc /(_:T, _:T) -> T
+#   proc <(_:T, _T) -> bool
+# }
+
+# proc abs[Number(T)](x1: T, x2: T) -> T = if x1 < x2 do x2 else x1
+# proc distance[Number(T)](x1: T, x2: T) -> T = abs(x2-x1)
+
+# proc mymathproc() {
+#   var f1: f32 = 123
+#   var f2: f32 = 321
+#   distance(arg1,arg)  
+# }
+
 trait MyTrait(T) = {
-  proc foo(_:T, _:str) -> void
-  proc foo(_:T, _:f32) -> void
+  proc foo(_:T, _:str) -> void  
+  proc foo(_:T, _:f32) -> void  
   proc foo(_:T, _:f64) -> void
 }
 
@@ -24,7 +41,7 @@ type MyStruct = struct {
   b: str
 }
 
-proc foo(self:MyStruct, arg:str) -> void = {
+proc foo(self:MyStruct, arg:str) -> void = {  
   printf("foo str: %d %s %s\n", self.a, self.b, arg)
 }
 proc foo(self:MyStruct, arg:f32) -> void = {
@@ -38,10 +55,11 @@ trait Any(T) = {}
 
 proc ident[Any(T)](arg: T) -> T = arg
 
-proc main() -> void = {
+proc main() -> i32 = {
   var myStruct: MyStruct = [123, "xyz"]
   myStruct = ident(myStruct) # does nothing, but should compile
   bar(myStruct)
+  0
 }
 
 # bing(13:i32)

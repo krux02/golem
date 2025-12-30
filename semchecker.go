@@ -719,17 +719,17 @@ func argTypeGroupAtIndex(signatures []Signature, idx int) (result TypeConstraint
 	return (*TypeGroup)(builder)
 }
 
-type ProcSubstitution = struct {
+type ProcSubstitution struct {
 	sig    Overloadable
 	newSig Overloadable
 }
 
-type SymbolSubstitution = struct {
+type SymbolSubstitution struct {
 	sym    *TcSymbol
 	newSym *TcSymbol
 }
 
-type TypeSubstitution = struct {
+type TypeSubstitution struct {
 	sym     Type
 	newType Type
 }
@@ -1211,9 +1211,51 @@ genericParams:
 	return cacheKey
 }
 
-func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, ident *Ident, overloadable Overloadable, checkedArgs []TcExpr, substitutions *Substitutions) {
+// / might return nil when no overloadable was found
+func SelectProcFromCandidatesUsingSignature(candidates []Overloadable, signature Signature, debug bool) Overloadable {
+	if debug {
+		fmt.Printf("newSig: %s\n", AstFormat(&signature))
+		fmt.Printf("candidates:\n")
+		for i, it := range candidates {
+			fmt.Printf("  %d: %s\n", i, AstFormat(it.GetSignature()))
+		}
+	}
+candidatesLoop:
+	for _, it := range candidates {
+		itSig := it.GetSignature()
+		for i := range signature.Params {
+			// if debug {
+			// 	fmt.Printf("a: %s\nb: %s\n", AstFormat(itSig.Params[i].Type), AstFormat(newSig.Params[i].Type))
+			// }
 
-	// this is for trait checking
+			// TODO this is the Bug I am working on !!!! this doesn't work for any generic types properly, as it doesn't substitute generic type symbols
+			// ***** HIER WEITERMACHEN ****
+			// ***** NOT FINISHED ****
+			if ok, typeSubs := ParamSignatureMatch(itSig.Params[i].Type, signature.Params[i].Type); ok {
+				if debug {
+					for _, sub := range typeSubs {
+						AstFormat(sub)
+					}
+				}
+			} else {
+				// some parameter doesn't match, therefore this candidate isn't the one -> next
+				continue candidatesLoop
+			}
+		}
+
+		// all parameters match, just return it.
+		//
+		// TODO is it correct to just take the first one? I actually have my doubts
+		// here. If it is correct there should be a comment about why this is the
+		// intended behavior.
+		return it
+	}
+	return nil
+}
+
+func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, ident *Ident, overloadable Overloadable, checkedArgs []TcExpr, substitutions *Substitutions) {
+	// a generic function is called on some resolved arguments. This function must verify that the argument are compatible with the given type constraints.
+
 	var traits []TypeSubstitution
 
 	for _, typeSub := range substitutions.typeSubs {
@@ -1231,7 +1273,7 @@ func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, ident *Ident, o
 			}
 		}
 
-		var debug = true
+		//var debug = true
 
 		if len(traits) > 0 {
 			fmt.Println("\n=== check generic type ===")
@@ -1241,7 +1283,7 @@ func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, ident *Ident, o
 			fmt.Println("traits")
 			for _, trait := range traits {
 
-				fmt.Printf("%s -> %s", AstFormat(trait.sym), AstFormat(trait.newType))
+				fmt.Printf("%s -> %s\n", AstFormat(trait.sym), AstFormat(trait.newType))
 				// // fmt.Println(AstFormat(trait.Impl))
 				// // // trait.Impl.Signatures
 				// // // for _, def := range traitInst.ProcDefs {
@@ -1259,9 +1301,9 @@ func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, ident *Ident, o
 
 				// exprType := typeSub.sym.constrainet
 
-				fmt.Printf("gen param match expr: %s param: %s\n", AstFormat(typeSub.sym), AstFormat(typeSub.newType))
-				fmt.Printf("%#+v\n", typeSub.sym)
-				fmt.Printf("%#+v\n", typeSub.newType)
+				// fmt.Printf("gen param match expr: %s param: %s\n", AstFormat(typeSub.sym), AstFormat(typeSub.newType))
+				// fmt.Printf("%#+v\n", typeSub.sym)
+				// fmt.Printf("%#+v\n", typeSub.newType)
 
 				typeSym := typeSub.sym.(*GenericTypeSymbol)
 				constraint := typeSym.Constraint.(*TypeTrait)
@@ -1272,18 +1314,16 @@ func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, ident *Ident, o
 					panic("not implemented")
 				}
 				traitInst := typeSym.TraitInst
+
 				// fmt.Printf("proc defs:\n")
 				// for _, def := range traitInst.ProcDefs {
 				// 	fmt.Printf("   %s\n", AstFormat(def))
 				// }
-				//
 				// trait CanDoPointlessStuff(U) = {
 				//   proc pointlessStuff(_: U): void
 				// }
-
 				// to convert the signatures listed in the trait to the current usage, we
 				// create a substitutions object here. in the example it would be U -> f32
-
 				// typeSym := constraint.Impl.DependentTypes[0]
 
 				traitSubs := &Substitutions{}
@@ -1292,37 +1332,29 @@ func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, ident *Ident, o
 
 				// fmt.Printf("traitSubs: %s\n", AstFormat(traitSubs))
 				var procSubs []ProcSubstitution
+
+				// find a matching proc for each signature stored in the trait
 				for i, sig := range constraint.Impl.Signatures {
-					// sig :: pointlessStuff(U): void
+
+					// this might be a noop, this is fine.
+					var debug = false
+					if len(checkedArgs) == 1 && checkedArgs[0].GetType() == TypeStr {
+						debug = true
+					}
 					newSig, _ := SignatureApplyTypeSubstitution(sig, traitSubs) // pointlessStuff(f32): void
+
 					// fmt.Printf("traitSubs: %s\n", AstFormat(traitSubs))
 					// fmt.Printf("sig: %s\nnewsig: %s\n", AstFormat(&sig), AstFormat(&newSig))
 					candidates := LookUpProc(scope, newSig.Name, -1, nil)
-					var substitutionProc Overloadable
 
 					if debug {
-						fmt.Printf("sig: %s\nnewSig: %s\n", AstFormat(&sig), AstFormat(&newSig))
-						fmt.Printf("candidates: %d\n", len(candidates))
-					}
-
-				candidatesLoop:
-					for _, it := range candidates {
-
-						itSig := it.GetSignature()
-						for i := range newSig.Params {
-							// if debug {
-							// 	fmt.Printf("a: %s\nb: %s\n", AstFormat(itSig.Params[i].Type), AstFormat(newSig.Params[i].Type))
-							// }
-
-							// this doesn't work for any generic types properly, as it doesn't substitute generic type symbols
-							if ok, _ := ParamSignatureMatch(itSig.Params[i].Type, newSig.Params[i].Type); !ok {
-								continue candidatesLoop
-							}
+						fmt.Printf("args:\n")
+						for i, it := range checkedArgs {
+							fmt.Printf("  %d: %s : %s\n", i, AstFormat(it), AstFormat(it.GetType()))
 						}
-
-						substitutionProc = it
-						break candidatesLoop
 					}
+
+					substitutionProc := SelectProcFromCandidatesUsingSignature(candidates, newSig, debug)
 
 					if substitutionProc == nil {
 						ReportErrorf(sc, overloadable, "overload '%s' for trait '%s' not found\n", AstFormat(&newSig), constraint.Impl.Name)
@@ -1330,22 +1362,14 @@ func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, ident *Ident, o
 					}
 
 					traitProc := traitInst.ProcDefs[i]
-					//fmt.Printf("subst: %s\nwith: %s\n", AstFormat(traitProc), AstFormat(substitutionProc))
+					fmt.Printf("subst: %s\nwith: %s\n", AstFormat(traitProc), AstFormat(substitutionProc.GetSignature()))
+
 					procSubs = append(procSubs, ProcSubstitution{traitProc, substitutionProc})
 				}
 
 				substitutions.procSubs = append(substitutions.procSubs, procSubs...)
 			}
-
-			//return gotten
-			fmt.Println(checkedArgs[0].GetSource())
-			fmt.Printf("%s\n%s\n%v\n", AstFormat(overloadable), AstFormat(checkedArgs[0].GetType()), substitutions)
-			fmt.Println(AstTreeFormat(overloadable))
-			ReportErrorf(sc, ident, "compiler bug")
-			panic("what do I do now?")
 		}
-
-		// panic("what do I do now?")
 	}
 
 	// fmt.Printf("dependent types: [")
@@ -1436,6 +1460,10 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 	}
 
 	result := &TcCall{Source: call.Source, Braced: call.Braced}
+
+	if strings.HasPrefix(call.Source, "pointless") {
+		fmt.Printf("jo got call: %s", call.Source)
+	}
 
 	switch len(overloadables) {
 	case 0:
@@ -2331,6 +2359,9 @@ func SemCheckPackage(sc *SemChecker, currentProgram *ProgramContext, arg *Packag
 				if mainPackage && x.Signature.Name == "main" {
 					if len(x.Signature.GenericParams) > 0 {
 						ReportErrorf(sc, x, "main proc may not be generic")
+					}
+					if x.Signature.ResultType != TypeInt32 {
+						ReportErrorf(sc, x, "main proc must return type i32")
 					}
 					if currentProgram.Main != nil {
 						ReportErrorf(sc, x, "double definition of main proc")

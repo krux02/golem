@@ -858,6 +858,12 @@ func (this *AbstractDefaultValue) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("~~~abstract default value~~~")
 }
 
+func (this TypeSubstitution) PrettyPrint(builder *AstPrettyPrinter) {
+	this.sym.PrettyPrint(builder)
+	builder.WriteString(" -> ")
+	this.newType.PrettyPrint(builder)
+}
+
 func (this *BuiltinType) GetName() string {
 	return this.Name
 }
