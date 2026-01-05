@@ -1213,6 +1213,13 @@ genericParams:
 
 // / might return nil when no overloadable was found
 func SelectProcFromCandidatesUsingSignature(candidates []Overloadable, signature Signature, debug bool) Overloadable {
+
+	if len(signature.GenericParams) > 0 {
+		panic(fmt.Sprintf(
+			"internal error: generics arguments are expected to instanciated\n%s\n",
+			AstFormat(&signature)))
+	}
+
 	if debug {
 		fmt.Printf("newSig: %s\n", AstFormat(&signature))
 		fmt.Printf("candidates:\n")
@@ -1256,6 +1263,11 @@ candidatesLoop:
 func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, ident *Ident, overloadable Overloadable, checkedArgs []TcExpr, substitutions *Substitutions) {
 	// a generic function is called on some resolved arguments. This function must verify that the argument are compatible with the given type constraints.
 
+	var debug = false
+	if len(checkedArgs) == 1 && checkedArgs[0].GetType() == TypeStr {
+		debug = true
+	}
+
 	var traits []TypeSubstitution
 
 	for _, typeSub := range substitutions.typeSubs {
@@ -1276,22 +1288,25 @@ func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, ident *Ident, o
 		//var debug = true
 
 		if len(traits) > 0 {
-			fmt.Println("\n=== check generic type ===")
-			fmt.Println(AstFormat(overloadable.GetSignature()))
-			// fmt.Println(AstFormat(&signatures[0]))
-			fmt.Println(AstFormat(substitutions))
-			fmt.Println("traits")
-			for _, trait := range traits {
 
-				fmt.Printf("%s -> %s\n", AstFormat(trait.sym), AstFormat(trait.newType))
-				// // fmt.Println(AstFormat(trait.Impl))
-				// // // trait.Impl.Signatures
-				// // // for _, def := range traitInst.ProcDefs {
-				// // // 	fmt.Printf("   %s\n", AstFormat(def))
-				// // }
+			if debug {
+				fmt.Println("\n=== check generic type ===")
+				fmt.Println(AstFormat(overloadable.GetSignature()))
+				// fmt.Println(AstFormat(&signatures[0]))
+				fmt.Println(AstFormat(substitutions))
+				fmt.Println("traits")
+
+				for _, trait := range traits {
+
+					fmt.Printf("%s -> %s\n", AstFormat(trait.sym), AstFormat(trait.newType))
+
+					// // fmt.Println(AstFormat(trait.Impl))
+					// // // trait.Impl.Signatures
+					// // // for _, def := range traitInst.ProcDefs {
+					// // // 	fmt.Printf("   %s\n", AstFormat(def))
+					// // }
+				}
 			}
-
-			fmt.Printf("proc defs:\n")
 
 			// trait CanDoPointlessStuff(U) = {
 			//   proc pointlessStuff(_: U): void
@@ -1337,16 +1352,14 @@ func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, ident *Ident, o
 				for i, sig := range constraint.Impl.Signatures {
 
 					// this might be a noop, this is fine.
-					var debug = false
-					if len(checkedArgs) == 1 && checkedArgs[0].GetType() == TypeStr {
-						debug = true
-					}
 					newSig, _ := SignatureApplyTypeSubstitution(sig, traitSubs) // pointlessStuff(f32): void
-
-					// fmt.Printf("traitSubs: %s\n", AstFormat(traitSubs))
-					// fmt.Printf("sig: %s\nnewsig: %s\n", AstFormat(&sig), AstFormat(&newSig))
+					//
+					if len(newSig.GenericParams) > 0 {
+						fmt.Printf("substitudions:\n%s\n", AstFormat(traitSubs))
+						fmt.Printf("sig:\n  %s\nnewSig:\n  %s\n", AstFormat(&sig), AstFormat(&newSig))
+						panic("we have a problem here, new signature shall not have generic types anymore")
+					}
 					candidates := LookUpProc(scope, newSig.Name, -1, nil)
-
 					if debug {
 						fmt.Printf("args:\n")
 						for i, it := range checkedArgs {
@@ -1362,8 +1375,9 @@ func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, ident *Ident, o
 					}
 
 					traitProc := traitInst.ProcDefs[i]
-					fmt.Printf("subst: %s\nwith: %s\n", AstFormat(traitProc), AstFormat(substitutionProc.GetSignature()))
-
+					if debug {
+						fmt.Printf("subst: %s\nwith: %s\n", AstFormat(traitProc), AstFormat(substitutionProc.GetSignature()))
+					}
 					procSubs = append(procSubs, ProcSubstitution{traitProc, substitutionProc})
 				}
 
@@ -1461,9 +1475,9 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 
 	result := &TcCall{Source: call.Source, Braced: call.Braced}
 
-	if strings.HasPrefix(call.Source, "pointless") {
-		fmt.Printf("jo got call: %s", call.Source)
-	}
+	// if strings.HasPrefix(call.Source, "pointless") {
+	// 	fmt.Printf("jo got call: %s", call.Source)
+	// }
 
 	switch len(overloadables) {
 	case 0:

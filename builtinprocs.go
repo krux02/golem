@@ -986,6 +986,7 @@ func BuiltinContinueStmt(sc *SemChecker, scope Scope, call *TcCall, expected Typ
 }
 
 func BuiltinProcDef(sc *SemChecker, parentScope Scope, call *TcCall, expected TypeConstraint) TcExpr {
+	// sem check proc def
 	innerScope := NewSubScope(parentScope)
 
 	var annotations *StrLit
@@ -1047,6 +1048,15 @@ func BuiltinProcDef(sc *SemChecker, parentScope Scope, call *TcCall, expected Ty
 	}
 
 	result.Body = tcBody
+
+	if name.Source == "pointless" {
+		fooCall := tcBody.(*TcCodeBlock).Items[2].(*TcCall)
+		//fooSym := fooCall.Sym
+		//argSym := fooCall.Args[0].(*TcSymRef)
+		// TODO here are still some bugs, as it has both U and T as a symbol, that means at the final symbol substitudion, this won't work anymore
+		fmt.Printf("pointless:\n%s\ntree:\n%s\n", AstFormat(fooCall), AstTreeFormat(fooCall))
+		//fmt.Printf("pointless:\n%s\n", AstFormat(tcBody))
+	}
 	return result
 }
 
