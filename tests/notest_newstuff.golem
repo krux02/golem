@@ -29,6 +29,8 @@ proc compare(x,y: MyStruct) -> int = {
   compare(x.a, y.a)
 }
 
+# TODO this should return an error, as `V` isn't used in the argument list, and can
+# therefore not be inferred from the calling site.
 proc foo[HasFoo(T), CombineTrait(T,V)](arg1,arg2: T) -> void = {
   bar(arg1, 13)
   bar(arg2, 14)

@@ -419,7 +419,7 @@ func AstListFormat[T PrettyPrintable](syms []T) string {
 		sym.PrettyPrint(builder)
 	}
 	builder.WriteString("}")
-	return builder.String()
+	return builder.builder.String()
 }
 
 func makeGenericSignature(name string, genericParams []*GenericTypeSymbol, args []Type, result Type, argMutableBitmask uint64) Signature {

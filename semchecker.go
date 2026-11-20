@@ -1357,6 +1357,7 @@ func CheckGenericTypeCallConstraint(sc *SemChecker, scope Scope, ident *Ident, o
 					if len(newSig.GenericParams) > 0 {
 						fmt.Printf("substitudions:\n%s\n", AstFormat(traitSubs))
 						fmt.Printf("sig:\n  %s\nnewSig:\n  %s\n", AstFormat(&sig), AstFormat(&newSig))
+						AstInspector(ident)
 						panic("we have a problem here, new signature shall not have generic types anymore")
 					}
 					candidates := LookUpProc(scope, newSig.Name, -1, nil)
@@ -1509,7 +1510,7 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 				}
 			}
 
-			ReportErrorf(sc, call, "%s", builder.String())
+			ReportErrorf(sc, call, "%s", builder.builder.String())
 		}
 		result.Sym = errorProcSym(ident)
 		result.Args = checkedArgs
@@ -1546,9 +1547,7 @@ func SemCheckCall(sc *SemChecker, scope Scope, call *Call, expected TypeConstrai
 		overloadable := overloadables[0]
 
 		if len(overloadable.GetSignature().GenericParams) > 0 {
-
 			CheckGenericTypeCallConstraint(sc, scope, ident, overloadable, checkedArgs, &sigSubstitutions[0])
-
 		}
 
 		switch impl := overloadable.(type) {

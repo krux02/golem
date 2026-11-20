@@ -19,5 +19,6 @@ func main() {
 	}
 
 	compileAndRunFile(os.Args[1], true)
+	
 	// dlv :args ["./hello_triangle.golem"]
 }

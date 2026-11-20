@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"html"
 	"math/big"
 	"strings"
 )
@@ -9,9 +10,22 @@ import (
 /// TOKENS
 
 type AstPrettyPrinter struct {
-	strings.Builder
+	builder     strings.Builder
 	LineIdx     int
 	Indentation int
+	HtmlFormat  bool
+}
+
+func (this *AstPrettyPrinter) WriteStyled(msg string, style string) {
+	if this.HtmlFormat {
+		this.builder.WriteString(`<span class="`)
+		this.builder.WriteString(style)
+		this.builder.WriteString(`">`)
+		this.builder.WriteString(html.EscapeString(msg))
+		this.builder.WriteString(`</span>`)
+	} else {
+		this.builder.WriteString(msg)
+	}
 }
 
 func (this Token) String() string {
@@ -52,6 +66,20 @@ type PrettyPrintable interface {
 	PrettyPrint(builder *AstPrettyPrinter)
 }
 
+func (builder *AstPrettyPrinter) WriteString(str string) {
+	builder.builder.WriteString(str);
+}
+
+func (builder *AstPrettyPrinter) WriteRune(r rune) {
+	builder.builder.WriteRune(r);
+}
+
+func (builder *AstPrettyPrinter) WriteError(str string) {
+	builder.builder.WriteString("");	
+	builder.builder.WriteString(str);
+	builder.builder.WriteString("");	
+}
+
 func (builder *AstPrettyPrinter) WriteNode(node PrettyPrintable) {
 	if node == nil {
 		builder.WriteString("<nil>")
@@ -66,7 +94,7 @@ func AstFormat(node PrettyPrintable) string {
 	}
 	builder := &AstPrettyPrinter{}
 	node.PrettyPrint(builder)
-	result := builder.String()
+	result := builder.builder.String()
 	if len(result) == 0 {
 		return fmt.Sprintf("%T", node)
 	}
@@ -280,11 +308,11 @@ func WriteIntLit(builder *strings.Builder, value *big.Int) {
 }
 
 func (lit *IntLit) PrettyPrint(builder *AstPrettyPrinter) {
-	WriteIntLit(&builder.Builder, lit.Value)
+	WriteIntLit(&builder.builder, lit.Value)
 }
 
 func (lit *TcIntLit) PrettyPrint(builder *AstPrettyPrinter) {
-	WriteIntLit(&builder.Builder, lit.Value)
+	WriteIntLit(&builder.builder, lit.Value)
 	if lit.Type != nil && lit.Type != (Type)(GetIntLitType(lit.Value)) {
 		builder.WriteString(":")
 		lit.Type.PrettyPrint(builder)
@@ -389,23 +417,23 @@ func (arg *TcWrappedUntypedAst) PrettyPrint(builder *AstPrettyPrinter) {
 
 // format type checked ast nodes
 func (typ *BuiltinType) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString(typ.Name)
+	builder.WriteStyled(typ.Name, "type")
 }
 
 func (typ *BuiltinIntType) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString(typ.Name)
+	builder.WriteStyled(typ.Name, "type")
 }
 
 func (typ *BuiltinFloatType) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString(typ.Name)
+	builder.WriteStyled(typ.Name, "type")
 }
 
 func (typ *BuiltinStringType) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString(typ.Name)
+	builder.WriteStyled(typ.Name, "type")
 }
 
 func (typ *UntypedType) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString(typ.Name)
+	builder.WriteStyled(typ.Name, "type")
 }
 
 func (typ *UnspecifiedType) PrettyPrint(builder *AstPrettyPrinter) {
@@ -413,17 +441,17 @@ func (typ *UnspecifiedType) PrettyPrint(builder *AstPrettyPrinter) {
 	// and as message. The Unspecified should not be used for ast printing
 	// therefore this function is just optimized for message printing. This is
 	// weird and should probably have a cleaner solution.
-	builder.WriteString("no constraint")
+	builder.WriteStyled("no constraint", "type-constraint")
 }
 
 func (typ *ErrorType) PrettyPrint(builder *AstPrettyPrinter) {
-	//fmt.Fprintf(&builder.Builder,
-	builder.WriteString("?err?")
+	//fmt.Fprintf(&builder.builder,
+	builder.WriteStyled("?err?", "error")
 }
 
 func (typ *ArrayType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("array(")
-	WriteUIntLit(&builder.Builder, false, uint64(typ.Len))
+	WriteUIntLit(&builder.builder, false, uint64(typ.Len))
 	builder.WriteString(", ")
 	builder.WriteNode(typ.Elem)
 	builder.WriteString(")")
@@ -438,7 +466,7 @@ func (typ *OpenArrayType) PrettyPrint(builder *AstPrettyPrinter) {
 func (typ *SimdVectorType) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteNode(typ.Elem)
 	builder.WriteString("x")
-	WriteUIntLit(&builder.Builder, false, uint64(typ.Len))
+	WriteUIntLit(&builder.builder, false, uint64(typ.Len))
 }
 
 func (typ *EnumSetType) PrettyPrint(builder *AstPrettyPrinter) {
@@ -490,7 +518,7 @@ func (structDef *StructType) PrettyPrint(builder *AstPrettyPrinter) {
 func (structDef *TcStructDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteString("type ")
 	if structDef.Importc {
-		builder.WriteString("\"importc\" ")
+		builder.builder.WriteString("\"importc\" ")
 	}
 	builder.WriteString(structDef.Name)
 	builder.WriteString(" = struct {")
@@ -518,7 +546,7 @@ func (typ *EnumType) PrettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (enumDef *TcEnumDef) PrettyPrint(builder *AstPrettyPrinter) {
-	builder.WriteString("type ")
+	builder.builder.WriteString("type ")
 	if enumDef.Importc {
 		builder.WriteString("\"importc\" ")
 	}
@@ -527,11 +555,11 @@ func (enumDef *TcEnumDef) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.Indentation++
 	for _, field := range enumDef.Values {
 		builder.NewlineAndIndent()
-		builder.WriteString(field.Source)
+		builder.builder.WriteString(field.Source)
 	}
 	builder.Indentation--
 	builder.NewlineAndIndent()
-	builder.WriteString("}")
+	builder.builder.WriteString("}")
 }
 
 func (codeBlock TcCodeBlock) PrettyPrint(builder *AstPrettyPrinter) {
@@ -540,13 +568,13 @@ func (codeBlock TcCodeBlock) PrettyPrint(builder *AstPrettyPrinter) {
 	for _, item := range codeBlock.Items {
 		builder.NewlineAndIndent()
 		builder.WriteNode(item)
-		builder.WriteString(";")
+		builder.builder.WriteString(";")
 	}
 	builder.Indentation--
 	if len(codeBlock.Items) > 0 {
 		builder.NewlineAndIndent()
 	}
-	builder.WriteString("}")
+	builder.builder.WriteString("}")
 }
 
 func (sym *TcSymbol) PrettyPrint(printer *AstPrettyPrinter) {
@@ -594,7 +622,7 @@ func (expr *TcTypeContext) PrettyPrint(builder *AstPrettyPrinter) {
 
 func (expr *TcDotExpr) PrettyPrint(builder *AstPrettyPrinter) {
 	builder.WriteNode(expr.Lhs)
-	builder.WriteByte('.')
+	builder.WriteRune('.')
 	builder.WriteNode(expr.Rhs)
 }
 
@@ -755,11 +783,11 @@ func (typ *PtrType) PrettyPrint(builder *AstPrettyPrinter) {
 }
 
 func (lit *IntLitType) PrettyPrint(builder *AstPrettyPrinter) {
-	WriteIntLit(&builder.Builder, lit.Value)
+	WriteIntLit(&builder.builder, lit.Value)
 }
 
 func (lit *FloatLitType) PrettyPrint(builder *AstPrettyPrinter) {
-	fmt.Fprintf(builder, "%f", lit.Value)
+	fmt.Fprintf(&builder.builder, "%f", lit.Value)
 }
 
 func (lit *StringLitType) PrettyPrint(builder *AstPrettyPrinter) {

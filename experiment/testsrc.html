@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body {
+      font-family: 'Consolas', 'Lucida Console', monospace;
+      white-space-collapse: preserve;
+  }
+  .my-paragraph {
+      color: skyblue;
+  }
+  .keyword {
+      color: orange;
+  }
+  .type {
+      color: blue
+  }
+</Style>
+</head>
+<body>
+
+<div>
+
+<span class="my-paragraph" title="bananas"> Welcome bananas! </span><br>
+    <span title="something">value</span><br>
+    <span class="keyword">This</span> is <span class="operator">&lt;</span>
+</div>
+<div>
+  
+# this test is supposed to do something with the wrapped array and test generics of the language
+
+<span class="keyword">type</span> ArrayTag = <span class="keyword">enum</span> {A;B;C;D}
+
+<span class="keyword">type</span> WrappedArray = <span class="keyword">struct</span> {
+  tag: ArrayTag
+  arr: array(16,f32)
+}
+
+<span class="keyword">trait</span> CanDoPointlessStuff(U) = {
+  proc foo(_: <span class="type">U</span>) -> <span class="keyword">void</span>
+}
+
+<span class="keyword">proc</span> pointless[CanDoPointlessStuff(T)](arg1: <span class="type">T</span>) -> <span class="keyword">void</span> = {
+  <span class="keyword">var</span> tmp: <span class="type">T</span> = arg1
+  <span class="keyword">var</span> someArray: array(4, <span class="type">T</span>) = [arg1,arg1,arg1,arg1]
+  foo(tmp)
+  for it in someArray do {
+    foo(it)
+  }
+}
+
+<span class="keyword">proc</span> foo(arg: <span class="type">i32</span>) -> void = {
+  printf("doing pointless stuff for i32: %d\n", arg)
+}
+
+<span class="keyword">proc</span> foo(arg: <span class="type">str</span>) -> void = {
+  printf("doing pointless stuff for str %s\n", arg)
+}
+
+<span class="keyword">proc</span> main() -> <span class="type">i32</span>= {
+  <span class="keyword">let</span> myarray : WrappedArray = [A,[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]]
+  
+  printf("tag: %v\n", myarray.tag | string)
+  <span class="keyword">for</span> it in myarray.arr do {
+    printf("hello %v\n", it)
+  }
+
+  <span class="keyword">let</span> tmp1 = 123:<span class="type">i32</span>
+  <span class="keyword">let</span> tmp2 = "abcdef":<span class="type">str</span>
+
+  pointless(tmp1)
+  pointless(tmp2)
+  # test reuse if generic instance
+  pointless(tmp2)
+  pointless(tmp1)
+
+  0
+}
+</div>
+
+<div id="myDiv">
+&lt;!DOCTYPE html&gt;<br>
+&lt;html&gt;<br>
+&lt;body&gt;<br>
+<br>
+&lt;h1&gt;Testing an HTML Syntax Highlighter&lt;/h2&gt;<br>
+&lt;p&gt;Hello world!&lt;/p&gt;<br>
+&lt;a href="https://www.w3schools.com"&gt;Back to School&lt;/a&gt;<br>
+<br>
+&lt;/body&gt;<br>
+&lt;/html&gt;
+</div> 
+  
+<button title="Click to submit the form">Submit</button>
+<font color="#9900FF"> Welcome to freeCodeCamp.
+
+  <font color="#abcdef"> something else</font>
+
+  blubbediblub
+
+</font>
+
+</body>
+</html>

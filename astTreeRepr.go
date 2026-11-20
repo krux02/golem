@@ -15,7 +15,7 @@ func AstTreeFormat(node Expr) string {
 	builder := &AstPrettyPrinter{}
 	m := make(map[uintptr]int)
 	astTreeFormat(builder, m, reflect.ValueOf(node))
-	return filterOutEmptyLines(builder.String())
+	return filterOutEmptyLines(builder.builder.String())
 }
 
 func isEmpty(node reflect.Value) bool {
@@ -49,9 +49,9 @@ var filteredOutFields = []string{
 func astTreeFormat(builder *AstPrettyPrinter, visitedNodes map[uintptr]int, node reflect.Value) {
 	switch node.Kind() {
 	case reflect.Invalid:
-		builder.WriteString("<invalid>")
+		builder.WriteError("<invalid>")
 	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr, reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128:
-		fmt.Fprintf(builder, "%v", node)
+		fmt.Fprintf(&builder.builder, "%v", node)
 	case reflect.String:
 		str := node.String()
 		idx := strings.IndexRune(str, '\n')
@@ -65,21 +65,21 @@ func astTreeFormat(builder *AstPrettyPrinter, visitedNodes map[uintptr]int, node
 			truncated = true
 		}
 		if truncated {
-			fmt.Fprintf(builder, "%s...", str)
+			fmt.Fprintf(&builder.builder, "%s...", str)
 		} else {
-			fmt.Fprintf(builder, "%s", str)
+			fmt.Fprintf(&builder.builder, "%s", str)
 		}
 	case reflect.Chan:
-		fmt.Fprintf(builder, "not implemented %v", node.Kind())
+		fmt.Fprintf(&builder.builder, "not implemented %v", node.Kind())
 	case reflect.Func:
-		fmt.Fprintf(builder, "not implemented %v", node.Kind())
+		fmt.Fprintf(&builder.builder, "not implemented %v", node.Kind())
 	case reflect.Map:
-		fmt.Fprintf(builder, "map (len: %d)", node.Len())
+		fmt.Fprintf(&builder.builder, "map (len: %d)", node.Len())
 		builder.Indentation += 1
 		for it := node.MapRange(); it.Next(); {
 			builder.NewlineAndIndent()
 			astTreeFormat(builder, visitedNodes, it.Key())
-			fmt.Fprintf(builder, " -> ")
+			fmt.Fprintf(&builder.builder, " -> ")
 			astTreeFormat(builder, visitedNodes, it.Value())
 		}
 		builder.Indentation -= 1
@@ -102,16 +102,16 @@ func astTreeFormat(builder *AstPrettyPrinter, visitedNodes map[uintptr]int, node
 
 		switch n := node.Interface().(type) {
 		case (*BuiltinIntType):
-			builder.WriteString(n.Name)
+			builder.builder.WriteString(n.Name)
 		case (*BuiltinFloatType):
-			builder.WriteString(n.Name)
+			builder.builder.WriteString(n.Name)
 		case (*BuiltinStringType):
-			builder.WriteString(n.Name)
+			builder.builder.WriteString(n.Name)
 		case (*BuiltinType):
-			builder.WriteString(n.Name)
+			builder.builder.WriteString(n.Name)
 		default:
 			if idx, ok := visitedNodes[node.Pointer()]; ok {
-				fmt.Fprintf(builder, "visited on Line %d", idx+1)
+				fmt.Fprintf(&builder.builder, "visited on Line %d", idx+1)
 			} else {
 				visitedNodes[node.Pointer()] = builder.LineIdx
 				astTreeFormat(builder, visitedNodes, node.Elem())
@@ -132,7 +132,7 @@ func astTreeFormat(builder *AstPrettyPrinter, visitedNodes map[uintptr]int, node
 		//builder.WriteString("]")
 
 	case reflect.Struct:
-		builder.WriteString(node.Type().Name())
+		builder.builder.WriteString(node.Type().Name())
 		// builder.WriteString("{")
 		builder.Indentation += 1
 		for i := range node.NumField() {
@@ -147,8 +147,8 @@ func astTreeFormat(builder *AstPrettyPrinter, visitedNodes map[uintptr]int, node
 			}
 
 			builder.NewlineAndIndent()
-			builder.WriteString(name)
-			builder.WriteString(": ")
+			builder.builder.WriteString(name)
+			builder.builder.WriteString(": ")
 			astTreeFormat(builder, visitedNodes, value)
 
 		}
@@ -158,7 +158,7 @@ func astTreeFormat(builder *AstPrettyPrinter, visitedNodes map[uintptr]int, node
 		}
 		// builder.WriteString("}")
 	case reflect.UnsafePointer:
-		fmt.Fprintf(builder, "not implemented %v", node.Kind())
+		fmt.Fprintf(&builder.builder, "not implemented %v", node.Kind())
 	}
 
 }
